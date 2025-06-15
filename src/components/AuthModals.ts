@@ -43,9 +43,15 @@ export function createSignupModal() {
           </button>
         </div>
         <form class="space-y-6">
-          <div>
-            <label for="signup-name" class="block text-sm font-medium text-gray-700">Full Name</label>
-            <input type="text" id="signup-name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="signup-firstname" class="block text-sm font-medium text-gray-700">First Name</label>
+              <input type="text" id="signup-firstname" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            </div>
+            <div>
+              <label for="signup-lastname" class="block text-sm font-medium text-gray-700">Last Name</label>
+              <input type="text" id="signup-lastname" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            </div>
           </div>
           <div>
             <label for="signup-email" class="block text-sm font-medium text-gray-700">Email</label>

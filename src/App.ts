@@ -14,7 +14,7 @@ export default function setupApp() {
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div class="flex justify-between items-center h-16"><!-- Logo, brand name and theme toggle -->
           <div class="flex items-center space-x-2">
-            <img src="/guestgo-logo.png" alt="GuestGo Logo" class="h-8 w-auto">
+            <img src="/guestgo-logo-no_word.png" alt="GuestGo Logo" class="h-8 w-auto">
             <div class="flex items-center space-x-2">
               <div class="flex-shrink-0 text-2xl font-bold text-blue-600 dark:text-blue-500">
                 GuestGo
@@ -41,7 +41,7 @@ export default function setupApp() {
 
           <!-- Right side menu -->
           <div class="flex items-center space-x-2">
-            <div class="hidden md:flex items-center">
+            <div class="hidden md:flex items-center" id="auth-menu-container" style="display: none;">
               <div class="relative">
                 <button id="auth-menu-button" class="flex items-center text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500 px-3 py-2 transition-colors duration-200">
                   <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -74,8 +74,10 @@ export default function setupApp() {
             <a href="#/" class="block px-3 py-2 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500">Home</a>
             <a href="#/about" class="block px-3 py-2 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500">About</a>
             <a href="#/contact" class="block px-3 py-2 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500">Contact Us</a>
-            <button class="mobile-login-button block w-full text-left px-3 py-2 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500">Login</button>
-            <button class="mobile-signup-button block w-full text-left px-3 py-2 text-blue-600 dark:text-blue-500 font-medium">Sign Up</button>
+            <div id="mobile-auth-buttons" style="display: none;">
+              <button class="mobile-login-button block w-full text-left px-3 py-2 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500">Login</button>
+              <button class="mobile-signup-button block w-full text-left px-3 py-2 text-blue-600 dark:text-blue-500 font-medium">Sign Up</button>
+            </div>
           </div>
         </div>
       </div>
@@ -127,9 +129,15 @@ export default function setupApp() {
           </button>
         </div>
         <form class="space-y-6">
-          <div>
-            <label for="signup-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Full Name</label>
-            <input type="text" id="signup-name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition duration-200">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="signup-firstname" class="block text-sm font-medium text-gray-700 dark:text-gray-300">First Name</label>
+              <input type="text" id="signup-firstname" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition duration-200">
+            </div>
+            <div>
+              <label for="signup-lastname" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Last Name</label>
+              <input type="text" id="signup-lastname" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition duration-200">
+            </div>
           </div>
           <div>
             <label for="signup-email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>

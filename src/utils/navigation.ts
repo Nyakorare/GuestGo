@@ -34,4 +34,18 @@ export function updateNavigation() {
       link.classList.add('nav-link');
     }
   });
+
+  // Show/hide auth menu based on current page
+  const authMenuContainer = document.getElementById('auth-menu-container');
+  const mobileAuthButtons = document.getElementById('mobile-auth-buttons');
+  
+  if (authMenuContainer && mobileAuthButtons) {
+    if (path === '/' || path === '') {
+      authMenuContainer.style.display = 'flex';
+      mobileAuthButtons.style.display = 'block';
+    } else {
+      authMenuContainer.style.display = 'none';
+      mobileAuthButtons.style.display = 'none';
+    }
+  }
 }
