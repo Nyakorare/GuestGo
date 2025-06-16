@@ -74,23 +74,60 @@ export function HomePage() {
               </div>
               <div>
                 <label for="scheduleEmail" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
-                <input 
-                  type="email" 
-                  id="scheduleEmail" 
-                  name="email"
-                  class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  required
-                >
+                <div class="flex space-x-2">
+                  <input 
+                    type="email" 
+                    id="scheduleEmail" 
+                    name="email"
+                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    required
+                  >
+                  <button 
+                    type="button"
+                    id="sendVerificationCode"
+                    class="mt-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Send Code
+                  </button>
+                </div>
+                <div id="verificationCodeContainer" class="hidden mt-2">
+                  <div class="flex space-x-2">
+                    <input 
+                      type="text" 
+                      id="verificationCode" 
+                      placeholder="Enter verification code"
+                      class="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    >
+                    <button 
+                      type="button"
+                      id="verifyCode"
+                      class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                    >
+                      Verify
+                    </button>
+                  </div>
+                  <p id="verificationStatus" class="mt-1 text-sm"></p>
+                </div>
               </div>
               <div>
                 <label for="phone" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Phone Number</label>
-                <input 
-                  type="tel" 
-                  id="phone" 
-                  name="phone"
-                  class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  required
-                >
+                <div class="relative">
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <img src="/ph-flag.png" alt="Philippine Flag" class="h-5 w-7 object-cover rounded-sm" />
+                    <span class="ml-2 text-gray-700 dark:text-gray-300">+63</span>
+                  </div>
+                  <input 
+                    type="tel" 
+                    id="phone" 
+                    name="phone"
+                    maxlength="10"
+                    pattern="[0-9]{10}"
+                    class="mt-1 block w-full pl-20 rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    required
+                    placeholder="9XXXXXXXXX"
+                  >
+                </div>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Enter 10-digit mobile number (e.g., 9123456789)</p>
               </div>
               <div>
                 <label for="visitDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Visit Date</label>
@@ -175,7 +212,9 @@ export function HomePage() {
               <div class="flex justify-end">
                 <button 
                   type="submit"
-                  class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  id="scheduleSubmitBtn"
+                  class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled
                 >
                   Schedule Visit
                 </button>
