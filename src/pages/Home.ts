@@ -1,13 +1,30 @@
 import { setupEventListeners } from '../components/ModalFunctions';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  'https://srfcewglmzczveopbwsk.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyZmNld2dsbXpjenZlb3Bid3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwMDI5ODEsImV4cCI6MjA2NTU3ODk4MX0.H6b6wbYOVytt2VOirSmJnjMkm-ba3H-i0LkCszxqYLY'
+);
 
 export function HomePage() {
   // Initialize the page
-  setTimeout(() => {
+  setTimeout(async () => {
     // Set minimum date to today
     const today = new Date().toISOString().split('T')[0];
     const visitDateInput = document.getElementById('visitDate') as HTMLInputElement;
     if (visitDateInput) {
       visitDateInput.min = today;
+    }
+
+    // Check if user is logged in and update email field
+    const { data: { user } } = await supabase.auth.getUser();
+    const scheduleEmail = document.getElementById('scheduleEmail') as HTMLInputElement;
+    const emailVerificationSection = document.getElementById('emailVerificationSection');
+    
+    if (user && scheduleEmail && emailVerificationSection) {
+      scheduleEmail.value = user.email || '';
+      scheduleEmail.readOnly = true;
+      emailVerificationSection.classList.add('hidden');
     }
 
     // Setup event listeners
@@ -72,7 +89,7 @@ export function HomePage() {
                   >
                 </div>
               </div>
-              <div>
+              <div id="emailVerificationSection">
                 <label for="scheduleEmail" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
                 <div class="flex space-x-2">
                   <input 

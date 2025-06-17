@@ -1,13 +1,30 @@
-import { HomePage } from '../pages/Home';
-import { AboutPage } from '../pages/About';
-import { ContactPage } from '../pages/Contact';
+import { HomePage } from '../pages/home';
+import { AboutPage } from '../pages/about';
+import { ContactPage } from '../pages/contact';
+import { DashboardPage } from '../pages/dashboard';
 
-export function renderPage(route: string) {
-  switch(route) {
+export function renderPage(path: string) {
+  // Hide welcome message and profile settings by default
+  const welcomeMessage = document.getElementById('welcomeMessage');
+  const profileSettingsBtn = document.getElementById('profileSettingsBtn');
+  if (welcomeMessage) welcomeMessage.classList.add('hidden');
+  if (profileSettingsBtn) profileSettingsBtn.classList.add('hidden');
+
+  // Show welcome message and profile settings only on dashboard page
+  if (path === '/dashboard') {
+    if (welcomeMessage) welcomeMessage.classList.remove('hidden');
+    if (profileSettingsBtn) profileSettingsBtn.classList.remove('hidden');
+  }
+
+  switch (path) {
+    case '/':
+      return HomePage();
     case '/about':
       return AboutPage();
     case '/contact':
       return ContactPage();
+    case '/dashboard':
+      return DashboardPage();
     default:
       return HomePage();
   }

@@ -1,6 +1,13 @@
 import { getThemePreference, updateTheme } from './utils/theme';
 import { updateNavigation } from './utils/navigation';
 import { setupEventListeners } from './utils/eventHandlers';
+import { createLoginModal, createSignupModal, setupAuthEventListeners } from './components/AuthModals';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  'https://srfcewglmzczveopbwsk.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyZmNld2dsbXpjenZlb3Bid3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwMDI5ODEsImV4cCI6MjA2NTU3ODk4MX0.H6b6wbYOVytt2VOirSmJnjMkm-ba3H-i0LkCszxqYLY'
+);
 
 export default function setupApp() {
   // Initialize theme
@@ -37,10 +44,33 @@ export default function setupApp() {
             <a href="#/" class="nav-link">Home</a>
             <a href="#/about" class="nav-link">About</a>
             <a href="#/contact" class="nav-link">Contact Us</a>
+            <a href="#/dashboard" class="nav-link hidden" id="dashboard-link">Dashboard</a>
           </div>
 
           <!-- Right side menu -->
-          <div class="flex items-center space-x-2">
+          <div class="flex items-center space-x-4">
+            <span id="welcome-message" class="text-gray-700 dark:text-gray-300 hidden"></span>
+            <div class="relative">
+              <button 
+                id="profileSettingsBtn"
+                class="text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500 hidden"
+              >
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
+              <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-50 dropdown-transition">
+                <div class="py-1">
+                  <button id="account-settings-btn" class="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors duration-200">
+                    Account Settings
+                  </button>
+                  <button id="profile-logout-btn" class="block w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100 dark:text-red-500 dark:hover:bg-gray-700 transition-colors duration-200">
+                    Logout
+                  </button>
+                </div>
+              </div>
+            </div>
             <div class="hidden md:flex items-center" id="auth-menu-container" style="display: none;">
               <div class="relative">
                 <button id="auth-menu-button" class="flex items-center text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500 px-3 py-2 transition-colors duration-200">
@@ -49,9 +79,8 @@ export default function setupApp() {
                   </svg>
                 </button>
                 <div id="auth-dropdown" class="hidden absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-50 dropdown-transition">
-                  <div class="py-1">
-                    <button id="login-button" class="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors duration-200">Login</button>
-                    <button id="signup-button" class="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors duration-200">Sign Up</button>
+                  <div class="py-1" id="auth-dropdown-content">
+                    <!-- Content will be dynamically updated based on auth state -->
                   </div>
                 </div>
               </div>
@@ -74,9 +103,9 @@ export default function setupApp() {
             <a href="#/" class="block px-3 py-2 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500">Home</a>
             <a href="#/about" class="block px-3 py-2 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500">About</a>
             <a href="#/contact" class="block px-3 py-2 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500">Contact Us</a>
+            <a href="#/dashboard" class="block px-3 py-2 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500 hidden" id="mobile-dashboard-link">Dashboard</a>
             <div id="mobile-auth-buttons" style="display: none;">
-              <button class="mobile-login-button block w-full text-left px-3 py-2 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500">Login</button>
-              <button class="mobile-signup-button block w-full text-left px-3 py-2 text-blue-600 dark:text-blue-500 font-medium">Sign Up</button>
+              <!-- Content will be dynamically updated based on auth state -->
             </div>
           </div>
         </div>
@@ -88,73 +117,8 @@ export default function setupApp() {
       </div>
     </main>
 
-    <!-- Login Modal -->
-    <div id="login-modal" class="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75 flex items-center justify-center hidden z-50 modal-backdrop">
-      <div class="bg-white dark:bg-gray-800 rounded-lg p-8 max-w-md w-full mx-4 modal-content">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Login</h2>
-          <button class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 close-modal transition-colors duration-200">
-            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-          </button>
-        </div>
-        <form class="space-y-6">
-          <div>
-            <label for="login-email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
-            <input type="email" id="login-email" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition duration-200">
-          </div>
-          <div>
-            <label for="login-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
-            <input type="password" id="login-password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition duration-200">
-          </div>
-          <div>
-            <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors duration-200">
-              Login
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Signup Modal -->
-    <div id="signup-modal" class="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75 flex items-center justify-center hidden z-50 modal-backdrop">
-      <div class="bg-white dark:bg-gray-800 rounded-lg p-8 max-w-md w-full mx-4 modal-content">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Sign Up</h2>
-          <button class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 close-modal transition-colors duration-200">
-            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-          </button>
-        </div>
-        <form class="space-y-6">
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label for="signup-firstname" class="block text-sm font-medium text-gray-700 dark:text-gray-300">First Name</label>
-              <input type="text" id="signup-firstname" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition duration-200">
-            </div>
-            <div>
-              <label for="signup-lastname" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Last Name</label>
-              <input type="text" id="signup-lastname" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition duration-200">
-            </div>
-          </div>
-          <div>
-            <label for="signup-email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
-            <input type="email" id="signup-email" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition duration-200">
-          </div>
-          <div>
-            <label for="signup-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
-            <input type="password" id="signup-password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white transition duration-200">
-          </div>
-          <div>
-            <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors duration-200">
-              Create Account
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+    ${createLoginModal()}
+    ${createSignupModal()}
   `;
 
   // Initialize page content
@@ -162,6 +126,7 @@ export default function setupApp() {
 
   // Setup all event listeners
   setupEventListeners();
+  setupAuthEventListeners();
 
   // Theme toggle functionality
   const themeToggleButton = document.getElementById('theme-toggle');
@@ -172,4 +137,83 @@ export default function setupApp() {
 
   // Handle navigation
   window.addEventListener('hashchange', updateNavigation);
+
+  // Check auth state and update UI
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session?.user) {
+      // Show dashboard link
+      const dashboardLink = document.getElementById('dashboard-link');
+      const mobileDashboardLink = document.getElementById('mobile-dashboard-link');
+      if (dashboardLink) dashboardLink.classList.remove('hidden');
+      if (mobileDashboardLink) mobileDashboardLink.classList.remove('hidden');
+
+      // Show welcome message
+      const welcomeMessage = document.getElementById('welcome-message');
+      if (welcomeMessage) {
+        const firstName = session.user.user_metadata?.first_name || 'User';
+        welcomeMessage.textContent = `Welcome, ${firstName}`;
+        welcomeMessage.classList.remove('hidden');
+      }
+    }
+  });
+
+  // Listen for auth state changes
+  supabase.auth.onAuthStateChange((_event, session) => {
+    const dashboardLink = document.getElementById('dashboard-link');
+    const mobileDashboardLink = document.getElementById('mobile-dashboard-link');
+    const welcomeMessage = document.getElementById('welcome-message');
+
+    if (session?.user) {
+      // Show dashboard link
+      if (dashboardLink) dashboardLink.classList.remove('hidden');
+      if (mobileDashboardLink) mobileDashboardLink.classList.remove('hidden');
+
+      // Show welcome message
+      if (welcomeMessage) {
+        const firstName = session.user.user_metadata?.first_name || 'User';
+        welcomeMessage.textContent = `Welcome, ${firstName}`;
+        welcomeMessage.classList.remove('hidden');
+      }
+    } else {
+      // Hide dashboard link
+      if (dashboardLink) dashboardLink.classList.add('hidden');
+      if (mobileDashboardLink) mobileDashboardLink.classList.add('hidden');
+
+      // Hide welcome message
+      if (welcomeMessage) welcomeMessage.classList.add('hidden');
+    }
+  });
+}
+
+// Function to handle navigation
+function handleNavigation() {
+  const path = window.location.pathname;
+  const navLinks = document.querySelectorAll('nav a');
+  const welcomeMessage = document.getElementById('welcomeMessage');
+  const profileSettingsBtn = document.getElementById('profileSettingsBtn');
+
+  // Hide welcome message and profile settings by default
+  if (welcomeMessage) welcomeMessage.classList.add('hidden');
+  if (profileSettingsBtn) profileSettingsBtn.classList.add('hidden');
+
+  // Show welcome message and profile settings only on dashboard page
+  if (path === '/dashboard') {
+    if (welcomeMessage) welcomeMessage.classList.remove('hidden');
+    if (profileSettingsBtn) profileSettingsBtn.classList.remove('hidden');
+  }
+
+  navLinks.forEach(link => {
+    if (link.getAttribute('href') === path) {
+      link.classList.add('text-blue-600', 'dark:text-blue-500');
+      link.classList.remove('text-gray-900', 'dark:text-white');
+    } else {
+      link.classList.remove('text-blue-600', 'dark:text-blue-500');
+      link.classList.add('text-gray-900', 'dark:text-white');
+    }
+  });
+
+  const mainContent = document.getElementById('mainContent');
+  if (mainContent) {
+    mainContent.innerHTML = renderPage(path);
+  }
 }

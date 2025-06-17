@@ -1,15 +1,62 @@
 import { sendVerificationEmail } from '../config/emailjs';
+import { createClient } from '@supabase/supabase-js';
 
-export function setupEventListeners() {
+const supabase = createClient(
+  'https://srfcewglmzczveopbwsk.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyZmNld2dsbXpjenZlb3Bid3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwMDI5ODEsImV4cCI6MjA2NTU3ODk4MX0.H6b6wbYOVytt2VOirSmJnjMkm-ba3H-i0LkCszxqYLY'
+);
+
+export async function setupEventListeners() {
+  // Fetch places from database
+  const { data: places, error } = await supabase
+    .from('places_to_visit')
+    .select('*')
+    .order('name');
+
+  if (error) {
+    console.error('Error fetching places:', error);
+    return;
+  }
+
   // Function to toggle multiple places checkboxes
   const placeToVisitSelect = document.getElementById('placeToVisit') as HTMLSelectElement;
   if (placeToVisitSelect) {
+    // Clear existing options except the first one
+    placeToVisitSelect.innerHTML = '<option value="">Select a place</option>';
+    
+    // Add places from database
+    places.forEach(place => {
+      const option = document.createElement('option');
+      option.value = place.id;
+      option.textContent = place.name;
+      placeToVisitSelect.appendChild(option);
+    });
+
+    // Add "Multiple Places" option at the end
+    const multipleOption = document.createElement('option');
+    multipleOption.value = 'multiple';
+    multipleOption.textContent = 'Multiple Places';
+    placeToVisitSelect.appendChild(multipleOption);
+
     placeToVisitSelect.addEventListener('change', function(e: Event) {
       const target = e.target as HTMLSelectElement;
       const multiplePlacesContainer = document.getElementById('multiplePlacesContainer');
       if (multiplePlacesContainer) {
         if (target.value === 'multiple') {
           multiplePlacesContainer.classList.remove('hidden');
+          // Clear existing checkboxes
+          multiplePlacesContainer.innerHTML = '';
+          
+          // Add checkboxes for each place
+          places.forEach(place => {
+            const checkboxDiv = document.createElement('div');
+            checkboxDiv.className = 'flex items-center';
+            checkboxDiv.innerHTML = `
+              <input type="checkbox" id="place_${place.id}" name="places" value="${place.id}" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+              <label for="place_${place.id}" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">${place.name}</label>
+            `;
+            multiplePlacesContainer.appendChild(checkboxDiv);
+          });
         } else {
           multiplePlacesContainer.classList.add('hidden');
         }
@@ -212,7 +259,8 @@ export function setupEventListeners() {
   // Function to update submit button state
   function updateSubmitButtonState() {
     if (scheduleSubmitBtn) {
-      scheduleSubmitBtn.disabled = !(areAllFieldsFilled() && isEmailVerified);
+      const isLoggedIn = scheduleEmail.readOnly;
+      scheduleSubmitBtn.disabled = !(areAllFieldsFilled() && (isLoggedIn || isEmailVerified));
     }
   }
 
@@ -247,6 +295,11 @@ export function setupEventListeners() {
 
   // Add input event listener for email validation
   scheduleEmail?.addEventListener('input', () => {
+    // Skip validation if email is readonly (user is logged in)
+    if (scheduleEmail.readOnly) {
+      return;
+    }
+
     const email = scheduleEmail.value;
     if (sendVerificationCode) {
       if (isGmailEmail(email)) {

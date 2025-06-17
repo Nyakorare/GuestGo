@@ -1,3 +1,10 @@
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  'https://srfcewglmzczveopbwsk.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyZmNld2dsbXpjenZlb3Bid3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwMDI5ODEsImV4cCI6MjA2NTU3ODk4MX0.H6b6wbYOVytt2VOirSmJnjMkm-ba3H-i0LkCszxqYLY'
+);
+
 export function setupModalListeners(modalId: string, openButtonClass: string) {
   const modal = document.getElementById(modalId);
   const openButtons = document.querySelectorAll(`.${openButtonClass}`);
@@ -25,6 +32,98 @@ export function setupModalListeners(modalId: string, openButtonClass: string) {
   });
 }
 
+function updateAuthMenu(isLoggedIn: boolean) {
+  const authDropdownContent = document.getElementById('auth-dropdown-content');
+  const mobileAuthButtons = document.getElementById('mobile-auth-buttons');
+
+  if (isLoggedIn) {
+    // Desktop dropdown content
+    if (authDropdownContent) {
+      authDropdownContent.innerHTML = `
+        <button id="logout-button" class="block w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100 dark:text-red-500 dark:hover:bg-gray-700 transition-colors duration-200">
+          Logout
+        </button>
+      `;
+    }
+
+    // Mobile menu content
+    if (mobileAuthButtons) {
+      mobileAuthButtons.innerHTML = `
+        <button id="mobile-logout-button" class="block w-full text-left px-3 py-2 text-red-600 dark:text-red-500 font-medium">
+          Logout
+        </button>
+      `;
+    }
+  } else {
+    // Desktop dropdown content
+    if (authDropdownContent) {
+      authDropdownContent.innerHTML = `
+        <button id="login-button" class="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors duration-200">Login</button>
+        <button id="signup-button" class="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors duration-200">Sign Up</button>
+      `;
+    }
+
+    // Mobile menu content
+    if (mobileAuthButtons) {
+      mobileAuthButtons.innerHTML = `
+        <button class="mobile-login-button block w-full text-left px-3 py-2 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500">Login</button>
+        <button class="mobile-signup-button block w-full text-left px-3 py-2 text-blue-600 dark:text-blue-500 font-medium">Sign Up</button>
+      `;
+    }
+  }
+
+  // Setup event listeners for the new buttons
+  setupAuthButtonListeners();
+}
+
+function setupAuthButtonListeners() {
+  // Login button click handler
+  const loginButton = document.getElementById('login-button');
+  const loginModal = document.getElementById('login-modal');
+  loginButton?.addEventListener('click', () => {
+    loginModal?.classList.remove('hidden');
+    const authDropdown = document.getElementById('auth-dropdown');
+    authDropdown?.classList.add('hidden');
+  });
+
+  // Signup button click handler
+  const signupButton = document.getElementById('signup-button');
+  const signupModal = document.getElementById('signup-modal');
+  signupButton?.addEventListener('click', () => {
+    signupModal?.classList.remove('hidden');
+    const authDropdown = document.getElementById('auth-dropdown');
+    authDropdown?.classList.add('hidden');
+  });
+
+  // Logout button click handler
+  const logoutButton = document.getElementById('logout-button');
+  const mobileLogoutButton = document.getElementById('mobile-logout-button');
+  
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/';
+  };
+
+  logoutButton?.addEventListener('click', handleLogout);
+  mobileLogoutButton?.addEventListener('click', handleLogout);
+
+  // Mobile login button click handler
+  const mobileLoginButton = document.querySelector('.mobile-login-button');
+  mobileLoginButton?.addEventListener('click', () => {
+    loginModal?.classList.remove('hidden');
+    const mobileMenu = document.getElementById('mobile-menu');
+    mobileMenu?.classList.add('hidden');
+  });
+
+  // Mobile signup button click handler
+  const mobileSignupButton = document.querySelector('.mobile-signup-button');
+  mobileSignupButton?.addEventListener('click', () => {
+    signupModal?.classList.remove('hidden');
+    const mobileMenu = document.getElementById('mobile-menu');
+    mobileMenu?.classList.add('hidden');
+  });
+}
+
 export function setupEventListeners() {
   // Mobile menu toggle functionality
   const mobileMenuButton = document.getElementById('mobile-menu-button');
@@ -33,6 +132,148 @@ export function setupEventListeners() {
   mobileMenuButton?.addEventListener('click', () => {
     mobileMenu?.classList.toggle('hidden');
   });
+
+  // Profile settings dropdown functionality
+  const profileSettingsBtn = document.getElementById('profileSettingsBtn');
+  const profileDropdown = document.getElementById('profile-dropdown');
+  const accountSettingsBtn = document.getElementById('account-settings-btn');
+  const profileLogoutBtn = document.getElementById('profile-logout-btn');
+  const profileSettingsModal = document.getElementById('profileSettingsModal');
+  const closeProfileModalBtn = document.getElementById('closeProfileModalBtn');
+  
+  // Function to close the modal
+  const closeModal = () => {
+    if (profileSettingsModal) {
+      profileSettingsModal.classList.add('hidden');
+      // Reset form and messages
+      const passwordChangeForm = document.getElementById('passwordChangeForm') as HTMLFormElement;
+      const passwordError = document.getElementById('passwordError');
+      const passwordSuccess = document.getElementById('passwordSuccess');
+      
+      if (passwordChangeForm) {
+        passwordChangeForm.reset();
+      }
+      if (passwordError) {
+        passwordError.classList.add('hidden');
+        passwordError.textContent = '';
+      }
+      if (passwordSuccess) {
+        passwordSuccess.classList.add('hidden');
+        passwordSuccess.textContent = '';
+      }
+    }
+  };
+
+  profileSettingsBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    profileDropdown?.classList.toggle('hidden');
+  });
+
+  // Close profile dropdown when clicking outside
+  document.addEventListener('click', () => {
+    profileDropdown?.classList.add('hidden');
+  });
+
+  // Account settings button click handler
+  accountSettingsBtn?.addEventListener('click', async () => {
+    if (profileSettingsModal) {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        // Get user's role
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
+
+        const modalUserRole = document.getElementById('modalUserRole');
+        if (modalUserRole) {
+          if (roleData) {
+            // Capitalize first letter of role
+            const role = roleData.role.charAt(0).toUpperCase() + roleData.role.slice(1);
+            modalUserRole.textContent = role;
+          } else {
+            modalUserRole.textContent = 'User';
+          }
+        }
+      }
+      
+      profileSettingsModal.classList.remove('hidden');
+      profileDropdown?.classList.add('hidden');
+    }
+  });
+
+  // Close modal when clicking the close button
+  closeProfileModalBtn?.addEventListener('click', closeModal);
+
+  // Close modal when clicking outside
+  profileSettingsModal?.addEventListener('click', (e) => {
+    if (e.target === profileSettingsModal) {
+      closeModal();
+    }
+  });
+
+  // Close modal when pressing Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && profileSettingsModal && !profileSettingsModal.classList.contains('hidden')) {
+      closeModal();
+    }
+  });
+
+  // Profile logout button click handler
+  profileLogoutBtn?.addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/';
+  });
+
+  // Handle password change form
+  const passwordChangeForm = document.getElementById('passwordChangeForm') as HTMLFormElement;
+  if (passwordChangeForm) {
+    passwordChangeForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const currentPassword = (document.getElementById('currentPassword') as HTMLInputElement).value;
+      const newPassword = (document.getElementById('newPassword') as HTMLInputElement).value;
+      const confirmPassword = (document.getElementById('confirmPassword') as HTMLInputElement).value;
+      const passwordError = document.getElementById('passwordError');
+      const passwordSuccess = document.getElementById('passwordSuccess');
+
+      if (newPassword !== confirmPassword) {
+        if (passwordError) {
+          passwordError.textContent = 'New passwords do not match';
+          passwordError.classList.remove('hidden');
+        }
+        return;
+      }
+
+      try {
+        const { error } = await supabase.auth.updateUser({
+          password: newPassword
+        });
+
+        if (error) throw error;
+
+        if (passwordSuccess) {
+          passwordSuccess.textContent = 'Password updated successfully';
+          passwordSuccess.classList.remove('hidden');
+        }
+        if (passwordError) {
+          passwordError.classList.add('hidden');
+        }
+        passwordChangeForm.reset();
+      } catch (err: any) {
+        if (passwordError) {
+          passwordError.textContent = err.message;
+          passwordError.classList.remove('hidden');
+        }
+        if (passwordSuccess) {
+          passwordSuccess.classList.add('hidden');
+        }
+      }
+    });
+  }
 
   // Auth dropdown functionality
   const authMenuButton = document.getElementById('auth-menu-button');
@@ -51,17 +292,14 @@ export function setupEventListeners() {
   // Setup modal listeners for both desktop and mobile
   setupModalListeners('login-modal', 'mobile-login-button');
   setupModalListeners('signup-modal', 'mobile-signup-button');
-  
-  const loginButton = document.getElementById('login-button');
-  const signupButton = document.getElementById('signup-button');
-  const loginModal = document.getElementById('login-modal');
-  const signupModal = document.getElementById('signup-modal');
 
-  loginButton?.addEventListener('click', () => {
-    loginModal?.classList.remove('hidden');
+  // Check initial auth state and update menu
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    updateAuthMenu(!!session);
   });
 
-  signupButton?.addEventListener('click', () => {
-    signupModal?.classList.remove('hidden');
+  // Listen for auth state changes
+  supabase.auth.onAuthStateChange((_event, session) => {
+    updateAuthMenu(!!session);
   });
 }
