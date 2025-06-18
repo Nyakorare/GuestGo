@@ -77,6 +77,9 @@ export function DashboardPage() {
       placesTab?.classList.add('bg-gray-100', 'text-gray-700');
       accountsContent?.classList.remove('hidden');
       placesContent?.classList.add('hidden');
+      
+      // Load accounts when switching to accounts tab
+      loadAccounts();
     });
 
     // Show profile settings button when logged in
@@ -84,6 +87,9 @@ export function DashboardPage() {
     if (profileSettingsBtn) {
       profileSettingsBtn.classList.remove('hidden');
     }
+
+    // Setup modal event listeners
+    setupModalEventListeners();
   }, 0);
 
   return `
@@ -137,8 +143,7 @@ export function DashboardPage() {
       </div>
 
       <div id="accountsContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-        <h2 class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">Accounts Management</h2>
-        <p class="text-gray-600 dark:text-gray-300">Manage user accounts here.</p>
+        <!-- Accounts will be loaded here -->
       </div>
 
       <!-- Edit Place Modal -->
@@ -296,13 +301,14 @@ async function loadPlaces() {
               type="checkbox" 
               class="sr-only peer" 
               ${place.is_available ? 'checked' : ''}
-              onchange="togglePlaceAvailability('${place.id}', this.checked)"
+              data-place-id="${place.id}"
+              onchange="window.togglePlaceAvailability('${place.id}', this.checked)"
             >
             <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
             <span class="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300">Available</span>
           </label>
           <button 
-            onclick="editPlace('${place.id}')"
+            onclick="window.editPlace('${place.id}')"
             class="text-blue-600 hover:text-blue-800 dark:text-blue-500 dark:hover:text-blue-400"
           >
             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -315,8 +321,116 @@ async function loadPlaces() {
   }
 }
 
+// Function to load accounts from the database
+async function loadAccounts() {
+  const { data: accounts, error } = await supabase
+    .from('user_roles')
+    .select('user_id, role, created_at')
+    .neq('role', 'admin')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error loading accounts:', error);
+    return;
+  }
+
+  const accountsContent = document.getElementById('accountsContent');
+  if (accountsContent) {
+    if (accounts.length === 0) {
+      accountsContent.innerHTML = `
+        <h2 class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">Accounts Management</h2>
+        <p class="text-gray-600 dark:text-gray-300">No accounts found.</p>
+      `;
+      return;
+    }
+
+    accountsContent.innerHTML = `
+      <h2 class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">Accounts Management</h2>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">User ID</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Role</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Joined</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+            ${accounts.map((account: any) => `
+              <tr>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white font-mono">
+                  ${account.user_id.substring(0, 8)}...
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                    account.role === 'log' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                    account.role === 'personnel' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                    account.role === 'visitor' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                    'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                  }">
+                    ${account.role.charAt(0).toUpperCase() + account.role.slice(1)}
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  ${new Date(account.created_at).toLocaleDateString()}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <select 
+                    onchange="window.changeUserRole('${account.user_id}', this.value)"
+                    class="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                    style="min-width: 120px;"
+                  >
+                    <option value="log" ${account.role === 'log' ? 'selected' : ''}>Log</option>
+                    <option value="personnel" ${account.role === 'personnel' ? 'selected' : ''}>Personnel</option>
+                    <option value="visitor" ${account.role === 'visitor' ? 'selected' : ''}>Visitor</option>
+                    <option value="guest" ${account.role === 'guest' ? 'selected' : ''}>Guest</option>
+                  </select>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+}
+
+// Function to change user role
+async function changeUserRole(userId: string, newRole: string) {
+  // Show confirmation popup
+  const confirmed = confirm(`Are you sure you want to change this user's role to ${newRole.charAt(0).toUpperCase() + newRole.slice(1)}?`);
+  
+  if (!confirmed) {
+    // If user cancels, reload accounts to reset the dropdown to current value
+    loadAccounts();
+    return;
+  }
+
+  const { error } = await supabase
+    .from('user_roles')
+    .update({ role: newRole })
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('Error updating user role:', error);
+    showNotification('Error updating user role. Please try again.', 'error');
+    return;
+  }
+
+  showNotification(`User role changed to ${newRole.charAt(0).toUpperCase() + newRole.slice(1)} successfully!`, 'success');
+  loadAccounts(); // Reload the accounts list
+}
+
 // Function to toggle place availability
 async function togglePlaceAvailability(placeId: string, isAvailable: boolean) {
+  // Find the checkbox that was clicked
+  const checkbox = document.querySelector(`input[data-place-id="${placeId}"]`) as HTMLInputElement;
+  if (!checkbox) return;
+
+  // Show loading state
+  checkbox.disabled = true;
+  
   const { error } = await supabase
     .from('places_to_visit')
     .update({ is_available: isAvailable })
@@ -325,11 +439,16 @@ async function togglePlaceAvailability(placeId: string, isAvailable: boolean) {
   if (error) {
     console.error('Error updating place availability:', error);
     // Revert the toggle if there was an error
-    const checkbox = document.querySelector(`input[onchange*="${placeId}"]`) as HTMLInputElement;
-    if (checkbox) {
-      checkbox.checked = !isAvailable;
-    }
+    checkbox.checked = !isAvailable;
+    // Show error message
+    showNotification('Error updating availability. Please try again.', 'error');
+  } else {
+    // Show success message
+    showNotification(`Place ${isAvailable ? 'made available' : 'made unavailable'} successfully!`, 'success');
   }
+
+  // Re-enable the checkbox
+  checkbox.disabled = false;
 }
 
 // Function to edit place
@@ -342,6 +461,7 @@ async function editPlace(placeId: string) {
 
   if (error) {
     console.error('Error loading place:', error);
+    showNotification('Error loading place details.', 'error');
     return;
   }
 
@@ -351,6 +471,8 @@ async function editPlace(placeId: string) {
   const nameInput = document.getElementById('editPlaceName') as HTMLInputElement;
   const descriptionInput = document.getElementById('editPlaceDescription') as HTMLTextAreaElement;
   const locationInput = document.getElementById('editPlaceLocation') as HTMLInputElement;
+  const submitBtn = form?.querySelector('button[type="submit"]') as HTMLButtonElement;
+  const modalTitle = modal?.querySelector('h3') as HTMLHeadingElement;
 
   if (modal && form && idInput && nameInput && descriptionInput && locationInput) {
     idInput.value = place.id;
@@ -358,11 +480,25 @@ async function editPlace(placeId: string) {
     descriptionInput.value = place.description || '';
     locationInput.value = place.location;
 
+    // Update modal title and button text for edit mode
+    if (modalTitle) {
+      modalTitle.textContent = 'Edit Place';
+    }
+    if (submitBtn) {
+      submitBtn.textContent = 'Save Changes';
+    }
+
     modal.classList.remove('hidden');
 
-    // Handle form submission
-    form.onsubmit = async (e) => {
+    // Handle form submission for editing place
+    const handleSubmit = async (e: Event) => {
       e.preventDefault();
+      
+      // Show loading state
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving...';
+      }
       
       const { error } = await supabase
         .from('places_to_visit')
@@ -375,17 +511,69 @@ async function editPlace(placeId: string) {
 
       if (error) {
         console.error('Error updating place:', error);
+        showNotification('Error updating place. Please try again.', 'error');
+        // Reset button state
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Save Changes';
+        }
         return;
       }
 
+      showNotification('Place updated successfully!', 'success');
       modal.classList.add('hidden');
       loadPlaces(); // Reload the places list
+      
+      // Reset button state
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save Changes';
+      }
+
+      // Remove the event listener to prevent conflicts
+      form.removeEventListener('submit', handleSubmit);
     };
+
+    // Remove any existing submit handlers and add the new one
+    form.removeEventListener('submit', handleSubmit);
+    form.addEventListener('submit', handleSubmit);
   }
+}
+
+// Function to show notifications
+function showNotification(message: string, type: 'success' | 'error') {
+  // Remove existing notifications
+  const existingNotifications = document.querySelectorAll('.notification');
+  existingNotifications.forEach(notification => notification.remove());
+
+  const notification = document.createElement('div');
+  notification.className = `notification fixed top-4 right-4 z-50 px-6 py-3 rounded-md shadow-lg transition-all duration-300 ${
+    type === 'success' 
+      ? 'bg-green-500 text-white' 
+      : 'bg-red-500 text-white'
+  }`;
+  notification.textContent = message;
+
+  document.body.appendChild(notification);
+
+  // Remove notification after 3 seconds
+  setTimeout(() => {
+    notification.remove();
+  }, 3000);
 }
 
 // Add event listeners
 document.addEventListener('DOMContentLoaded', () => {
+  // This is now handled in setupModalEventListeners() which is called after the page loads
+});
+
+// Make functions globally available
+(window as any).togglePlaceAvailability = togglePlaceAvailability;
+(window as any).editPlace = editPlace;
+(window as any).changeUserRole = changeUserRole;
+
+// Setup modal event listeners
+function setupModalEventListeners() {
   // Profile settings button
   const profileSettingsBtn = document.getElementById('profileSettingsBtn');
   const profileSettingsModal = document.getElementById('profileSettingsModal');
@@ -524,8 +712,26 @@ document.addEventListener('DOMContentLoaded', () => {
   if (closeEditModalBtn) {
     closeEditModalBtn.addEventListener('click', () => {
       const modal = document.getElementById('editPlaceModal');
+      const form = document.getElementById('editPlaceForm') as HTMLFormElement;
+      const modalTitle = modal?.querySelector('h3') as HTMLHeadingElement;
+      const submitBtn = form?.querySelector('button[type="submit"]') as HTMLButtonElement;
+      
       if (modal) {
         modal.classList.add('hidden');
+        
+        // Reset modal title and button text
+        if (modalTitle) {
+          modalTitle.textContent = 'Edit Place';
+        }
+        if (submitBtn) {
+          submitBtn.textContent = 'Save Changes';
+          submitBtn.disabled = false;
+        }
+        
+        // Reset form
+        if (form) {
+          form.reset();
+        }
       }
     });
   }
@@ -540,6 +746,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const nameInput = document.getElementById('editPlaceName') as HTMLInputElement;
       const descriptionInput = document.getElementById('editPlaceDescription') as HTMLTextAreaElement;
       const locationInput = document.getElementById('editPlaceLocation') as HTMLInputElement;
+      const submitBtn = form?.querySelector('button[type="submit"]') as HTMLButtonElement;
+      const modalTitle = modal?.querySelector('h3') as HTMLHeadingElement;
 
       if (modal && form && idInput && nameInput && descriptionInput && locationInput) {
         // Clear form
@@ -548,11 +756,25 @@ document.addEventListener('DOMContentLoaded', () => {
         descriptionInput.value = '';
         locationInput.value = '';
 
+        // Update modal title and button text for add mode
+        if (modalTitle) {
+          modalTitle.textContent = 'Add New Place';
+        }
+        if (submitBtn) {
+          submitBtn.textContent = 'Add Place';
+        }
+
         modal.classList.remove('hidden');
 
-        // Handle form submission
-        form.onsubmit = async (e) => {
+        // Handle form submission for adding new place
+        const handleSubmit = async (e: Event) => {
           e.preventDefault();
+          
+          // Show loading state
+          if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Adding...';
+          }
           
           const { error } = await supabase
             .from('places_to_visit')
@@ -565,13 +787,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
           if (error) {
             console.error('Error adding place:', error);
+            showNotification('Error adding place. Please try again.', 'error');
+            // Reset button state
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = 'Add Place';
+            }
             return;
           }
 
+          showNotification('Place added successfully!', 'success');
           modal.classList.add('hidden');
           loadPlaces(); // Reload the places list
+          
+          // Reset button state
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Add Place';
+          }
+
+          // Remove the event listener to prevent conflicts
+          form.removeEventListener('submit', handleSubmit);
         };
+
+        // Remove any existing submit handlers and add the new one
+        form.removeEventListener('submit', handleSubmit);
+        form.addEventListener('submit', handleSubmit);
       }
     });
   }
-}); 
+} 
