@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { logAction, getLogs } from '../../utils/logging';
 
 const supabase = createClient(
   'https://srfcewglmzczveopbwsk.supabase.co',
@@ -36,21 +37,44 @@ export function DashboardPage() {
         const role = roleData.role.charAt(0).toUpperCase() + roleData.role.slice(1);
         roleElement.textContent = role;
 
-        // Show/hide admin tabs based on role
         const adminTabs = document.getElementById('adminTabs');
-        if (adminTabs) {
-          if (roleData.role === 'admin') {
-            adminTabs.classList.remove('hidden');
-            // Load places if admin
-            loadPlaces();
-          } else {
-            adminTabs.classList.add('hidden');
-            // Hide places content for non-admin users
-            const placesContent = document.getElementById('placesContent');
-            if (placesContent) {
-              placesContent.classList.add('hidden');
-            }
-          }
+        const logsTab = document.getElementById('logsTab');
+        const placesTab = document.getElementById('placesTab');
+        const accountsTab = document.getElementById('accountsTab');
+        const placesContent = document.getElementById('placesContent');
+        const accountsContent = document.getElementById('accountsContent');
+        const logsContent = document.getElementById('logsContent');
+
+        if (roleData.role === 'log') {
+          // Only show logs tab and content
+          if (adminTabs) adminTabs.classList.remove('hidden');
+          if (logsTab) logsTab.classList.remove('hidden');
+          if (placesTab) placesTab.classList.add('hidden');
+          if (accountsTab) accountsTab.classList.add('hidden');
+          if (placesContent) placesContent.classList.add('hidden');
+          if (accountsContent) accountsContent.classList.add('hidden');
+          if (logsContent) logsContent.classList.remove('hidden');
+          // Load logs immediately
+          loadLogs();
+        } else if (roleData.role === 'admin') {
+          // Admin: show admin tabs, hide logs
+          if (adminTabs) adminTabs.classList.remove('hidden');
+          if (logsTab) logsTab.classList.add('hidden');
+          if (placesTab) placesTab.classList.remove('hidden');
+          if (accountsTab) accountsTab.classList.remove('hidden');
+          if (placesContent) placesContent.classList.remove('hidden');
+          if (accountsContent) accountsContent.classList.add('hidden');
+          if (logsContent) logsContent.classList.add('hidden');
+          loadPlaces();
+        } else {
+          // Other roles: hide all admin/logs tabs
+          if (adminTabs) adminTabs.classList.add('hidden');
+          if (logsTab) logsTab.classList.add('hidden');
+          if (placesTab) placesTab.classList.add('hidden');
+          if (accountsTab) accountsTab.classList.add('hidden');
+          if (placesContent) placesContent.classList.add('hidden');
+          if (accountsContent) accountsContent.classList.add('hidden');
+          if (logsContent) logsContent.classList.add('hidden');
         }
       }
     }
@@ -58,16 +82,21 @@ export function DashboardPage() {
     // Setup tab switching
     const placesTab = document.getElementById('placesTab');
     const accountsTab = document.getElementById('accountsTab');
+    const logsTab = document.getElementById('logsTab');
     const placesContent = document.getElementById('placesContent');
     const accountsContent = document.getElementById('accountsContent');
+    const logsContent = document.getElementById('logsContent');
 
     placesTab?.addEventListener('click', () => {
       placesTab.classList.add('bg-blue-600', 'text-white');
       placesTab.classList.remove('bg-gray-100', 'text-gray-700');
       accountsTab?.classList.remove('bg-blue-600', 'text-white');
       accountsTab?.classList.add('bg-gray-100', 'text-gray-700');
+      logsTab?.classList.remove('bg-blue-600', 'text-white');
+      logsTab?.classList.add('bg-gray-100', 'text-gray-700');
       placesContent?.classList.remove('hidden');
       accountsContent?.classList.add('hidden');
+      logsContent?.classList.add('hidden');
     });
 
     accountsTab?.addEventListener('click', () => {
@@ -75,11 +104,29 @@ export function DashboardPage() {
       accountsTab.classList.remove('bg-gray-100', 'text-gray-700');
       placesTab?.classList.remove('bg-blue-600', 'text-white');
       placesTab?.classList.add('bg-gray-100', 'text-gray-700');
+      logsTab?.classList.remove('bg-blue-600', 'text-white');
+      logsTab?.classList.add('bg-gray-100', 'text-gray-700');
       accountsContent?.classList.remove('hidden');
       placesContent?.classList.add('hidden');
+      logsContent?.classList.add('hidden');
       
       // Load accounts when switching to accounts tab
       loadAccounts();
+    });
+
+    logsTab?.addEventListener('click', () => {
+      logsTab.classList.add('bg-blue-600', 'text-white');
+      logsTab.classList.remove('bg-gray-100', 'text-gray-700');
+      placesTab?.classList.remove('bg-blue-600', 'text-white');
+      placesTab?.classList.add('bg-gray-100', 'text-gray-700');
+      accountsTab?.classList.remove('bg-blue-600', 'text-white');
+      accountsTab?.classList.add('bg-gray-100', 'text-gray-700');
+      logsContent?.classList.remove('hidden');
+      placesContent?.classList.add('hidden');
+      accountsContent?.classList.add('hidden');
+      
+      // Load logs when switching to logs tab
+      loadLogs();
     });
 
     // Show profile settings button when logged in
@@ -122,6 +169,12 @@ export function DashboardPage() {
             >
               Accounts
             </button>
+            <button 
+              id="logsTab"
+              class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+            >
+              Logs
+            </button>
           </div>
         </div>
       </div>
@@ -144,6 +197,21 @@ export function DashboardPage() {
 
       <div id="accountsContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-6">
         <!-- Accounts will be loaded here -->
+      </div>
+
+      <div id="logsContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">System Logs</h2>
+          <button 
+            id="refreshLogsBtn"
+            class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            Refresh Logs
+          </button>
+        </div>
+        <div id="logsList" class="space-y-4">
+          <!-- Logs will be loaded here -->
+        </div>
       </div>
 
       <!-- Edit Place Modal -->
@@ -396,6 +464,101 @@ async function loadAccounts() {
   }
 }
 
+// Function to load logs from the database
+async function loadLogs() {
+  const logs = await getLogs();
+
+  const logsList = document.getElementById('logsList');
+  if (logsList) {
+    if (logs.length === 0) {
+      logsList.innerHTML = `
+        <p class="text-gray-600 dark:text-gray-300">No logs found.</p>
+      `;
+      return;
+    }
+
+    logsList.innerHTML = `
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Timestamp</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">User</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Action</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Details</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+            ${logs.map((log: any) => `
+              <tr>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  ${new Date(log.created_at).toLocaleString()}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                  ${log.user_id ? log.user_id.substring(0, 8) + '...' : 'Unknown User'}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                    log.action === 'password_change' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                    log.action === 'place_update' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                    log.action === 'place_availability_toggle' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                    log.action === 'place_create' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                    'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                  }">
+                    ${log.action.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                  ${formatLogDetails(log.details, log.action)}
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+}
+
+// Function to format log details for display
+function formatLogDetails(details: any, action?: string): string {
+  if (!details) return 'No details';
+
+  try {
+    if (typeof details === 'string') {
+      return details;
+    }
+
+    // Pretty formatting for known log actions
+    if (details.place_id && details.hasOwnProperty('is_available')) {
+      // place_availability_toggle
+      return `Place ID: <span class="font-mono">${String(details.place_id).substring(0, 8)}...</span><br>Availability: <span class="font-semibold">${details.is_available ? 'Available' : 'Unavailable'}</span>`;
+    }
+    if (details.place_id && details.old_name !== undefined && details.new_name !== undefined) {
+      // place_update
+      return `Place ID: <span class="font-mono">${String(details.place_id).substring(0, 8)}...</span><br>
+        <span class="block">Name: <span class="line-through text-red-500">${details.old_name}</span> → <span class="text-green-600">${details.new_name}</span></span>
+        <span class="block">Description: <span class="line-through text-red-500">${details.old_description || 'None'}</span> → <span class="text-green-600">${details.new_description || 'None'}</span></span>
+        <span class="block">Location: <span class="line-through text-red-500">${details.old_location}</span> → <span class="text-green-600">${details.new_location}</span></span>`;
+    }
+    if (details.place_name && details.place_location) {
+      // place_create
+      return `New Place: <span class="font-semibold">${details.place_name}</span><br>Description: ${details.place_description || 'None'}<br>Location: ${details.place_location}`;
+    }
+    if (details.timestamp) {
+      // password_change
+      return `Password changed at <span class="font-mono">${new Date(details.timestamp).toLocaleString()}</span>`;
+    }
+
+    // Fallback: generic pretty print
+    return Object.entries(details)
+      .map(([key, value]) => `<span class="block"><span class="font-semibold">${key}:</span> ${typeof value === 'string' && value.length > 32 ? value.substring(0, 32) + '...' : value}</span>`)
+      .join('');
+  } catch (error) {
+    return 'Error formatting details';
+  }
+}
+
 // Function to change user role
 async function changeUserRole(userId: string, newRole: string) {
   // Show confirmation popup
@@ -443,6 +606,12 @@ async function togglePlaceAvailability(placeId: string, isAvailable: boolean) {
     // Show error message
     showNotification('Error updating availability. Please try again.', 'error');
   } else {
+    // Log the action
+    await logAction('place_availability_toggle', {
+      place_id: placeId,
+      is_available: isAvailable
+    });
+    
     // Show success message
     showNotification(`Place ${isAvailable ? 'made available' : 'made unavailable'} successfully!`, 'success');
   }
@@ -519,6 +688,17 @@ async function editPlace(placeId: string) {
         }
         return;
       }
+
+      // Log the action
+      await logAction('place_update', {
+        place_id: placeId,
+        old_name: place.name,
+        new_name: nameInput.value,
+        old_description: place.description,
+        new_description: descriptionInput.value,
+        old_location: place.location,
+        new_location: locationInput.value
+      });
 
       showNotification('Place updated successfully!', 'success');
       modal.classList.add('hidden');
@@ -681,6 +861,11 @@ function setupModalEventListeners() {
 
           if (error) throw error;
 
+          // Log the password change
+          await logAction('password_change', {
+            timestamp: new Date().toISOString()
+          });
+
           // Show success message
           if (passwordSuccess) {
             passwordSuccess.textContent = 'Password updated successfully';
@@ -796,6 +981,13 @@ function setupModalEventListeners() {
             return;
           }
 
+          // Log the action
+          await logAction('place_create', {
+            place_name: nameInput.value,
+            place_description: descriptionInput.value,
+            place_location: locationInput.value
+          });
+
           showNotification('Place added successfully!', 'success');
           modal.classList.add('hidden');
           loadPlaces(); // Reload the places list
@@ -814,6 +1006,15 @@ function setupModalEventListeners() {
         form.removeEventListener('submit', handleSubmit);
         form.addEventListener('submit', handleSubmit);
       }
+    });
+  }
+
+  // Refresh logs button
+  const refreshLogsBtn = document.getElementById('refreshLogsBtn');
+  if (refreshLogsBtn) {
+    refreshLogsBtn.addEventListener('click', () => {
+      loadLogs();
+      showNotification('Logs refreshed successfully!', 'success');
     });
   }
 } 

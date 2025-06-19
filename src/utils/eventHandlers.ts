@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { logAction } from './logging';
 
 const supabase = createClient(
   'https://srfcewglmzczveopbwsk.supabase.co',
@@ -254,6 +255,11 @@ export function setupEventListeners() {
         });
 
         if (error) throw error;
+
+        // Log the password change
+        await logAction('password_change', {
+          timestamp: new Date().toISOString()
+        });
 
         if (passwordSuccess) {
           passwordSuccess.textContent = 'Password updated successfully';
