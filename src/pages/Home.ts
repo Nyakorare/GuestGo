@@ -27,6 +27,36 @@ export function HomePage() {
       emailVerificationSection.classList.add('hidden');
     }
 
+    // Check user role and conditionally show/hide schedule button
+    const scheduleNowBtn = document.getElementById('scheduleNowBtn');
+    if (scheduleNowBtn) {
+      if (user) {
+        // User is logged in, check their role
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
+
+        if (roleData) {
+          const userRole = roleData.role;
+          // Hide button for admin, log, or personnel roles
+          if (userRole === 'admin' || userRole === 'log' || userRole === 'personnel') {
+            scheduleNowBtn.classList.add('hidden');
+          } else {
+            // Show button for visitor, guest, or any other roles
+            scheduleNowBtn.classList.remove('hidden');
+          }
+        } else {
+          // No role found, show button (default behavior)
+          scheduleNowBtn.classList.remove('hidden');
+        }
+      } else {
+        // User is not logged in, show button
+        scheduleNowBtn.classList.remove('hidden');
+      }
+    }
+
     // Setup event listeners
     setupEventListeners();
   }, 0);
@@ -107,6 +137,7 @@ export function HomePage() {
                     Send Code
                   </button>
                 </div>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Only Gmail addresses are currently supported</p>
                 <div id="verificationCodeContainer" class="hidden mt-2">
                   <div class="flex space-x-2">
                     <input 

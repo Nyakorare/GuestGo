@@ -14,6 +14,12 @@ interface Place {
   is_available: boolean;
 }
 
+interface Account {
+  user_id: string;
+  role: string;
+  created_at: string;
+}
+
 export function DashboardPage() {
   // Initialize the page
   setTimeout(async () => {
@@ -183,12 +189,42 @@ export function DashboardPage() {
       <div id="placesContent" class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
         <div class="flex justify-between items-center mb-6">
           <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">Places Management</h2>
-          <button 
-            id="addPlaceBtn"
-            class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          >
-            Add New Place
-          </button>
+          <div class="flex items-center space-x-4">
+            <!-- Search and Filter Section -->
+            <div class="flex items-center space-x-3">
+              <!-- Search Input -->
+              <div class="relative">
+                <input 
+                  type="text" 
+                  id="placesSearchInput"
+                  placeholder="Search places..."
+                  class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                >
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                  </svg>
+                </div>
+              </div>
+              
+              <!-- Availability Filter -->
+              <select 
+                id="availabilityFilter"
+                class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+              >
+                <option value="all">All Places</option>
+                <option value="available">Available Only</option>
+                <option value="unavailable">Unavailable Only</option>
+              </select>
+            </div>
+            
+            <button 
+              id="addPlaceBtn"
+              class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+              Add New Place
+            </button>
+          </div>
         </div>
         <div id="placesList" class="space-y-4">
           <!-- Places will be loaded here -->
@@ -196,7 +232,43 @@ export function DashboardPage() {
       </div>
 
       <div id="accountsContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-        <!-- Accounts will be loaded here -->
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">Accounts Management</h2>
+          <div class="flex items-center space-x-4">
+            <!-- Search and Filter Section -->
+            <div class="flex items-center space-x-3">
+              <!-- Search Input -->
+              <div class="relative">
+                <input 
+                  type="text" 
+                  id="accountsSearchInput"
+                  placeholder="Search accounts..."
+                  class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                >
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                  </svg>
+                </div>
+              </div>
+              
+              <!-- Role Filter -->
+              <select 
+                id="roleFilter"
+                class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+              >
+                <option value="all">All Roles</option>
+                <option value="log">Log</option>
+                <option value="personnel">Personnel</option>
+                <option value="visitor">Visitor</option>
+                <option value="guest">Guest</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div id="accountsList">
+          <!-- Accounts will be loaded here -->
+        </div>
       </div>
 
       <div id="logsContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-6">
@@ -290,6 +362,10 @@ export function DashboardPage() {
                 <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Your Role</h4>
                 <p id="modalUserRole" class="mt-1 text-lg font-semibold text-blue-600 dark:text-blue-500">Loading...</p>
               </div>
+              <div>
+                <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">User ID</h4>
+                <p id="modalUserId" class="mt-1 text-sm font-mono text-gray-600 dark:text-gray-400">Loading...</p>
+              </div>
               <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
                 <form id="passwordChangeForm" class="space-y-4">
                   <div>
@@ -343,6 +419,13 @@ export function DashboardPage() {
 }
 
 // Function to load places from the database
+let allPlaces: Place[] = [];
+let filteredPlaces: Place[] = [];
+
+// Function to load accounts from the database
+let allAccounts: Account[] = [];
+let filteredAccounts: Account[] = [];
+
 async function loadPlaces() {
   const { data: places, error } = await supabase
     .from('places_to_visit')
@@ -354,9 +437,25 @@ async function loadPlaces() {
     return;
   }
 
+  allPlaces = places || [];
+  filteredPlaces = [...allPlaces];
+  renderPlaces();
+}
+
+// Function to render places based on current filters
+function renderPlaces() {
   const placesList = document.getElementById('placesList');
   if (placesList) {
-    placesList.innerHTML = places.map((place: Place) => `
+    if (filteredPlaces.length === 0) {
+      placesList.innerHTML = `
+        <div class="text-center py-8">
+          <p class="text-gray-500 dark:text-gray-400">No places found matching your criteria.</p>
+        </div>
+      `;
+      return;
+    }
+
+    placesList.innerHTML = filteredPlaces.map((place: Place) => `
       <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
         <div class="flex-1">
           <h3 class="text-lg font-medium text-gray-900 dark:text-white">${place.name}</h3>
@@ -389,6 +488,37 @@ async function loadPlaces() {
   }
 }
 
+// Function to apply search and filter
+function applySearchAndFilter() {
+  const searchInput = document.getElementById('placesSearchInput') as HTMLInputElement;
+  const availabilityFilter = document.getElementById('availabilityFilter') as HTMLSelectElement;
+  
+  const searchTerm = searchInput?.value.toLowerCase() || '';
+  const availabilityValue = availabilityFilter?.value || 'all';
+
+  // Start with all places
+  let filtered = [...allPlaces];
+
+  // Apply search filter
+  if (searchTerm) {
+    filtered = filtered.filter(place => 
+      place.name.toLowerCase().includes(searchTerm) ||
+      place.description?.toLowerCase().includes(searchTerm) ||
+      place.location.toLowerCase().includes(searchTerm)
+    );
+  }
+
+  // Apply availability filter
+  if (availabilityValue === 'available') {
+    filtered = filtered.filter(place => place.is_available);
+  } else if (availabilityValue === 'unavailable') {
+    filtered = filtered.filter(place => !place.is_available);
+  }
+
+  filteredPlaces = filtered;
+  renderPlaces();
+}
+
 // Function to load accounts from the database
 async function loadAccounts() {
   const { data: accounts, error } = await supabase
@@ -402,18 +532,25 @@ async function loadAccounts() {
     return;
   }
 
-  const accountsContent = document.getElementById('accountsContent');
-  if (accountsContent) {
-    if (accounts.length === 0) {
-      accountsContent.innerHTML = `
-        <h2 class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">Accounts Management</h2>
-        <p class="text-gray-600 dark:text-gray-300">No accounts found.</p>
+  allAccounts = accounts || [];
+  filteredAccounts = [...allAccounts];
+  renderAccounts();
+}
+
+// Function to render accounts based on current filters
+function renderAccounts() {
+  const accountsList = document.getElementById('accountsList');
+  if (accountsList) {
+    if (filteredAccounts.length === 0) {
+      accountsList.innerHTML = `
+        <div class="text-center py-8">
+          <p class="text-gray-500 dark:text-gray-400">No accounts found matching your criteria.</p>
+        </div>
       `;
       return;
     }
 
-    accountsContent.innerHTML = `
-      <h2 class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">Accounts Management</h2>
+    accountsList.innerHTML = `
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead class="bg-gray-50 dark:bg-gray-800">
@@ -425,7 +562,7 @@ async function loadAccounts() {
             </tr>
           </thead>
           <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-            ${accounts.map((account: any) => `
+            ${filteredAccounts.map((account: Account) => `
               <tr>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white font-mono">
                   ${account.user_id.substring(0, 8)}...
@@ -462,6 +599,35 @@ async function loadAccounts() {
       </div>
     `;
   }
+}
+
+// Function to apply search and filter for accounts
+function applySearchAndFilterForAccounts() {
+  const searchInput = document.getElementById('accountsSearchInput') as HTMLInputElement;
+  const roleFilter = document.getElementById('roleFilter') as HTMLSelectElement;
+  
+  const searchTerm = searchInput?.value.toLowerCase() || '';
+  const roleValue = roleFilter?.value || 'all';
+
+  // Start with all accounts
+  let filtered = [...allAccounts];
+
+  // Apply search filter
+  if (searchTerm) {
+    filtered = filtered.filter(account => 
+      account.user_id.toLowerCase().includes(searchTerm) ||
+      account.role.toLowerCase().includes(searchTerm) ||
+      new Date(account.created_at).toLocaleDateString().includes(searchTerm)
+    );
+  }
+
+  // Apply role filter
+  if (roleValue !== 'all') {
+    filtered = filtered.filter(account => account.role === roleValue);
+  }
+
+  filteredAccounts = filtered;
+  renderAccounts();
 }
 
 // Function to load logs from the database
@@ -803,6 +969,12 @@ function setupModalEventListeners() {
         } else {
           modalUserRole.textContent = 'User';
         }
+
+        // Set user ID
+        const modalUserId = document.getElementById('modalUserId');
+        if (modalUserId) {
+          modalUserId.textContent = user.id;
+        }
       }
       
       profileSettingsModal.classList.remove('hidden');
@@ -1017,4 +1189,32 @@ function setupModalEventListeners() {
       showNotification('Logs refreshed successfully!', 'success');
     });
   }
+
+  // Search and filter event listeners
+  const placesSearchInput = document.getElementById('placesSearchInput');
+  const availabilityFilter = document.getElementById('availabilityFilter');
+
+  // Search input event listener
+  placesSearchInput?.addEventListener('input', () => {
+    applySearchAndFilter();
+  });
+
+  // Availability filter event listener
+  availabilityFilter?.addEventListener('change', () => {
+    applySearchAndFilter();
+  });
+
+  // Accounts search and filter event listeners
+  const accountsSearchInput = document.getElementById('accountsSearchInput');
+  const roleFilter = document.getElementById('roleFilter');
+
+  // Accounts search input event listener
+  accountsSearchInput?.addEventListener('input', () => {
+    applySearchAndFilterForAccounts();
+  });
+
+  // Role filter event listener
+  roleFilter?.addEventListener('change', () => {
+    applySearchAndFilterForAccounts();
+  });
 } 

@@ -28,7 +28,12 @@ export async function setupEventListeners() {
     places.forEach(place => {
       const option = document.createElement('option');
       option.value = place.id;
-      option.textContent = place.name;
+      if (place.is_available) {
+        option.textContent = place.name;
+      } else {
+        option.textContent = `${place.name} (currently unavailable)`;
+        option.disabled = true;
+      }
       placeToVisitSelect.appendChild(option);
     });
 
@@ -52,8 +57,8 @@ export async function setupEventListeners() {
             const checkboxDiv = document.createElement('div');
             checkboxDiv.className = 'flex items-center';
             checkboxDiv.innerHTML = `
-              <input type="checkbox" id="place_${place.id}" name="places" value="${place.id}" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-              <label for="place_${place.id}" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">${place.name}</label>
+              <input type="checkbox" id="place_${place.id}" name="places" value="${place.id}" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" ${!place.is_available ? 'disabled' : ''}>
+              <label for="place_${place.id}" class="ml-2 block text-sm ${place.is_available ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-500'}">${place.name}${!place.is_available ? ' (currently unavailable)' : ''}</label>
             `;
             multiplePlacesContainer.appendChild(checkboxDiv);
           });
