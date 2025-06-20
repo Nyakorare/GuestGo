@@ -75,3 +75,34 @@
     transform: scale(1);
   }
 }
+
+/* Custom Scrollbar for horizontal scroll containers */
+.contact-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #3b82f6 #e5e7eb; /* blue-500 on gray-200 */
+}
+.contact-scrollbar::-webkit-scrollbar {
+  height: 10px;
+}
+.contact-scrollbar::-webkit-scrollbar-track {
+  background: #e5e7eb; /* gray-200 */
+  border-radius: 8px;
+}
+.contact-scrollbar::-webkit-scrollbar-thumb {
+  background: #3b82f6; /* blue-500 */
+  border-radius: 8px;
+  transition: background 0.3s;
+}
+.contact-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #2563eb; /* blue-600 */
+}
+
+/* Hover animation for the contact cards container */
+.contact-cards-group:hover .contact-card {
+  transform: scale(1.04) translateY(-4px);
+  box-shadow: 0 8px 24px 0 rgba(59, 130, 246, 0.12);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.contact-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
