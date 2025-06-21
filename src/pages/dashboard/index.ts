@@ -140,9 +140,6 @@ export function DashboardPage() {
     if (profileSettingsBtn) {
       profileSettingsBtn.classList.remove('hidden');
     }
-
-    // Setup modal event listeners
-    setupModalEventListeners();
   }, 0);
 
   return `
@@ -274,12 +271,44 @@ export function DashboardPage() {
       <div id="logsContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-6">
         <div class="flex justify-between items-center mb-6">
           <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">System Logs</h2>
-          <button 
-            id="refreshLogsBtn"
-            class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          >
-            Refresh Logs
-          </button>
+          <div class="flex items-center space-x-4">
+            <!-- Search and Filter Section -->
+            <div class="flex items-center space-x-3">
+              <!-- Search Input -->
+              <div class="relative">
+                <input 
+                  type="text" 
+                  id="logsSearchInput"
+                  placeholder="Search logs..."
+                  class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                >
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                  </svg>
+                </div>
+              </div>
+              
+              <!-- Action Filter -->
+              <select 
+                id="actionFilter"
+                class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+              >
+                <option value="all">All Actions</option>
+                <option value="password_change">Password Change</option>
+                <option value="place_update">Place Update</option>
+                <option value="place_availability_toggle">Place Availability Toggle</option>
+                <option value="place_create">Place Create</option>
+              </select>
+            </div>
+            
+            <button 
+              id="refreshLogsBtn"
+              class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+              Refresh Logs
+            </button>
+          </div>
         </div>
         <div id="logsList" class="space-y-4">
           <!-- Logs will be loaded here -->
@@ -341,79 +370,6 @@ export function DashboardPage() {
           </div>
         </div>
       </div>
-
-      <!-- Profile Settings Modal -->
-      <div id="profileSettingsModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
-        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
-          <div class="mt-3">
-            <div class="flex justify-between items-center mb-4">
-              <h3 class="text-lg font-medium text-gray-900 dark:text-white">Profile Settings</h3>
-              <button 
-                id="closeProfileModalBtn"
-                class="text-gray-400 hover:text-gray-500 focus:outline-none"
-              >
-                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div class="space-y-4">
-              <div>
-                <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Your Role</h4>
-                <p id="modalUserRole" class="mt-1 text-lg font-semibold text-blue-600 dark:text-blue-500">Loading...</p>
-              </div>
-              <div>
-                <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">User ID</h4>
-                <p id="modalUserId" class="mt-1 text-sm font-mono text-gray-600 dark:text-gray-400">Loading...</p>
-              </div>
-              <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
-                <form id="passwordChangeForm" class="space-y-4">
-                  <div>
-                    <label for="currentPassword" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Current Password</label>
-                    <input 
-                      type="password" 
-                      id="currentPassword" 
-                      class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      required
-                    >
-                  </div>
-                  <div>
-                    <label for="newPassword" class="block text-sm font-medium text-gray-700 dark:text-gray-300">New Password</label>
-                    <input 
-                      type="password" 
-                      id="newPassword" 
-                      class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      required
-                      minlength="6"
-                    >
-                  </div>
-                  <div>
-                    <label for="confirmPassword" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Confirm New Password</label>
-                    <input 
-                      type="password" 
-                      id="confirmPassword" 
-                      class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      required
-                      minlength="6"
-                    >
-                  </div>
-                  <div id="passwordError" class="hidden text-red-600 text-sm"></div>
-                  <div id="passwordSuccess" class="hidden text-green-600 text-sm"></div>
-                  <div class="flex justify-end">
-                    <button 
-                      type="submit"
-                      id="changePasswordBtn"
-                      class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                    >
-                      Change Password
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   `;
 }
@@ -425,6 +381,10 @@ let filteredPlaces: Place[] = [];
 // Function to load accounts from the database
 let allAccounts: Account[] = [];
 let filteredAccounts: Account[] = [];
+
+// Function to load logs from the database
+let allLogs: any[] = [];
+let filteredLogs: any[] = [];
 
 async function loadPlaces() {
   const { data: places, error } = await supabase
@@ -632,13 +592,30 @@ function applySearchAndFilterForAccounts() {
 
 // Function to load logs from the database
 async function loadLogs() {
-  const logs = await getLogs();
+  try {
+    const logs = await getLogs();
+    allLogs = logs || [];
+    filteredLogs = [...allLogs];
+    renderLogs();
+  } catch (error) {
+    console.error('Error loading logs:', error);
+    const logsList = document.getElementById('logsList');
+    if (logsList) {
+      logsList.innerHTML = `
+        <p class="text-red-600 dark:text-red-400">Error loading logs. Please try again.</p>
+      `;
+    }
+    throw error; // Re-throw the error so it can be caught by the calling function
+  }
+}
 
+// Function to render logs based on current filters
+function renderLogs() {
   const logsList = document.getElementById('logsList');
   if (logsList) {
-    if (logs.length === 0) {
+    if (filteredLogs.length === 0) {
       logsList.innerHTML = `
-        <p class="text-gray-600 dark:text-gray-300">No logs found.</p>
+        <p class="text-gray-600 dark:text-gray-300">No logs found matching your criteria.</p>
       `;
       return;
     }
@@ -655,7 +632,7 @@ async function loadLogs() {
             </tr>
           </thead>
           <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-            ${logs.map((log: any) => `
+            ${filteredLogs.map((log: any) => `
               <tr>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                   ${new Date(log.created_at).toLocaleString()}
@@ -918,152 +895,10 @@ document.addEventListener('DOMContentLoaded', () => {
 (window as any).editPlace = editPlace;
 (window as any).changeUserRole = changeUserRole;
 
-// Setup modal event listeners
-function setupModalEventListeners() {
-  // Profile settings button
-  const profileSettingsBtn = document.getElementById('profileSettingsBtn');
-  const profileSettingsModal = document.getElementById('profileSettingsModal');
-  const closeProfileModalBtn = document.getElementById('closeProfileModalBtn');
-  const modalUserRole = document.getElementById('modalUserRole');
-  const passwordChangeForm = document.getElementById('passwordChangeForm') as HTMLFormElement;
-  const passwordError = document.getElementById('passwordError');
-  const passwordSuccess = document.getElementById('passwordSuccess');
-
-  // Function to close the modal
-  const closeModal = () => {
-    if (profileSettingsModal) {
-      profileSettingsModal.classList.add('hidden');
-      // Reset form and messages
-      if (passwordChangeForm) {
-        passwordChangeForm.reset();
-      }
-      if (passwordError) {
-        passwordError.classList.add('hidden');
-        passwordError.textContent = '';
-      }
-      if (passwordSuccess) {
-        passwordSuccess.classList.add('hidden');
-        passwordSuccess.textContent = '';
-      }
-    }
-  };
-
-  if (profileSettingsBtn && profileSettingsModal && closeProfileModalBtn && modalUserRole) {
-    // Show modal when clicking the gear icon
-    profileSettingsBtn.addEventListener('click', async () => {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        // Get user's role
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .single();
-
-        if (roleData) {
-          // Capitalize first letter of role
-          const role = roleData.role.charAt(0).toUpperCase() + roleData.role.slice(1);
-          modalUserRole.textContent = role;
-        } else {
-          modalUserRole.textContent = 'User';
-        }
-
-        // Set user ID
-        const modalUserId = document.getElementById('modalUserId');
-        if (modalUserId) {
-          modalUserId.textContent = user.id;
-        }
-      }
-      
-      profileSettingsModal.classList.remove('hidden');
-    });
-
-    // Close modal when clicking the close button
-    closeProfileModalBtn.addEventListener('click', closeModal);
-
-    // Close modal when clicking outside
-    profileSettingsModal.addEventListener('click', (e) => {
-      if (e.target === profileSettingsModal) {
-        closeModal();
-      }
-    });
-
-    // Close modal when pressing Escape key
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !profileSettingsModal.classList.contains('hidden')) {
-        closeModal();
-      }
-    });
-
-    // Handle password change
-    if (passwordChangeForm) {
-      passwordChangeForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const currentPassword = (document.getElementById('currentPassword') as HTMLInputElement).value;
-        const newPassword = (document.getElementById('newPassword') as HTMLInputElement).value;
-        const confirmPassword = (document.getElementById('confirmPassword') as HTMLInputElement).value;
-
-        // Reset messages
-        if (passwordError) {
-          passwordError.classList.add('hidden');
-          passwordError.textContent = '';
-        }
-        if (passwordSuccess) {
-          passwordSuccess.classList.add('hidden');
-          passwordSuccess.textContent = '';
-        }
-
-        // Validate passwords match
-        if (newPassword !== confirmPassword) {
-          if (passwordError) {
-            passwordError.textContent = 'New passwords do not match';
-            passwordError.classList.remove('hidden');
-          }
-          return;
-        }
-
-        try {
-          // Update password
-          const { error } = await supabase.auth.updateUser({
-            password: newPassword
-          });
-
-          if (error) throw error;
-
-          // Log the password change
-          await logAction('password_change', {
-            timestamp: new Date().toISOString()
-          });
-
-          // Show success message
-          if (passwordSuccess) {
-            passwordSuccess.textContent = 'Password updated successfully';
-            passwordSuccess.classList.remove('hidden');
-          }
-
-          // Reset form
-          passwordChangeForm.reset();
-
-          // Hide success message after 3 seconds
-          setTimeout(() => {
-            if (passwordSuccess) {
-              passwordSuccess.classList.add('hidden');
-              passwordSuccess.textContent = '';
-            }
-          }, 3000);
-        } catch (err: any) {
-          if (passwordError) {
-            passwordError.textContent = err.message;
-            passwordError.classList.remove('hidden');
-          }
-        }
-      });
-    }
-  }
-
+// Setup dashboard-specific event listeners
+function setupDashboardEventListeners() {
+  console.log('Setting up dashboard event listeners...');
+  
   // Close edit modal button
   const closeEditModalBtn = document.getElementById('closeEditModalBtn');
   if (closeEditModalBtn) {
@@ -1182,12 +1017,32 @@ function setupModalEventListeners() {
   }
 
   // Refresh logs button
-  const refreshLogsBtn = document.getElementById('refreshLogsBtn');
+  const refreshLogsBtn = document.getElementById('refreshLogsBtn') as HTMLButtonElement;
+  console.log('Refresh logs button found:', !!refreshLogsBtn);
   if (refreshLogsBtn) {
-    refreshLogsBtn.addEventListener('click', () => {
-      loadLogs();
-      showNotification('Logs refreshed successfully!', 'success');
+    refreshLogsBtn.addEventListener('click', async () => {
+      console.log('Refresh logs button clicked');
+      try {
+        // Show loading state
+        refreshLogsBtn.disabled = true;
+        refreshLogsBtn.textContent = 'Refreshing...';
+        
+        // Load logs
+        await loadLogs();
+        
+        // Show success notification
+        showNotification('Logs refreshed successfully!', 'success');
+      } catch (error) {
+        console.error('Error refreshing logs:', error);
+        showNotification('Error refreshing logs. Please try again.', 'error');
+      } finally {
+        // Reset button state
+        refreshLogsBtn.disabled = false;
+        refreshLogsBtn.textContent = 'Refresh Logs';
+      }
     });
+  } else {
+    console.warn('Refresh logs button not found');
   }
 
   // Search and filter event listeners
@@ -1217,4 +1072,68 @@ function setupModalEventListeners() {
   roleFilter?.addEventListener('change', () => {
     applySearchAndFilterForAccounts();
   });
+
+  // Logs search and filter event listeners
+  const logsSearchInput = document.getElementById('logsSearchInput');
+  const actionFilter = document.getElementById('actionFilter');
+
+  // Logs search input event listener
+  logsSearchInput?.addEventListener('input', () => {
+    applySearchAndFilterForLogs();
+  });
+
+  // Action filter event listener
+  actionFilter?.addEventListener('change', () => {
+    applySearchAndFilterForLogs();
+  });
+  
+  console.log('Dashboard event listeners setup complete');
+}
+
+// Initialize dashboard event listeners
+setTimeout(() => {
+  setupDashboardEventListeners();
+}, 100);
+
+// Function to apply search and filter for logs
+function applySearchAndFilterForLogs() {
+  const searchInput = document.getElementById('logsSearchInput') as HTMLInputElement;
+  const actionFilter = document.getElementById('actionFilter') as HTMLSelectElement;
+  
+  const searchTerm = searchInput?.value.toLowerCase() || '';
+  const actionValue = actionFilter?.value || 'all';
+
+  // Start with all logs
+  let filtered = [...allLogs];
+
+  // Apply search filter
+  if (searchTerm) {
+    filtered = filtered.filter(log => {
+      // Search in user ID
+      const userId = log.user_id ? log.user_id.toLowerCase() : '';
+      if (userId.includes(searchTerm)) return true;
+      
+      // Search in action
+      const action = log.action ? log.action.toLowerCase() : '';
+      if (action.includes(searchTerm)) return true;
+      
+      // Search in details (convert to string for searching)
+      const details = log.details ? JSON.stringify(log.details).toLowerCase() : '';
+      if (details.includes(searchTerm)) return true;
+      
+      // Search in timestamp
+      const timestamp = new Date(log.created_at).toLocaleString().toLowerCase();
+      if (timestamp.includes(searchTerm)) return true;
+      
+      return false;
+    });
+  }
+
+  // Apply action filter
+  if (actionValue !== 'all') {
+    filtered = filtered.filter(log => log.action === actionValue);
+  }
+
+  filteredLogs = filtered;
+  renderLogs();
 } 

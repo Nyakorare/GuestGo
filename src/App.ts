@@ -119,6 +119,81 @@ export default function setupApp() {
 
     ${createLoginModal()}
     ${createSignupModal()}
+
+    <!-- Profile Settings Modal -->
+    <div id="profileSettingsModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
+          <div class="p-6">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white">Profile Settings</h3>
+              <button 
+                id="closeProfileModalBtn"
+                class="text-gray-400 hover:text-gray-500 focus:outline-none"
+              >
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div class="space-y-4">
+              <div>
+                <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Your Role</h4>
+                <p id="modalUserRole" class="mt-1 text-lg font-semibold text-blue-600 dark:text-blue-500">Loading...</p>
+              </div>
+              <div>
+                <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">User ID</h4>
+                <p id="modalUserId" class="mt-1 text-sm font-mono text-gray-600 dark:text-gray-400">Loading...</p>
+              </div>
+              <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <form id="passwordChangeForm" class="space-y-4">
+                  <div>
+                    <label for="currentPassword" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Current Password</label>
+                    <input 
+                      type="password" 
+                      id="currentPassword" 
+                      class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2"
+                      required
+                    >
+                  </div>
+                  <div>
+                    <label for="newPassword" class="block text-sm font-medium text-gray-700 dark:text-gray-300">New Password</label>
+                    <input 
+                      type="password" 
+                      id="newPassword" 
+                      class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2"
+                      required
+                      minlength="6"
+                    >
+                  </div>
+                  <div>
+                    <label for="confirmPassword" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Confirm New Password</label>
+                    <input 
+                      type="password" 
+                      id="confirmPassword" 
+                      class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2"
+                      required
+                      minlength="6"
+                    >
+                  </div>
+                  <div id="passwordError" class="hidden text-red-600 text-sm"></div>
+                  <div id="passwordSuccess" class="hidden text-green-600 text-sm"></div>
+                  <div class="flex justify-end">
+                    <button 
+                      type="submit"
+                      id="changePasswordBtn"
+                      class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    >
+                      Change Password
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   `;
 
   // Initialize page content

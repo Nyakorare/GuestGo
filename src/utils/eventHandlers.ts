@@ -150,6 +150,7 @@ export function setupEventListeners() {
       const passwordChangeForm = document.getElementById('passwordChangeForm') as HTMLFormElement;
       const passwordError = document.getElementById('passwordError');
       const passwordSuccess = document.getElementById('passwordSuccess');
+      const submitBtn = passwordChangeForm?.querySelector('button[type="submit"]') as HTMLButtonElement;
       
       if (passwordChangeForm) {
         passwordChangeForm.reset();
@@ -161,6 +162,10 @@ export function setupEventListeners() {
       if (passwordSuccess) {
         passwordSuccess.classList.add('hidden');
         passwordSuccess.textContent = '';
+      }
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Change Password';
       }
     }
   };
@@ -190,6 +195,8 @@ export function setupEventListeners() {
           .single();
 
         const modalUserRole = document.getElementById('modalUserRole');
+        const modalUserId = document.getElementById('modalUserId');
+        
         if (modalUserRole) {
           if (roleData) {
             // Capitalize first letter of role
@@ -198,6 +205,11 @@ export function setupEventListeners() {
           } else {
             modalUserRole.textContent = 'User';
           }
+        }
+
+        // Set user ID
+        if (modalUserId) {
+          modalUserId.textContent = user.id;
         }
       }
       
@@ -240,13 +252,58 @@ export function setupEventListeners() {
       const confirmPassword = (document.getElementById('confirmPassword') as HTMLInputElement).value;
       const passwordError = document.getElementById('passwordError');
       const passwordSuccess = document.getElementById('passwordSuccess');
+      const submitBtn = passwordChangeForm.querySelector('button[type="submit"]') as HTMLButtonElement;
 
+      // Reset messages
+      if (passwordError) {
+        passwordError.classList.add('hidden');
+        passwordError.textContent = '';
+      }
+      if (passwordSuccess) {
+        passwordSuccess.classList.add('hidden');
+        passwordSuccess.textContent = '';
+      }
+
+      // Validate current password is provided
+      if (!currentPassword) {
+        if (passwordError) {
+          passwordError.textContent = 'Current password is required';
+          passwordError.classList.remove('hidden');
+        }
+        return;
+      }
+
+      // Validate new password is provided
+      if (!newPassword) {
+        if (passwordError) {
+          passwordError.textContent = 'New password is required';
+          passwordError.classList.remove('hidden');
+        }
+        return;
+      }
+
+      // Validate new password length
+      if (newPassword.length < 6) {
+        if (passwordError) {
+          passwordError.textContent = 'New password must be at least 6 characters long';
+          passwordError.classList.remove('hidden');
+        }
+        return;
+      }
+
+      // Validate passwords match
       if (newPassword !== confirmPassword) {
         if (passwordError) {
           passwordError.textContent = 'New passwords do not match';
           passwordError.classList.remove('hidden');
         }
         return;
+      }
+
+      // Show loading state
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Updating...';
       }
 
       try {
@@ -269,13 +326,27 @@ export function setupEventListeners() {
           passwordError.classList.add('hidden');
         }
         passwordChangeForm.reset();
+
+        // Hide success message after 3 seconds
+        setTimeout(() => {
+          if (passwordSuccess) {
+            passwordSuccess.classList.add('hidden');
+            passwordSuccess.textContent = '';
+          }
+        }, 3000);
       } catch (err: any) {
         if (passwordError) {
-          passwordError.textContent = err.message;
+          passwordError.textContent = err.message || 'Failed to update password';
           passwordError.classList.remove('hidden');
         }
         if (passwordSuccess) {
           passwordSuccess.classList.add('hidden');
+        }
+      } finally {
+        // Reset button state
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Change Password';
         }
       }
     });
