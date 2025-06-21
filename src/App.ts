@@ -258,6 +258,47 @@ export default function setupApp() {
       if (welcomeMessage) welcomeMessage.classList.add('hidden');
     }
   });
+
+  // Add dashboard link reload functionality
+  const setupDashboardLinkReload = () => {
+    const dashboardLink = document.getElementById('dashboard-link');
+    const mobileDashboardLink = document.getElementById('mobile-dashboard-link');
+
+    // Desktop dashboard link
+    if (dashboardLink) {
+      dashboardLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        // First navigate to dashboard
+        window.location.hash = '#/dashboard';
+        // Then reload after a brief delay to allow navigation to complete
+        setTimeout(() => {
+          window.location.reload();
+        }, 100);
+      });
+    }
+
+    // Mobile dashboard link
+    if (mobileDashboardLink) {
+      mobileDashboardLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        // First navigate to dashboard
+        window.location.hash = '#/dashboard';
+        // Then reload after a brief delay to allow navigation to complete
+        setTimeout(() => {
+          window.location.reload();
+        }, 100);
+      });
+    }
+  };
+
+  // Setup dashboard link reload functionality
+  setupDashboardLinkReload();
+
+  // Re-setup dashboard link reload when auth state changes
+  supabase.auth.onAuthStateChange(() => {
+    // Small delay to ensure DOM elements are updated
+    setTimeout(setupDashboardLinkReload, 100);
+  });
 }
 
 // Function to handle navigation

@@ -180,6 +180,20 @@ export function setupAuthEventListeners() {
         }
 
         if (data.user) {
+          // Update the user_roles table with first_name and last_name
+          const { error: updateError } = await supabase
+            .from('user_roles')
+            .update({ 
+              first_name: firstName,
+              last_name: lastName
+            })
+            .eq('user_id', data.user.id);
+
+          if (updateError) {
+            console.error('Error updating user_roles with name data:', updateError);
+            // Don't throw error here as the account was created successfully
+          }
+
           // Show success message
           if (successDiv) {
             successDiv.innerHTML = `

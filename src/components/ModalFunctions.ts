@@ -7,16 +7,43 @@ const supabase = createClient(
 );
 
 export async function setupEventListeners() {
-  // Fetch places from database
-  const { data: places, error } = await supabase
+  // Fetch places from database with personnel assignments
+  const { data: places, error: placesError } = await supabase
     .from('places_to_visit')
     .select('*')
     .order('name');
 
-  if (error) {
-    console.error('Error fetching places:', error);
+  if (placesError) {
+    console.error('Error fetching places:', placesError);
     return;
   }
+
+  // Get personnel assignments to determine availability
+  let assignments: any[] = [];
+  try {
+    const { data: assignmentsData, error: assignmentsError } = await supabase
+      .from('place_personnel')
+      .select('place_id');
+
+    if (assignmentsError) {
+      console.error('Error fetching personnel assignments:', assignmentsError);
+      // Continue without assignments - places will be marked as unavailable
+    } else {
+      assignments = assignmentsData || [];
+    }
+  } catch (error) {
+    console.error('Error accessing place_personnel table:', error);
+    // Continue without assignments
+  }
+
+  // Create a set of places that have personnel assigned
+  const availablePlaceIds = new Set(assignments.map(a => a.place_id));
+
+  // Add availability information to places
+  const placesWithAvailability = places?.map(place => ({
+    ...place,
+    is_available: availablePlaceIds.has(place.id)
+  })) || [];
 
   // Function to toggle multiple places checkboxes
   const placeToVisitSelect = document.getElementById('placeToVisit') as HTMLSelectElement;
@@ -25,7 +52,7 @@ export async function setupEventListeners() {
     placeToVisitSelect.innerHTML = '<option value="">Select a place</option>';
     
     // Add places from database
-    places.forEach(place => {
+    placesWithAvailability.forEach(place => {
       const option = document.createElement('option');
       option.value = place.id;
       if (place.is_available) {
@@ -53,7 +80,7 @@ export async function setupEventListeners() {
           multiplePlacesContainer.innerHTML = '';
           
           // Add checkboxes for each place
-          places.forEach(place => {
+          placesWithAvailability.forEach(place => {
             const checkboxDiv = document.createElement('div');
             checkboxDiv.className = 'flex items-center';
             checkboxDiv.innerHTML = `
