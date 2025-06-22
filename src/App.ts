@@ -2,12 +2,7 @@ import { getThemePreference, updateTheme } from './utils/theme';
 import { updateNavigation } from './utils/navigation';
 import { setupEventListeners } from './utils/eventHandlers';
 import { createLoginModal, createSignupModal, setupAuthEventListeners } from './components/AuthModals';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  'https://srfcewglmzczveopbwsk.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyZmNld2dsbXpjenZlb3Bid3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwMDI5ODEsImV4cCI6MjA2NTU3ODk4MX0.H6b6wbYOVytt2VOirSmJnjMkm-ba3H-i0LkCszxqYLY'
-);
+import supabase from './config/supabase';
 
 export default function setupApp() {
   // Initialize theme
@@ -299,37 +294,4 @@ export default function setupApp() {
     // Small delay to ensure DOM elements are updated
     setTimeout(setupDashboardLinkReload, 100);
   });
-}
-
-// Function to handle navigation
-function handleNavigation() {
-  const path = window.location.pathname;
-  const navLinks = document.querySelectorAll('nav a');
-  const welcomeMessage = document.getElementById('welcomeMessage');
-  const profileSettingsBtn = document.getElementById('profileSettingsBtn');
-
-  // Hide welcome message and profile settings by default
-  if (welcomeMessage) welcomeMessage.classList.add('hidden');
-  if (profileSettingsBtn) profileSettingsBtn.classList.add('hidden');
-
-  // Show welcome message and profile settings only on dashboard page
-  if (path === '/dashboard') {
-    if (welcomeMessage) welcomeMessage.classList.remove('hidden');
-    if (profileSettingsBtn) profileSettingsBtn.classList.remove('hidden');
-  }
-
-  navLinks.forEach(link => {
-    if (link.getAttribute('href') === path) {
-      link.classList.add('text-blue-600', 'dark:text-blue-500');
-      link.classList.remove('text-gray-900', 'dark:text-white');
-    } else {
-      link.classList.remove('text-blue-600', 'dark:text-blue-500');
-      link.classList.add('text-gray-900', 'dark:text-white');
-    }
-  });
-
-  const mainContent = document.getElementById('mainContent');
-  if (mainContent) {
-    mainContent.innerHTML = renderPage(path);
-  }
 }

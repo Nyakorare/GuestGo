@@ -4,10 +4,12 @@ DROP TABLE IF EXISTS place_personnel CASCADE;
 DROP TABLE IF EXISTS personnel_availability CASCADE;
 DROP TABLE IF EXISTS user_roles CASCADE;
 DROP TABLE IF EXISTS places_to_visit CASCADE;
+DROP TABLE IF EXISTS scheduled_visits CASCADE;
 
 -- Drop the enum type if it exists
 DROP TYPE IF EXISTS user_role CASCADE;
 DROP TYPE IF EXISTS log_action CASCADE;
+DROP TYPE IF EXISTS visit_status CASCADE;
 
 -- Drop the trigger if it exists
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
@@ -16,7 +18,10 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TYPE user_role AS ENUM ('admin', 'log', 'personnel', 'visitor', 'guest');
 
 -- Create enum for log actions
-CREATE TYPE log_action AS ENUM ('password_change', 'place_update', 'place_availability_toggle', 'place_create', 'personnel_assignment', 'personnel_removal', 'personnel_availability_change');
+CREATE TYPE log_action AS ENUM ('password_change', 'place_update', 'place_availability_toggle', 'place_create', 'personnel_assignment', 'personnel_removal', 'personnel_availability_change', 'visit_scheduled', 'visit_completed');
+
+-- Create enum for visit status
+CREATE TYPE visit_status AS ENUM ('pending', 'completed', 'cancelled');
 
 -- Create places_to_visit table
 CREATE TABLE places_to_visit (
@@ -35,6 +40,7 @@ CREATE TABLE user_roles (
     role user_role DEFAULT 'visitor',
     first_name VARCHAR(100),
     last_name VARCHAR(100),
+    email VARCHAR(255),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id)
@@ -62,6 +68,25 @@ CREATE TABLE personnel_availability (
     UNIQUE(personnel_id, place_id)
 );
 
+-- Create scheduled_visits table
+CREATE TABLE scheduled_visits (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    visitor_first_name VARCHAR(100) NOT NULL,
+    visitor_last_name VARCHAR(100) NOT NULL,
+    visitor_email VARCHAR(255) NOT NULL,
+    visitor_phone VARCHAR(20) NOT NULL,
+    visitor_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    visitor_role user_role NOT NULL,
+    place_id UUID REFERENCES places_to_visit(id) ON DELETE CASCADE,
+    visit_date DATE NOT NULL,
+    purpose VARCHAR(255) NOT NULL,
+    other_purpose TEXT,
+    status visit_status DEFAULT 'pending',
+    scheduled_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    completed_by UUID REFERENCES auth.users(id) ON DELETE SET NULL
+);
+
 -- Create logs table
 CREATE TABLE logs (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -77,13 +102,15 @@ CREATE TABLE logs (
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO public.user_roles (user_id, role, first_name, last_name)
+    INSERT INTO public.user_roles (user_id, role, first_name, last_name, email)
     VALUES (
         NEW.id, 
         'visitor',
         NEW.raw_user_meta_data->>'first_name',
-        NEW.raw_user_meta_data->>'last_name'
-    );
+        NEW.raw_user_meta_data->>'last_name',
+        NEW.email
+    )
+    ON CONFLICT (user_id) DO NOTHING;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -274,6 +301,178 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- Create function to schedule a visit
+CREATE OR REPLACE FUNCTION public.schedule_visit(
+    p_visitor_first_name VARCHAR(100),
+    p_visitor_last_name VARCHAR(100),
+    p_visitor_email VARCHAR(255),
+    p_visitor_phone VARCHAR(20),
+    p_place_id UUID,
+    p_visit_date DATE,
+    p_purpose VARCHAR(255),
+    p_other_purpose TEXT DEFAULT NULL,
+    p_visitor_user_id UUID DEFAULT NULL
+)
+RETURNS UUID AS $$
+DECLARE
+    visit_id UUID;
+    visitor_role user_role;
+BEGIN
+    -- Determine visitor role based on whether they're logged in
+    IF p_visitor_user_id IS NOT NULL THEN
+        visitor_role := 'visitor';
+    ELSE
+        visitor_role := 'guest';
+    END IF;
+    
+    -- Insert the scheduled visit
+    INSERT INTO scheduled_visits (
+        visitor_first_name,
+        visitor_last_name,
+        visitor_email,
+        visitor_phone,
+        visitor_user_id,
+        visitor_role,
+        place_id,
+        visit_date,
+        purpose,
+        other_purpose
+    )
+    VALUES (
+        p_visitor_first_name,
+        p_visitor_last_name,
+        p_visitor_email,
+        p_visitor_phone,
+        p_visitor_user_id,
+        visitor_role,
+        p_place_id,
+        p_visit_date,
+        p_purpose,
+        p_other_purpose
+    )
+    RETURNING id INTO visit_id;
+    
+    -- Log the visit scheduling
+    PERFORM public.log_action(
+        COALESCE(p_visitor_user_id, gen_random_uuid()), -- Use random UUID for guests
+        'visit_scheduled',
+        jsonb_build_object(
+            'visit_id', visit_id,
+            'visitor_name', p_visitor_first_name || ' ' || p_visitor_last_name,
+            'place_id', p_place_id,
+            'visit_date', p_visit_date,
+            'purpose', p_purpose
+        )
+    );
+    
+    RETURN visit_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create function to get scheduled visits for personnel
+CREATE OR REPLACE FUNCTION public.get_personnel_scheduled_visits(p_personnel_id UUID)
+RETURNS TABLE (
+    visit_id UUID,
+    visitor_first_name VARCHAR(100),
+    visitor_last_name VARCHAR(100),
+    visitor_email VARCHAR(255),
+    visitor_phone VARCHAR(20),
+    visitor_user_id UUID,
+    visitor_role user_role,
+    place_id UUID,
+    place_name VARCHAR(255),
+    place_location VARCHAR(255),
+    visit_date DATE,
+    purpose VARCHAR(255),
+    other_purpose TEXT,
+    status visit_status,
+    scheduled_at TIMESTAMP WITH TIME ZONE,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    completed_by UUID
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        sv.id as visit_id,
+        sv.visitor_first_name,
+        sv.visitor_last_name,
+        sv.visitor_email,
+        sv.visitor_phone,
+        sv.visitor_user_id,
+        sv.visitor_role,
+        sv.place_id,
+        p.name as place_name,
+        p.location as place_location,
+        sv.visit_date,
+        sv.purpose,
+        sv.other_purpose,
+        sv.status,
+        sv.scheduled_at,
+        sv.completed_at,
+        sv.completed_by
+    FROM scheduled_visits sv
+    JOIN places_to_visit p ON sv.place_id = p.id
+    JOIN place_personnel pp ON p.id = pp.place_id
+    WHERE pp.personnel_id = p_personnel_id
+    ORDER BY sv.visit_date ASC, sv.scheduled_at DESC;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create function to complete a visit
+CREATE OR REPLACE FUNCTION public.complete_visit(
+    p_visit_id UUID,
+    p_completed_by UUID
+)
+RETURNS BOOLEAN AS $$
+DECLARE
+    personnel_role user_role;
+    visit_place_id UUID;
+BEGIN
+    -- Check if the user completing is personnel
+    SELECT role INTO personnel_role 
+    FROM user_roles 
+    WHERE user_id = p_completed_by;
+    
+    IF personnel_role != 'personnel' THEN
+        RAISE EXCEPTION 'Only personnel can complete visits';
+    END IF;
+    
+    -- Get the place ID for this visit
+    SELECT place_id INTO visit_place_id
+    FROM scheduled_visits
+    WHERE id = p_visit_id;
+    
+    -- Check if personnel is assigned to this place
+    IF NOT EXISTS (
+        SELECT 1 FROM place_personnel 
+        WHERE place_id = visit_place_id AND personnel_id = p_completed_by
+    ) THEN
+        RAISE EXCEPTION 'Personnel is not assigned to this place';
+    END IF;
+    
+    -- Update the visit status
+    UPDATE scheduled_visits 
+    SET 
+        status = 'completed',
+        completed_at = CURRENT_TIMESTAMP,
+        completed_by = p_completed_by
+    WHERE id = p_visit_id;
+    
+    -- Log the visit completion
+    PERFORM public.log_action(
+        p_completed_by,
+        'visit_completed',
+        jsonb_build_object(
+            'visit_id', p_visit_id,
+            'place_id', visit_place_id,
+            'completed_at', CURRENT_TIMESTAMP
+        )
+    );
+    
+    RETURN FOUND;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Create trigger function to automatically create availability record when personnel is assigned
 CREATE OR REPLACE FUNCTION public.handle_personnel_assignment()
 RETURNS TRIGGER AS $$
@@ -298,4 +497,22 @@ INSERT INTO places_to_visit (name, description, location) VALUES
     ('Branch Office', 'Regional office', 'Los Angeles'),
     ('Training Center', 'Employee training facility', 'Chicago'),
     ('Research Lab', 'Research and development center', 'Boston'),
-    ('Customer Service Center', 'Customer support office', 'Miami'); 
+    ('Customer Service Center', 'Customer support office', 'Miami')
+ON CONFLICT DO NOTHING;
+
+-- Create function to check if email is already registered
+CREATE OR REPLACE FUNCTION public.is_email_registered(p_email VARCHAR(255))
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 FROM auth.users 
+        WHERE email = p_email
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Fix any existing scheduled visits with incorrect role assignments
+-- Update visits where visitor_user_id is NULL but visitor_role is 'visitor' to be 'guest'
+UPDATE scheduled_visits 
+SET visitor_role = 'guest' 
+WHERE visitor_user_id IS NULL AND visitor_role = 'visitor';

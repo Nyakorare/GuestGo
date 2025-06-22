@@ -1,10 +1,5 @@
 import { sendVerificationEmail } from '../config/emailjs';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  'https://srfcewglmzczveopbwsk.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyZmNld2dsbXpjenZlb3Bid3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwMDI5ODEsImV4cCI6MjA2NTU3ODk4MX0.H6b6wbYOVytt2VOirSmJnjMkm-ba3H-i0LkCszxqYLY'
-);
+import supabase from '../config/supabase';
 
 export async function setupEventListeners() {
   // Fetch places from database with personnel assignments
@@ -45,6 +40,9 @@ export async function setupEventListeners() {
     is_available: availablePlaceIds.has(place.id)
   })) || [];
 
+  // Count available places
+  const availablePlacesCount = placesWithAvailability.filter(place => place.is_available).length;
+
   // Function to toggle multiple places checkboxes
   const placeToVisitSelect = document.getElementById('placeToVisit') as HTMLSelectElement;
   if (placeToVisitSelect) {
@@ -67,14 +65,31 @@ export async function setupEventListeners() {
     // Add "Multiple Places" option at the end
     const multipleOption = document.createElement('option');
     multipleOption.value = 'multiple';
-    multipleOption.textContent = 'Multiple Places';
+    if (availablePlacesCount < 2) {
+      multipleOption.textContent = 'Multiple Places (requires at least 2 available places)';
+      multipleOption.disabled = true;
+    } else {
+      multipleOption.textContent = 'Multiple Places';
+    }
     placeToVisitSelect.appendChild(multipleOption);
+
+    // Update help text
+    const helpText = placeToVisitSelect.parentElement?.querySelector('p');
+    if (helpText) {
+      if (availablePlacesCount < 2) {
+        helpText.textContent = `Multiple Places option is disabled (only ${availablePlacesCount} available place)`;
+        helpText.className = 'mt-1 text-sm text-orange-600 dark:text-orange-400';
+      } else {
+        helpText.textContent = `Multiple Places option requires at least 2 available places (${availablePlacesCount} available)`;
+        helpText.className = 'mt-1 text-sm text-gray-500 dark:text-gray-400';
+      }
+    }
 
     placeToVisitSelect.addEventListener('change', function(e: Event) {
       const target = e.target as HTMLSelectElement;
       const multiplePlacesContainer = document.getElementById('multiplePlacesContainer');
       if (multiplePlacesContainer) {
-        if (target.value === 'multiple') {
+        if (target.value === 'multiple' && availablePlacesCount >= 2) {
           multiplePlacesContainer.classList.remove('hidden');
           // Clear existing checkboxes
           multiplePlacesContainer.innerHTML = '';
@@ -212,6 +227,7 @@ export async function setupEventListeners() {
   const verificationCode = document.getElementById('verificationCode') as HTMLInputElement;
   const verifyCode = document.getElementById('verifyCode');
   const verificationStatus = document.getElementById('verificationStatus');
+  const emailValidationStatus = document.getElementById('emailValidationStatus');
   const scheduleSubmitBtn = document.getElementById('scheduleSubmitBtn') as HTMLButtonElement;
   const scheduleForm = document.getElementById('scheduleForm') as HTMLFormElement;
 
@@ -226,6 +242,7 @@ export async function setupEventListeners() {
   let countdownInterval: number | null = null;
   let codeExpirationTimeout: number | null = null;
   let currentCode: string | null = null;
+  let emailCheckTimeout: number | null = null;
 
   // Function to generate a random 6-digit code
   function generateVerificationCode(): string {
@@ -262,6 +279,10 @@ export async function setupEventListeners() {
     if (codeExpirationTimeout) {
       clearTimeout(codeExpirationTimeout);
       codeExpirationTimeout = null;
+    }
+    if (emailCheckTimeout) {
+      clearTimeout(emailCheckTimeout);
+      emailCheckTimeout = null;
     }
   }
 
@@ -325,28 +346,41 @@ export async function setupEventListeners() {
     }
   }
 
+  // Function to check if email is already registered
+  async function isEmailRegistered(email: string): Promise<boolean> {
+    try {
+      // Use the database function to check if email exists
+      const { data, error } = await supabase.rpc('is_email_registered', {
+        p_email: email
+      });
+      
+      if (error) {
+        console.error('Error checking email registration:', error);
+        return false;
+      }
+      
+      return data || false;
+    } catch (error) {
+      console.error('Error in isEmailRegistered:', error);
+      return false;
+    }
+  }
+
   // Add input event listener for email validation
-  scheduleEmail?.addEventListener('input', () => {
-    // Skip validation if email is readonly (user is logged in)
-    if (scheduleEmail.readOnly) {
+  scheduleEmail?.addEventListener('input', async () => {
+    // Skip validation if email is readonly (user is logged in) or if email is already verified
+    if (scheduleEmail.readOnly || scheduleEmail.disabled) {
       return;
     }
 
     const email = scheduleEmail.value;
-    if (sendVerificationCode) {
-      if (isGmailEmail(email)) {
-        sendVerificationCode.disabled = false;
-        sendVerificationCode.classList.remove('opacity-50', 'cursor-not-allowed');
-        verificationStatus!.textContent = '';
-      } else {
-        sendVerificationCode.disabled = true;
-        sendVerificationCode.classList.add('opacity-50', 'cursor-not-allowed');
-        verificationStatus!.textContent = 'Only Gmail addresses are allowed';
-        verificationStatus!.className = 'mt-1 text-sm text-red-600';
-      }
+    
+    // Clear any existing timeout
+    if (emailCheckTimeout) {
+      clearTimeout(emailCheckTimeout);
     }
 
-    // Reset verification state
+    // Reset verification state immediately
     isEmailVerified = false;
     verificationCodeSent = false;
     verificationCodeContainer?.classList.add('hidden');
@@ -358,20 +392,123 @@ export async function setupEventListeners() {
     currentCode = null;
     enableVerificationInputs();
     updateSubmitButtonState();
+
+    // Clear previous status messages
+    if (emailValidationStatus) {
+      emailValidationStatus.textContent = '';
+      emailValidationStatus.className = 'mt-1 text-sm';
+    }
+
+    // Show immediate feedback based on email format
+    if (!email) {
+      if (sendVerificationCode) {
+        sendVerificationCode.disabled = true;
+        sendVerificationCode.classList.add('opacity-50', 'cursor-not-allowed');
+      }
+      if (emailValidationStatus) {
+        emailValidationStatus.textContent = 'Please enter an email address';
+        emailValidationStatus.className = 'mt-1 text-sm text-gray-500';
+      }
+      return;
+    }
+
+    // Check email format first
+    if (!isValidEmail(email)) {
+      if (sendVerificationCode) {
+        sendVerificationCode.disabled = true;
+        sendVerificationCode.classList.add('opacity-50', 'cursor-not-allowed');
+      }
+      if (emailValidationStatus) {
+        emailValidationStatus.textContent = 'Please enter a valid email address';
+        emailValidationStatus.className = 'mt-1 text-sm text-red-600';
+      }
+      return;
+    }
+
+    // Check Gmail requirement
+    if (!isGmailEmail(email)) {
+      if (sendVerificationCode) {
+        sendVerificationCode.disabled = true;
+        sendVerificationCode.classList.add('opacity-50', 'cursor-not-allowed');
+      }
+      if (emailValidationStatus) {
+        emailValidationStatus.textContent = 'Only Gmail addresses are allowed';
+        emailValidationStatus.className = 'mt-1 text-sm text-red-600';
+      }
+      return;
+    }
+
+    // Show checking status
+    if (emailValidationStatus) {
+      emailValidationStatus.textContent = 'Checking email availability...';
+      emailValidationStatus.className = 'mt-1 text-sm text-blue-600';
+    }
+
+    // Debounce the email registration check with shorter delay for more real-time feedback
+    emailCheckTimeout = window.setTimeout(async () => {
+      if (sendVerificationCode && isGmailEmail(email)) {
+        // Check if email is already registered
+        const isRegistered = await isEmailRegistered(email);
+        if (isRegistered) {
+          sendVerificationCode.disabled = true;
+          sendVerificationCode.classList.add('opacity-50', 'cursor-not-allowed');
+          if (emailValidationStatus) {
+            emailValidationStatus.textContent = 'This email is already registered. Please login or use another Gmail account.';
+            emailValidationStatus.className = 'mt-1 text-sm text-red-600';
+          }
+        } else {
+          sendVerificationCode.disabled = false;
+          sendVerificationCode.classList.remove('opacity-50', 'cursor-not-allowed');
+          if (emailValidationStatus) {
+            emailValidationStatus.textContent = '✓ Email is available for verification';
+            emailValidationStatus.className = 'mt-1 text-sm text-green-600';
+          }
+        }
+      }
+    }, 300); // Reduced from 500ms to 300ms for more real-time feedback
   });
 
   // Send verification code
   sendVerificationCode?.addEventListener('click', async () => {
-    const email = scheduleEmail.value;
+    // Prevent action if button is disabled or email field is disabled
+    if (sendVerificationCode.disabled || scheduleEmail.disabled) {
+      return;
+    }
+
+    const email = scheduleEmail.value.trim();
+    if (!email) {
+      if (emailValidationStatus) {
+        emailValidationStatus.textContent = 'Please enter an email address';
+        emailValidationStatus.className = 'mt-1 text-sm text-red-600';
+      }
+      return;
+    }
+
     if (!isValidEmail(email)) {
-      verificationStatus!.textContent = 'Please enter a valid email address';
-      verificationStatus!.className = 'mt-1 text-sm text-red-600';
+      if (emailValidationStatus) {
+        emailValidationStatus.textContent = 'Please enter a valid email address';
+        emailValidationStatus.className = 'mt-1 text-sm text-red-600';
+      }
       return;
     }
 
     if (!isGmailEmail(email)) {
-      verificationStatus!.textContent = 'Only Gmail addresses are allowed';
-      verificationStatus!.className = 'mt-1 text-sm text-red-600';
+      if (emailValidationStatus) {
+        emailValidationStatus.textContent = 'Only Gmail addresses are allowed';
+        emailValidationStatus.className = 'mt-1 text-sm text-red-600';
+      }
+      return;
+    }
+
+    // Double-check if email is registered before sending
+    const isRegistered = await isEmailRegistered(email);
+    if (isRegistered) {
+      if (emailValidationStatus) {
+        emailValidationStatus.textContent = 'This email is already registered. Please login or use another Gmail account.';
+        emailValidationStatus.className = 'mt-1 text-sm text-red-600';
+      }
+      sendVerificationCode.disabled = true;
+      sendVerificationCode.classList.add('opacity-50', 'cursor-not-allowed');
       return;
     }
 
@@ -382,13 +519,21 @@ export async function setupEventListeners() {
     sendVerificationCode.disabled = true;
     sendVerificationCode.textContent = 'Sending...';
     
-    // Send verification email
+    // Show sending status
+    if (emailValidationStatus) {
+      emailValidationStatus.textContent = 'Sending verification code...';
+      emailValidationStatus.className = 'mt-1 text-sm text-blue-600';
+    }
+    
+    // Send verification email to the current email from input field
     const emailSent = await sendVerificationEmail(email, currentCode);
     
     if (emailSent) {
       verificationCodeContainer?.classList.remove('hidden');
-      verificationStatus!.textContent = 'Verification code sent! Please check your email.';
-      verificationStatus!.className = 'mt-1 text-sm text-green-600';
+      if (verificationStatus) {
+        verificationStatus.textContent = 'Verification code sent! Please check your email.';
+        verificationStatus.className = 'mt-1 text-sm text-green-600';
+      }
       verificationCodeSent = true;
 
       // Reset verification state
@@ -405,16 +550,48 @@ export async function setupEventListeners() {
       }
       codeExpirationTimeout = window.setTimeout(() => {
         currentCode = null;
-        verificationStatus!.textContent = 'Verification code has expired. Please request a new one.';
-        verificationStatus!.className = 'mt-1 text-sm text-red-600';
+        if (verificationStatus) {
+          verificationStatus.textContent = 'Verification code has expired. Please request a new one.';
+          verificationStatus.className = 'mt-1 text-sm text-red-600';
+        }
         isEmailVerified = false;
         updateSubmitButtonState();
       }, 5 * 60 * 1000); // 5 minutes
     } else {
-      verificationStatus!.textContent = 'Failed to send verification code. Please try again.';
-      verificationStatus!.className = 'mt-1 text-sm text-red-600';
+      if (emailValidationStatus) {
+        emailValidationStatus.textContent = 'Failed to send verification code. Please try again.';
+        emailValidationStatus.className = 'mt-1 text-sm text-red-600';
+      }
       sendVerificationCode.disabled = false;
       sendVerificationCode.textContent = 'Send Code';
+    }
+  });
+
+  // Add focus and blur events for immediate validation
+  scheduleEmail?.addEventListener('blur', async () => {
+    if (scheduleEmail.readOnly || scheduleEmail.disabled) {
+      return;
+    }
+
+    const email = scheduleEmail.value;
+    if (email && isGmailEmail(email)) {
+      // Check immediately when user leaves the field
+      const isRegistered = await isEmailRegistered(email);
+      if (isRegistered) {
+        sendVerificationCode.disabled = true;
+        sendVerificationCode.classList.add('opacity-50', 'cursor-not-allowed');
+        if (emailValidationStatus) {
+          emailValidationStatus.textContent = 'This email is already registered. Please login or use another Gmail account.';
+          emailValidationStatus.className = 'mt-1 text-sm text-red-600';
+        }
+      } else {
+        sendVerificationCode.disabled = false;
+        sendVerificationCode.classList.remove('opacity-50', 'cursor-not-allowed');
+        if (emailValidationStatus) {
+          emailValidationStatus.textContent = '✓ Email is available for verification';
+          emailValidationStatus.className = 'mt-1 text-sm text-green-600';
+        }
+      }
     }
   });
 
@@ -422,47 +599,91 @@ export async function setupEventListeners() {
   verifyCode?.addEventListener('click', () => {
     const code = verificationCode.value;
     if (!code) {
-      verificationStatus!.textContent = 'Please enter the verification code';
-      verificationStatus!.className = 'mt-1 text-sm text-red-600';
+      if (verificationStatus) {
+        verificationStatus.textContent = 'Please enter the verification code';
+        verificationStatus.className = 'mt-1 text-sm text-red-600';
+      }
       return;
     }
 
     if (!currentCode) {
-      verificationStatus!.textContent = 'Verification code has expired. Please request a new one.';
-      verificationStatus!.className = 'mt-1 text-sm text-red-600';
+      if (verificationStatus) {
+        verificationStatus.textContent = 'Verification code has expired. Please request a new one.';
+        verificationStatus.className = 'mt-1 text-sm text-red-600';
+      }
       return;
     }
 
     if (code === currentCode) {
       isEmailVerified = true;
-      verificationStatus!.textContent = 'Email verified successfully!';
-      verificationStatus!.className = 'mt-1 text-sm text-green-600';
+      if (verificationStatus) {
+        verificationStatus.textContent = 'Email verified successfully!';
+        verificationStatus.className = 'mt-1 text-sm text-green-600';
+      }
       clearTimers();
       updateSubmitButtonState();
       
       // Disable verification inputs after successful verification
       disableVerificationInputs();
       
+      // Disable email input field and send code button to prevent changes
+      if (scheduleEmail) {
+        scheduleEmail.disabled = true;
+        scheduleEmail.classList.add('opacity-50', 'cursor-not-allowed');
+      }
+      if (sendVerificationCode) {
+        sendVerificationCode.disabled = true;
+        sendVerificationCode.classList.add('opacity-50', 'cursor-not-allowed');
+        sendVerificationCode.textContent = 'Email Verified';
+      }
+      
+      // Update validation status to show email is locked
+      if (emailValidationStatus) {
+        emailValidationStatus.textContent = '✓ Email verified and locked';
+        emailValidationStatus.className = 'mt-1 text-sm text-green-600';
+      }
+      
       // Invalidate the code after successful verification
       currentCode = null;
     } else {
-      verificationStatus!.textContent = 'Invalid verification code. Please try again.';
-      verificationStatus!.className = 'mt-1 text-sm text-red-600';
+      if (verificationStatus) {
+        verificationStatus.textContent = 'Invalid verification code. Please try again.';
+        verificationStatus.className = 'mt-1 text-sm text-red-600';
+      }
     }
   });
 
   // Reset verification when email changes
   scheduleEmail?.addEventListener('input', () => {
+    // Skip reset if email is readonly (user is logged in)
+    if (scheduleEmail.readOnly) {
+      return;
+    }
+
     isEmailVerified = false;
     verificationCodeSent = false;
     verificationCodeContainer?.classList.add('hidden');
     verificationCode.value = '';
-    verificationStatus!.textContent = '';
+    if (verificationStatus) {
+      verificationStatus.textContent = '';
+    }
+    if (emailValidationStatus) {
+      emailValidationStatus.textContent = '';
+      emailValidationStatus.className = 'mt-1 text-sm';
+    }
     clearTimers();
+    
+    // Re-enable email input field and send code button
+    if (scheduleEmail) {
+      scheduleEmail.disabled = false;
+      scheduleEmail.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
     if (sendVerificationCode) {
       sendVerificationCode.disabled = false;
+      sendVerificationCode.classList.remove('opacity-50', 'cursor-not-allowed');
       sendVerificationCode.textContent = 'Send Code';
     }
+    
     currentCode = null;
     enableVerificationInputs();
     updateSubmitButtonState();
@@ -495,6 +716,128 @@ export async function setupEventListeners() {
         phoneInput.setCustomValidity('Philippine mobile numbers must start with 9');
       } else {
         phoneInput.setCustomValidity('');
+      }
+    });
+  }
+
+  // Handle form submission
+  if (scheduleForm) {
+    scheduleForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      // Show loading state
+      if (scheduleSubmitBtn) {
+        scheduleSubmitBtn.disabled = true;
+        scheduleSubmitBtn.textContent = 'Scheduling...';
+      }
+
+      try {
+        // Get form data
+        const firstName = (document.getElementById('scheduleFirstName') as HTMLInputElement).value;
+        const lastName = (document.getElementById('scheduleLastName') as HTMLInputElement).value;
+        const email = scheduleEmail.value;
+        const phone = phoneInput.value;
+        const visitDate = (document.getElementById('visitDate') as HTMLInputElement).value;
+        const placeToVisit = placeToVisitSelect.value;
+        const purpose = purposeSelect.value;
+        const otherPurpose = otherPurposeTextarea?.value || '';
+
+        // Get current user if logged in
+        const { data: { user } } = await supabase.auth.getUser();
+        const visitorUserId = user?.id || null;
+
+        // Validate place selection
+        if (placeToVisit === 'multiple') {
+          // Check if multiple places option is available
+          if (availablePlacesCount < 2) {
+            throw new Error('Multiple places option is not available. Please select a single place.');
+          }
+          
+          const selectedPlaces = Array.from(document.querySelectorAll('input[name="places"]:checked'))
+            .map((checkbox: HTMLInputElement) => checkbox.value);
+          
+          if (selectedPlaces.length === 0) {
+            throw new Error('Please select at least one place to visit');
+          }
+
+          // Schedule visits for each selected place
+          for (const placeId of selectedPlaces) {
+            await supabase.rpc('schedule_visit', {
+              p_visitor_first_name: firstName,
+              p_visitor_last_name: lastName,
+              p_visitor_email: email,
+              p_visitor_phone: phone,
+              p_place_id: placeId,
+              p_visit_date: visitDate,
+              p_purpose: purpose === 'other' ? otherPurpose : purpose,
+              p_other_purpose: purpose === 'other' ? otherPurpose : null,
+              p_visitor_user_id: visitorUserId
+            });
+          }
+        } else {
+          // Schedule visit for single place
+          await supabase.rpc('schedule_visit', {
+            p_visitor_first_name: firstName,
+            p_visitor_last_name: lastName,
+            p_visitor_email: email,
+            p_visitor_phone: phone,
+            p_place_id: placeToVisit,
+            p_visit_date: visitDate,
+            p_purpose: purpose === 'other' ? otherPurpose : purpose,
+            p_other_purpose: purpose === 'other' ? otherPurpose : null,
+            p_visitor_user_id: visitorUserId
+          });
+        }
+
+        // Show success message
+        alert('Visit scheduled successfully! You will receive a confirmation email shortly.');
+        
+        // Close modal and reset form
+        const modal = document.getElementById('scheduleModal');
+        if (modal) {
+          modal.classList.add('hidden');
+        }
+        scheduleForm.reset();
+        
+        // Reset verification state
+        isEmailVerified = false;
+        verificationCodeSent = false;
+        verificationCodeContainer?.classList.add('hidden');
+        verificationCode.value = '';
+        if (verificationStatus) {
+          verificationStatus.textContent = '';
+        }
+        if (emailValidationStatus) {
+          emailValidationStatus.textContent = '';
+          emailValidationStatus.className = 'mt-1 text-sm';
+        }
+        clearTimers();
+        if (sendVerificationCode) {
+          sendVerificationCode.textContent = 'Send Code';
+        }
+        
+        // Re-enable email input field and send code button
+        if (scheduleEmail) {
+          scheduleEmail.disabled = false;
+          scheduleEmail.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+        if (sendVerificationCode) {
+          sendVerificationCode.disabled = false;
+          sendVerificationCode.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+        
+        currentCode = null;
+        enableVerificationInputs();
+
+      } catch (error: any) {
+        console.error('Error scheduling visit:', error);
+        alert('Error scheduling visit: ' + (error.message || 'Please try again'));
+      } finally {
+        // Reset button state
+        if (scheduleSubmitBtn) {
+          scheduleSubmitBtn.disabled = false;
+          scheduleSubmitBtn.textContent = 'Schedule Visit';
+        }
       }
     });
   }

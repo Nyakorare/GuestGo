@@ -1,10 +1,5 @@
 import { setupEventListeners } from '../components/ModalFunctions';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  'https://srfcewglmzczveopbwsk.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyZmNld2dsbXpjenZlb3Bid3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwMDI5ODEsImV4cCI6MjA2NTU3ODk4MX0.H6b6wbYOVytt2VOirSmJnjMkm-ba3H-i0LkCszxqYLY'
-);
+import supabase from '../config/supabase';
 
 export function HomePage() {
   // Initialize the page
@@ -138,6 +133,8 @@ export function HomePage() {
                   </button>
                 </div>
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Only Gmail addresses are currently supported</p>
+                <!-- Real-time validation status - always visible -->
+                <div id="emailValidationStatus" class="mt-1 text-sm"></div>
                 <div id="verificationCodeContainer" class="hidden mt-2">
                   <div class="flex space-x-2">
                     <input 
@@ -204,6 +201,7 @@ export function HomePage() {
                   <option value="lobby">Lobby</option>
                   <option value="multiple">Multiple Places</option>
                 </select>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Multiple Places option requires at least 2 available places</p>
               </div>
               <div id="multiplePlacesContainer" class="hidden space-y-2">
                 <div class="flex items-center">

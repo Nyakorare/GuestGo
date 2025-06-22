@@ -1,4 +1,4 @@
-import { HomePage } from '../pages/home';
+import { HomePage } from '../pages/Home';
 import { AboutPage } from '../pages/about';
 import { ContactPage } from '../pages/contact';
 import { DashboardPage } from '../pages/dashboard';

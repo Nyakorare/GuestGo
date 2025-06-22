@@ -1,10 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
+import supabase from '../../config/supabase';
 import { logAction, getLogs } from '../../utils/logging';
-
-const supabase = createClient(
-  'https://srfcewglmzczveopbwsk.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyZmNld2dsbXpjenZlb3Bid3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwMDI5ODEsImV4cCI6MjA2NTU3ODk4MX0.H6b6wbYOVytt2VOirSmJnjMkm-ba3H-i0LkCszxqYLY'
-);
 
 interface Place {
   id: string;
@@ -86,6 +81,8 @@ export function DashboardPage() {
           if (accountsContent) accountsContent.classList.add('hidden');
           if (logsContent) logsContent.classList.add('hidden');
           loadPlaces();
+          // Setup admin tab event listeners
+          setupAdminTabEventListeners();
         } else if (roleData.role === 'personnel') {
           // Personnel: show personnel content, hide admin tabs
           if (adminTabs) adminTabs.classList.add('hidden');
@@ -117,46 +114,52 @@ export function DashboardPage() {
     const accountsContent = document.getElementById('accountsContent');
     const logsContent = document.getElementById('logsContent');
 
-    placesTab?.addEventListener('click', () => {
-      placesTab.classList.add('bg-blue-600', 'text-white');
-      placesTab.classList.remove('bg-gray-100', 'text-gray-700');
-      accountsTab?.classList.remove('bg-blue-600', 'text-white');
-      accountsTab?.classList.add('bg-gray-100', 'text-gray-700');
-      logsTab?.classList.remove('bg-blue-600', 'text-white');
-      logsTab?.classList.add('bg-gray-100', 'text-gray-700');
-      placesContent?.classList.remove('hidden');
-      accountsContent?.classList.add('hidden');
-      logsContent?.classList.add('hidden');
+    // Personnel tab switching
+    const assignmentTab = document.getElementById('assignmentTab');
+    const visitsTab = document.getElementById('visitsTab');
+    const finishedTab = document.getElementById('finishedTab');
+    const assignmentContent = document.getElementById('assignmentContent');
+    const visitsContent = document.getElementById('visitsContent');
+    const finishedContent = document.getElementById('finishedContent');
+
+    assignmentTab?.addEventListener('click', () => {
+      assignmentTab.classList.add('bg-blue-600', 'text-white');
+      assignmentTab.classList.remove('bg-gray-100', 'text-gray-700');
+      visitsTab?.classList.remove('bg-blue-600', 'text-white');
+      visitsTab?.classList.add('bg-gray-100', 'text-gray-700');
+      finishedTab?.classList.remove('bg-blue-600', 'text-white');
+      finishedTab?.classList.add('bg-gray-100', 'text-gray-700');
+      assignmentContent?.classList.remove('hidden');
+      visitsContent?.classList.add('hidden');
+      finishedContent?.classList.add('hidden');
     });
 
-    accountsTab?.addEventListener('click', () => {
-      accountsTab.classList.add('bg-blue-600', 'text-white');
-      accountsTab.classList.remove('bg-gray-100', 'text-gray-700');
-      placesTab?.classList.remove('bg-blue-600', 'text-white');
-      placesTab?.classList.add('bg-gray-100', 'text-gray-700');
-      logsTab?.classList.remove('bg-blue-600', 'text-white');
-      logsTab?.classList.add('bg-gray-100', 'text-gray-700');
-      accountsContent?.classList.remove('hidden');
-      placesContent?.classList.add('hidden');
-      logsContent?.classList.add('hidden');
-      
-      // Load accounts when switching to accounts tab
-      loadAccounts();
+    visitsTab?.addEventListener('click', () => {
+      visitsTab.classList.add('bg-blue-600', 'text-white');
+      visitsTab.classList.remove('bg-gray-100', 'text-gray-700');
+      assignmentTab?.classList.remove('bg-blue-600', 'text-white');
+      assignmentTab?.classList.add('bg-gray-100', 'text-gray-700');
+      finishedTab?.classList.remove('bg-blue-600', 'text-white');
+      finishedTab?.classList.add('bg-gray-100', 'text-gray-700');
+      visitsContent?.classList.remove('hidden');
+      assignmentContent?.classList.add('hidden');
+      finishedContent?.classList.add('hidden');
+      loadScheduledVisits();
     });
 
-    logsTab?.addEventListener('click', () => {
-      logsTab.classList.add('bg-blue-600', 'text-white');
-      logsTab.classList.remove('bg-gray-100', 'text-gray-700');
-      placesTab?.classList.remove('bg-blue-600', 'text-white');
-      placesTab?.classList.add('bg-gray-100', 'text-gray-700');
-      accountsTab?.classList.remove('bg-blue-600', 'text-white');
-      accountsTab?.classList.add('bg-gray-100', 'text-gray-700');
-      logsContent?.classList.remove('hidden');
-      placesContent?.classList.add('hidden');
-      accountsContent?.classList.add('hidden');
+    finishedTab?.addEventListener('click', () => {
+      finishedTab.classList.add('bg-blue-600', 'text-white');
+      finishedTab.classList.remove('bg-gray-100', 'text-gray-700');
+      assignmentTab?.classList.remove('bg-blue-600', 'text-white');
+      assignmentTab?.classList.add('bg-gray-100', 'text-gray-700');
+      visitsTab?.classList.remove('bg-blue-600', 'text-white');
+      visitsTab?.classList.add('bg-gray-100', 'text-gray-700');
+      finishedContent?.classList.remove('hidden');
+      assignmentContent?.classList.add('hidden');
+      visitsContent?.classList.add('hidden');
       
-      // Load logs when switching to logs tab
-      loadLogs();
+      // Load finished schedules when switching to finished tab
+      loadFinishedSchedules();
     });
 
     // Show profile settings button when logged in
@@ -326,6 +329,8 @@ export function DashboardPage() {
                 <option value="personnel_assignment">Personnel Assignment</option>
                 <option value="personnel_removal">Personnel Removal</option>
                 <option value="personnel_availability_change">Personnel Availability Change</option>
+                <option value="visit_scheduled">Visit Scheduled</option>
+                <option value="visit_completed">Visit Completed</option>
               </select>
             </div>
             
@@ -345,8 +350,29 @@ export function DashboardPage() {
       <!-- Personnel Dashboard Content -->
       <div id="personnelContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-6">
         <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">My Assignment</h2>
+          <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">Personnel Dashboard</h2>
           <div class="flex items-center space-x-4">
+            <!-- Personnel Tabs -->
+            <div class="flex space-x-2 mb-6">
+              <button 
+                id="assignmentTab"
+                class="px-4 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              >
+                My Assignment
+              </button>
+              <button 
+                id="visitsTab"
+                class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+              >
+                Scheduled Visits
+              </button>
+              <button 
+                id="finishedTab"
+                class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+              >
+                Finished Schedules
+              </button>
+            </div>
             <button 
               id="refreshPersonnelBtn"
               class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
@@ -355,8 +381,155 @@ export function DashboardPage() {
             </button>
           </div>
         </div>
-        <div id="personnelAssignmentInfo" class="space-y-4">
-          <!-- Personnel assignment info will be loaded here -->
+
+        <!-- Assignment Content -->
+        <div id="assignmentContent" class="space-y-4">
+          <div id="personnelAssignmentInfo" class="space-y-4">
+            <!-- Personnel assignment info will be loaded here -->
+          </div>
+        </div>
+
+        <!-- Scheduled Visits Content -->
+        <div id="visitsContent" class="hidden space-y-4">
+          <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Scheduled Visits</h3>
+            <div class="flex items-center space-x-4">
+              <!-- Search and Filter Section -->
+              <div class="flex items-center space-x-3">
+                <!-- Search Input -->
+                <div class="relative">
+                  <input 
+                    type="text" 
+                    id="visitsSearchInput"
+                    placeholder="Search visits..."
+                    class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                  >
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                  </div>
+                </div>
+                
+                <!-- Status Filter -->
+                <select 
+                  id="visitStatusFilter"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                >
+                  <option value="all">All Status</option>
+                  <option value="pending">Pending</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+
+                <!-- Visitor Role Filter -->
+                <select 
+                  id="visitorRoleFilter"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                >
+                  <option value="all">All Roles</option>
+                  <option value="visitor">Visitor</option>
+                  <option value="guest">Guest</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Schedule Type Tabs -->
+          <div class="flex space-x-2 mb-4">
+            <button 
+              id="allSchedulesTab"
+              class="px-4 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm"
+            >
+              All Schedules
+            </button>
+            <button 
+              id="todaySchedulesTab"
+              class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm"
+            >
+              Today Schedules
+            </button>
+            <button 
+              id="futureSchedulesTab"
+              class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm"
+            >
+              Future Schedules
+            </button>
+          </div>
+
+          <div id="scheduledVisitsList" class="space-y-4">
+            <!-- Scheduled visits will be loaded here -->
+          </div>
+        </div>
+
+        <!-- Finished Schedules Content -->
+        <div id="finishedContent" class="hidden space-y-4">
+          <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Finished Schedules</h3>
+            <div class="flex items-center space-x-4">
+              <!-- Search and Filter Section -->
+              <div class="flex items-center space-x-3">
+                <!-- Search Input -->
+                <div class="relative">
+                  <input 
+                    type="text" 
+                    id="finishedSearchInput"
+                    placeholder="Search finished visits..."
+                    class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                  >
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                  </div>
+                </div>
+
+                <!-- Date Filter -->
+                <select 
+                  id="finishedDateFilter"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                >
+                  <option value="all">All Dates</option>
+                  <option value="today">Today</option>
+                  <option value="yesterday">Yesterday</option>
+                  <option value="this_week">This Week</option>
+                  <option value="last_week">Last Week</option>
+                  <option value="this_month">This Month</option>
+                  <option value="last_month">Last Month</option>
+                </select>
+
+                <!-- Specific Date Filter -->
+                <div class="relative">
+                  <input 
+                    type="date" 
+                    id="finishedSpecificDateFilter"
+                    class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                    placeholder="Select specific date"
+                  >
+                  <button 
+                    id="clearSpecificDateBtn"
+                    class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-sm hidden"
+                    title="Clear date"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <!-- Visitor Role Filter -->
+                <select 
+                  id="finishedRoleFilter"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                >
+                  <option value="all">All Roles</option>
+                  <option value="visitor">Visitor</option>
+                  <option value="guest">Guest</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div id="finishedVisitsList" class="space-y-4">
+            <!-- Finished visits will be loaded here -->
+          </div>
         </div>
       </div>
 
@@ -900,7 +1073,7 @@ async function loadLogs() {
     const logs = await getLogs();
     allLogs = logs || [];
     filteredLogs = [...allLogs];
-    renderLogs();
+    await renderLogs();
   } catch (error) {
     console.error('Error loading logs:', error);
     const logsList = document.getElementById('logsList');
@@ -914,7 +1087,7 @@ async function loadLogs() {
 }
 
 // Function to render logs based on current filters
-function renderLogs() {
+async function renderLogs() {
   const logsList = document.getElementById('logsList');
   if (logsList) {
     if (filteredLogs.length === 0) {
@@ -923,6 +1096,17 @@ function renderLogs() {
       `;
       return;
     }
+
+    // Format all log details asynchronously
+    const formattedDetails = await Promise.all(
+      filteredLogs.map(async (log: any) => {
+        const details = await formatLogDetails(log.details, log.action, log);
+        return {
+          ...log,
+          formattedDetails: details
+        };
+      })
+    );
 
     logsList.innerHTML = `
       <div class="overflow-x-auto">
@@ -936,13 +1120,20 @@ function renderLogs() {
             </tr>
           </thead>
           <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-            ${filteredLogs.map((log: any) => `
+            ${formattedDetails.map((log: any) => `
               <tr>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                   ${new Date(log.created_at).toLocaleString()}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                  ${log.user_id ? log.user_id.substring(0, 8) + '...' : 'Unknown User'}
+                  ${log.user_roles ? 
+                    `${log.user_roles.first_name || ''} ${log.user_roles.last_name || ''}`.trim() || 
+                    log.user_roles.email || 
+                    'Unknown User' 
+                    : 'Guest User'}
+                  ${log.user_roles ? 
+                    `<br><span class="text-xs text-gray-500 font-mono">${log.user_id.substring(0, 8)}...</span>` 
+                    : ''}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -953,13 +1144,17 @@ function renderLogs() {
                     log.action === 'personnel_assignment' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
                     log.action === 'personnel_removal' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
                     log.action === 'personnel_availability_change' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' :
+                    log.action === 'visit_scheduled' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' :
+                    log.action === 'visit_completed' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
                     'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
                   }">
                     ${log.action.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                   </span>
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                  ${formatLogDetails(log.details, log.action)}
+                  <div class="max-w-md">
+                    ${log.formattedDetails}
+                  </div>
                 </td>
               </tr>
             `).join('')}
@@ -971,11 +1166,68 @@ function renderLogs() {
 }
 
 // Function to format log details for display
-function formatLogDetails(details: any, action: string): string {
+async function formatLogDetails(details: any, action: string, log?: any): Promise<string> {
   if (!details) return 'No details available';
   
   try {
     const parsedDetails = typeof details === 'string' ? JSON.parse(details) : details;
+    
+    // Helper function to get user display name
+    const getUserDisplayName = (userId: string) => {
+      if (!userId) return 'Unknown';
+      
+      // If we have the log object with user_roles, use that
+      if (log && log.user_roles && log.user_roles.user_id === userId) {
+        const name = `${log.user_roles.first_name || ''} ${log.user_roles.last_name || ''}`.trim();
+        return name || log.user_roles.email || `User (${userId.substring(0, 8)}...)`;
+      }
+      
+      // For personnel IDs in details, we don't have user info, so fallback to truncated ID
+      return `User (${userId.substring(0, 8)}...)`;
+    };
+
+    // Helper function to get place name
+    const getPlaceName = async (placeId: string) => {
+      if (!placeId) return 'Unknown place';
+      
+      try {
+        const { data: place, error } = await supabase
+          .from('places_to_visit')
+          .select('name')
+          .eq('id', placeId)
+          .single();
+        
+        if (error || !place) {
+          return `Place (${placeId.substring(0, 8)}...)`;
+        }
+        
+        return place.name;
+      } catch (error) {
+        return `Place (${placeId.substring(0, 8)}...)`;
+      }
+    };
+
+    // Helper function to get user name from user_roles
+    const getUserName = async (userId: string) => {
+      if (!userId) return 'Unknown user';
+      
+      try {
+        const { data: user, error } = await supabase
+          .from('user_roles')
+          .select('first_name, last_name, email')
+          .eq('user_id', userId)
+          .single();
+        
+        if (error || !user) {
+          return `User (${userId.substring(0, 8)}...)`;
+        }
+        
+        const name = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+        return name || user.email || `User (${userId.substring(0, 8)}...)`;
+      } catch (error) {
+        return `User (${userId.substring(0, 8)}...)`;
+      }
+    };
     
     switch (action) {
       case 'password_change':
@@ -983,29 +1235,43 @@ function formatLogDetails(details: any, action: string): string {
       case 'place_update':
         const changes = [];
         if (parsedDetails.old_name !== parsedDetails.new_name) {
-          changes.push(`Name: "${parsedDetails.old_name}" → "${parsedDetails.new_name}"`);
+          changes.push(`<div class="mb-1"><span class="font-medium">Name:</span> <span class="text-red-600 dark:text-red-400">"${parsedDetails.old_name}"</span> <span class="text-gray-500">→</span> <span class="text-green-600 dark:text-green-400">"${parsedDetails.new_name}"</span></div>`);
         }
         if (parsedDetails.old_description !== parsedDetails.new_description) {
-          changes.push(`Description: "${parsedDetails.old_description || 'None'}" → "${parsedDetails.new_description || 'None'}"`);
+          changes.push(`<div class="mb-1"><span class="font-medium">Description:</span> <span class="text-red-600 dark:text-red-400">"${parsedDetails.old_description || 'None'}"</span> <span class="text-gray-500">→</span> <span class="text-green-600 dark:text-green-400">"${parsedDetails.new_description || 'None'}"</span></div>`);
         }
         if (parsedDetails.old_location !== parsedDetails.new_location) {
-          changes.push(`Location: "${parsedDetails.old_location}" → "${parsedDetails.new_location}"`);
+          changes.push(`<div class="mb-1"><span class="font-medium">Location:</span> <span class="text-red-600 dark:text-red-400">"${parsedDetails.old_location}"</span> <span class="text-gray-500">→</span> <span class="text-green-600 dark:text-green-400">"${parsedDetails.new_location}"</span></div>`);
         }
-        return changes.length > 0 ? changes.join(', ') : 'Place details updated';
+        return changes.length > 0 ? `<div class="space-y-1">${changes.join('')}</div>` : 'Place details updated';
       case 'place_availability_toggle':
-        return `Place availability toggled: ${parsedDetails.name || 'Unknown place'} - ${parsedDetails.is_available ? 'Available' : 'Unavailable'}`;
+        const statusClass = parsedDetails.is_available ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
+        const statusText = parsedDetails.is_available ? 'Available' : 'Unavailable';
+        return `<div><span class="font-medium">Place:</span> ${parsedDetails.name || 'Unknown place'}</div><div><span class="font-medium">Status:</span> <span class="${statusClass}">${statusText}</span></div>`;
       case 'place_create':
-        return `New place created: "${parsedDetails.name || 'Unknown place'}" at ${parsedDetails.location || 'Unknown location'}`;
+        return `<div><span class="font-medium">Name:</span> ${parsedDetails.place_name || 'Unknown place'}</div><div><span class="font-medium">Location:</span> ${parsedDetails.place_location || 'Unknown location'}</div>`;
       case 'personnel_assignment':
-        return `Personnel (${parsedDetails.personnel_id ? parsedDetails.personnel_id.substring(0, 8) + '...' : 'Unknown'}) assigned to place (${parsedDetails.place_id ? parsedDetails.place_id.substring(0, 8) + '...' : 'Unknown'})`;
+        const personnelName = await getUserName(parsedDetails.personnel_id);
+        const assignmentPlaceName = await getPlaceName(parsedDetails.place_id);
+        return `<div><span class="font-medium">Personnel:</span> ${personnelName}</div><div><span class="font-medium">Place:</span> ${assignmentPlaceName}</div>`;
       case 'personnel_removal':
-        return `Personnel (${parsedDetails.personnel_id ? parsedDetails.personnel_id.substring(0, 8) + '...' : 'Unknown'}) removed from place (${parsedDetails.place_id ? parsedDetails.place_id.substring(0, 8) + '...' : 'Unknown'})`;
+        const removedPersonnelName = await getUserName(parsedDetails.personnel_id);
+        const removalPlaceName = await getPlaceName(parsedDetails.place_id);
+        return `<div><span class="font-medium">Personnel:</span> ${removedPersonnelName}</div><div><span class="font-medium">Place:</span> ${removalPlaceName}</div>`;
       case 'personnel_availability_change':
         const status = parsedDetails.is_available ? 'Available' : 'Unavailable';
-        const reason = parsedDetails.unavailability_reason ? ` (Reason: ${parsedDetails.unavailability_reason})` : '';
-        return `Personnel availability changed to ${status} for place (${parsedDetails.place_id ? parsedDetails.place_id.substring(0, 8) + '...' : 'Unknown'})${reason}`;
+        const statusColor = parsedDetails.is_available ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
+        const reason = parsedDetails.unavailability_reason ? `<div><span class="font-medium">Reason:</span> ${parsedDetails.unavailability_reason}</div>` : '';
+        const availabilityPlaceName = await getPlaceName(parsedDetails.place_id);
+        return `<div><span class="font-medium">Place:</span> ${availabilityPlaceName}</div><div><span class="font-medium">Status:</span> <span class="${statusColor}">${status}</span></div>${reason}`;
+      case 'visit_scheduled':
+        const visitPlaceName = await getPlaceName(parsedDetails.place_id);
+        return `<div><span class="font-medium">Visitor:</span> ${parsedDetails.visitor_name || 'Unknown visitor'}</div><div><span class="font-medium">Date:</span> ${new Date(parsedDetails.visit_date).toLocaleDateString()}</div><div><span class="font-medium">Place:</span> ${visitPlaceName}</div><div><span class="font-medium">Purpose:</span> ${parsedDetails.purpose || 'Not specified'}</div>`;
+      case 'visit_completed':
+        const completedVisitPlaceName = await getPlaceName(parsedDetails.place_id);
+        return `<div><span class="font-medium">Visit ID:</span> ${parsedDetails.visit_id ? parsedDetails.visit_id.substring(0, 8) + '...' : 'Unknown'}</div><div><span class="font-medium">Place:</span> ${completedVisitPlaceName}</div><div><span class="font-medium">Completed:</span> ${new Date(parsedDetails.completed_at).toLocaleString()}</div>`;
       default:
-        return JSON.stringify(parsedDetails, null, 2);
+        return `<pre class="text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto">${JSON.stringify(parsedDetails, null, 2)}</pre>`;
     }
   } catch (error) {
     return 'Error parsing details';
@@ -1037,6 +1303,9 @@ async function changeUserRole(userId: string, newRole: string) {
   showNotification(`User role changed to ${newRole.charAt(0).toUpperCase() + newRole.slice(1)} successfully!`, 'success');
   loadAccounts(); // Reload the accounts list
 }
+
+// Make function available globally
+(window as any).changeUserRole = changeUserRole;
 
 // Function to edit place
 async function editPlace(placeId: string) {
@@ -1171,6 +1440,7 @@ document.addEventListener('DOMContentLoaded', () => {
 (window as any).assignPersonnelToPlace = assignPersonnelToPlace;
 (window as any).removePersonnelFromPlace = removePersonnelFromPlace;
 (window as any).togglePersonnelAvailability = togglePersonnelAvailability;
+(window as any).completeVisit = completeVisit;
 
 // Setup dashboard-specific event listeners
 function setupDashboardEventListeners() {
@@ -1327,8 +1597,7 @@ function setupDashboardEventListeners() {
             .insert({
               name: nameInput.value,
               description: descriptionInput.value,
-              location: locationInput.value,
-              is_available: true
+              location: locationInput.value
             });
 
           if (error) {
@@ -1432,15 +1701,137 @@ function setupDashboardEventListeners() {
   const actionFilter = document.getElementById('actionFilter');
 
   // Logs search input event listener
-  logsSearchInput?.addEventListener('input', () => {
-    applySearchAndFilterForLogs();
+  logsSearchInput?.addEventListener('input', async () => {
+    await applySearchAndFilterForLogs();
   });
 
   // Action filter event listener
-  actionFilter?.addEventListener('change', () => {
-    applySearchAndFilterForLogs();
+  actionFilter?.addEventListener('change', async () => {
+    await applySearchAndFilterForLogs();
   });
   
+  // Add search and filter event listeners for scheduled visits
+  const visitsSearchInput = document.getElementById('visitsSearchInput') as HTMLInputElement;
+  if (visitsSearchInput) {
+    visitsSearchInput.addEventListener('input', debounce(async () => {
+      currentSearchTerm = visitsSearchInput.value;
+      await applyVisitsFilters();
+    }, 300));
+  }
+
+  // Status filter event listener
+  const visitStatusFilter = document.getElementById('visitStatusFilter') as HTMLSelectElement;
+  if (visitStatusFilter) {
+    visitStatusFilter.addEventListener('change', async () => {
+      currentStatusFilter = visitStatusFilter.value;
+      await applyVisitsFilters();
+    });
+  }
+
+  // Role filter event listener
+  const visitorRoleFilter = document.getElementById('visitorRoleFilter') as HTMLSelectElement;
+  if (visitorRoleFilter) {
+    visitorRoleFilter.addEventListener('change', async () => {
+      currentRoleFilter = visitorRoleFilter.value;
+      await applyVisitsFilters();
+    });
+  }
+
+  // Add search and filter event listeners for finished schedules
+  const finishedSearchInput = document.getElementById('finishedSearchInput') as HTMLInputElement;
+  if (finishedSearchInput) {
+    finishedSearchInput.addEventListener('input', debounce(() => {
+      currentFinishedSearchTerm = finishedSearchInput.value;
+      applyFinishedFilters();
+    }, 300));
+  }
+
+  // Finished date filter event listener
+  const finishedDateFilter = document.getElementById('finishedDateFilter') as HTMLSelectElement;
+  if (finishedDateFilter) {
+    finishedDateFilter.addEventListener('change', () => {
+      currentFinishedDateFilter = finishedDateFilter.value;
+      // Clear specific date when date range is selected
+      if (currentFinishedDateFilter !== 'all') {
+        currentFinishedSpecificDate = '';
+        const specificDateInput = document.getElementById('finishedSpecificDateFilter') as HTMLInputElement;
+        if (specificDateInput) {
+          specificDateInput.value = '';
+        }
+        updateClearDateButton();
+      }
+      applyFinishedFilters();
+    });
+  }
+
+  // Finished specific date filter event listener
+  const finishedSpecificDateFilter = document.getElementById('finishedSpecificDateFilter') as HTMLInputElement;
+  if (finishedSpecificDateFilter) {
+    finishedSpecificDateFilter.addEventListener('change', () => {
+      currentFinishedSpecificDate = finishedSpecificDateFilter.value;
+      // Clear date range filter when specific date is selected
+      if (currentFinishedSpecificDate) {
+        currentFinishedDateFilter = 'all';
+        if (finishedDateFilter) {
+          finishedDateFilter.value = 'all';
+        }
+      }
+      updateClearDateButton();
+      applyFinishedFilters();
+    });
+  }
+
+  // Clear specific date button event listener
+  const clearSpecificDateBtn = document.getElementById('clearSpecificDateBtn');
+  if (clearSpecificDateBtn) {
+    clearSpecificDateBtn.addEventListener('click', () => {
+      currentFinishedSpecificDate = '';
+      if (finishedSpecificDateFilter) {
+        finishedSpecificDateFilter.value = '';
+      }
+      updateClearDateButton();
+      applyFinishedFilters();
+    });
+  }
+
+  // Finished role filter event listener
+  const finishedRoleFilter = document.getElementById('finishedRoleFilter') as HTMLSelectElement;
+  if (finishedRoleFilter) {
+    finishedRoleFilter.addEventListener('change', () => {
+      currentFinishedRoleFilter = finishedRoleFilter.value;
+      applyFinishedFilters();
+    });
+  }
+
+  // Schedule type tabs event listeners
+  const allSchedulesTab = document.getElementById('allSchedulesTab');
+  const todaySchedulesTab = document.getElementById('todaySchedulesTab');
+  const futureSchedulesTab = document.getElementById('futureSchedulesTab');
+
+  if (allSchedulesTab) {
+    allSchedulesTab.addEventListener('click', async () => {
+      currentScheduleType = 'all';
+      updateScheduleTypeTabs();
+      await applyVisitsFilters();
+    });
+  }
+
+  if (todaySchedulesTab) {
+    todaySchedulesTab.addEventListener('click', async () => {
+      currentScheduleType = 'today';
+      updateScheduleTypeTabs();
+      await applyVisitsFilters();
+    });
+  }
+
+  if (futureSchedulesTab) {
+    futureSchedulesTab.addEventListener('click', async () => {
+      currentScheduleType = 'future';
+      updateScheduleTypeTabs();
+      await applyVisitsFilters();
+    });
+  }
+
   console.log('Dashboard event listeners setup complete');
 }
 
@@ -1449,8 +1840,41 @@ setTimeout(() => {
   setupDashboardEventListeners();
 }, 100);
 
+// Add admin tab switching event listeners
+function setupAdminTabEventListeners() {
+  const placesTab = document.getElementById('placesTab');
+  const accountsTab = document.getElementById('accountsTab');
+  const placesContent = document.getElementById('placesContent');
+  const accountsContent = document.getElementById('accountsContent');
+
+  // Places tab event listener
+  placesTab?.addEventListener('click', () => {
+    placesTab.classList.add('bg-blue-600', 'text-white');
+    placesTab.classList.remove('bg-gray-100', 'text-gray-700');
+    accountsTab?.classList.remove('bg-blue-600', 'text-white');
+    accountsTab?.classList.add('bg-gray-100', 'text-gray-700');
+    placesContent?.classList.remove('hidden');
+    accountsContent?.classList.add('hidden');
+    loadPlaces();
+  });
+
+  // Accounts tab event listener
+  accountsTab?.addEventListener('click', () => {
+    accountsTab.classList.add('bg-blue-600', 'text-white');
+    accountsTab.classList.remove('bg-gray-100', 'text-gray-700');
+    placesTab?.classList.remove('bg-blue-600', 'text-white');
+    placesTab?.classList.add('bg-gray-100', 'text-gray-700');
+    accountsContent?.classList.remove('hidden');
+    placesContent?.classList.add('hidden');
+    loadAccounts();
+  });
+}
+
+// Make function available globally
+(window as any).setupAdminTabEventListeners = setupAdminTabEventListeners;
+
 // Function to apply search and filter for logs
-function applySearchAndFilterForLogs() {
+async function applySearchAndFilterForLogs() {
   const searchInput = document.getElementById('logsSearchInput') as HTMLInputElement;
   const actionFilter = document.getElementById('actionFilter') as HTMLSelectElement;
   
@@ -1489,7 +1913,7 @@ function applySearchAndFilterForLogs() {
   }
 
   filteredLogs = filtered;
-  renderLogs();
+  await renderLogs();
 }
 
 // Function to assign personnel to a place
@@ -1770,10 +2194,494 @@ async function loadPersonnelDashboard() {
         `;
       }
     }
+
+    // Note: Scheduled visits will be loaded when the visits tab is clicked
   } catch (error) {
     console.error('Error in loadPersonnelDashboard:', error);
   }
 }
+
+// Global variables for visits
+let allScheduledVisits: any[] = [];
+let allFinishedVisits: any[] = [];
+let currentScheduleType = 'all'; // 'all', 'today', 'future'
+let currentSearchTerm = '';
+let currentStatusFilter = 'all';
+let currentRoleFilter = 'all';
+let currentFinishedSearchTerm = '';
+let currentFinishedRoleFilter = 'all';
+let currentFinishedDateFilter = 'all';
+let currentFinishedSpecificDate = '';
+
+// Function to load scheduled visits for personnel
+async function loadScheduledVisits() {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error('No user found');
+      return;
+    }
+
+    const { data, error } = await supabase.rpc('get_personnel_scheduled_visits', {
+      p_personnel_id: user.id
+    });
+
+    if (error) throw error;
+
+    // Filter out completed visits since we only want pending ones
+    allScheduledVisits = (data || []).filter(visit => visit.status !== 'completed');
+    await applyVisitsFilters();
+  } catch (error) {
+    console.error('Error loading scheduled visits:', error);
+    showNotification('Error loading scheduled visits', 'error');
+  }
+}
+
+// Function to load finished schedules for personnel
+async function loadFinishedSchedules() {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error('No user found');
+      return;
+    }
+
+    // Get all visits for places this personnel is assigned to
+    const { data: visits, error: visitsError } = await supabase.rpc('get_personnel_scheduled_visits', {
+      p_personnel_id: user.id
+    });
+
+    if (visitsError) throw visitsError;
+
+    // Filter for completed visits only
+    const completedVisits = (visits || []).filter(visit => visit.status === 'completed');
+
+    // Get unique personnel IDs who completed visits
+    const personnelIds = [...new Set(completedVisits.map(visit => visit.completed_by).filter(id => id))];
+    
+    // Fetch personnel information
+    let personnelInfo = {};
+    if (personnelIds.length > 0) {
+      const { data: personnel, error: personnelError } = await supabase
+        .from('user_roles')
+        .select('user_id, first_name, last_name, email')
+        .in('user_id', personnelIds);
+      
+      if (personnelError) throw personnelError;
+      
+      // Create a map of user_id to personnel info
+      personnelInfo = personnel?.reduce((acc, person) => {
+        acc[person.user_id] = person;
+        return acc;
+      }, {}) || {};
+    }
+
+    // Combine visit data with personnel info
+    allFinishedVisits = completedVisits.map(visit => ({
+      ...visit,
+      completed_by_info: visit.completed_by ? personnelInfo[visit.completed_by] : null
+    }));
+
+    applyFinishedFilters();
+  } catch (error) {
+    console.error('Error loading finished schedules:', error);
+    showNotification('Error loading finished schedules', 'error');
+  }
+}
+
+// Apply filters and search to visits
+async function applyVisitsFilters() {
+  let filteredVisits = [...allScheduledVisits];
+
+  // Apply schedule type filter
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  switch (currentScheduleType) {
+    case 'today':
+      filteredVisits = filteredVisits.filter(visit => {
+        const visitDate = new Date(visit.visit_date);
+        visitDate.setHours(0, 0, 0, 0);
+        return visitDate.getTime() === today.getTime();
+      });
+      break;
+    case 'future':
+      filteredVisits = filteredVisits.filter(visit => {
+        const visitDate = new Date(visit.visit_date);
+        visitDate.setHours(0, 0, 0, 0);
+        return visitDate.getTime() > today.getTime();
+      });
+      break;
+    // 'all' case - no filtering needed
+  }
+
+  // Apply status filter
+  if (currentStatusFilter !== 'all') {
+    filteredVisits = filteredVisits.filter(visit => visit.status === currentStatusFilter);
+  }
+
+  // Apply role filter
+  if (currentRoleFilter !== 'all') {
+    filteredVisits = filteredVisits.filter(visit => {
+      const visitorRole = visit.visitor_role || 'guest';
+      return visitorRole === currentRoleFilter;
+    });
+  }
+
+  // Apply search filter
+  if (currentSearchTerm.trim()) {
+    const searchLower = currentSearchTerm.toLowerCase();
+    filteredVisits = filteredVisits.filter(visit => {
+      const visitorName = `${visit.visitor_first_name} ${visit.visitor_last_name}`;
+      const visitorEmail = visit.visitor_email || '';
+      const purpose = visit.purpose || '';
+      const status = visit.status || '';
+      
+      return visitorName.toLowerCase().includes(searchLower) ||
+             visitorEmail.toLowerCase().includes(searchLower) ||
+             purpose.toLowerCase().includes(searchLower) ||
+             status.toLowerCase().includes(searchLower);
+    });
+  }
+
+  await displayScheduledVisits(filteredVisits);
+}
+
+// Display filtered visits
+async function displayScheduledVisits(visits: any[]) {
+  const visitsList = document.getElementById('scheduledVisitsList');
+  if (!visitsList) return;
+
+  if (visits.length === 0) {
+    visitsList.innerHTML = `
+      <div class="text-center py-8">
+        <div class="text-gray-500 dark:text-gray-400 text-lg">No scheduled visits found</div>
+        <div class="text-gray-400 dark:text-gray-500 text-sm mt-2">
+          ${currentSearchTerm || currentStatusFilter !== 'all' || currentRoleFilter !== 'all' || currentScheduleType !== 'all' 
+            ? 'Try adjusting your search or filters' 
+            : 'No visits have been scheduled yet'}
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  // Check permissions for all visits
+  const { data: { user } } = await supabase.auth.getUser();
+  let userRole = null;
+  let userAssignments: string[] = [];
+
+  if (user) {
+    try {
+      // Get user role
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+      
+      userRole = roleData?.role;
+
+      // If user is personnel, get their place assignments
+      if (userRole === 'personnel') {
+        const { data: assignments } = await supabase
+          .from('place_personnel')
+          .select('place_id')
+          .eq('personnel_id', user.id);
+        
+        userAssignments = assignments?.map(a => a.place_id) || [];
+      }
+    } catch (error) {
+      console.error('Error checking user permissions:', error);
+    }
+  }
+
+  visitsList.innerHTML = visits.map(visit => {
+    const visitorName = `${visit.visitor_first_name} ${visit.visitor_last_name}`;
+    const visitorEmail = visit.visitor_email || 'No email';
+    const visitorRole = visit.visitor_role || 'guest';
+    const isLoggedIn = visit.visitor_user_id !== null;
+    const visitorId = isLoggedIn ? visit.visitor_user_id : 'guest';
+    const scheduledDate = new Date(visit.visit_date).toLocaleDateString();
+    const scheduledTime = new Date(visit.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    const statusColors = {
+      pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+      completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+      cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+    };
+
+    const roleColors = {
+      visitor: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+      guest: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+    };
+
+    // Check if user can complete this visit
+    const canComplete = userRole === 'personnel' && 
+                       userAssignments.includes(visit.place_id) && 
+                       visit.status === 'pending';
+
+    return `
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h4 class="text-lg font-semibold text-gray-900 dark:text-white">${visitorName}</h4>
+            <p class="text-gray-600 dark:text-gray-400">${visitorEmail}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              ${isLoggedIn ? 'Logged-in User' : 'Guest User'} • ID: ${visitorId}
+            </p>
+          </div>
+          <div class="flex space-x-2">
+            <span class="px-2 py-1 rounded-full text-xs font-medium ${statusColors[visit.status] || statusColors.pending}">
+              ${visit.status}
+            </span>
+            <span class="px-2 py-1 rounded-full text-xs font-medium ${roleColors[visitorRole] || roleColors.guest}">
+              ${visitorRole}
+            </span>
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Scheduled Date</p>
+            <p class="text-gray-900 dark:text-white font-medium">${scheduledDate} at ${scheduledTime}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Purpose</p>
+            <p class="text-gray-900 dark:text-white">${visit.purpose || 'No purpose specified'}</p>
+          </div>
+        </div>
+        
+        ${canComplete ? `
+          <div class="flex justify-end">
+            <button 
+              onclick="completeVisit('${visit.visit_id}')"
+              class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-sm font-medium"
+            >
+              Mark Complete
+            </button>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+// Event listeners for search and filters
+document.addEventListener('DOMContentLoaded', function() {
+  // ... existing event listeners ...
+
+  // Search input event listener
+  const visitsSearchInput = document.getElementById('visitsSearchInput') as HTMLInputElement;
+  if (visitsSearchInput) {
+    visitsSearchInput.addEventListener('input', debounce(() => {
+      currentSearchTerm = visitsSearchInput.value;
+      applyVisitsFilters();
+    }, 300));
+  }
+
+  // Status filter event listener
+  const visitStatusFilter = document.getElementById('visitStatusFilter') as HTMLSelectElement;
+  if (visitStatusFilter) {
+    visitStatusFilter.addEventListener('change', async () => {
+      currentStatusFilter = visitStatusFilter.value;
+      await applyVisitsFilters();
+    });
+  }
+
+  // Role filter event listener
+  const visitorRoleFilter = document.getElementById('visitorRoleFilter') as HTMLSelectElement;
+  if (visitorRoleFilter) {
+    visitorRoleFilter.addEventListener('change', async () => {
+      currentRoleFilter = visitorRoleFilter.value;
+      await applyVisitsFilters();
+    });
+  }
+
+  // Schedule type tabs event listeners
+  const allSchedulesTab = document.getElementById('allSchedulesTab');
+  const todaySchedulesTab = document.getElementById('todaySchedulesTab');
+  const futureSchedulesTab = document.getElementById('futureSchedulesTab');
+
+  if (allSchedulesTab) {
+    allSchedulesTab.addEventListener('click', async () => {
+      currentScheduleType = 'all';
+      updateScheduleTypeTabs();
+      await applyVisitsFilters();
+    });
+  }
+
+  if (todaySchedulesTab) {
+    todaySchedulesTab.addEventListener('click', async () => {
+      currentScheduleType = 'today';
+      updateScheduleTypeTabs();
+      await applyVisitsFilters();
+    });
+  }
+
+  if (futureSchedulesTab) {
+    futureSchedulesTab.addEventListener('click', async () => {
+      currentScheduleType = 'future';
+      updateScheduleTypeTabs();
+      await applyVisitsFilters();
+    });
+  }
+});
+
+// Update schedule type tab styles
+function updateScheduleTypeTabs() {
+  const allSchedulesTab = document.getElementById('allSchedulesTab');
+  const todaySchedulesTab = document.getElementById('todaySchedulesTab');
+  const futureSchedulesTab = document.getElementById('futureSchedulesTab');
+
+  const activeClasses = 'bg-blue-600 text-white';
+  const inactiveClasses = 'bg-gray-100 text-gray-700 hover:bg-gray-200';
+
+  if (allSchedulesTab) {
+    allSchedulesTab.className = `px-4 py-2 rounded-md font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 text-sm ${currentScheduleType === 'all' ? activeClasses : inactiveClasses}`;
+  }
+
+  if (todaySchedulesTab) {
+    todaySchedulesTab.className = `px-4 py-2 rounded-md font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 text-sm ${currentScheduleType === 'today' ? activeClasses : inactiveClasses}`;
+  }
+
+  if (futureSchedulesTab) {
+    futureSchedulesTab.className = `px-4 py-2 rounded-md font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 text-sm ${currentScheduleType === 'future' ? activeClasses : inactiveClasses}`;
+  }
+}
+
+// Debounce function for search
+function debounce(func: Function, wait: number) {
+  let timeout: NodeJS.Timeout;
+  return function executedFunction(...args: any[]) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+// Function to complete a visit
+async function completeVisit(visitId: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    console.error('No user found');
+    showNotification('Authentication error. Please login again.', 'error');
+    return;
+  }
+
+  try {
+    console.log('Attempting to complete visit:', visitId, 'by user:', user.id);
+    
+    // First, let's check if the visit exists and get its details
+    const { data: visitData, error: visitError } = await supabase
+      .from('scheduled_visits')
+      .select('*')
+      .eq('id', visitId)
+      .single();
+    
+    if (visitError || !visitData) {
+      console.error('Visit not found:', visitId, visitError);
+      showNotification('Visit not found. It may have been deleted or already completed.', 'error');
+      return;
+    }
+    
+    console.log('Visit found:', visitData);
+    
+    // Check user's role
+    const { data: roleData, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single();
+    
+    if (roleError || !roleData) {
+      console.error('User role not found:', user.id, roleError);
+      showNotification('User role not found. Please contact an administrator.', 'error');
+      return;
+    }
+    
+    console.log('User role:', roleData.role);
+    
+    // Check if user is assigned to the place
+    const { data: assignmentData, error: assignmentError } = await supabase
+      .from('place_personnel')
+      .select('id')
+      .eq('place_id', visitData.place_id)
+      .eq('personnel_id', user.id)
+      .single();
+    
+    console.log('Assignment check:', assignmentData, assignmentError);
+    
+    // Test if the function exists by calling it with invalid parameters first
+    try {
+      const { error: testError } = await supabase.rpc('complete_visit', {
+        p_visit_id: '00000000-0000-0000-0000-000000000000',
+        p_completed_by: user.id
+      });
+      console.log('Function test result:', testError);
+    } catch (testErr) {
+      console.error('Function test failed:', testErr);
+    }
+    
+    // Test the RPC call with more detailed error handling
+    console.log('Calling complete_visit RPC with params:', {
+      p_visit_id: visitId,
+      p_completed_by: user.id
+    });
+    
+    const { data: rpcData, error } = await supabase.rpc('complete_visit', {
+      p_visit_id: visitId,
+      p_completed_by: user.id
+    });
+
+    console.log('RPC response:', { data: rpcData, error });
+
+    if (error) {
+      console.error('Error completing visit:', error);
+      console.error('Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      
+      // Provide more specific error messages based on the error
+      if (error.message?.includes('Only personnel can complete visits')) {
+        showNotification('Only personnel can complete visits. Please contact an administrator.', 'error');
+      } else if (error.message?.includes('Personnel is not assigned to this place')) {
+        showNotification('You are not assigned to this place. Please contact an administrator.', 'error');
+      } else if (error.message?.includes('visit not found') || error.message?.includes('does not exist')) {
+        showNotification('Visit not found. It may have been deleted or already completed.', 'error');
+      } else {
+        showNotification(`Error completing visit: ${error.message || 'Unknown error'}`, 'error');
+      }
+      return;
+    }
+
+    console.log('Visit completed successfully:', rpcData);
+    showNotification('Visit marked as completed successfully', 'success');
+    
+    // Reload both scheduled visits and finished schedules to reflect the change
+    await loadScheduledVisits();
+    await loadFinishedSchedules();
+    
+    // Log the action
+    await logAction('visit_completed', {
+      visit_id: visitId,
+      completed_by: user.id,
+      completed_at: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error completing visit:', error);
+    showNotification('Error completing visit. Please try again.', 'error');
+  }
+}
+
+// Make function available globally
+(window as any).completeVisit = completeVisit;
 
 // Function to toggle personnel availability
 async function togglePersonnelAvailability(placeId: string, currentAvailability: boolean) {
@@ -1902,3 +2810,233 @@ async function togglePersonnelAvailability(placeId: string, currentAvailability:
     availabilityForm.addEventListener('submit', handleSubmit);
   }
 } 
+
+// Apply filters and search to finished visits
+function applyFinishedFilters() {
+  let filteredVisits = [...allFinishedVisits];
+
+  // Apply specific date filter (takes precedence over date range filter)
+  if (currentFinishedSpecificDate) {
+    const selectedDate = new Date(currentFinishedSpecificDate);
+    selectedDate.setHours(0, 0, 0, 0);
+    
+    filteredVisits = filteredVisits.filter(visit => {
+      const completedDate = new Date(visit.completed_at);
+      completedDate.setHours(0, 0, 0, 0);
+      return completedDate.getTime() === selectedDate.getTime();
+    });
+  }
+  // Apply date range filter (only if no specific date is selected)
+  else if (currentFinishedDateFilter !== 'all') {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    // Get start of week (Monday)
+    const startOfWeek = new Date(today);
+    const dayOfWeek = today.getDay();
+    const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Sunday = 0, Monday = 1
+    startOfWeek.setDate(today.getDate() - daysToSubtract);
+    
+    // Get start of last week
+    const startOfLastWeek = new Date(startOfWeek);
+    startOfLastWeek.setDate(startOfWeek.getDate() - 7);
+    
+    // Get start of month
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    // Get start of last month
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+    filteredVisits = filteredVisits.filter(visit => {
+      const completedDate = new Date(visit.completed_at);
+      completedDate.setHours(0, 0, 0, 0);
+
+      switch (currentFinishedDateFilter) {
+        case 'today':
+          return completedDate.getTime() === today.getTime();
+        case 'yesterday':
+          return completedDate.getTime() === yesterday.getTime();
+        case 'this_week':
+          return completedDate >= startOfWeek && completedDate <= today;
+        case 'last_week':
+          const endOfLastWeek = new Date(startOfWeek);
+          endOfLastWeek.setDate(startOfWeek.getDate() - 1);
+          return completedDate >= startOfLastWeek && completedDate <= endOfLastWeek;
+        case 'this_month':
+          return completedDate >= startOfMonth && completedDate <= today;
+        case 'last_month':
+          const endOfLastMonth = new Date(startOfMonth);
+          endOfLastMonth.setDate(startOfMonth.getDate() - 1);
+          return completedDate >= startOfLastMonth && completedDate <= endOfLastMonth;
+        default:
+          return true;
+      }
+    });
+  }
+
+  // Apply role filter
+  if (currentFinishedRoleFilter !== 'all') {
+    filteredVisits = filteredVisits.filter(visit => {
+      const visitorRole = visit.visitor_role || 'guest';
+      return visitorRole === currentFinishedRoleFilter;
+    });
+  }
+
+  // Apply search filter
+  if (currentFinishedSearchTerm.trim()) {
+    const searchLower = currentFinishedSearchTerm.toLowerCase();
+    filteredVisits = filteredVisits.filter(visit => {
+      const visitorName = `${visit.visitor_first_name} ${visit.visitor_last_name}`;
+      const visitorEmail = visit.visitor_email || '';
+      const purpose = visit.purpose || '';
+      
+      // Get personnel name for search
+      let completedByName = 'Unknown';
+      if (visit.completed_by_info) {
+        const personnel = visit.completed_by_info;
+        completedByName = `${personnel.first_name || ''} ${personnel.last_name || ''}`.trim() || personnel.email || 'Unknown Personnel';
+      } else if (visit.completed_by) {
+        completedByName = `Personnel (${visit.completed_by.substring(0, 8)}...)`;
+      }
+      
+      return visitorName.toLowerCase().includes(searchLower) ||
+             visitorEmail.toLowerCase().includes(searchLower) ||
+             purpose.toLowerCase().includes(searchLower) ||
+             completedByName.toLowerCase().includes(searchLower);
+    });
+  }
+
+  displayFinishedVisits(filteredVisits);
+}
+
+// Display filtered finished visits
+function displayFinishedVisits(visits: any[]) {
+  const visitsList = document.getElementById('finishedVisitsList');
+  if (!visitsList) return;
+
+  if (visits.length === 0) {
+    visitsList.innerHTML = `
+      <div class="text-center py-8">
+        <div class="text-gray-500 dark:text-gray-400 text-lg">No finished schedules found</div>
+        <div class="text-gray-400 dark:text-gray-500 text-sm mt-2">
+          ${currentFinishedSearchTerm || currentFinishedRoleFilter !== 'all' 
+            ? 'Try adjusting your search or filters' 
+            : 'No visits have been completed yet'}
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  visitsList.innerHTML = visits.map(visit => {
+    const visitorName = `${visit.visitor_first_name} ${visit.visitor_last_name}`;
+    const visitorEmail = visit.visitor_email || 'No email';
+    const visitorRole = visit.visitor_role || 'guest';
+    const isLoggedIn = visit.visitor_user_id !== null;
+    const visitorId = isLoggedIn ? visit.visitor_user_id : 'guest';
+    const visitDate = new Date(visit.visit_date).toLocaleDateString();
+    const completedDate = new Date(visit.completed_at).toLocaleDateString();
+    const completedTime = new Date(visit.completed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    // Get personnel name who completed the visit
+    let completedByName = 'Unknown';
+    if (visit.completed_by_info) {
+      const personnel = visit.completed_by_info;
+      completedByName = `${personnel.first_name || ''} ${personnel.last_name || ''}`.trim() || personnel.email || 'Unknown Personnel';
+    } else if (visit.completed_by) {
+      completedByName = `Personnel (${visit.completed_by.substring(0, 8)}...)`;
+    }
+    
+    const roleColors = {
+      visitor: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+      guest: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+    };
+
+    return `
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h4 class="text-lg font-semibold text-gray-900 dark:text-white">${visitorName}</h4>
+            <p class="text-gray-600 dark:text-gray-400">${visitorEmail}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              ${isLoggedIn ? 'Logged-in User' : 'Guest User'} • ID: ${visitorId}
+            </p>
+          </div>
+          <div class="flex space-x-2">
+            <span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+              Completed
+            </span>
+            <span class="px-2 py-1 rounded-full text-xs font-medium ${roleColors[visitorRole] || roleColors.guest}">
+              ${visitorRole}
+            </span>
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Visit Date</p>
+            <p class="text-gray-900 dark:text-white font-medium">${visitDate}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Purpose</p>
+            <p class="text-gray-900 dark:text-white">${visit.purpose || 'No purpose specified'}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Completed Date</p>
+            <p class="text-gray-900 dark:text-white font-medium">${completedDate} at ${completedTime}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Completed By</p>
+            <p class="text-gray-900 dark:text-white font-medium">${completedByName}</p>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Update clear date button visibility
+function updateClearDateButton() {
+  const clearBtn = document.getElementById('clearSpecificDateBtn');
+  if (clearBtn) {
+    if (currentFinishedSpecificDate) {
+      clearBtn.classList.remove('hidden');
+    } else {
+      clearBtn.classList.add('hidden');
+    }
+  }
+}
+
+// Function to check if current user can complete a visit
+async function canCompleteVisit(visitPlaceId: string): Promise<boolean> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+
+  try {
+    // Check if user has personnel role
+    const { data: roleData } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!roleData || roleData.role !== 'personnel') {
+      return false;
+    }
+
+    // Check if personnel is assigned to this place
+    const { data: assignmentData } = await supabase
+      .from('place_personnel')
+      .select('id')
+      .eq('place_id', visitPlaceId)
+      .eq('personnel_id', user.id)
+      .single();
+
+    return !!assignmentData;
+  } catch (error) {
+    console.error('Error checking visit completion permissions:', error);
+    return false;
+  }
+}

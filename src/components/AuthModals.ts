@@ -1,9 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  'https://srfcewglmzczveopbwsk.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyZmNld2dsbXpjenZlb3Bid3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwMDI5ODEsImV4cCI6MjA2NTU3ODk4MX0.H6b6wbYOVytt2VOirSmJnjMkm-ba3H-i0LkCszxqYLY'
-);
+import supabase from '../config/supabase';
 
 export function createLoginModal() {
   return `
@@ -176,22 +171,30 @@ export function setupAuthEventListeners() {
           if (error.message.includes('already registered')) {
             throw new Error('An account with this email already exists. Please login instead.');
           }
+          if (error.status === 409) {
+            throw new Error('Account creation conflict. Please try again or contact support.');
+          }
           throw error;
         }
 
         if (data.user) {
-          // Update the user_roles table with first_name and last_name
-          const { error: updateError } = await supabase
+          // Upsert the user_roles table with first_name, last_name, and email
+          const { error: upsertError } = await supabase
             .from('user_roles')
-            .update({ 
+            .upsert({ 
+              user_id: data.user.id,
               first_name: firstName,
-              last_name: lastName
-            })
-            .eq('user_id', data.user.id);
+              last_name: lastName,
+              email: email,
+              role: 'visitor' // Ensure default role
+            }, {
+              onConflict: 'user_id'
+            });
 
-          if (updateError) {
-            console.error('Error updating user_roles with name data:', updateError);
-            // Don't throw error here as the account was created successfully
+          if (upsertError) {
+            console.error('Error upserting user_roles with user data:', upsertError);
+            // Log the error but don't throw it as the account was created successfully
+            // The user can still verify their email and login
           }
 
           // Show success message

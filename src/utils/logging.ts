@@ -1,11 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
+import supabase from '../config/supabase';
 
-const supabase = createClient(
-  'https://srfcewglmzczveopbwsk.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyZmNld2dsbXpjenZlb3Bid3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwMDI5ODEsImV4cCI6MjA2NTU3ODk4MX0.H6b6wbYOVytt2VOirSmJnjMkm-ba3H-i0LkCszxqYLY'
-);
-
-export type LogAction = 'password_change' | 'place_update' | 'place_availability_toggle' | 'place_create' | 'personnel_assignment' | 'personnel_removal';
+export type LogAction = 'password_change' | 'place_update' | 'place_availability_toggle' | 'place_create' | 'personnel_assignment' | 'personnel_removal' | 'personnel_availability_change' | 'visit_scheduled' | 'visit_completed';
 
 export interface LogDetails {
   [key: string]: any;
@@ -48,6 +43,7 @@ export async function logAction(
 
 export async function getLogs(): Promise<any[]> {
   try {
+    // First, fetch the logs
     const { data: logs, error } = await supabase
       .from('logs')
       .select('*')
@@ -59,7 +55,36 @@ export async function getLogs(): Promise<any[]> {
       return [];
     }
 
-    return logs || [];
+    if (!logs || logs.length === 0) {
+      return [];
+    }
+
+    // Get unique user IDs from logs
+    const userIds = [...new Set(logs.map(log => log.user_id).filter(id => id))];
+
+    // Fetch user information for all users
+    let userInfo: any = {};
+    if (userIds.length > 0) {
+      const { data: users, error: userError } = await supabase
+        .from('user_roles')
+        .select('user_id, first_name, last_name, email, role')
+        .in('user_id', userIds);
+
+      if (!userError && users) {
+        userInfo = users.reduce((acc: any, user: any) => {
+          acc[user.user_id] = user;
+          return acc;
+        }, {});
+      }
+    }
+
+    // Combine logs with user information
+    const logsWithUsers = logs.map(log => ({
+      ...log,
+      user_roles: log.user_id ? userInfo[log.user_id] : null
+    }));
+
+    return logsWithUsers;
   } catch (error) {
     console.error('Error in getLogs:', error);
     return [];
