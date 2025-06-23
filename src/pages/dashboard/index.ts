@@ -69,17 +69,27 @@ export function DashboardPage() {
           if (placesContent) placesContent.classList.add('hidden');
           if (accountsContent) accountsContent.classList.add('hidden');
           if (logsContent) logsContent.classList.remove('hidden');
+          
+          // Hide visitor content
+          const visitorContent = document.getElementById('visitorContent');
+          if (visitorContent) visitorContent.classList.add('hidden');
+          
           // Load logs immediately
           loadLogs();
         } else if (roleData.role === 'admin') {
           // Admin: show admin tabs, hide logs
           if (adminTabs) adminTabs.classList.remove('hidden');
           if (logsTab) logsTab.classList.add('hidden');
-          if (placesTab) placesTab.classList.remove('hidden');
-          if (accountsTab) accountsTab.classList.remove('hidden');
+          if (placesTab) placesTab.classList.remove('bg-blue-600', 'text-white');
+          if (accountsTab) accountsTab.classList.remove('bg-gray-100', 'text-gray-700');
           if (placesContent) placesContent.classList.remove('hidden');
           if (accountsContent) accountsContent.classList.add('hidden');
           if (logsContent) logsContent.classList.add('hidden');
+          
+          // Hide visitor content
+          const visitorContent = document.getElementById('visitorContent');
+          if (visitorContent) visitorContent.classList.add('hidden');
+          
           loadPlaces();
           // Setup admin tab event listeners
           setupAdminTabEventListeners();
@@ -93,8 +103,23 @@ export function DashboardPage() {
           if (accountsContent) accountsContent.classList.add('hidden');
           if (logsContent) logsContent.classList.add('hidden');
           loadPersonnelDashboard();
+        } else if (roleData.role === 'visitor') {
+          // Visitor: show visitor content, hide admin tabs
+          if (adminTabs) adminTabs.classList.add('hidden');
+          if (logsTab) logsTab.classList.add('hidden');
+          if (placesTab) placesTab.classList.add('hidden');
+          if (accountsTab) accountsTab.classList.add('hidden');
+          if (placesContent) placesContent.classList.add('hidden');
+          if (accountsContent) accountsContent.classList.add('hidden');
+          if (logsContent) logsContent.classList.add('hidden');
+          
+          // Show visitor content
+          const visitorContent = document.getElementById('visitorContent');
+          if (visitorContent) visitorContent.classList.remove('hidden');
+          
+          loadVisitorDashboard();
         } else {
-          // Other roles: hide all admin/logs tabs
+          // Other roles (guest): hide all admin/logs tabs
           if (adminTabs) adminTabs.classList.add('hidden');
           if (logsTab) logsTab.classList.add('hidden');
           if (placesTab) placesTab.classList.add('hidden');
@@ -529,6 +554,74 @@ export function DashboardPage() {
 
           <div id="finishedVisitsList" class="space-y-4">
             <!-- Finished visits will be loaded here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Visitor Dashboard Content -->
+      <div id="visitorContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">My Scheduled Visits</h2>
+          <div class="flex items-center space-x-4">
+            <button 
+              id="refreshVisitorBtn"
+              class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        <!-- Visitor Visits Content -->
+        <div id="visitorVisitsContent" class="space-y-4">
+          <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-white">My Visits</h3>
+            <div class="flex items-center space-x-4">
+              <!-- Search and Filter Section -->
+              <div class="flex items-center space-x-3">
+                <!-- Search Input -->
+                <div class="relative">
+                  <input 
+                    type="text" 
+                    id="visitorSearchInput"
+                    placeholder="Search my visits..."
+                    class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                  >
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                  </div>
+                </div>
+                
+                <!-- Status Filter -->
+                <select 
+                  id="visitorStatusFilter"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                >
+                  <option value="all">All Status</option>
+                  <option value="pending">Pending</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                  <option value="unsuccessful">Unsuccessful</option>
+                </select>
+
+                <!-- Date Filter -->
+                <select 
+                  id="visitorDateFilter"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                >
+                  <option value="all">All Dates</option>
+                  <option value="today">Today</option>
+                  <option value="future">Future</option>
+                  <option value="past">Past</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div id="visitorVisitsList" class="space-y-4">
+            <!-- Visitor visits will be loaded here -->
           </div>
         </div>
       </div>
@@ -2253,11 +2346,11 @@ async function loadFinishedSchedules() {
 
     if (visitsError) throw visitsError;
 
-    // Filter for completed visits only
-    const completedVisits = (visits || []).filter(visit => visit.status === 'completed');
+    // Filter for completed and unsuccessful visits
+    const finishedVisits = (visits || []).filter(visit => visit.status === 'completed' || visit.status === 'unsuccessful');
 
-    // Get unique personnel IDs who completed visits
-    const personnelIds = [...new Set(completedVisits.map(visit => visit.completed_by).filter(id => id))];
+    // Get unique personnel IDs who completed or marked visits as unsuccessful
+    const personnelIds = [...new Set(finishedVisits.map(visit => visit.completed_by).filter(id => id))];
     
     // Fetch personnel information
     let personnelInfo = {};
@@ -2277,7 +2370,7 @@ async function loadFinishedSchedules() {
     }
 
     // Combine visit data with personnel info
-    allFinishedVisits = completedVisits.map(visit => ({
+    allFinishedVisits = finishedVisits.map(visit => ({
       ...visit,
       completed_by_info: visit.completed_by ? personnelInfo[visit.completed_by] : null
     }));
@@ -2293,23 +2386,26 @@ async function loadFinishedSchedules() {
 async function applyVisitsFilters() {
   let filteredVisits = [...allScheduledVisits];
 
-  // Apply schedule type filter
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // Apply schedule type filter using Philippine time
+  const philippineToday = getPhilippineDate();
 
   switch (currentScheduleType) {
     case 'today':
       filteredVisits = filteredVisits.filter(visit => {
         const visitDate = new Date(visit.visit_date);
         visitDate.setHours(0, 0, 0, 0);
-        return visitDate.getTime() === today.getTime();
+        const philippineVisitDate = toPhilippineTime(visitDate);
+        philippineVisitDate.setHours(0, 0, 0, 0);
+        return philippineVisitDate.getTime() === philippineToday.getTime();
       });
       break;
     case 'future':
       filteredVisits = filteredVisits.filter(visit => {
         const visitDate = new Date(visit.visit_date);
         visitDate.setHours(0, 0, 0, 0);
-        return visitDate.getTime() > today.getTime();
+        const philippineVisitDate = toPhilippineTime(visitDate);
+        philippineVisitDate.setHours(0, 0, 0, 0);
+        return philippineVisitDate.getTime() > philippineToday.getTime();
       });
       break;
     // 'all' case - no filtering needed
@@ -2408,7 +2504,8 @@ async function displayScheduledVisits(visits: any[]) {
     const statusColors = {
       pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
       completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+      cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+      unsuccessful: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
     };
 
     const roleColors = {
@@ -2416,10 +2513,23 @@ async function displayScheduledVisits(visits: any[]) {
       guest: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
     };
 
-    // Check if user can complete this visit
+    // Check if user can complete this visit using Philippine time
+    const philippineToday = getPhilippineDate();
+    const visitDate = new Date(visit.visit_date);
+    visitDate.setHours(0, 0, 0, 0);
+    const philippineVisitDate = toPhilippineTime(visitDate);
+    philippineVisitDate.setHours(0, 0, 0, 0);
+    
     const canComplete = userRole === 'personnel' && 
                        userAssignments.includes(visit.place_id) && 
-                       visit.status === 'pending';
+                       visit.status === 'pending' &&
+                       philippineVisitDate.getTime() <= philippineToday.getTime();
+
+    // Check if user meets basic requirements but visit is in the future
+    const meetsBasicRequirements = userRole === 'personnel' && 
+                                  userAssignments.includes(visit.place_id) && 
+                                  visit.status === 'pending';
+    const isFutureVisit = philippineVisitDate.getTime() > philippineToday.getTime();
 
     return `
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
@@ -2460,6 +2570,12 @@ async function displayScheduledVisits(visits: any[]) {
             >
               Mark Complete
             </button>
+          </div>
+        ` : meetsBasicRequirements && isFutureVisit ? `
+          <div class="flex justify-end">
+            <div class="px-4 py-2 bg-gray-100 text-gray-600 rounded-md text-sm font-medium">
+              Cannot complete - scheduled for future date
+            </div>
           </div>
         ` : ''}
       </div>
@@ -2575,22 +2691,7 @@ async function completeVisit(visitId: string) {
   try {
     console.log('Attempting to complete visit:', visitId, 'by user:', user.id);
     
-    // First, let's check if the visit exists and get its details
-    const { data: visitData, error: visitError } = await supabase
-      .from('scheduled_visits')
-      .select('*')
-      .eq('id', visitId)
-      .single();
-    
-    if (visitError || !visitData) {
-      console.error('Visit not found:', visitId, visitError);
-      showNotification('Visit not found. It may have been deleted or already completed.', 'error');
-      return;
-    }
-    
-    console.log('Visit found:', visitData);
-    
-    // Check user's role
+    // Check user role first
     const { data: roleData, error: roleError } = await supabase
       .from('user_roles')
       .select('role')
@@ -2598,14 +2699,35 @@ async function completeVisit(visitId: string) {
       .single();
     
     if (roleError || !roleData) {
-      console.error('User role not found:', user.id, roleError);
-      showNotification('User role not found. Please contact an administrator.', 'error');
+      console.error('Error fetching user role:', roleError);
+      showNotification('Error fetching user role. Please try again.', 'error');
       return;
     }
     
     console.log('User role:', roleData.role);
     
-    // Check if user is assigned to the place
+    if (roleData.role !== 'personnel') {
+      console.error('User does not have personnel role:', roleData.role);
+      showNotification('Only personnel can complete visits. Please contact an administrator if you believe this is an error.', 'error');
+      return;
+    }
+    
+    // First, check if the visit exists and get its details for debugging
+    const { data: visitData, error: visitError } = await supabase
+      .from('scheduled_visits')
+      .select('*')
+      .eq('id', visitId)
+      .single();
+    
+    if (visitError || !visitData) {
+      console.error('Visit not found or error fetching visit:', visitError);
+      showNotification('Visit not found. The visit may have been deleted or you may not have permission to access it.', 'error');
+      return;
+    }
+    
+    console.log('Visit details:', visitData);
+    
+    // Check if personnel is assigned to this place
     const { data: assignmentData, error: assignmentError } = await supabase
       .from('place_personnel')
       .select('id')
@@ -2613,25 +2735,15 @@ async function completeVisit(visitId: string) {
       .eq('personnel_id', user.id)
       .single();
     
-    console.log('Assignment check:', assignmentData, assignmentError);
-    
-    // Test if the function exists by calling it with invalid parameters first
-    try {
-      const { error: testError } = await supabase.rpc('complete_visit', {
-        p_visit_id: '00000000-0000-0000-0000-000000000000',
-        p_completed_by: user.id
-      });
-      console.log('Function test result:', testError);
-    } catch (testErr) {
-      console.error('Function test failed:', testErr);
+    if (assignmentError || !assignmentData) {
+      console.error('Personnel not assigned to this place:', assignmentError);
+      showNotification('You are not assigned to this place. Please contact an administrator to be assigned.', 'error');
+      return;
     }
     
-    // Test the RPC call with more detailed error handling
-    console.log('Calling complete_visit RPC with params:', {
-      p_visit_id: visitId,
-      p_completed_by: user.id
-    });
+    console.log('Personnel assignment confirmed');
     
+    // Call the database function directly - it handles all validation
     const { data: rpcData, error } = await supabase.rpc('complete_visit', {
       p_visit_id: visitId,
       p_completed_by: user.id
@@ -2641,23 +2753,24 @@ async function completeVisit(visitId: string) {
 
     if (error) {
       console.error('Error completing visit:', error);
-      console.error('Error details:', {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code
-      });
+      // Provide specific error messages based on the error
+      let errorMsg = error.message || 'Unknown error';
+      if (error.details) errorMsg += `\nDetails: ${error.details}`;
+      if (error.hint) errorMsg += `\nHint: ${error.hint}`;
+      if (error.code) errorMsg += `\nCode: ${error.code}`;
       
-      // Provide more specific error messages based on the error
+      // Provide user-friendly error messages
       if (error.message?.includes('Only personnel can complete visits')) {
-        showNotification('Only personnel can complete visits. Please contact an administrator.', 'error');
+        errorMsg = 'Only personnel can complete visits. Please contact an administrator if you believe this is an error.';
+      } else if (error.message?.includes('Cannot complete visits scheduled for future dates')) {
+        errorMsg = 'Cannot complete visits scheduled for future dates. Please wait until the scheduled date.';
       } else if (error.message?.includes('Personnel is not assigned to this place')) {
-        showNotification('You are not assigned to this place. Please contact an administrator.', 'error');
-      } else if (error.message?.includes('visit not found') || error.message?.includes('does not exist')) {
-        showNotification('Visit not found. It may have been deleted or already completed.', 'error');
-      } else {
-        showNotification(`Error completing visit: ${error.message || 'Unknown error'}`, 'error');
+        errorMsg = 'You are not assigned to this place. Please contact an administrator to be assigned.';
+      } else if (error.message?.includes('Visit not found')) {
+        errorMsg = 'Visit not found. The visit may have been deleted or you may not have permission to access it.';
       }
+      
+      showNotification(`Error completing visit: ${errorMsg}`, 'error');
       return;
     }
 
@@ -2812,69 +2925,8 @@ async function togglePersonnelAvailability(placeId: string, currentAvailability:
 } 
 
 // Apply filters and search to finished visits
-function applyFinishedFilters() {
+async function applyFinishedFilters() {
   let filteredVisits = [...allFinishedVisits];
-
-  // Apply specific date filter (takes precedence over date range filter)
-  if (currentFinishedSpecificDate) {
-    const selectedDate = new Date(currentFinishedSpecificDate);
-    selectedDate.setHours(0, 0, 0, 0);
-    
-    filteredVisits = filteredVisits.filter(visit => {
-      const completedDate = new Date(visit.completed_at);
-      completedDate.setHours(0, 0, 0, 0);
-      return completedDate.getTime() === selectedDate.getTime();
-    });
-  }
-  // Apply date range filter (only if no specific date is selected)
-  else if (currentFinishedDateFilter !== 'all') {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    // Get start of week (Monday)
-    const startOfWeek = new Date(today);
-    const dayOfWeek = today.getDay();
-    const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Sunday = 0, Monday = 1
-    startOfWeek.setDate(today.getDate() - daysToSubtract);
-    
-    // Get start of last week
-    const startOfLastWeek = new Date(startOfWeek);
-    startOfLastWeek.setDate(startOfWeek.getDate() - 7);
-    
-    // Get start of month
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    
-    // Get start of last month
-    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-
-    filteredVisits = filteredVisits.filter(visit => {
-      const completedDate = new Date(visit.completed_at);
-      completedDate.setHours(0, 0, 0, 0);
-
-      switch (currentFinishedDateFilter) {
-        case 'today':
-          return completedDate.getTime() === today.getTime();
-        case 'yesterday':
-          return completedDate.getTime() === yesterday.getTime();
-        case 'this_week':
-          return completedDate >= startOfWeek && completedDate <= today;
-        case 'last_week':
-          const endOfLastWeek = new Date(startOfWeek);
-          endOfLastWeek.setDate(startOfWeek.getDate() - 1);
-          return completedDate >= startOfLastWeek && completedDate <= endOfLastWeek;
-        case 'this_month':
-          return completedDate >= startOfMonth && completedDate <= today;
-        case 'last_month':
-          const endOfLastMonth = new Date(startOfMonth);
-          endOfLastMonth.setDate(startOfMonth.getDate() - 1);
-          return completedDate >= startOfLastMonth && completedDate <= endOfLastMonth;
-        default:
-          return true;
-      }
-    });
-  }
 
   // Apply role filter
   if (currentFinishedRoleFilter !== 'all') {
@@ -2884,6 +2936,71 @@ function applyFinishedFilters() {
     });
   }
 
+  // Apply date filter using Philippine time
+  if (currentFinishedDateFilter !== 'all') {
+    const philippineToday = getPhilippineDate();
+
+    switch (currentFinishedDateFilter) {
+      case 'today':
+        filteredVisits = filteredVisits.filter(visit => {
+          const visitDate = new Date(visit.visit_date);
+          visitDate.setHours(0, 0, 0, 0);
+          const philippineVisitDate = toPhilippineTime(visitDate);
+          philippineVisitDate.setHours(0, 0, 0, 0);
+          return philippineVisitDate.getTime() === philippineToday.getTime();
+        });
+        break;
+      case 'yesterday':
+        const philippineYesterday = new Date(philippineToday);
+        philippineYesterday.setDate(philippineYesterday.getDate() - 1);
+        filteredVisits = filteredVisits.filter(visit => {
+          const visitDate = new Date(visit.visit_date);
+          visitDate.setHours(0, 0, 0, 0);
+          const philippineVisitDate = toPhilippineTime(visitDate);
+          philippineVisitDate.setHours(0, 0, 0, 0);
+          return philippineVisitDate.getTime() === philippineYesterday.getTime();
+        });
+        break;
+      case 'this_week':
+        const philippineWeekStart = new Date(philippineToday);
+        philippineWeekStart.setDate(philippineWeekStart.getDate() - philippineWeekStart.getDay());
+        philippineWeekStart.setHours(0, 0, 0, 0);
+        const philippineWeekEnd = new Date(philippineWeekStart);
+        philippineWeekEnd.setDate(philippineWeekEnd.getDate() + 6);
+        philippineWeekEnd.setHours(23, 59, 59, 999);
+        filteredVisits = filteredVisits.filter(visit => {
+          const visitDate = new Date(visit.visit_date);
+          const philippineVisitDate = toPhilippineTime(visitDate);
+          return philippineVisitDate >= philippineWeekStart && philippineVisitDate <= philippineWeekEnd;
+        });
+        break;
+      case 'this_month':
+        const philippineMonthStart = new Date(philippineToday.getFullYear(), philippineToday.getMonth(), 1);
+        const philippineMonthEnd = new Date(philippineToday.getFullYear(), philippineToday.getMonth() + 1, 0, 23, 59, 59, 999);
+        filteredVisits = filteredVisits.filter(visit => {
+          const visitDate = new Date(visit.visit_date);
+          const philippineVisitDate = toPhilippineTime(visitDate);
+          return philippineVisitDate >= philippineMonthStart && philippineVisitDate <= philippineMonthEnd;
+        });
+        break;
+      case 'specific_date':
+        if (currentFinishedSpecificDate) {
+          const specificDate = new Date(currentFinishedSpecificDate);
+          specificDate.setHours(0, 0, 0, 0);
+          const philippineSpecificDate = toPhilippineTime(specificDate);
+          philippineSpecificDate.setHours(0, 0, 0, 0);
+          filteredVisits = filteredVisits.filter(visit => {
+            const visitDate = new Date(visit.visit_date);
+            visitDate.setHours(0, 0, 0, 0);
+            const philippineVisitDate = toPhilippineTime(visitDate);
+            philippineVisitDate.setHours(0, 0, 0, 0);
+            return philippineVisitDate.getTime() === philippineSpecificDate.getTime();
+          });
+        }
+        break;
+    }
+  }
+
   // Apply search filter
   if (currentFinishedSearchTerm.trim()) {
     const searchLower = currentFinishedSearchTerm.toLowerCase();
@@ -2891,24 +3008,16 @@ function applyFinishedFilters() {
       const visitorName = `${visit.visitor_first_name} ${visit.visitor_last_name}`;
       const visitorEmail = visit.visitor_email || '';
       const purpose = visit.purpose || '';
-      
-      // Get personnel name for search
-      let completedByName = 'Unknown';
-      if (visit.completed_by_info) {
-        const personnel = visit.completed_by_info;
-        completedByName = `${personnel.first_name || ''} ${personnel.last_name || ''}`.trim() || personnel.email || 'Unknown Personnel';
-      } else if (visit.completed_by) {
-        completedByName = `Personnel (${visit.completed_by.substring(0, 8)}...)`;
-      }
+      const status = visit.status || '';
       
       return visitorName.toLowerCase().includes(searchLower) ||
              visitorEmail.toLowerCase().includes(searchLower) ||
              purpose.toLowerCase().includes(searchLower) ||
-             completedByName.toLowerCase().includes(searchLower);
+             status.toLowerCase().includes(searchLower);
     });
   }
 
-  displayFinishedVisits(filteredVisits);
+  await displayFinishedVisits(filteredVisits);
 }
 
 // Display filtered finished visits
@@ -2923,7 +3032,7 @@ function displayFinishedVisits(visits: any[]) {
         <div class="text-gray-400 dark:text-gray-500 text-sm mt-2">
           ${currentFinishedSearchTerm || currentFinishedRoleFilter !== 'all' 
             ? 'Try adjusting your search or filters' 
-            : 'No visits have been completed yet'}
+            : 'No visits have been completed or marked as unsuccessful yet'}
         </div>
       </div>
     `;
@@ -2954,6 +3063,13 @@ function displayFinishedVisits(visits: any[]) {
       guest: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
     };
 
+    const statusClass = visit.status === 'completed' 
+      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+      : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+    
+    const statusText = visit.status === 'completed' ? 'Completed' : 'Unsuccessful';
+    const actionText = visit.status === 'completed' ? 'Completed' : 'Marked';
+
     return `
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <div class="flex justify-between items-start mb-4">
@@ -2965,8 +3081,8 @@ function displayFinishedVisits(visits: any[]) {
             </p>
           </div>
           <div class="flex space-x-2">
-            <span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-              Completed
+            <span class="px-2 py-1 rounded-full text-xs font-medium ${statusClass}">
+              ${statusText}
             </span>
             <span class="px-2 py-1 rounded-full text-xs font-medium ${roleColors[visitorRole] || roleColors.guest}">
               ${visitorRole}
@@ -2984,11 +3100,11 @@ function displayFinishedVisits(visits: any[]) {
             <p class="text-gray-900 dark:text-white">${visit.purpose || 'No purpose specified'}</p>
           </div>
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Completed Date</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">${actionText} Date</p>
             <p class="text-gray-900 dark:text-white font-medium">${completedDate} at ${completedTime}</p>
           </div>
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Completed By</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">${actionText} By</p>
             <p class="text-gray-900 dark:text-white font-medium">${completedByName}</p>
           </div>
         </div>
@@ -3039,4 +3155,349 @@ async function canCompleteVisit(visitPlaceId: string): Promise<boolean> {
     console.error('Error checking visit completion permissions:', error);
     return false;
   }
+}
+
+// Function to load visitor dashboard
+async function loadVisitorDashboard() {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error('No user found');
+      return;
+    }
+
+    // Load visitor's scheduled visits
+    await loadVisitorVisits();
+
+    // Setup visitor dashboard event listeners with a small delay to ensure DOM is ready
+    setTimeout(() => {
+      setupVisitorDashboardEventListeners();
+    }, 100);
+    
+    console.log('Visitor dashboard loaded successfully');
+  } catch (error) {
+    console.error('Error in loadVisitorDashboard:', error);
+  }
+}
+
+// Global function for manual refresh (for debugging)
+(window as any).refreshVisitorVisits = async () => {
+  console.log('Manual refresh triggered');
+  await loadVisitorVisits();
+  showNotification('Manual refresh completed', 'success');
+};
+
+// Global function to manually trigger daily visit status check (for testing)
+(window as any).triggerDailyVisitStatusCheck = async () => {
+  try {
+    console.log('Triggering daily visit status check...');
+    const { data, error } = await supabase.rpc('trigger_daily_visit_status_check');
+    
+    if (error) {
+      console.error('Error triggering daily visit status check:', error);
+      showNotification('Error triggering daily check: ' + error.message, 'error');
+      return;
+    }
+    
+    console.log('Daily visit status check completed. Affected visits:', data);
+    showNotification(`Daily visit status check completed. ${data} visits marked as unsuccessful.`, 'success');
+    
+    // Reload visits to reflect changes
+    await loadScheduledVisits();
+    await loadFinishedSchedules();
+    await loadVisitorVisits();
+  } catch (error) {
+    console.error('Error in triggerDailyVisitStatusCheck:', error);
+    showNotification('Error triggering daily visit status check', 'error');
+  }
+};
+
+// Global function to create sample visits for testing
+(window as any).createSampleVisits = async () => {
+  try {
+    console.log('Creating sample visits...');
+    const { data, error } = await supabase.rpc('create_sample_visits');
+    
+    if (error) {
+      console.error('Error creating sample visits:', error);
+      showNotification('Error creating sample visits: ' + error.message, 'error');
+      return;
+    }
+    
+    console.log('Sample visits created successfully');
+    showNotification('Sample visits created successfully', 'success');
+    
+    // Reload visits to reflect changes
+    await loadScheduledVisits();
+    await loadFinishedSchedules();
+    await loadVisitorVisits();
+  } catch (error) {
+    console.error('Error in createSampleVisits:', error);
+    showNotification('Error creating sample visits', 'error');
+  }
+};
+
+// Global function to get all visits for debugging
+(window as any).getAllVisits = async () => {
+  try {
+    console.log('Getting all visits...');
+    const { data, error } = await supabase.rpc('get_all_visits_for_admin');
+    
+    if (error) {
+      console.error('Error getting all visits:', error);
+      showNotification('Error getting all visits: ' + error.message, 'error');
+      return;
+    }
+    
+    console.log('All visits:', data);
+    showNotification(`Found ${data?.length || 0} visits`, 'success');
+    return data;
+  } catch (error) {
+    console.error('Error in getAllVisits:', error);
+    showNotification('Error getting all visits', 'error');
+  }
+};
+
+// Global variables for visitor visits
+let allVisitorVisits: any[] = [];
+let currentVisitorSearchTerm = '';
+let currentVisitorStatusFilter = 'all';
+let currentVisitorDateFilter = 'all';
+
+// Function to load visitor's scheduled visits
+async function loadVisitorVisits() {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error('No user found');
+      return;
+    }
+
+    const { data, error } = await supabase.rpc('get_visitor_scheduled_visits', {
+      p_visitor_user_id: user.id
+    });
+
+    if (error) throw error;
+
+    allVisitorVisits = data || [];
+    await applyVisitorFilters();
+  } catch (error) {
+    console.error('Error loading visitor visits:', error);
+    showNotification('Error loading your visits', 'error');
+  }
+}
+
+// Apply filters and search to visitor visits
+async function applyVisitorFilters() {
+  let filteredVisits = [...allVisitorVisits];
+
+  // Apply status filter
+  if (currentVisitorStatusFilter !== 'all') {
+    filteredVisits = filteredVisits.filter(visit => visit.status === currentVisitorStatusFilter);
+  }
+
+  // Apply date filter using Philippine time
+  if (currentVisitorDateFilter !== 'all') {
+    const philippineToday = getPhilippineDate();
+
+    switch (currentVisitorDateFilter) {
+      case 'today':
+        filteredVisits = filteredVisits.filter(visit => {
+          const visitDate = new Date(visit.visit_date);
+          visitDate.setHours(0, 0, 0, 0);
+          const philippineVisitDate = toPhilippineTime(visitDate);
+          philippineVisitDate.setHours(0, 0, 0, 0);
+          return philippineVisitDate.getTime() === philippineToday.getTime();
+        });
+        break;
+      case 'future':
+        filteredVisits = filteredVisits.filter(visit => {
+          const visitDate = new Date(visit.visit_date);
+          visitDate.setHours(0, 0, 0, 0);
+          const philippineVisitDate = toPhilippineTime(visitDate);
+          philippineVisitDate.setHours(0, 0, 0, 0);
+          return philippineVisitDate.getTime() > philippineToday.getTime();
+        });
+        break;
+      case 'past':
+        filteredVisits = filteredVisits.filter(visit => {
+          const visitDate = new Date(visit.visit_date);
+          visitDate.setHours(0, 0, 0, 0);
+          const philippineVisitDate = toPhilippineTime(visitDate);
+          philippineVisitDate.setHours(0, 0, 0, 0);
+          return philippineVisitDate.getTime() < philippineToday.getTime();
+        });
+        break;
+    }
+  }
+
+  // Apply search filter
+  if (currentVisitorSearchTerm.trim()) {
+    const searchLower = currentVisitorSearchTerm.toLowerCase();
+    filteredVisits = filteredVisits.filter(visit => {
+      const placeName = visit.place_name || '';
+      const purpose = visit.purpose || '';
+      const status = visit.status || '';
+      
+      return placeName.toLowerCase().includes(searchLower) ||
+             purpose.toLowerCase().includes(searchLower) ||
+             status.toLowerCase().includes(searchLower);
+    });
+  }
+
+  await displayVisitorVisits(filteredVisits);
+}
+
+// Display filtered visitor visits
+async function displayVisitorVisits(visits: any[]) {
+  const visitsList = document.getElementById('visitorVisitsList');
+  if (!visitsList) return;
+
+  if (visits.length === 0) {
+    visitsList.innerHTML = `
+      <div class="text-center py-8">
+        <div class="text-gray-500 dark:text-gray-400 text-lg">No visits found</div>
+        <div class="text-gray-400 dark:text-gray-500 text-sm mt-2">
+          ${currentVisitorSearchTerm || currentVisitorStatusFilter !== 'all' || currentVisitorDateFilter !== 'all' 
+            ? 'Try adjusting your search or filters' 
+            : 'You haven\'t scheduled any visits yet'}
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  visitsList.innerHTML = visits.map(visit => {
+    const placeName = visit.place_name || 'Unknown Place';
+    const placeLocation = visit.place_location || 'No location specified';
+    const visitDate = new Date(visit.visit_date).toLocaleDateString();
+    const scheduledTime = new Date(visit.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    const statusColors = {
+      pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+      completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+      cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+      unsuccessful: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+    };
+
+    const statusText = {
+      pending: 'Pending',
+      completed: 'Completed',
+      cancelled: 'Cancelled',
+      unsuccessful: 'Unsuccessful'
+    };
+
+    return `
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h4 class="text-lg font-semibold text-gray-900 dark:text-white">${placeName}</h4>
+            <p class="text-gray-600 dark:text-gray-400">${placeLocation}</p>
+          </div>
+          <div class="flex space-x-2">
+            <span class="px-2 py-1 rounded-full text-xs font-medium ${statusColors[visit.status] || statusColors.pending}">
+              ${statusText[visit.status] || 'Pending'}
+            </span>
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Visit Date</p>
+            <p class="text-gray-900 dark:text-white font-medium">${visitDate} at ${scheduledTime}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Purpose</p>
+            <p class="text-gray-900 dark:text-white">${visit.purpose || 'No purpose specified'}</p>
+          </div>
+        </div>
+        
+        ${visit.other_purpose ? `
+          <div class="mb-4">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Additional Details</p>
+            <p class="text-gray-900 dark:text-white">${visit.other_purpose}</p>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+// Setup visitor dashboard event listeners
+function setupVisitorDashboardEventListeners() {
+  // Refresh button event listener
+  const refreshVisitorBtn = document.getElementById('refreshVisitorBtn');
+  if (refreshVisitorBtn) {
+    refreshVisitorBtn.addEventListener('click', async () => {
+      try {
+        // Show loading state
+        refreshVisitorBtn.disabled = true;
+        refreshVisitorBtn.textContent = 'Refreshing...';
+        
+        // Reload visitor visits
+        await loadVisitorVisits();
+        
+        // Show success notification
+        showNotification('Visits refreshed successfully', 'success');
+      } catch (error) {
+        console.error('Error refreshing visits:', error);
+        showNotification('Error refreshing visits', 'error');
+      } finally {
+        // Reset button state
+        refreshVisitorBtn.disabled = false;
+        refreshVisitorBtn.textContent = 'Refresh';
+      }
+    });
+    console.log('Refresh button event listener added');
+  } else {
+    console.error('Refresh button not found');
+  }
+
+  // Search input event listener
+  const visitorSearchInput = document.getElementById('visitorSearchInput') as HTMLInputElement;
+  if (visitorSearchInput) {
+    visitorSearchInput.addEventListener('input', debounce(() => {
+      currentVisitorSearchTerm = visitorSearchInput.value;
+      applyVisitorFilters();
+    }, 300));
+  }
+
+  // Status filter event listener
+  const visitorStatusFilter = document.getElementById('visitorStatusFilter') as HTMLSelectElement;
+  if (visitorStatusFilter) {
+    visitorStatusFilter.addEventListener('change', async () => {
+      currentVisitorStatusFilter = visitorStatusFilter.value;
+      await applyVisitorFilters();
+    });
+  }
+
+  // Date filter event listener
+  const visitorDateFilter = document.getElementById('visitorDateFilter') as HTMLSelectElement;
+  if (visitorDateFilter) {
+    visitorDateFilter.addEventListener('change', async () => {
+      currentVisitorDateFilter = visitorDateFilter.value;
+      await applyVisitorFilters();
+    });
+  }
+
+  console.log('Visitor dashboard event listeners setup complete');
+}
+
+// Helper function to get current Philippine time
+function getPhilippineTime(): Date {
+  const now = new Date();
+  const philippineTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Manila"}));
+  return philippineTime;
+}
+
+// Helper function to get Philippine date (date only)
+function getPhilippineDate(): Date {
+  const philippineTime = getPhilippineTime();
+  philippineTime.setHours(0, 0, 0, 0);
+  return philippineTime;
+}
+
+// Helper function to convert a date to Philippine time
+function toPhilippineTime(date: Date): Date {
+  return new Date(date.toLocaleString("en-US", {timeZone: "Asia/Manila"}));
 }

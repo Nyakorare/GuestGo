@@ -18,10 +18,10 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TYPE user_role AS ENUM ('admin', 'log', 'personnel', 'visitor', 'guest');
 
 -- Create enum for log actions
-CREATE TYPE log_action AS ENUM ('password_change', 'place_update', 'place_availability_toggle', 'place_create', 'personnel_assignment', 'personnel_removal', 'personnel_availability_change', 'visit_scheduled', 'visit_completed');
+CREATE TYPE log_action AS ENUM ('password_change', 'place_update', 'place_availability_toggle', 'place_create', 'personnel_assignment', 'personnel_removal', 'personnel_availability_change', 'visit_scheduled', 'visit_completed', 'visit_unsuccessful');
 
 -- Create enum for visit status
-CREATE TYPE visit_status AS ENUM ('pending', 'completed', 'cancelled');
+CREATE TYPE visit_status AS ENUM ('pending', 'completed', 'cancelled', 'unsuccessful');
 
 -- Create places_to_visit table
 CREATE TABLE places_to_visit (
@@ -317,7 +317,55 @@ RETURNS UUID AS $$
 DECLARE
     visit_id UUID;
     visitor_role user_role;
+    philippine_date DATE;
+    max_schedule_date DATE;
+    week_start DATE;
+    week_end DATE;
+    visits_this_week INTEGER;
+    user_role_check user_role;
 BEGIN
+    -- Get current Philippine date (UTC+8) using the new function
+    philippine_date := public.get_philippine_date();
+    
+    -- Calculate maximum schedule date (1 month from today)
+    max_schedule_date := philippine_date + INTERVAL '1 month';
+    
+    -- Check if visit date is within allowed range (not in the past and not more than 1 month away)
+    IF p_visit_date < philippine_date THEN
+        RAISE EXCEPTION 'Cannot schedule visits for past dates. Current Philippine date is %.', philippine_date;
+    END IF;
+    
+    IF p_visit_date > max_schedule_date THEN
+        RAISE EXCEPTION 'Cannot schedule visits more than 1 month in advance. Maximum allowed date is %.', max_schedule_date;
+    END IF;
+    
+    -- If user is logged in, check if they have visitor role
+    IF p_visitor_user_id IS NOT NULL THEN
+        SELECT role INTO user_role_check 
+        FROM user_roles 
+        WHERE user_id = p_visitor_user_id;
+        
+        IF user_role_check IS NULL OR user_role_check != 'visitor' THEN
+            RAISE EXCEPTION 'Only users with visitor role can schedule visits. Current user role: %.', COALESCE(user_role_check, 'none');
+        END IF;
+    END IF;
+    
+    -- Check weekly visit limit (2 visits per week per email)
+    -- Calculate the week boundaries for the requested visit date
+    week_start := p_visit_date - (EXTRACT(DOW FROM p_visit_date)::INTEGER * INTERVAL '1 day');
+    week_end := week_start + INTERVAL '6 days';
+    
+    -- Count existing visits for this email in the same week
+    SELECT COUNT(*) INTO visits_this_week
+    FROM scheduled_visits
+    WHERE visitor_email = p_visitor_email
+      AND visit_date BETWEEN week_start AND week_end
+      AND status IN ('pending', 'completed'); -- Count both pending and completed visits
+    
+    IF visits_this_week >= 2 THEN
+        RAISE EXCEPTION 'Maximum of 2 visits per week allowed per email address. You have already scheduled % visits for the week of %.', visits_this_week, week_start;
+    END IF;
+    
     -- Determine visitor role based on whether they're logged in
     IF p_visitor_user_id IS NOT NULL THEN
         visitor_role := 'visitor';
@@ -352,20 +400,97 @@ BEGIN
     )
     RETURNING id INTO visit_id;
     
-    -- Log the visit scheduling
-    PERFORM public.log_action(
-        COALESCE(p_visitor_user_id, gen_random_uuid()), -- Use random UUID for guests
-        'visit_scheduled',
-        jsonb_build_object(
-            'visit_id', visit_id,
-            'visitor_name', p_visitor_first_name || ' ' || p_visitor_last_name,
-            'place_id', p_place_id,
-            'visit_date', p_visit_date,
-            'purpose', p_purpose
-        )
-    );
+    -- Log the visit scheduling (only for logged-in users since logs table has FK constraint)
+    IF p_visitor_user_id IS NOT NULL THEN
+        PERFORM public.log_action(
+            p_visitor_user_id,
+            'visit_scheduled',
+            jsonb_build_object(
+                'visit_id', visit_id,
+                'visitor_name', p_visitor_first_name || ' ' || p_visitor_last_name,
+                'visitor_email', p_visitor_email,
+                'visitor_role', visitor_role,
+                'place_id', p_place_id,
+                'visit_date', p_visit_date,
+                'purpose', p_purpose,
+                'is_guest', visitor_role = 'guest',
+                'scheduled_at_philippine_time', public.get_philippine_timestamp()
+            )
+        );
+    END IF;
     
     RETURN visit_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create function to automatically mark past pending visits as unsuccessful
+CREATE OR REPLACE FUNCTION public.mark_past_visits_unsuccessful()
+RETURNS INTEGER AS $$
+DECLARE
+    philippine_date DATE;
+    affected_rows INTEGER;
+BEGIN
+    -- Get current Philippine date (UTC+8) using the new function
+    philippine_date := public.get_philippine_date();
+    
+    -- Mark pending visits from past dates as unsuccessful
+    UPDATE scheduled_visits 
+    SET 
+        status = 'unsuccessful',
+        completed_at = public.get_philippine_timestamp(),
+        completed_by = NULL -- System action, no specific user
+    WHERE status = 'pending' 
+      AND visit_date < philippine_date;
+    
+    GET DIAGNOSTICS affected_rows = ROW_COUNT;
+    
+    -- Log the action if any visits were marked as unsuccessful
+    IF affected_rows > 0 THEN
+        PERFORM public.log_action(
+            NULL, -- System action
+            'visit_unsuccessful',
+            jsonb_build_object(
+                'action', 'auto_mark_past_visits',
+                'affected_visits', affected_rows,
+                'philippine_date', philippine_date,
+                'executed_at', public.get_philippine_timestamp(),
+                'executed_at_philippine_time', public.get_philippine_timestamp()
+            )
+        );
+    END IF;
+    
+    RETURN affected_rows;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create a function that will be called by the trigger to check and mark past visits
+CREATE OR REPLACE FUNCTION public.check_and_mark_past_visits()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Call the function to mark past visits as unsuccessful
+    PERFORM public.mark_past_visits_unsuccessful();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create a trigger that runs on any insert/update to scheduled_visits to automatically mark past visits
+CREATE TRIGGER auto_mark_past_visits_trigger
+    AFTER INSERT OR UPDATE ON scheduled_visits
+    FOR EACH ROW EXECUTE FUNCTION public.check_and_mark_past_visits();
+
+-- Create a function to get current Philippine date (for use in other functions)
+CREATE OR REPLACE FUNCTION public.get_philippine_date()
+RETURNS DATE AS $$
+BEGIN
+    RETURN (CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Manila')::DATE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create a function to get current Philippine timestamp
+CREATE OR REPLACE FUNCTION public.get_philippine_timestamp()
+RETURNS TIMESTAMP WITH TIME ZONE AS $$
+BEGIN
+    RETURN CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Manila';
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -391,30 +516,33 @@ RETURNS TABLE (
     completed_by UUID
 ) AS $$
 BEGIN
+    -- First, automatically mark any past pending visits as unsuccessful
+    PERFORM public.mark_past_visits_unsuccessful();
+    
     RETURN QUERY
     SELECT 
-        sv.id as visit_id,
-        sv.visitor_first_name,
-        sv.visitor_last_name,
-        sv.visitor_email,
-        sv.visitor_phone,
-        sv.visitor_user_id,
-        sv.visitor_role,
-        sv.place_id,
-        p.name as place_name,
-        p.location as place_location,
-        sv.visit_date,
-        sv.purpose,
-        sv.other_purpose,
-        sv.status,
-        sv.scheduled_at,
-        sv.completed_at,
-        sv.completed_by
-    FROM scheduled_visits sv
-    JOIN places_to_visit p ON sv.place_id = p.id
-    JOIN place_personnel pp ON p.id = pp.place_id
-    WHERE pp.personnel_id = p_personnel_id
-    ORDER BY sv.visit_date ASC, sv.scheduled_at DESC;
+        scheduled_visits.id as visit_id,
+        scheduled_visits.visitor_first_name,
+        scheduled_visits.visitor_last_name,
+        scheduled_visits.visitor_email,
+        scheduled_visits.visitor_phone,
+        scheduled_visits.visitor_user_id,
+        scheduled_visits.visitor_role,
+        scheduled_visits.place_id,
+        places_to_visit.name as place_name,
+        places_to_visit.location as place_location,
+        scheduled_visits.visit_date,
+        scheduled_visits.purpose,
+        scheduled_visits.other_purpose,
+        scheduled_visits.status,
+        scheduled_visits.scheduled_at,
+        scheduled_visits.completed_at,
+        scheduled_visits.completed_by
+    FROM scheduled_visits
+    INNER JOIN places_to_visit ON scheduled_visits.place_id = places_to_visit.id
+    INNER JOIN place_personnel ON places_to_visit.id = place_personnel.place_id
+    WHERE place_personnel.personnel_id = p_personnel_id
+    ORDER BY scheduled_visits.visit_date ASC, scheduled_visits.scheduled_at DESC;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -427,6 +555,10 @@ RETURNS BOOLEAN AS $$
 DECLARE
     personnel_role user_role;
     visit_place_id UUID;
+    v_visit_date DATE;
+    v_visitor_user_id UUID;
+    v_visitor_email VARCHAR(255);
+    philippine_date DATE;
 BEGIN
     -- Check if the user completing is personnel
     SELECT role INTO personnel_role 
@@ -437,10 +569,18 @@ BEGIN
         RAISE EXCEPTION 'Only personnel can complete visits';
     END IF;
     
-    -- Get the place ID for this visit
-    SELECT place_id INTO visit_place_id
+    -- Get the place ID, visit date, visitor_user_id, and visitor_email for this visit
+    SELECT place_id, visit_date, visitor_user_id, visitor_email INTO visit_place_id, v_visit_date, v_visitor_user_id, v_visitor_email
     FROM scheduled_visits
     WHERE id = p_visit_id;
+    
+    -- Get current Philippine date (UTC+8) using the new function
+    philippine_date := public.get_philippine_date();
+    
+    -- Check if the visit date is in the future
+    IF v_visit_date > philippine_date THEN
+        RAISE EXCEPTION 'Cannot complete visits scheduled for future dates. Visit date is % but current Philippine date is %.', v_visit_date, philippine_date;
+    END IF;
     
     -- Check if personnel is assigned to this place
     IF NOT EXISTS (
@@ -454,18 +594,21 @@ BEGIN
     UPDATE scheduled_visits 
     SET 
         status = 'completed',
-        completed_at = CURRENT_TIMESTAMP,
+        completed_at = public.get_philippine_timestamp(),
         completed_by = p_completed_by
     WHERE id = p_visit_id;
     
-    -- Log the visit completion
+    -- Always log the visit completion (for both logged-in users and guests)
     PERFORM public.log_action(
         p_completed_by,
         'visit_completed',
         jsonb_build_object(
             'visit_id', p_visit_id,
             'place_id', visit_place_id,
-            'completed_at', CURRENT_TIMESTAMP
+            'visitor_user_id', v_visitor_user_id,
+            'visitor_email', v_visitor_email,
+            'completed_at', public.get_philippine_timestamp(),
+            'completed_at_philippine_time', public.get_philippine_timestamp()
         )
     );
     
@@ -516,3 +659,239 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 UPDATE scheduled_visits 
 SET visitor_role = 'guest' 
 WHERE visitor_user_id IS NULL AND visitor_role = 'visitor';
+
+-- Create function to mark a visit as unsuccessful
+CREATE OR REPLACE FUNCTION public.mark_visit_unsuccessful(
+    p_visit_id UUID,
+    p_marked_by UUID
+)
+RETURNS BOOLEAN AS $$
+DECLARE
+    admin_role user_role;
+    visit_place_id UUID;
+BEGIN
+    -- Check if the user marking is an admin
+    SELECT role INTO admin_role 
+    FROM user_roles 
+    WHERE user_id = p_marked_by;
+    
+    IF admin_role != 'admin' THEN
+        RAISE EXCEPTION 'Only admins can mark visits as unsuccessful';
+    END IF;
+    
+    -- Get the place ID for this visit
+    SELECT place_id INTO visit_place_id
+    FROM scheduled_visits
+    WHERE id = p_visit_id;
+    
+    -- Update the visit status
+    UPDATE scheduled_visits 
+    SET 
+        status = 'unsuccessful',
+        completed_at = public.get_philippine_timestamp(),
+        completed_by = p_marked_by
+    WHERE id = p_visit_id;
+    
+    -- Log the visit marking as unsuccessful
+    PERFORM public.log_action(
+        p_marked_by,
+        'visit_unsuccessful',
+        jsonb_build_object(
+            'visit_id', p_visit_id,
+            'place_id', visit_place_id,
+            'marked_at', public.get_philippine_timestamp(),
+            'marked_at_philippine_time', public.get_philippine_timestamp()
+        )
+    );
+    
+    RETURN FOUND;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create function to get all visits for admin (including unsuccessful)
+CREATE OR REPLACE FUNCTION public.get_all_visits_for_admin()
+RETURNS TABLE (
+    visit_id UUID,
+    visitor_first_name VARCHAR(100),
+    visitor_last_name VARCHAR(100),
+    visitor_email VARCHAR(255),
+    visitor_phone VARCHAR(20),
+    visitor_user_id UUID,
+    visitor_role user_role,
+    place_id UUID,
+    place_name VARCHAR(255),
+    place_location VARCHAR(255),
+    visit_date DATE,
+    purpose VARCHAR(255),
+    other_purpose TEXT,
+    status visit_status,
+    scheduled_at TIMESTAMP WITH TIME ZONE,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    completed_by UUID
+) AS $$
+DECLARE
+    philippine_date DATE;
+BEGIN
+    -- First, automatically mark any past pending visits as unsuccessful
+    PERFORM public.mark_past_visits_unsuccessful();
+    
+    -- Return all visits
+    RETURN QUERY
+    SELECT 
+        sv.id as visit_id,
+        sv.visitor_first_name,
+        sv.visitor_last_name,
+        sv.visitor_email,
+        sv.visitor_phone,
+        sv.visitor_user_id,
+        sv.visitor_role,
+        sv.place_id,
+        p.name as place_name,
+        p.location as place_location,
+        sv.visit_date,
+        sv.purpose,
+        sv.other_purpose,
+        sv.status,
+        sv.scheduled_at,
+        sv.completed_at,
+        sv.completed_by
+    FROM scheduled_visits sv
+    JOIN places_to_visit p ON sv.place_id = p.id
+    ORDER BY sv.visit_date DESC, sv.scheduled_at DESC;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create function to get scheduled visits for a visitor
+CREATE OR REPLACE FUNCTION public.get_visitor_scheduled_visits(p_visitor_user_id UUID)
+RETURNS TABLE (
+    visit_id UUID,
+    visitor_first_name VARCHAR(100),
+    visitor_last_name VARCHAR(100),
+    visitor_email VARCHAR(255),
+    visitor_phone VARCHAR(20),
+    visitor_user_id UUID,
+    visitor_role user_role,
+    place_id UUID,
+    place_name VARCHAR(255),
+    place_location VARCHAR(255),
+    visit_date DATE,
+    purpose VARCHAR(255),
+    other_purpose TEXT,
+    status visit_status,
+    scheduled_at TIMESTAMP WITH TIME ZONE,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    completed_by UUID
+) AS $$
+BEGIN
+    -- First, automatically mark any past pending visits as unsuccessful
+    PERFORM public.mark_past_visits_unsuccessful();
+    
+    RETURN QUERY
+    SELECT 
+        sv.id as visit_id,
+        sv.visitor_first_name,
+        sv.visitor_last_name,
+        sv.visitor_email,
+        sv.visitor_phone,
+        sv.visitor_user_id,
+        sv.visitor_role,
+        sv.place_id,
+        p.name as place_name,
+        p.location as place_location,
+        sv.visit_date,
+        sv.purpose,
+        sv.other_purpose,
+        sv.status,
+        sv.scheduled_at,
+        sv.completed_at,
+        sv.completed_by
+    FROM scheduled_visits sv
+    JOIN places_to_visit p ON sv.place_id = p.id
+    WHERE sv.visitor_user_id = p_visitor_user_id
+    ORDER BY sv.visit_date ASC, sv.scheduled_at DESC;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create function to create sample visits for testing
+CREATE OR REPLACE FUNCTION public.create_sample_visits()
+RETURNS VOID AS $$
+DECLARE
+    sample_place_id UUID;
+    sample_visitor_id UUID;
+    sample_personnel_id UUID;
+    today_date DATE;
+BEGIN
+    -- Get current Philippine date
+    today_date := public.get_philippine_date();
+    
+    -- Get a sample place
+    SELECT id INTO sample_place_id FROM places_to_visit LIMIT 1;
+    
+    -- Get a sample visitor user
+    SELECT user_id INTO sample_visitor_id FROM user_roles WHERE role = 'visitor' LIMIT 1;
+    
+    -- Get a sample personnel user
+    SELECT user_id INTO sample_personnel_id FROM user_roles WHERE role = 'personnel' LIMIT 1;
+    
+    -- Assign personnel to place if not already assigned
+    INSERT INTO place_personnel (place_id, personnel_id, assigned_by)
+    VALUES (sample_place_id, sample_personnel_id, sample_personnel_id)
+    ON CONFLICT (place_id, personnel_id) DO NOTHING;
+    
+    -- Create a sample visit for today (logged-in visitor)
+    INSERT INTO scheduled_visits (
+        visitor_first_name,
+        visitor_last_name,
+        visitor_email,
+        visitor_phone,
+        visitor_user_id,
+        visitor_role,
+        place_id,
+        visit_date,
+        purpose,
+        status,
+        scheduled_at
+    ) VALUES (
+        'Test',
+        'Visitor',
+        'test@example.com',
+        '1234567890',
+        sample_visitor_id,
+        'visitor',
+        sample_place_id,
+        today_date,
+        'Testing visit completion',
+        'pending',
+        public.get_philippine_timestamp()
+    );
+    
+    -- Create a sample guest visit for today
+    INSERT INTO scheduled_visits (
+        visitor_first_name,
+        visitor_last_name,
+        visitor_email,
+        visitor_phone,
+        visitor_user_id,
+        visitor_role,
+        place_id,
+        visit_date,
+        purpose,
+        status,
+        scheduled_at
+    ) VALUES (
+        'Guest',
+        'User',
+        'guest@example.com',
+        '0987654321',
+        NULL,
+        'guest',
+        sample_place_id,
+        today_date,
+        'Testing guest visit completion',
+        'pending',
+        public.get_philippine_timestamp()
+    );
+    
+    RAISE NOTICE 'Sample visits created successfully';
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

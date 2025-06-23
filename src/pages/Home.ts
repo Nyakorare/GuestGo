@@ -1,14 +1,213 @@
 import { setupEventListeners } from '../components/ModalFunctions';
 import supabase from '../config/supabase';
 
+// Helper function to get current Philippine time
+function getPhilippineTime(): Date {
+  const now = new Date();
+  const philippineTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Manila"}));
+  return philippineTime;
+}
+
+// Helper function to get Philippine date (date only)
+function getPhilippineDate(): Date {
+  const philippineTime = getPhilippineTime();
+  philippineTime.setHours(0, 0, 0, 0);
+  return philippineTime;
+}
+
+// Helper function to convert any date to Philippine time
+function toPhilippineTime(date: Date): Date {
+  const philippineTime = new Date(date.toLocaleString("en-US", {timeZone: "Asia/Manila"}));
+  return philippineTime;
+}
+
+// Function to load and display weekly visit count for logged-in users
+async function loadWeeklyVisitCount(userEmail: string) {
+  try {
+    const weeklyVisitCountDiv = document.getElementById('weeklyVisitCount');
+    const weeklyVisitText = document.getElementById('weeklyVisitText');
+    
+    if (!weeklyVisitCountDiv || !weeklyVisitText) return;
+
+    // Check if user has visitor role
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    try {
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+      
+      // Only show weekly visit count for visitor roles
+      if (roleData?.role !== 'visitor') {
+        weeklyVisitCountDiv.classList.add('hidden');
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking user role for weekly visit count:', error);
+      weeklyVisitCountDiv.classList.add('hidden');
+      return;
+    }
+
+    // Show the weekly visit count section
+    weeklyVisitCountDiv.classList.remove('hidden');
+    weeklyVisitText.textContent = 'Loading...';
+
+    // Get current Philippine date
+    const philippineToday = getPhilippineDate();
+    
+    // Calculate the week boundaries (Sunday to Saturday)
+    const weekStart = new Date(philippineToday);
+    weekStart.setDate(philippineToday.getDate() - philippineToday.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+    
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+
+    // Query the database for visits in the current week
+    const { data: visits, error } = await supabase
+      .from('scheduled_visits')
+      .select('visit_date, status')
+      .eq('visitor_email', userEmail)
+      .gte('visit_date', weekStart.toISOString().split('T')[0])
+      .lte('visit_date', weekEnd.toISOString().split('T')[0])
+      .in('status', ['pending', 'completed']);
+
+    if (error) {
+      console.error('Error loading weekly visit count:', error);
+      weeklyVisitText.textContent = 'Error loading visit count';
+      return;
+    }
+
+    // Count the visits
+    const visitCount = visits?.length || 0;
+    const remainingVisits = Math.max(0, 2 - visitCount);
+
+    // Format the week range for display
+    const weekStartFormatted = weekStart.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric' 
+    });
+    const weekEndFormatted = weekEnd.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric' 
+    });
+
+    // Update the display based on the count
+    if (visitCount === 0) {
+      weeklyVisitText.innerHTML = `
+        <span class="font-medium text-green-600 dark:text-green-400">2 visits remaining</span> 
+        for the week of ${weekStartFormatted} - ${weekEndFormatted}
+      `;
+    } else if (visitCount === 1) {
+      weeklyVisitText.innerHTML = `
+        <span class="font-medium text-yellow-600 dark:text-yellow-400">1 visit remaining</span> 
+        for the week of ${weekStartFormatted} - ${weekEndFormatted}
+      `;
+    } else {
+      weeklyVisitText.innerHTML = `
+        <span class="font-medium text-red-600 dark:text-red-400">No visits remaining</span> 
+        for the week of ${weekStartFormatted} - ${weekEndFormatted}
+      `;
+    }
+
+    // Add a small note about the limit
+    const noteElement = document.createElement('div');
+    noteElement.className = 'mt-1 text-xs text-blue-600 dark:text-blue-400';
+    noteElement.textContent = 'Maximum 2 visits per week per email address';
+    
+    // Remove existing note if present
+    const existingNote = weeklyVisitCountDiv.querySelector('.text-xs');
+    if (existingNote) {
+      existingNote.remove();
+    }
+    
+    weeklyVisitCountDiv.querySelector('.ml-3')?.appendChild(noteElement);
+
+  } catch (error) {
+    console.error('Error in loadWeeklyVisitCount:', error);
+    const weeklyVisitText = document.getElementById('weeklyVisitText');
+    if (weeklyVisitText) {
+      weeklyVisitText.textContent = 'Error loading visit count';
+    }
+  }
+}
+
+// Global function to refresh weekly visit count (can be called from other components)
+(window as any).refreshWeeklyVisitCount = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || !user.email) return;
+
+    // Check if user has visitor role
+    try {
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+      
+      // Only refresh weekly visit count for visitor roles
+      if (roleData?.role !== 'visitor') {
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking user role for refresh:', error);
+      return;
+    }
+
+    await loadWeeklyVisitCount(user.email);
+  } catch (error) {
+    console.error('Error refreshing weekly visit count:', error);
+  }
+};
+
 export function HomePage() {
   // Initialize the page
   setTimeout(async () => {
-    // Set minimum date to today
-    const today = new Date().toISOString().split('T')[0];
+    // Set minimum date to today and maximum date to one month from today (Philippine time)
+    const philippineToday = getPhilippineDate();
+    const philippineMaxDate = new Date(philippineToday);
+    philippineMaxDate.setMonth(philippineMaxDate.getMonth() + 1);
+    
     const visitDateInput = document.getElementById('visitDate') as HTMLInputElement;
     if (visitDateInput) {
-      visitDateInput.min = today;
+      // Set minimum date to today (Philippine time)
+      visitDateInput.min = philippineToday.toISOString().split('T')[0];
+      // Set maximum date to one month from today
+      visitDateInput.max = philippineMaxDate.toISOString().split('T')[0];
+      
+      // Set default value to today
+      visitDateInput.value = philippineToday.toISOString().split('T')[0];
+      
+      // Add event listener to prevent selecting past dates
+      visitDateInput.addEventListener('change', () => {
+        const selectedDate = new Date(visitDateInput.value);
+        selectedDate.setHours(0, 0, 0, 0);
+        const philippineSelectedDate = toPhilippineTime(selectedDate);
+        philippineSelectedDate.setHours(0, 0, 0, 0);
+        
+        if (philippineSelectedDate.getTime() < philippineToday.getTime()) {
+          alert('Cannot schedule visits for past dates. Please select today or a future date.');
+          visitDateInput.value = philippineToday.toISOString().split('T')[0];
+        }
+      });
+      
+      // Add event listener to prevent selecting dates more than 1 month in the future
+      visitDateInput.addEventListener('change', () => {
+        const selectedDate = new Date(visitDateInput.value);
+        selectedDate.setHours(0, 0, 0, 0);
+        const philippineSelectedDate = toPhilippineTime(selectedDate);
+        philippineSelectedDate.setHours(0, 0, 0, 0);
+        
+        if (philippineSelectedDate.getTime() > philippineMaxDate.getTime()) {
+          alert('Cannot schedule visits more than 1 month in advance. Please select a date within the next month.');
+          visitDateInput.value = philippineMaxDate.toISOString().split('T')[0];
+        }
+      });
     }
 
     // Check if user is logged in and update email field
@@ -26,35 +225,45 @@ export function HomePage() {
     const scheduleNowBtn = document.getElementById('scheduleNowBtn');
     if (scheduleNowBtn) {
       if (user) {
-        // User is logged in, check their role
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .single();
-
-        if (roleData) {
-          const userRole = roleData.role;
-          // Hide button for admin, log, or personnel roles
-          if (userRole === 'admin' || userRole === 'log' || userRole === 'personnel') {
-            scheduleNowBtn.classList.add('hidden');
-          } else {
-            // Show button for visitor, guest, or any other roles
+        // Check if user has visitor role
+        try {
+          const { data: roleData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id)
+            .single();
+          
+          // Only show schedule button for visitor roles
+          if (roleData?.role === 'visitor') {
             scheduleNowBtn.classList.remove('hidden');
+            // Load and display weekly visit count for visitor users
+            await loadWeeklyVisitCount(user.email || '');
+          } else {
+            // Hide schedule button for non-visitor roles (admin, personnel, etc.)
+            scheduleNowBtn.classList.add('hidden');
+            // Hide weekly visit count for non-visitor roles
+            const weeklyVisitCountDiv = document.getElementById('weeklyVisitCount');
+            if (weeklyVisitCountDiv) {
+              weeklyVisitCountDiv.classList.add('hidden');
+            }
           }
-        } else {
-          // No role found, show button (default behavior)
-          scheduleNowBtn.classList.remove('hidden');
+        } catch (error) {
+          console.error('Error checking user role:', error);
+          // Hide schedule button if role check fails
+          scheduleNowBtn.classList.add('hidden');
         }
       } else {
-        // User is not logged in, show button
+        // User is not logged in, show the button for guest scheduling
         scheduleNowBtn.classList.remove('hidden');
       }
     }
 
-    // Setup event listeners
-    setupEventListeners();
-  }, 0);
+    // Load available places
+    await loadPlaces();
+  }, 100);
+
+  // Setup event listeners (this will also load places from database)
+  setupEventListeners();
 
   return `    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div class="flex items-center space-x-4 mb-8">
@@ -66,6 +275,27 @@ export function HomePage() {
           <p class="text-xl text-gray-600 dark:text-gray-300 transition-colors duration-200">
             Your one-stop solution for guest management and hospitality services.
           </p>
+        </div>
+      </div>
+
+      <!-- Weekly Visit Count Display for Logged-in Users -->
+      <div id="weeklyVisitCount" class="mb-6 hidden">
+        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <h3 class="text-sm font-medium text-blue-800 dark:text-blue-200">
+                Weekly Visit Status
+              </h3>
+              <div class="mt-1 text-sm text-blue-700 dark:text-blue-300">
+                <span id="weeklyVisitText">Loading...</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -183,7 +413,9 @@ export function HomePage() {
                   class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   required
                   min=""
+                  max=""
                 >
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Scheduling is available up to 1 month in advance. Maximum 2 visits per week per email address.</p>
               </div>
               <div>
                 <label for="placeToVisit" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Place to Visit</label>
@@ -194,36 +426,11 @@ export function HomePage() {
                   required
                 >
                   <option value="">Select a place</option>
-                  <option value="reception">Reception</option>
-                  <option value="meeting_room">Meeting Room</option>
-                  <option value="office">Office</option>
-                  <option value="conference_room">Conference Room</option>
-                  <option value="lobby">Lobby</option>
-                  <option value="multiple">Multiple Places</option>
                 </select>
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Multiple Places option requires at least 2 available places</p>
               </div>
               <div id="multiplePlacesContainer" class="hidden space-y-2">
-                <div class="flex items-center">
-                  <input type="checkbox" id="place_reception" name="places" value="reception" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                  <label for="place_reception" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Reception</label>
-                </div>
-                <div class="flex items-center">
-                  <input type="checkbox" id="place_meeting_room" name="places" value="meeting_room" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                  <label for="place_meeting_room" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Meeting Room</label>
-                </div>
-                <div class="flex items-center">
-                  <input type="checkbox" id="place_office" name="places" value="office" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                  <label for="place_office" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Office</label>
-                </div>
-                <div class="flex items-center">
-                  <input type="checkbox" id="place_conference_room" name="places" value="conference_room" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                  <label for="place_conference_room" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Conference Room</label>
-                </div>
-                <div class="flex items-center">
-                  <input type="checkbox" id="place_lobby" name="places" value="lobby" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                  <label for="place_lobby" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">Lobby</label>
-                </div>
+                <!-- Dynamic place checkboxes will be loaded here -->
               </div>
               <div>
                 <label for="purpose" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Purpose of Visit</label>

@@ -1,6 +1,26 @@
 import { sendVerificationEmail } from '../config/emailjs';
 import supabase from '../config/supabase';
 
+// Helper function to get current Philippine time
+function getPhilippineTime(): Date {
+  const now = new Date();
+  const philippineTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Manila"}));
+  return philippineTime;
+}
+
+// Helper function to get Philippine date (date only)
+function getPhilippineDate(): Date {
+  const philippineTime = getPhilippineTime();
+  philippineTime.setHours(0, 0, 0, 0);
+  return philippineTime;
+}
+
+// Helper function to convert any date to Philippine time
+function toPhilippineTime(date: Date): Date {
+  const philippineTime = new Date(date.toLocaleString("en-US", {timeZone: "Asia/Manila"}));
+  return philippineTime;
+}
+
 export async function setupEventListeners() {
   // Fetch places from database with personnel assignments
   const { data: places, error: placesError } = await supabase
@@ -191,13 +211,60 @@ export async function setupEventListeners() {
   // Schedule modal open/close
   const scheduleNowBtn = document.getElementById('scheduleNowBtn');
   if (scheduleNowBtn) {
-    scheduleNowBtn.addEventListener('click', function() {
+    scheduleNowBtn.addEventListener('click', async function() {
+      // Check if user is logged in and has visitor role
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        // Check if user has visitor role
+        try {
+          const { data: roleData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id)
+            .single();
+          
+          if (roleData?.role !== 'visitor') {
+            alert('Only visitors can schedule visits. Please contact an administrator if you need access.');
+            return;
+          }
+        } catch (error) {
+          console.error('Error checking user role:', error);
+          alert('Error checking user permissions. Please try again.');
+          return;
+        }
+      }
+      
       const modal = document.getElementById('scheduleModal');
       if (modal) {
         modal.classList.remove('hidden');
+        // Initialize date validation when modal opens
+        initializeDateValidation();
       }
     });
   }
+
+  // Handle clicking outside modal to close
+  const scheduleModal = document.getElementById('scheduleModal');
+  if (scheduleModal) {
+    scheduleModal.addEventListener('click', function(e) {
+      if (e.target === scheduleModal) {
+        scheduleModal.classList.add('hidden');
+        resetDateValidation();
+      }
+    });
+  }
+
+  // Handle ESC key to close modal
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      const modal = document.getElementById('scheduleModal');
+      if (modal && !modal.classList.contains('hidden')) {
+        modal.classList.add('hidden');
+        resetDateValidation();
+      }
+    }
+  });
 
   const closeScheduleModalBtn = document.getElementById('closeScheduleModalBtn');
   if (closeScheduleModalBtn) {
@@ -205,6 +272,8 @@ export async function setupEventListeners() {
       const modal = document.getElementById('scheduleModal');
       if (modal) {
         modal.classList.add('hidden');
+        // Reset date validation when modal is closed
+        resetDateValidation();
       }
     });
   }
@@ -742,9 +811,55 @@ export async function setupEventListeners() {
         const purpose = purposeSelect.value;
         const otherPurpose = otherPurposeTextarea?.value || '';
 
+        // Validate visit date using Philippine time
+        const philippineToday = getPhilippineDate();
+        const selectedDate = new Date(visitDate);
+        selectedDate.setHours(0, 0, 0, 0);
+        const philippineSelectedDate = toPhilippineTime(selectedDate);
+        philippineSelectedDate.setHours(0, 0, 0, 0);
+        
+        if (philippineSelectedDate.getTime() < philippineToday.getTime()) {
+          throw new Error(`Cannot schedule visits for past dates. Current Philippine date is ${philippineToday.toLocaleDateString()}. Please select today or a future date.`);
+        }
+
+        // Check if date is more than 1 month in the future
+        const philippineMaxDate = new Date(philippineToday);
+        philippineMaxDate.setMonth(philippineMaxDate.getMonth() + 1);
+        
+        if (philippineSelectedDate.getTime() > philippineMaxDate.getTime()) {
+          throw new Error(`Cannot schedule visits more than 1 month in advance. Maximum allowed date is ${philippineMaxDate.toLocaleDateString()}.`);
+        }
+
+        // Additional validation: Check if the date input has validation errors
+        const visitDateInput = document.getElementById('visitDate') as HTMLInputElement;
+        if (visitDateInput && visitDateInput.classList.contains('border-red-500')) {
+          throw new Error('Please select a valid date before submitting the form.');
+        }
+
         // Get current user if logged in
         const { data: { user } } = await supabase.auth.getUser();
         const visitorUserId = user?.id || null;
+
+        // If user is logged in, check if they have visitor role
+        if (user) {
+          try {
+            const { data: roleData } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', user.id)
+              .single();
+            
+            if (roleData?.role !== 'visitor') {
+              throw new Error('Only visitors can schedule visits. Please contact an administrator if you need access.');
+            }
+          } catch (error) {
+            if (error instanceof Error) {
+              throw error;
+            } else {
+              throw new Error('Error checking user permissions. Please try again.');
+            }
+          }
+        }
 
         // Validate place selection
         if (placeToVisit === 'multiple') {
@@ -792,12 +907,23 @@ export async function setupEventListeners() {
         // Show success message
         alert('Visit scheduled successfully! You will receive a confirmation email shortly.');
         
+        // Refresh weekly visit count for logged-in users
+        if ((window as any).refreshWeeklyVisitCount) {
+          await (window as any).refreshWeeklyVisitCount();
+        }
+        
+        // Refresh modal weekly visit count if modal is still open
+        refreshModalWeeklyVisitCount();
+        
         // Close modal and reset form
         const modal = document.getElementById('scheduleModal');
         if (modal) {
           modal.classList.add('hidden');
         }
         scheduleForm.reset();
+        
+        // Reset date validation
+        resetDateValidation();
         
         // Reset verification state
         isEmailVerified = false;
@@ -840,5 +966,315 @@ export async function setupEventListeners() {
         }
       }
     });
+  }
+
+  // Function to initialize date validation for the scheduling modal
+  function initializeDateValidation() {
+    const visitDateInput = document.getElementById('visitDate') as HTMLInputElement;
+    if (!visitDateInput) return;
+
+    // Get current Philippine time
+    const philippineToday = getPhilippineDate();
+    const philippineMaxDate = new Date(philippineToday);
+    philippineMaxDate.setMonth(philippineMaxDate.getMonth() + 1);
+
+    // Set min and max dates
+    visitDateInput.min = philippineToday.toISOString().split('T')[0];
+    visitDateInput.max = philippineMaxDate.toISOString().split('T')[0];
+
+    // Set default value to today if not already set
+    if (!visitDateInput.value) {
+      visitDateInput.value = philippineToday.toISOString().split('T')[0];
+    }
+
+    // Create or get the date validation status element
+    let dateValidationStatus = document.getElementById('dateValidationStatus');
+    if (!dateValidationStatus) {
+      dateValidationStatus = document.createElement('div');
+      dateValidationStatus.id = 'dateValidationStatus';
+      dateValidationStatus.className = 'mt-1 text-sm';
+      visitDateInput.parentNode?.insertBefore(dateValidationStatus, visitDateInput.nextSibling);
+    }
+
+    // Function to validate date and update status
+    function validateDate() {
+      const selectedDate = new Date(visitDateInput.value);
+      selectedDate.setHours(0, 0, 0, 0);
+      const philippineSelectedDate = toPhilippineTime(selectedDate);
+      philippineSelectedDate.setHours(0, 0, 0, 0);
+
+      // Clear previous validation
+      visitDateInput.classList.remove('border-red-500', 'border-green-500', 'border-yellow-500', 'focus:border-red-500', 'focus:border-green-500', 'focus:border-yellow-500');
+      dateValidationStatus.className = 'mt-1 text-sm';
+
+      // Check if date is in the past
+      if (philippineSelectedDate.getTime() < philippineToday.getTime()) {
+        visitDateInput.classList.add('border-red-500', 'focus:border-red-500');
+        dateValidationStatus.textContent = `❌ Cannot schedule for past dates. Current Philippine date is ${philippineToday.toLocaleDateString()}.`;
+        dateValidationStatus.className = 'mt-1 text-sm text-red-600 font-medium';
+        return false;
+      }
+
+      // Check if date is more than 1 month in the future
+      if (philippineSelectedDate.getTime() > philippineMaxDate.getTime()) {
+        visitDateInput.classList.add('border-red-500', 'focus:border-red-500');
+        dateValidationStatus.textContent = `❌ Cannot schedule more than 1 month in advance. Maximum allowed date is ${philippineMaxDate.toLocaleDateString()}.`;
+        dateValidationStatus.className = 'mt-1 text-sm text-red-600 font-medium';
+        return false;
+      }
+
+      // Check if date is today
+      if (philippineSelectedDate.getTime() === philippineToday.getTime()) {
+        visitDateInput.classList.add('border-yellow-500', 'focus:border-yellow-500');
+        dateValidationStatus.textContent = `⚠️ Scheduling for today (${philippineToday.toLocaleDateString()}). Please ensure you can visit today.`;
+        dateValidationStatus.className = 'mt-1 text-sm text-yellow-600 font-medium';
+        return true;
+      }
+
+      // Check if date is tomorrow
+      const philippineTomorrow = new Date(philippineToday);
+      philippineTomorrow.setDate(philippineTomorrow.getDate() + 1);
+      if (philippineSelectedDate.getTime() === philippineTomorrow.getTime()) {
+        visitDateInput.classList.add('border-green-500', 'focus:border-green-500');
+        dateValidationStatus.textContent = `✅ Scheduling for tomorrow (${philippineTomorrow.toLocaleDateString()}).`;
+        dateValidationStatus.className = 'mt-1 text-sm text-green-600 font-medium';
+        return true;
+      }
+
+      // Valid future date
+      visitDateInput.classList.add('border-green-500', 'focus:border-green-500');
+      dateValidationStatus.textContent = `✅ Valid date selected: ${philippineSelectedDate.toLocaleDateString()}.`;
+      dateValidationStatus.className = 'mt-1 text-sm text-green-600 font-medium';
+      return true;
+    }
+
+    // Add event listeners for real-time validation
+    visitDateInput.addEventListener('change', validateDate);
+    visitDateInput.addEventListener('input', validateDate);
+    visitDateInput.addEventListener('blur', validateDate);
+
+    // Initial validation
+    validateDate();
+
+    // Add real-time clock display
+    let clockDisplay = document.getElementById('philippineClock');
+    if (!clockDisplay) {
+      clockDisplay = document.createElement('div');
+      clockDisplay.id = 'philippineClock';
+      clockDisplay.className = 'text-xs text-gray-500 dark:text-gray-400 mt-1';
+      visitDateInput.parentNode?.insertBefore(clockDisplay, dateValidationStatus);
+    }
+
+    // Update clock every second
+    function updateClock() {
+      const philippineTime = getPhilippineTime();
+      clockDisplay.textContent = `Current Philippine time: ${philippineTime.toLocaleString('en-US', { 
+        timeZone: 'Asia/Manila',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      })}`;
+    }
+
+    updateClock();
+    const clockInterval = setInterval(updateClock, 1000);
+
+    // Clean up interval when modal is closed
+    const modal = document.getElementById('scheduleModal');
+    if (modal) {
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+            if (modal.classList.contains('hidden')) {
+              clearInterval(clockInterval);
+              observer.disconnect();
+            }
+          }
+        });
+      });
+      observer.observe(modal, { attributes: true });
+    }
+
+    // Add weekly visit count display for logged-in users
+    addWeeklyVisitCountToModal();
+  }
+
+  // Function to reset date validation
+  function resetDateValidation() {
+    const visitDateInput = document.getElementById('visitDate') as HTMLInputElement;
+    const dateValidationStatus = document.getElementById('dateValidationStatus');
+    const clockDisplay = document.getElementById('philippineClock');
+    const modalWeeklyVisitCount = document.getElementById('modalWeeklyVisitCount');
+    
+    if (visitDateInput) {
+      visitDateInput.classList.remove('border-red-500', 'border-green-500', 'border-yellow-500', 'focus:border-red-500', 'focus:border-green-500', 'focus:border-yellow-500');
+    }
+    
+    if (dateValidationStatus) {
+      dateValidationStatus.textContent = '';
+      dateValidationStatus.className = 'mt-1 text-sm';
+    }
+    
+    if (clockDisplay) {
+      clockDisplay.textContent = '';
+    }
+    
+    if (modalWeeklyVisitCount) {
+      modalWeeklyVisitCount.remove();
+    }
+  }
+
+  // Function to add weekly visit count display to the modal
+  async function addWeeklyVisitCountToModal() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !user.email) return;
+
+      // Check if user has visitor role
+      try {
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
+        
+        // Only show weekly visit count for visitor roles
+        if (roleData?.role !== 'visitor') {
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking user role for modal weekly visit count:', error);
+        return;
+      }
+
+      // Check if weekly visit count is already displayed
+      if (document.getElementById('modalWeeklyVisitCount')) return;
+
+      const visitDateInput = document.getElementById('visitDate');
+      if (!visitDateInput) return;
+
+      // Get current Philippine date
+      const philippineToday = getPhilippineDate();
+      
+      // Calculate the week boundaries (Sunday to Saturday)
+      const weekStart = new Date(philippineToday);
+      weekStart.setDate(philippineToday.getDate() - philippineToday.getDay());
+      weekStart.setHours(0, 0, 0, 0);
+      
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      weekEnd.setHours(23, 59, 59, 999);
+
+      // Query the database for visits in the current week
+      const { data: visits, error } = await supabase
+        .from('scheduled_visits')
+        .select('visit_date, status')
+        .eq('visitor_email', user.email)
+        .gte('visit_date', weekStart.toISOString().split('T')[0])
+        .lte('visit_date', weekEnd.toISOString().split('T')[0])
+        .in('status', ['pending', 'completed']);
+
+      if (error) {
+        console.error('Error loading weekly visit count for modal:', error);
+        return;
+      }
+
+      // Count the visits
+      const visitCount = visits?.length || 0;
+      const remainingVisits = Math.max(0, 2 - visitCount);
+
+      // Format the week range for display
+      const weekStartFormatted = weekStart.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric' 
+      });
+      const weekEndFormatted = weekEnd.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric' 
+      });
+
+      // Create the weekly visit count display
+      const weeklyVisitDiv = document.createElement('div');
+      weeklyVisitDiv.id = 'modalWeeklyVisitCount';
+      weeklyVisitDiv.className = 'mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md';
+      
+      let statusText = '';
+      let statusColor = '';
+      
+      if (visitCount === 0) {
+        statusText = '2 visits remaining';
+        statusColor = 'text-green-600 dark:text-green-400';
+      } else if (visitCount === 1) {
+        statusText = '1 visit remaining';
+        statusColor = 'text-yellow-600 dark:text-yellow-400';
+      } else {
+        statusText = 'No visits remaining';
+        statusColor = 'text-red-600 dark:text-red-400';
+      }
+
+      weeklyVisitDiv.innerHTML = `
+        <div class="flex items-center text-sm">
+          <svg class="h-4 w-4 text-blue-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <span class="font-medium ${statusColor}">${statusText}</span>
+          <span class="text-gray-600 dark:text-gray-400 ml-1">
+            for the week of ${weekStartFormatted} - ${weekEndFormatted}
+          </span>
+        </div>
+        <div class="mt-1 text-xs text-blue-600 dark:text-blue-400">
+          Maximum 2 visits per week per email address
+        </div>
+      `;
+
+      // Insert after the visit date input
+      visitDateInput.parentNode?.insertBefore(weeklyVisitDiv, visitDateInput.nextSibling);
+
+    } catch (error) {
+      console.error('Error adding weekly visit count to modal:', error);
+    }
+  }
+
+  // Function to refresh modal weekly visit count
+  async function refreshModalWeeklyVisitCount() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !user.email) return;
+
+      // Check if user has visitor role
+      try {
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
+        
+        // Only refresh modal weekly visit count for visitor roles
+        if (roleData?.role !== 'visitor') {
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking user role for modal refresh:', error);
+        return;
+      }
+
+      // Check if weekly visit count is already displayed
+      if (document.getElementById('modalWeeklyVisitCount')) {
+        // Remove existing weekly visit count
+        const weeklyVisitDiv = document.getElementById('modalWeeklyVisitCount');
+        if (weeklyVisitDiv) {
+          weeklyVisitDiv.remove();
+        }
+      }
+
+      // Add new weekly visit count
+      await addWeeklyVisitCountToModal();
+
+    } catch (error) {
+      console.error('Error refreshing modal weekly visit count:', error);
+    }
   }
 } 

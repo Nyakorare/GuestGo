@@ -11,6 +11,7 @@ DECLARE
     admin_user_id UUID;
     personnel_user_id UUID;
     logs_user_id UUID;
+    visitor_user_id UUID;
 BEGIN
     -- Check for existing admin user
     SELECT id INTO admin_user_id 
@@ -26,6 +27,11 @@ BEGIN
     SELECT id INTO logs_user_id 
     FROM auth.users 
     WHERE email = 'illuminat30@gmail.com';
+    
+    -- Check for existing visitor user
+    SELECT id INTO visitor_user_id 
+    FROM auth.users 
+    WHERE email = 'geko_041702@yahoo.com';
     
     -- Insert admin user if not exists
     IF admin_user_id IS NULL THEN
@@ -105,6 +111,32 @@ BEGIN
         WHERE email = 'illuminat30@gmail.com';
     END IF;
     
+    -- Insert visitor user if not exists
+    IF visitor_user_id IS NULL THEN
+        INSERT INTO auth.users (
+            id,
+            email,
+            encrypted_password,
+            email_confirmed_at,
+            created_at,
+            updated_at,
+            raw_user_meta_data
+        ) VALUES (
+            gen_random_uuid(),
+            'geko_041702@yahoo.com',
+            crypt('lolsomuch28', gen_salt('bf')),
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP,
+            '{"first_name": "Geko", "last_name": "Visitor"}'
+        );
+        
+        -- Get the newly created visitor user ID
+        SELECT id INTO visitor_user_id 
+        FROM auth.users 
+        WHERE email = 'geko_041702@yahoo.com';
+    END IF;
+    
     -- Insert or update admin role
     INSERT INTO user_roles (user_id, role, first_name, last_name, email)
     VALUES (admin_user_id, 'admin', 'Glenn', 'Galbadores', 'g1galba042804@gmail.com')
@@ -133,6 +165,16 @@ BEGIN
         first_name = 'Logs',
         last_name = 'Test',
         email = 'illuminat30@gmail.com',
+        updated_at = CURRENT_TIMESTAMP;
+    
+    -- Insert or update visitor role
+    INSERT INTO user_roles (user_id, role, first_name, last_name, email)
+    VALUES (visitor_user_id, 'visitor', 'Geko', 'Visitor', 'geko_041702@yahoo.com')
+    ON CONFLICT (user_id) DO UPDATE SET
+        role = 'visitor',
+        first_name = 'Geko',
+        last_name = 'Visitor',
+        email = 'geko_041702@yahoo.com',
         updated_at = CURRENT_TIMESTAMP;
         
     RAISE NOTICE 'Sample users created/updated successfully';
