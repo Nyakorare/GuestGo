@@ -811,8 +811,21 @@ export async function setupEventListeners() {
         const purpose = purposeSelect.value;
         const otherPurpose = otherPurposeTextarea?.value || '';
 
-        // Validate visit date using Philippine time
-        const philippineToday = getPhilippineDate();
+        // Validate visit date using Philippine time from database
+        let philippineToday: Date;
+        try {
+          const { data: philippineDateData, error } = await supabase.rpc('get_philippine_date');
+          if (error) {
+            console.error('Error getting Philippine date from DB:', error);
+            philippineToday = getPhilippineDate();
+          } else {
+            philippineToday = new Date(philippineDateData);
+          }
+        } catch (error) {
+          console.error('Exception getting Philippine date from DB:', error);
+          philippineToday = getPhilippineDate();
+        }
+        
         const selectedDate = new Date(visitDate);
         selectedDate.setHours(0, 0, 0, 0);
         const philippineSelectedDate = toPhilippineTime(selectedDate);
@@ -969,13 +982,30 @@ export async function setupEventListeners() {
   }
 
   // Function to initialize date validation for the scheduling modal
-  function initializeDateValidation() {
+  async function initializeDateValidation() {
     const visitDateInput = document.getElementById('visitDate') as HTMLInputElement;
     if (!visitDateInput) return;
 
-    // Get current Philippine time
-    const philippineToday = getPhilippineDate();
-    const philippineMaxDate = new Date(philippineToday);
+    // Get current Philippine time from database (real-time)
+    let philippineToday: Date;
+    let philippineMaxDate: Date;
+    
+    try {
+      const { data: philippineDateData, error } = await supabase.rpc('get_philippine_date');
+      if (error) {
+        console.error('Error getting Philippine date from DB:', error);
+        // Fallback to local calculation
+        philippineToday = getPhilippineDate();
+      } else {
+        philippineToday = new Date(philippineDateData);
+      }
+    } catch (error) {
+      console.error('Exception getting Philippine date from DB:', error);
+      // Fallback to local calculation
+      philippineToday = getPhilippineDate();
+    }
+    
+    philippineMaxDate = new Date(philippineToday);
     philippineMaxDate.setMonth(philippineMaxDate.getMonth() + 1);
 
     // Set min and max dates
@@ -997,20 +1027,35 @@ export async function setupEventListeners() {
     }
 
     // Function to validate date and update status
-    function validateDate() {
+    async function validateDate() {
       const selectedDate = new Date(visitDateInput.value);
       selectedDate.setHours(0, 0, 0, 0);
       const philippineSelectedDate = toPhilippineTime(selectedDate);
       philippineSelectedDate.setHours(0, 0, 0, 0);
+
+      // Get current Philippine date from database for real-time validation
+      let currentPhilippineDate: Date;
+      try {
+        const { data: currentDateData, error } = await supabase.rpc('get_philippine_date');
+        if (error) {
+          console.error('Error getting current Philippine date from DB:', error);
+          currentPhilippineDate = getPhilippineDate();
+        } else {
+          currentPhilippineDate = new Date(currentDateData);
+        }
+      } catch (error) {
+        console.error('Exception getting current Philippine date from DB:', error);
+        currentPhilippineDate = getPhilippineDate();
+      }
 
       // Clear previous validation
       visitDateInput.classList.remove('border-red-500', 'border-green-500', 'border-yellow-500', 'focus:border-red-500', 'focus:border-green-500', 'focus:border-yellow-500');
       dateValidationStatus.className = 'mt-1 text-sm';
 
       // Check if date is in the past
-      if (philippineSelectedDate.getTime() < philippineToday.getTime()) {
+      if (philippineSelectedDate.getTime() < currentPhilippineDate.getTime()) {
         visitDateInput.classList.add('border-red-500', 'focus:border-red-500');
-        dateValidationStatus.textContent = `❌ Cannot schedule for past dates. Current Philippine date is ${philippineToday.toLocaleDateString()}.`;
+        dateValidationStatus.textContent = `❌ Cannot schedule for past dates. Current Philippine date is ${currentPhilippineDate.toLocaleDateString()}.`;
         dateValidationStatus.className = 'mt-1 text-sm text-red-600 font-medium';
         return false;
       }
@@ -1024,15 +1069,15 @@ export async function setupEventListeners() {
       }
 
       // Check if date is today
-      if (philippineSelectedDate.getTime() === philippineToday.getTime()) {
+      if (philippineSelectedDate.getTime() === currentPhilippineDate.getTime()) {
         visitDateInput.classList.add('border-yellow-500', 'focus:border-yellow-500');
-        dateValidationStatus.textContent = `⚠️ Scheduling for today (${philippineToday.toLocaleDateString()}). Please ensure you can visit today.`;
+        dateValidationStatus.textContent = `⚠️ Scheduling for today (${currentPhilippineDate.toLocaleDateString()}). Please ensure you can visit today.`;
         dateValidationStatus.className = 'mt-1 text-sm text-yellow-600 font-medium';
         return true;
       }
 
       // Check if date is tomorrow
-      const philippineTomorrow = new Date(philippineToday);
+      const philippineTomorrow = new Date(currentPhilippineDate);
       philippineTomorrow.setDate(philippineTomorrow.getDate() + 1);
       if (philippineSelectedDate.getTime() === philippineTomorrow.getTime()) {
         visitDateInput.classList.add('border-green-500', 'focus:border-green-500');
@@ -1065,8 +1110,13 @@ export async function setupEventListeners() {
       visitDateInput.parentNode?.insertBefore(clockDisplay, dateValidationStatus);
     }
 
-    // Update clock every second
-    function updateClock() {
+    // Update clock every second with real-time Philippine time from database
+    async function updateClock() {
+      try {
+        const { data: philippineTimeData, error } = await supabase.rpc('get_philippine_timestamp');
+        if (error) {
+          console.error('Error getting Philippine time from DB:', error);
+          // Fallback to local calculation
       const philippineTime = getPhilippineTime();
       clockDisplay.textContent = `Current Philippine time: ${philippineTime.toLocaleString('en-US', { 
         timeZone: 'Asia/Manila',
@@ -1076,7 +1126,33 @@ export async function setupEventListeners() {
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit'
-      })}`;
+          })} (local calculation)`;
+        } else {
+          const philippineTime = new Date(philippineTimeData);
+          clockDisplay.textContent = `Current Philippine time: ${philippineTime.toLocaleString('en-US', { 
+            timeZone: 'Asia/Manila',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+          })} (real-time from DB)`;
+        }
+      } catch (error) {
+        console.error('Exception getting Philippine time from DB:', error);
+        // Fallback to local calculation
+        const philippineTime = getPhilippineTime();
+        clockDisplay.textContent = `Current Philippine time: ${philippineTime.toLocaleString('en-US', { 
+          timeZone: 'Asia/Manila',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        })} (local calculation)`;
+      }
     }
 
     updateClock();

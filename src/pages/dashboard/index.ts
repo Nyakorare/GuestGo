@@ -159,7 +159,7 @@ export function DashboardPage() {
       finishedContent?.classList.add('hidden');
     });
 
-    visitsTab?.addEventListener('click', () => {
+    visitsTab?.addEventListener('click', async () => {
       visitsTab.classList.add('bg-blue-600', 'text-white');
       visitsTab.classList.remove('bg-gray-100', 'text-gray-700');
       assignmentTab?.classList.remove('bg-blue-600', 'text-white');
@@ -169,10 +169,13 @@ export function DashboardPage() {
       visitsContent?.classList.remove('hidden');
       assignmentContent?.classList.add('hidden');
       finishedContent?.classList.add('hidden');
-      loadScheduledVisits();
+      
+      // Stop auto-refresh for other tabs and start for visits
+      stopVisitsAutoRefresh();
+      await loadScheduledVisits();
     });
 
-    finishedTab?.addEventListener('click', () => {
+    finishedTab?.addEventListener('click', async () => {
       finishedTab.classList.add('bg-blue-600', 'text-white');
       finishedTab.classList.remove('bg-gray-100', 'text-gray-700');
       assignmentTab?.classList.remove('bg-blue-600', 'text-white');
@@ -183,8 +186,11 @@ export function DashboardPage() {
       assignmentContent?.classList.add('hidden');
       visitsContent?.classList.add('hidden');
       
+      // Stop auto-refresh for visits tab
+      stopVisitsAutoRefresh();
+      
       // Load finished schedules when switching to finished tab
-      loadFinishedSchedules();
+      await loadFinishedSchedules();
     });
 
     // Show profile settings button when logged in
@@ -230,6 +236,21 @@ export function DashboardPage() {
             >
               Logs
             </button>
+          </div>
+        </div>
+
+        <!-- Philippine Clock -->
+        <div id="philippineClock" class="flex flex-col items-end justify-center bg-white dark:bg-gray-800 rounded-lg shadow-md px-6 py-4 border border-gray-200 dark:border-gray-700">
+          <div class="text-center">
+            <div class="text-2xl font-bold text-gray-900 dark:text-white" id="philippineTime">
+              Loading...
+            </div>
+            <div class="text-sm text-gray-600 dark:text-gray-400" id="philippineDate">
+              Loading...
+            </div>
+            <div class="text-xs text-gray-500 dark:text-gray-500 mt-1">
+              🇵🇭 Philippine Time
+            </div>
           </div>
         </div>
       </div>
@@ -419,6 +440,18 @@ export function DashboardPage() {
           <div class="flex justify-between items-center mb-6">
             <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Scheduled Visits</h3>
             <div class="flex items-center space-x-4">
+              <!-- Manual Refresh Button -->
+              <button 
+                id="refreshVisitsBtn"
+                class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm"
+                title="Refresh visits data"
+              >
+                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                Refresh
+              </button>
+              
               <!-- Search and Filter Section -->
               <div class="flex items-center space-x-3">
                 <!-- Search Input -->
@@ -1194,9 +1227,23 @@ async function renderLogs() {
     const formattedDetails = await Promise.all(
       filteredLogs.map(async (log: any) => {
         const details = await formatLogDetails(log.details, log.action, log);
+        // Determine action override for visit_scheduled logs
+        let displayAction = log.action;
+        if (log.action === 'visit_scheduled' && log.details) {
+          let parsedDetails = typeof log.details === 'string' ? JSON.parse(log.details) : log.details;
+          if (Array.isArray(parsedDetails.history) && parsedDetails.history.length > 0) {
+            const lastEvent = parsedDetails.history[parsedDetails.history.length - 1];
+            if (lastEvent.event === 'completed') {
+              displayAction = 'visit_completed';
+            } else if (lastEvent.event === 'unsuccessful' || lastEvent.event === 'failed') {
+              displayAction = 'visit_unsuccessful';
+            }
+          }
+        }
         return {
           ...log,
-          formattedDetails: details
+          formattedDetails: details,
+          displayAction
         };
       })
     );
@@ -1230,18 +1277,19 @@ async function renderLogs() {
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                    log.action === 'password_change' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                    log.action === 'place_update' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                    log.action === 'place_availability_toggle' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                    log.action === 'place_create' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                    log.action === 'personnel_assignment' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
-                    log.action === 'personnel_removal' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
-                    log.action === 'personnel_availability_change' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' :
-                    log.action === 'visit_scheduled' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' :
-                    log.action === 'visit_completed' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
+                    log.displayAction === 'password_change' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                    log.displayAction === 'place_update' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                    log.displayAction === 'place_availability_toggle' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                    log.displayAction === 'place_create' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                    log.displayAction === 'personnel_assignment' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+                    log.displayAction === 'personnel_removal' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
+                    log.displayAction === 'personnel_availability_change' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' :
+                    log.displayAction === 'visit_scheduled' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' :
+                    log.displayAction === 'visit_completed' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
+                    log.displayAction === 'visit_unsuccessful' ? 'bg-gray-200 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
                     'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
                   }">
-                    ${log.action.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                    ${log.displayAction.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                   </span>
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
@@ -1357,9 +1405,31 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
         const reason = parsedDetails.unavailability_reason ? `<div><span class="font-medium">Reason:</span> ${parsedDetails.unavailability_reason}</div>` : '';
         const availabilityPlaceName = await getPlaceName(parsedDetails.place_id);
         return `<div><span class="font-medium">Place:</span> ${availabilityPlaceName}</div><div><span class="font-medium">Status:</span> <span class="${statusColor}">${status}</span></div>${reason}`;
-      case 'visit_scheduled':
+      case 'visit_scheduled': {
         const visitPlaceName = await getPlaceName(parsedDetails.place_id);
-        return `<div><span class="font-medium">Visitor:</span> ${parsedDetails.visitor_name || 'Unknown visitor'}</div><div><span class="font-medium">Date:</span> ${new Date(parsedDetails.visit_date).toLocaleDateString()}</div><div><span class="font-medium">Place:</span> ${visitPlaceName}</div><div><span class="font-medium">Purpose:</span> ${parsedDetails.purpose || 'Not specified'}</div>`;
+        let historyHtml = '';
+        if (Array.isArray(parsedDetails.history)) {
+          historyHtml = `<div class="mt-2"><span class="font-medium">History:</span><ul class="ml-4 mt-1 space-y-1">` +
+            parsedDetails.history.map((event: any) => {
+              const eventType = event.event ? event.event.charAt(0).toUpperCase() + event.event.slice(1) : 'Event';
+              const eventTime = event.timestamp ? new Date(event.timestamp).toLocaleString() : '';
+              let details = '';
+              if (event.details) {
+                if (event.details.by) {
+                  details += `<span class='text-xs text-gray-500'>(By: ${event.details.by})</span> `;
+                }
+                if (event.details.purpose) {
+                  details += `<span class='text-xs text-gray-500'>Purpose: ${event.details.purpose}</span> `;
+                }
+                if (event.details.note) {
+                  details += `<span class='text-xs text-gray-500'>Note: ${event.details.note}</span> `;
+                }
+              }
+              return `<li><span class='font-semibold'>${eventType}</span> <span class='text-xs text-gray-400'>${eventTime}</span> ${details}</li>`;
+            }).join('') + '</ul></div>';
+        }
+        return `<div><span class="font-medium">Visitor:</span> ${parsedDetails.visitor_name || 'Unknown visitor'}</div><div><span class="font-medium">Date:</span> ${new Date(parsedDetails.visit_date).toLocaleDateString()}</div><div><span class="font-medium">Place:</span> ${visitPlaceName}</div><div><span class="font-medium">Purpose:</span> ${parsedDetails.purpose || 'Not specified'}</div>${historyHtml}`;
+      }
       case 'visit_completed':
         const completedVisitPlaceName = await getPlaceName(parsedDetails.place_id);
         return `<div><span class="font-medium">Visit ID:</span> ${parsedDetails.visit_id ? parsedDetails.visit_id.substring(0, 8) + '...' : 'Unknown'}</div><div><span class="font-medium">Place:</span> ${completedVisitPlaceName}</div><div><span class="font-medium">Completed:</span> ${new Date(parsedDetails.completed_at).toLocaleString()}</div>`;
@@ -1620,7 +1690,7 @@ function setupDashboardEventListeners() {
     });
   }
 
-  // Refresh personnel button
+  // Refresh personnel dashboard button
   const refreshPersonnelBtn = document.getElementById('refreshPersonnelBtn');
   if (refreshPersonnelBtn) {
     refreshPersonnelBtn.addEventListener('click', async () => {
@@ -1641,6 +1711,41 @@ function setupDashboardEventListeners() {
         // Reset button state
         refreshPersonnelBtn.disabled = false;
         refreshPersonnelBtn.textContent = 'Refresh';
+      }
+    });
+  }
+
+  // Refresh visits button
+  const refreshVisitsBtn = document.getElementById('refreshVisitsBtn');
+  if (refreshVisitsBtn) {
+    refreshVisitsBtn.addEventListener('click', async () => {
+      try {
+        // Show loading state
+        refreshVisitsBtn.disabled = true;
+        refreshVisitsBtn.innerHTML = `
+          <svg class="w-4 h-4 inline mr-1 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          Refreshing...
+        `;
+        
+        // Load scheduled visits with real-time data
+        await loadScheduledVisits();
+        
+        // Show success notification
+        showNotification('Visits refreshed successfully!', 'success');
+      } catch (error) {
+        console.error('Error refreshing visits:', error);
+        showNotification('Error refreshing visits. Please try again.', 'error');
+      } finally {
+        // Reset button state
+        refreshVisitsBtn.disabled = false;
+        refreshVisitsBtn.innerHTML = `
+          <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          Refresh
+        `;
       }
     });
   }
@@ -1932,6 +2037,11 @@ function setupDashboardEventListeners() {
 setTimeout(() => {
   setupDashboardEventListeners();
 }, 100);
+
+// Cleanup auto-refresh when page is unloaded
+window.addEventListener('beforeunload', () => {
+  stopVisitsAutoRefresh();
+});
 
 // Add admin tab switching event listeners
 function setupAdminTabEventListeners() {
@@ -2305,6 +2415,8 @@ let currentFinishedSearchTerm = '';
 let currentFinishedRoleFilter = 'all';
 let currentFinishedDateFilter = 'all';
 let currentFinishedSpecificDate = '';
+let visitsRefreshInterval: NodeJS.Timeout | null = null; // For auto-refresh
+let lastVisitsRefresh = 0; // Track last refresh time
 
 // Function to load scheduled visits for personnel
 async function loadScheduledVisits() {
@@ -2315,18 +2427,58 @@ async function loadScheduledVisits() {
       return;
     }
 
-    const { data, error } = await supabase.rpc('get_personnel_scheduled_visits', {
+    // Get scheduled visits for this personnel
+    const { data: scheduledVisits, error } = await supabase.rpc('get_personnel_scheduled_visits', {
       p_personnel_id: user.id
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error loading scheduled visits:', error);
+      showNotification('Error loading scheduled visits', 'error');
+      return;
+    }
 
-    // Filter out completed visits since we only want pending ones
-    allScheduledVisits = (data || []).filter(visit => visit.status !== 'completed');
+    // Store all visits for filtering
+    allScheduledVisits = scheduledVisits || [];
+
+    // Apply filters and display
     await applyVisitsFilters();
+
+    // Update last refresh time
+    lastVisitsRefresh = Date.now();
+
+    // Start auto-refresh if not already running
+    startVisitsAutoRefresh();
+
   } catch (error) {
     console.error('Error loading scheduled visits:', error);
     showNotification('Error loading scheduled visits', 'error');
+  }
+}
+
+// Function to start auto-refresh for scheduled visits
+function startVisitsAutoRefresh() {
+  // Clear existing interval if any
+  if (visitsRefreshInterval) {
+    clearInterval(visitsRefreshInterval);
+  }
+
+  // Refresh every 30 seconds to ensure real-time updates
+  visitsRefreshInterval = setInterval(async () => {
+    // Only refresh if the visits tab is currently visible
+    const visitsContent = document.getElementById('visitsContent');
+    if (visitsContent && !visitsContent.classList.contains('hidden')) {
+      console.log('Auto-refreshing scheduled visits...');
+      await loadScheduledVisits();
+    }
+  }, 30000); // 30 seconds
+}
+
+// Function to stop auto-refresh
+function stopVisitsAutoRefresh() {
+  if (visitsRefreshInterval) {
+    clearInterval(visitsRefreshInterval);
+    visitsRefreshInterval = null;
   }
 }
 
@@ -2387,21 +2539,23 @@ async function applyVisitsFilters() {
   let filteredVisits = [...allScheduledVisits];
 
   // Apply schedule type filter using Philippine time
-  const philippineToday = getPhilippineDate();
+  const philippineToday = await getCurrentPhilippineDateFromDB();
 
   switch (currentScheduleType) {
     case 'today':
+      // Show all pending visits scheduled for today or any past date (overdue)
       filteredVisits = filteredVisits.filter(visit => {
-        const visitDate = new Date(visit.visit_date);
+        const visitDate = parseDateAsPhilippine(visit.visit_date);
         visitDate.setHours(0, 0, 0, 0);
         const philippineVisitDate = toPhilippineTime(visitDate);
         philippineVisitDate.setHours(0, 0, 0, 0);
-        return philippineVisitDate.getTime() === philippineToday.getTime();
+        // Show if visit date is today or before today (overdue), and still pending
+        return philippineVisitDate.getTime() <= philippineToday.getTime() && visit.status === 'pending';
       });
       break;
     case 'future':
       filteredVisits = filteredVisits.filter(visit => {
-        const visitDate = new Date(visit.visit_date);
+        const visitDate = parseDateAsPhilippine(visit.visit_date);
         visitDate.setHours(0, 0, 0, 0);
         const philippineVisitDate = toPhilippineTime(visitDate);
         philippineVisitDate.setHours(0, 0, 0, 0);
@@ -2455,12 +2609,18 @@ async function displayScheduledVisits(visits: any[]) {
         <div class="text-gray-400 dark:text-gray-500 text-sm mt-2">
           ${currentSearchTerm || currentStatusFilter !== 'all' || currentRoleFilter !== 'all' || currentScheduleType !== 'all' 
             ? 'Try adjusting your search or filters' 
-            : 'No visits have been scheduled yet'}
+            : 'No visits are currently scheduled'}
+        </div>
+        <div class="text-xs text-gray-400 dark:text-gray-500 mt-4">
+          Last updated: ${new Date().toLocaleTimeString()} (Auto-refreshing every 30 seconds)
         </div>
       </div>
     `;
     return;
   }
+
+  // Get real-time Philippine date for accurate comparison
+  const philippineToday = await getCurrentPhilippineDateFromDB();
 
   // Check permissions for all visits
   const { data: { user } } = await supabase.auth.getUser();
@@ -2513,23 +2673,46 @@ async function displayScheduledVisits(visits: any[]) {
       guest: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
     };
 
-    // Check if user can complete this visit using Philippine time
-    const philippineToday = getPhilippineDate();
-    const visitDate = new Date(visit.visit_date);
+    // Check if user can complete this visit using real-time Philippine time
+    const visitDate = parseDateAsPhilippine(visit.visit_date);
     visitDate.setHours(0, 0, 0, 0);
     const philippineVisitDate = toPhilippineTime(visitDate);
     philippineVisitDate.setHours(0, 0, 0, 0);
     
+    // Simplified date comparison - compare date strings directly
+    const visitDateStr = visit.visit_date; // This should be "YYYY-MM-DD"
+    const currentDateStr = philippineToday.toISOString().split('T')[0]; // Get "YYYY-MM-DD" from current date
+    
     const canComplete = userRole === 'personnel' && 
                        userAssignments.includes(visit.place_id) && 
                        visit.status === 'pending' &&
-                       philippineVisitDate.getTime() <= philippineToday.getTime();
+                       visitDateStr <= currentDateStr;
 
     // Check if user meets basic requirements but visit is in the future
     const meetsBasicRequirements = userRole === 'personnel' && 
                                   userAssignments.includes(visit.place_id) && 
                                   visit.status === 'pending';
-    const isFutureVisit = philippineVisitDate.getTime() > philippineToday.getTime();
+    const isFutureVisit = visitDateStr > currentDateStr;
+
+    // Debugging output for this specific visit
+    console.log('[DEBUG] Visit Date Comparison:', {
+      visitorName,
+      visitDate: visit.visit_date,
+      visitDateStr,
+      currentDateStr,
+      parsedVisitDate: visitDate,
+      parsedVisitDateISO: visitDate.toISOString(),
+      philippineVisitDate: philippineVisitDate,
+      philippineVisitDateISO: philippineVisitDate.toISOString(),
+      philippineToday,
+      philippineTodayISO: philippineToday.toISOString(),
+      canComplete,
+      isFutureVisit,
+      stringComparison: `${visitDateStr} <= ${currentDateStr} = ${visitDateStr <= currentDateStr}`,
+      userRole,
+      userAssignments: userAssignments.includes(visit.place_id),
+      status: visit.status
+    });
 
     return `
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
@@ -2574,13 +2757,19 @@ async function displayScheduledVisits(visits: any[]) {
         ` : meetsBasicRequirements && isFutureVisit ? `
           <div class="flex justify-end">
             <div class="px-4 py-2 bg-gray-100 text-gray-600 rounded-md text-sm font-medium">
-              Cannot complete - scheduled for future date
+              Cannot complete - scheduled for future date (${philippineVisitDate.toLocaleDateString()})
             </div>
           </div>
         ` : ''}
       </div>
     `;
-  }).join('');
+  }).join('') + `
+    <div class="text-center mt-6">
+      <div class="text-xs text-gray-400 dark:text-gray-500">
+        Last updated: ${new Date().toLocaleTimeString()} • Auto-refreshing every 30 seconds
+      </div>
+    </div>
+  `;
 }
 
 // Event listeners for search and filters
@@ -2743,6 +2932,52 @@ async function completeVisit(visitId: string) {
     
     console.log('Personnel assignment confirmed');
     
+    // Test if the complete_visit function exists
+    try {
+      const { data: testData, error: testError } = await supabase.rpc('test_complete_visit_function');
+      console.log('Function test result:', { data: testData, error: testError });
+      if (testError) {
+        console.error('Function test failed:', testError);
+        showNotification('Database function not available. Please contact support.', 'error');
+        return;
+      }
+    } catch (testErr) {
+      console.error('Function test exception:', testErr);
+      showNotification('Database function test failed. Please contact support.', 'error');
+      return;
+    }
+    
+    // Add debugging for Philippine time comparison
+    const philippineToday = await getCurrentPhilippineDateFromDB();
+    const visitDate = parseDateAsPhilippine(visitData.visit_date);
+    visitDate.setHours(0, 0, 0, 0);
+    const philippineVisitDate = toPhilippineTime(visitDate);
+    philippineVisitDate.setHours(0, 0, 0, 0);
+    
+    // Simplified date comparison
+    const visitDateStr = visitData.visit_date;
+    const currentDateStr = philippineToday.toISOString().split('T')[0];
+    
+    console.log('Date comparison debug (simplified):', {
+      visitDateStr,
+      currentDateStr,
+      philippineToday: philippineToday.toISOString(),
+      philippineTodayLocal: philippineToday.toLocaleDateString(),
+      visitDate: visitData.visit_date,
+      visitDateLocal: visitDate.toLocaleDateString(),
+      philippineVisitDate: philippineVisitDate.toISOString(),
+      philippineVisitDateLocal: philippineVisitDate.toLocaleDateString(),
+      canComplete: visitDateStr <= currentDateStr,
+      stringComparison: `${visitDateStr} <= ${currentDateStr} = ${visitDateStr <= currentDateStr}`
+    });
+    
+    // Pre-check using simplified comparison before calling RPC
+    if (visitDateStr > currentDateStr) {
+      console.error('Frontend validation: Visit is scheduled for future date');
+      showNotification('Cannot complete visits scheduled for future dates. Please wait until the scheduled date.', 'error');
+      return;
+    }
+    
     // Call the database function directly - it handles all validation
     const { data: rpcData, error } = await supabase.rpc('complete_visit', {
       p_visit_id: visitId,
@@ -2753,6 +2988,15 @@ async function completeVisit(visitId: string) {
 
     if (error) {
       console.error('Error completing visit:', error);
+      console.error('Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+        status: error.status,
+        statusText: error.statusText
+      });
+      
       // Provide specific error messages based on the error
       let errorMsg = error.message || 'Unknown error';
       if (error.details) errorMsg += `\nDetails: ${error.details}`;
@@ -2781,12 +3025,7 @@ async function completeVisit(visitId: string) {
     await loadScheduledVisits();
     await loadFinishedSchedules();
     
-    // Log the action
-    await logAction('visit_completed', {
-      visit_id: visitId,
-      completed_by: user.id,
-      completed_at: new Date().toISOString()
-    });
+    // Note: Logging is now handled by the database function, no need to call logAction here
   } catch (error) {
     console.error('Error completing visit:', error);
     showNotification('Error completing visit. Please try again.', 'error');
@@ -2938,12 +3177,12 @@ async function applyFinishedFilters() {
 
   // Apply date filter using Philippine time
   if (currentFinishedDateFilter !== 'all') {
-    const philippineToday = getPhilippineDate();
+    const philippineToday = await getCurrentPhilippineDateFromDB();
 
     switch (currentFinishedDateFilter) {
       case 'today':
         filteredVisits = filteredVisits.filter(visit => {
-          const visitDate = new Date(visit.visit_date);
+          const visitDate = parseDateAsPhilippine(visit.visit_date);
           visitDate.setHours(0, 0, 0, 0);
           const philippineVisitDate = toPhilippineTime(visitDate);
           philippineVisitDate.setHours(0, 0, 0, 0);
@@ -2954,7 +3193,7 @@ async function applyFinishedFilters() {
         const philippineYesterday = new Date(philippineToday);
         philippineYesterday.setDate(philippineYesterday.getDate() - 1);
         filteredVisits = filteredVisits.filter(visit => {
-          const visitDate = new Date(visit.visit_date);
+          const visitDate = parseDateAsPhilippine(visit.visit_date);
           visitDate.setHours(0, 0, 0, 0);
           const philippineVisitDate = toPhilippineTime(visitDate);
           philippineVisitDate.setHours(0, 0, 0, 0);
@@ -2963,13 +3202,13 @@ async function applyFinishedFilters() {
         break;
       case 'this_week':
         const philippineWeekStart = new Date(philippineToday);
-        philippineWeekStart.setDate(philippineWeekStart.getDate() - philippineWeekStart.getDay());
+        philippineWeekStart.setDate(philippineToday.getDate() - philippineToday.getDay());
         philippineWeekStart.setHours(0, 0, 0, 0);
         const philippineWeekEnd = new Date(philippineWeekStart);
-        philippineWeekEnd.setDate(philippineWeekEnd.getDate() + 6);
+        philippineWeekEnd.setDate(philippineWeekStart.getDate() + 6);
         philippineWeekEnd.setHours(23, 59, 59, 999);
         filteredVisits = filteredVisits.filter(visit => {
-          const visitDate = new Date(visit.visit_date);
+          const visitDate = parseDateAsPhilippine(visit.visit_date);
           const philippineVisitDate = toPhilippineTime(visitDate);
           return philippineVisitDate >= philippineWeekStart && philippineVisitDate <= philippineWeekEnd;
         });
@@ -2978,7 +3217,7 @@ async function applyFinishedFilters() {
         const philippineMonthStart = new Date(philippineToday.getFullYear(), philippineToday.getMonth(), 1);
         const philippineMonthEnd = new Date(philippineToday.getFullYear(), philippineToday.getMonth() + 1, 0, 23, 59, 59, 999);
         filteredVisits = filteredVisits.filter(visit => {
-          const visitDate = new Date(visit.visit_date);
+          const visitDate = parseDateAsPhilippine(visit.visit_date);
           const philippineVisitDate = toPhilippineTime(visitDate);
           return philippineVisitDate >= philippineMonthStart && philippineVisitDate <= philippineMonthEnd;
         });
@@ -2990,7 +3229,7 @@ async function applyFinishedFilters() {
           const philippineSpecificDate = toPhilippineTime(specificDate);
           philippineSpecificDate.setHours(0, 0, 0, 0);
           filteredVisits = filteredVisits.filter(visit => {
-            const visitDate = new Date(visit.visit_date);
+            const visitDate = parseDateAsPhilippine(visit.visit_date);
             visitDate.setHours(0, 0, 0, 0);
             const philippineVisitDate = toPhilippineTime(visitDate);
             philippineVisitDate.setHours(0, 0, 0, 0);
@@ -3298,12 +3537,12 @@ async function applyVisitorFilters() {
 
   // Apply date filter using Philippine time
   if (currentVisitorDateFilter !== 'all') {
-    const philippineToday = getPhilippineDate();
+    const philippineToday = await getCurrentPhilippineDateFromDB();
 
     switch (currentVisitorDateFilter) {
       case 'today':
         filteredVisits = filteredVisits.filter(visit => {
-          const visitDate = new Date(visit.visit_date);
+          const visitDate = parseDateAsPhilippine(visit.visit_date);
           visitDate.setHours(0, 0, 0, 0);
           const philippineVisitDate = toPhilippineTime(visitDate);
           philippineVisitDate.setHours(0, 0, 0, 0);
@@ -3312,7 +3551,7 @@ async function applyVisitorFilters() {
         break;
       case 'future':
         filteredVisits = filteredVisits.filter(visit => {
-          const visitDate = new Date(visit.visit_date);
+          const visitDate = parseDateAsPhilippine(visit.visit_date);
           visitDate.setHours(0, 0, 0, 0);
           const philippineVisitDate = toPhilippineTime(visitDate);
           philippineVisitDate.setHours(0, 0, 0, 0);
@@ -3321,7 +3560,7 @@ async function applyVisitorFilters() {
         break;
       case 'past':
         filteredVisits = filteredVisits.filter(visit => {
-          const visitDate = new Date(visit.visit_date);
+          const visitDate = parseDateAsPhilippine(visit.visit_date);
           visitDate.setHours(0, 0, 0, 0);
           const philippineVisitDate = toPhilippineTime(visitDate);
           philippineVisitDate.setHours(0, 0, 0, 0);
@@ -3500,4 +3739,92 @@ function getPhilippineDate(): Date {
 // Helper function to convert a date to Philippine time
 function toPhilippineTime(date: Date): Date {
   return new Date(date.toLocaleString("en-US", {timeZone: "Asia/Manila"}));
+}
+
+// Helper function to get current Philippine time from database (real-time)
+async function getCurrentPhilippineTimeFromDB(): Promise<Date> {
+  try {
+    const { data, error } = await supabase.rpc('get_philippine_timestamp');
+    if (error) {
+      console.error('Error getting Philippine time from DB:', error);
+      // Fallback to local calculation
+      return getPhilippineTime();
+    }
+    return new Date(data);
+  } catch (error) {
+    console.error('Exception getting Philippine time from DB:', error);
+    // Fallback to local calculation
+    return getPhilippineTime();
+  }
+}
+
+// Helper function to get current Philippine date from database (real-time)
+async function getCurrentPhilippineDateFromDB(): Promise<Date> {
+  try {
+    const { data, error } = await supabase.rpc('get_philippine_date');
+    if (error) {
+      console.error('Error getting Philippine date from DB:', error);
+      // Fallback to local calculation
+      return getPhilippineDate();
+    }
+    return new Date(data);
+  } catch (error) {
+    console.error('Exception getting Philippine date from DB:', error);
+    // Fallback to local calculation
+    return getPhilippineDate();
+  }
+}
+
+// Function to update the Philippine clock display
+function updatePhilippineClock() {
+  const timeElement = document.getElementById('philippineTime');
+  const dateElement = document.getElementById('philippineDate');
+  
+  if (!timeElement || !dateElement) return;
+  
+  // Get current Philippine time
+  const philippineTime = getPhilippineTime();
+  
+  // Format time (HH:MM:SS)
+  const timeString = philippineTime.toLocaleTimeString('en-US', {
+    timeZone: 'Asia/Manila',
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+  
+  // Format date (Day, Month DD, YYYY)
+  const dateString = philippineTime.toLocaleDateString('en-US', {
+    timeZone: 'Asia/Manila',
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+  
+  // Update the display
+  timeElement.textContent = timeString;
+  dateElement.textContent = dateString;
+}
+
+// Function to start the Philippine clock
+function startPhilippineClock() {
+  // Update immediately
+  updatePhilippineClock();
+  
+  // Update every second
+  setInterval(updatePhilippineClock, 1000);
+}
+
+// Initialize the Philippine clock when the dashboard loads
+setTimeout(() => {
+  startPhilippineClock();
+}, 100);
+
+// Helper to parse YYYY-MM-DD as Asia/Manila midnight
+function parseDateAsPhilippine(dateStr: string): Date {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  // JS months are 0-based
+  return new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
 }
