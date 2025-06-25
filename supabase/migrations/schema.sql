@@ -325,7 +325,12 @@ DECLARE
     user_role_check user_role;
     log_id UUID;
 BEGIN
+    -- Debug: Log the received date and current Philippine date
+    RAISE NOTICE 'DEBUG: Received visit_date: %, Type: %', p_visit_date, pg_typeof(p_visit_date);
+    
     philippine_date := public.get_philippine_date();
+    RAISE NOTICE 'DEBUG: Current Philippine date: %', philippine_date;
+    
     max_schedule_date := philippine_date + INTERVAL '1 month';
     IF p_visit_date < philippine_date THEN
         RAISE EXCEPTION 'Cannot schedule visits for past dates. Current Philippine date is %.', philippine_date;
@@ -379,33 +384,35 @@ BEGIN
         p_other_purpose
     )
     RETURNING id INTO visit_id;
-    IF p_visitor_user_id IS NOT NULL THEN
-        log_id := public.log_action(
-            p_visitor_user_id,
-            'visit_scheduled',
-            jsonb_build_object(
-                'visit_id', visit_id,
-                'visitor_name', p_visitor_first_name || ' ' || p_visitor_last_name,
-                'visitor_email', p_visitor_email,
-                'visitor_role', visitor_role,
-                'place_id', p_place_id,
-                'visit_date', p_visit_date,
-                'purpose', p_purpose,
-                'is_guest', visitor_role = 'guest',
-                'scheduled_at_philippine_time', public.get_philippine_timestamp(),
-                'history', jsonb_build_array(
-                    jsonb_build_object(
-                        'event', 'scheduled',
-                        'timestamp', public.get_philippine_timestamp(),
-                        'details', jsonb_build_object(
-                            'by', p_visitor_user_id,
-                            'purpose', p_purpose
-                        )
+    
+    -- Log all visits, including guest visits
+    log_id := public.log_action(
+        p_visitor_user_id, -- This will be NULL for guest visits, which is fine
+        'visit_scheduled',
+        jsonb_build_object(
+            'visit_id', visit_id,
+            'visitor_name', p_visitor_first_name || ' ' || p_visitor_last_name,
+            'visitor_email', p_visitor_email,
+            'visitor_role', visitor_role,
+            'place_id', p_place_id,
+            'visit_date', p_visit_date,
+            'purpose', p_purpose,
+            'is_guest', visitor_role = 'guest',
+            'scheduled_at_philippine_time', public.get_philippine_timestamp(),
+            'history', jsonb_build_array(
+                jsonb_build_object(
+                    'event', 'scheduled',
+                    'timestamp', public.get_philippine_timestamp(),
+                    'details', jsonb_build_object(
+                        'by', p_visitor_user_id,
+                        'purpose', p_purpose,
+                        'scheduled_as_guest', visitor_role = 'guest'
                     )
                 )
             )
-        );
-    END IF;
+        )
+    );
+    
     RETURN visit_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -469,7 +476,8 @@ CREATE TRIGGER auto_mark_past_visits_trigger
 CREATE OR REPLACE FUNCTION public.get_philippine_date()
 RETURNS DATE AS $$
 BEGIN
-    RETURN (CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Manila')::DATE;
+    -- Use only AT TIME ZONE 'Asia/Manila' to get the correct Philippine date
+    RETURN (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Manila')::DATE;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -477,7 +485,54 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION public.get_philippine_timestamp()
 RETURNS TIMESTAMP WITH TIME ZONE AS $$
 BEGIN
-    RETURN CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Manila';
+    -- Use only AT TIME ZONE 'Asia/Manila' to get the correct Philippine timestamp
+    RETURN CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Manila';
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Debug function to check timezone conversion
+CREATE OR REPLACE FUNCTION public.debug_timezone_info()
+RETURNS TABLE (
+    current_utc TIMESTAMP WITH TIME ZONE,
+    current_philippine TIMESTAMP WITH TIME ZONE,
+    philippine_date DATE,
+    utc_date DATE,
+    timezone_name TEXT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        NOW() as current_utc,
+        NOW() AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Manila' as current_philippine,
+        (NOW() AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Manila')::DATE as philippine_date,
+        NOW()::DATE as utc_date,
+        current_setting('timezone') as timezone_name;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Test function to debug date comparison
+CREATE OR REPLACE FUNCTION public.test_date_comparison(test_date DATE)
+RETURNS TABLE (
+    test_date_input DATE,
+    philippine_date DATE,
+    is_future BOOLEAN,
+    comparison_result TEXT
+) AS $$
+DECLARE
+    philippine_date_val DATE;
+BEGIN
+    philippine_date_val := public.get_philippine_date();
+    
+    RETURN QUERY
+    SELECT 
+        test_date as test_date_input,
+        philippine_date_val as philippine_date,
+        test_date > philippine_date_val as is_future,
+        CASE 
+            WHEN test_date > philippine_date_val THEN 'Future date'
+            WHEN test_date = philippine_date_val THEN 'Today'
+            ELSE 'Past date'
+        END as comparison_result;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -574,8 +629,14 @@ BEGIN
         RAISE EXCEPTION 'Visit not found';
     END IF;
     
+    -- Debug: Log the visit date and current Philippine date
+    RAISE NOTICE 'DEBUG: Visit date from DB: %, Type: %', v_visit_date, pg_typeof(v_visit_date);
+    
     -- Get current Philippine date and validate
     philippine_date := public.get_philippine_date();
+    RAISE NOTICE 'DEBUG: Current Philippine date: %, Type: %', philippine_date, pg_typeof(philippine_date);
+    RAISE NOTICE 'DEBUG: Comparison: visit_date > philippine_date = %', v_visit_date > philippine_date;
+    
     IF v_visit_date > philippine_date THEN
         RAISE EXCEPTION 'Cannot complete visits scheduled for future dates. Visit date is % but current Philippine date is %.', v_visit_date, philippine_date;
     END IF;

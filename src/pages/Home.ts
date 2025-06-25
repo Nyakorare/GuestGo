@@ -4,7 +4,9 @@ import supabase from '../config/supabase';
 // Helper function to get current Philippine time
 function getPhilippineTime(): Date {
   const now = new Date();
-  const philippineTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Manila"}));
+  // Get the timezone offset between UTC and Asia/Manila (UTC+8)
+  const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const philippineTime = new Date(utcTime + (8 * 60 * 60 * 1000)); // Add 8 hours for UTC+8
   return philippineTime;
 }
 
@@ -17,7 +19,9 @@ function getPhilippineDate(): Date {
 
 // Helper function to convert any date to Philippine time
 function toPhilippineTime(date: Date): Date {
-  const philippineTime = new Date(date.toLocaleString("en-US", {timeZone: "Asia/Manila"}));
+  // Get the timezone offset between UTC and Asia/Manila (UTC+8)
+  const utcTime = date.getTime() + (date.getTimezoneOffset() * 60000);
+  const philippineTime = new Date(utcTime + (8 * 60 * 60 * 1000)); // Add 8 hours for UTC+8
   return philippineTime;
 }
 

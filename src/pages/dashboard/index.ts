@@ -2673,46 +2673,21 @@ async function displayScheduledVisits(visits: any[]) {
       guest: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
     };
 
-    // Check if user can complete this visit using real-time Philippine time
-    const visitDate = parseDateAsPhilippine(visit.visit_date);
-    visitDate.setHours(0, 0, 0, 0);
-    const philippineVisitDate = toPhilippineTime(visitDate);
-    philippineVisitDate.setHours(0, 0, 0, 0);
-    
-    // Simplified date comparison - compare date strings directly
-    const visitDateStr = visit.visit_date; // This should be "YYYY-MM-DD"
-    const currentDateStr = philippineToday.toISOString().split('T')[0]; // Get "YYYY-MM-DD" from current date
-    
+    // Use strict YYYY-MM-DD string comparison for visit date and Philippine date
+    const visitDateStr = (visit.visit_date || '').split('T')[0];
+    // Debug log
+    console.log('[DATE DEBUG] visitDateStr:', visitDateStr, 'currentDateStr:', philippineToday.toISOString().split('T')[0]);
+
     const canComplete = userRole === 'personnel' && 
                        userAssignments.includes(visit.place_id) && 
                        visit.status === 'pending' &&
-                       visitDateStr <= currentDateStr;
+                       visitDateStr === philippineToday.toISOString().split('T')[0];
 
     // Check if user meets basic requirements but visit is in the future
     const meetsBasicRequirements = userRole === 'personnel' && 
                                   userAssignments.includes(visit.place_id) && 
                                   visit.status === 'pending';
-    const isFutureVisit = visitDateStr > currentDateStr;
-
-    // Debugging output for this specific visit
-    console.log('[DEBUG] Visit Date Comparison:', {
-      visitorName,
-      visitDate: visit.visit_date,
-      visitDateStr,
-      currentDateStr,
-      parsedVisitDate: visitDate,
-      parsedVisitDateISO: visitDate.toISOString(),
-      philippineVisitDate: philippineVisitDate,
-      philippineVisitDateISO: philippineVisitDate.toISOString(),
-      philippineToday,
-      philippineTodayISO: philippineToday.toISOString(),
-      canComplete,
-      isFutureVisit,
-      stringComparison: `${visitDateStr} <= ${currentDateStr} = ${visitDateStr <= currentDateStr}`,
-      userRole,
-      userAssignments: userAssignments.includes(visit.place_id),
-      status: visit.status
-    });
+    const isFutureVisit = visitDateStr > philippineToday.toISOString().split('T')[0];
 
     return `
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
@@ -2757,7 +2732,7 @@ async function displayScheduledVisits(visits: any[]) {
         ` : meetsBasicRequirements && isFutureVisit ? `
           <div class="flex justify-end">
             <div class="px-4 py-2 bg-gray-100 text-gray-600 rounded-md text-sm font-medium">
-              Cannot complete - scheduled for future date (${philippineVisitDate.toLocaleDateString()})
+              Cannot complete - scheduled for future date (${scheduledDate})
             </div>
           </div>
         ` : ''}
@@ -2766,7 +2741,7 @@ async function displayScheduledVisits(visits: any[]) {
   }).join('') + `
     <div class="text-center mt-6">
       <div class="text-xs text-gray-400 dark:text-gray-500">
-        Last updated: ${new Date().toLocaleTimeString()} • Auto-refreshing every 30 seconds
+        Last updated: ${new Date().toLocaleTimeString()} • Auto-refreshing every 10 seconds
       </div>
     </div>
   `;
@@ -3725,7 +3700,9 @@ function setupVisitorDashboardEventListeners() {
 // Helper function to get current Philippine time
 function getPhilippineTime(): Date {
   const now = new Date();
-  const philippineTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Manila"}));
+  // Get the timezone offset between UTC and Asia/Manila (UTC+8)
+  const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const philippineTime = new Date(utcTime + (8 * 60 * 60 * 1000)); // Add 8 hours for UTC+8
   return philippineTime;
 }
 
@@ -3738,7 +3715,10 @@ function getPhilippineDate(): Date {
 
 // Helper function to convert a date to Philippine time
 function toPhilippineTime(date: Date): Date {
-  return new Date(date.toLocaleString("en-US", {timeZone: "Asia/Manila"}));
+  // Get the timezone offset between UTC and Asia/Manila (UTC+8)
+  const utcTime = date.getTime() + (date.getTimezoneOffset() * 60000);
+  const philippineTime = new Date(utcTime + (8 * 60 * 60 * 1000)); // Add 8 hours for UTC+8
+  return philippineTime;
 }
 
 // Helper function to get current Philippine time from database (real-time)
@@ -3785,18 +3765,16 @@ function updatePhilippineClock() {
   // Get current Philippine time
   const philippineTime = getPhilippineTime();
   
-  // Format time (HH:MM:SS)
+  // Format time (HH:MM:SS) using the corrected Philippine time
   const timeString = philippineTime.toLocaleTimeString('en-US', {
-    timeZone: 'Asia/Manila',
     hour12: false,
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit'
   });
   
-  // Format date (Day, Month DD, YYYY)
+  // Format date (Day, Month DD, YYYY) using the corrected Philippine time
   const dateString = philippineTime.toLocaleDateString('en-US', {
-    timeZone: 'Asia/Manila',
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -3825,6 +3803,35 @@ setTimeout(() => {
 // Helper to parse YYYY-MM-DD as Asia/Manila midnight
 function parseDateAsPhilippine(dateStr: string): Date {
   const [year, month, day] = dateStr.split('-').map(Number);
-  // JS months are 0-based
-  return new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
+  // Create date in Philippine timezone (UTC+8)
+  const utcTime = Date.UTC(year, month - 1, day, 0, 0, 0);
+  const philippineTime = new Date(utcTime + (8 * 60 * 60 * 1000)); // Add 8 hours for UTC+8
+  return philippineTime;
+}
+
+// Add a real-time auto-refresh for schedule lists and Mark Complete button
+let scheduleAutoRefreshInterval: any = null;
+
+function startScheduleAutoRefresh() {
+  if (scheduleAutoRefreshInterval) {
+    clearInterval(scheduleAutoRefreshInterval);
+  }
+  scheduleAutoRefreshInterval = setInterval(async () => {
+    // Re-apply filters to update today/future schedules and button states
+    await applyVisitsFilters();
+  }, 10000); // 10 seconds
+}
+
+function stopScheduleAutoRefresh() {
+  if (scheduleAutoRefreshInterval) {
+    clearInterval(scheduleAutoRefreshInterval);
+    scheduleAutoRefreshInterval = null;
+  }
+}
+
+// Start auto-refresh when dashboard loads
+if (typeof window !== 'undefined') {
+  window.addEventListener('DOMContentLoaded', () => {
+    startScheduleAutoRefresh();
+  });
 }
