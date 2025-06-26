@@ -201,38 +201,38 @@ export function DashboardPage() {
   }, 0);
 
   return `
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div class="flex items-center justify-between mb-8">
-        <div class="flex items-center space-x-4">
-          <img src="/guestgo-logo.png" alt="GuestGo Logo" class="h-16 w-16" />
-          <div>
-            <h1 class="text-4xl font-bold text-gray-900 dark:text-white transition-colors duration-200">
+    <div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-6 sm:py-12">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <div class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
+          <img src="/guestgo-logo.png" alt="GuestGo Logo" class="h-14 w-14 sm:h-16 sm:w-16" />
+          <div class="text-center sm:text-left">
+            <h1 class="text-2xl sm:text-4xl font-bold text-gray-900 dark:text-white transition-colors duration-200">
               Dashboard
             </h1>
-            <p class="text-xl text-gray-600 dark:text-gray-300 transition-colors duration-200">
+            <p class="text-base sm:text-xl text-gray-600 dark:text-gray-300 transition-colors duration-200">
               Your current role: <span id="userRole" class="font-semibold text-blue-600 dark:text-blue-500">Loading...</span>
             </p>
           </div>
         </div>
 
         <!-- Admin Tabs -->
-        <div id="adminTabs" class="hidden">
-          <div class="flex space-x-2">
+        <div id="adminTabs" class="hidden w-full sm:w-auto">
+          <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <button 
               id="placesTab"
-              class="px-4 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              class="w-full sm:w-auto px-4 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
               Places
             </button>
             <button 
               id="accountsTab"
-              class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+              class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
             >
               Accounts
             </button>
             <button 
               id="logsTab"
-              class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+              class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
             >
               Logs
             </button>
@@ -240,12 +240,12 @@ export function DashboardPage() {
         </div>
 
         <!-- Philippine Clock -->
-        <div id="philippineClock" class="flex flex-col items-end justify-center bg-white dark:bg-gray-800 rounded-lg shadow-md px-6 py-4 border border-gray-200 dark:border-gray-700">
+        <div id="philippineClock" class="flex flex-col items-end justify-center bg-white dark:bg-gray-800 rounded-lg shadow-md px-4 py-3 sm:px-6 sm:py-4 border border-gray-200 dark:border-gray-700 w-full sm:w-auto">
           <div class="text-center">
-            <div class="text-2xl font-bold text-gray-900 dark:text-white" id="philippineTime">
+            <div class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white" id="philippineTime">
               Loading...
             </div>
-            <div class="text-sm text-gray-600 dark:text-gray-400" id="philippineDate">
+            <div class="text-xs sm:text-sm text-gray-600 dark:text-gray-400" id="philippineDate">
               Loading...
             </div>
             <div class="text-xs text-gray-500 dark:text-gray-500 mt-1">
@@ -256,19 +256,19 @@ export function DashboardPage() {
       </div>
 
       <!-- Admin Content -->
-      <div id="placesContent" class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">Places Management</h2>
-          <div class="flex items-center space-x-4">
+      <div id="placesContent" class="bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+          <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">Places Management</h2>
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-4">
             <!-- Search and Filter Section -->
-            <div class="flex items-center space-x-3">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-3">
               <!-- Search Input -->
               <div class="relative">
                 <input 
                   type="text" 
                   id="placesSearchInput"
                   placeholder="Search places..."
-                  class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                  class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
                 >
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -276,44 +276,40 @@ export function DashboardPage() {
                   </svg>
                 </div>
               </div>
-              
               <!-- Availability Filter -->
               <select 
                 id="availabilityFilter"
-                class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
               >
                 <option value="all">All Places</option>
                 <option value="available">Available Only</option>
                 <option value="unavailable">Unavailable Only</option>
               </select>
             </div>
-            
             <button 
               id="addPlaceBtn"
-              class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 w-full sm:w-auto"
             >
               Add New Place
             </button>
           </div>
         </div>
-        <div id="placesList" class="space-y-4">
-          <!-- Places will be loaded here -->
-        </div>
+        <div id="placesList" class="space-y-4"></div>
       </div>
 
-      <div id="accountsContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">Accounts Management</h2>
-          <div class="flex items-center space-x-4">
+      <div id="accountsContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+          <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">Accounts Management</h2>
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-4">
             <!-- Search and Filter Section -->
-            <div class="flex items-center space-x-3">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-3">
               <!-- Search Input -->
               <div class="relative">
                 <input 
                   type="text" 
                   id="accountsSearchInput"
                   placeholder="Search accounts..."
-                  class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                  class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
                 >
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -321,11 +317,10 @@ export function DashboardPage() {
                   </svg>
                 </div>
               </div>
-              
               <!-- Role Filter -->
               <select 
                 id="roleFilter"
-                class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
               >
                 <option value="all">All Roles</option>
                 <option value="log">Log</option>
@@ -336,24 +331,22 @@ export function DashboardPage() {
             </div>
           </div>
         </div>
-        <div id="accountsList">
-          <!-- Accounts will be loaded here -->
-        </div>
+        <div id="accountsList" class="overflow-x-auto"></div>
       </div>
 
-      <div id="logsContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">System Logs</h2>
-          <div class="flex items-center space-x-4">
+      <div id="logsContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+          <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">System Logs</h2>
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-4">
             <!-- Search and Filter Section -->
-            <div class="flex items-center space-x-3">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-3">
               <!-- Search Input -->
               <div class="relative">
                 <input 
                   type="text" 
                   id="logsSearchInput"
                   placeholder="Search logs..."
-                  class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                  class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
                 >
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -361,11 +354,10 @@ export function DashboardPage() {
                   </svg>
                 </div>
               </div>
-              
               <!-- Action Filter -->
               <select 
                 id="actionFilter"
-                class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
               >
                 <option value="all">All Actions</option>
                 <option value="password_change">Password Change</option>
@@ -379,27 +371,24 @@ export function DashboardPage() {
                 <option value="visit_completed">Visit Completed</option>
               </select>
             </div>
-            
             <button 
               id="refreshLogsBtn"
-              class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 w-full sm:w-auto"
             >
               Refresh Logs
             </button>
           </div>
         </div>
-        <div id="logsList" class="space-y-4">
-          <!-- Logs will be loaded here -->
-        </div>
+        <div id="logsList" class="overflow-x-auto space-y-4"></div>
       </div>
 
       <!-- Personnel Dashboard Content -->
-      <div id="personnelContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">Personnel Dashboard</h2>
-          <div class="flex items-center space-x-4">
+      <div id="personnelContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+          <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">Personnel Dashboard</h2>
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-4">
             <!-- Personnel Tabs -->
-            <div class="flex space-x-2 mb-6">
+            <div class="flex flex-row flex-wrap gap-2 mb-2 sm:mb-6">
               <button 
                 id="assignmentTab"
                 class="px-4 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
@@ -421,29 +410,25 @@ export function DashboardPage() {
             </div>
             <button 
               id="refreshPersonnelBtn"
-              class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 w-full sm:w-auto"
             >
               Refresh
             </button>
           </div>
         </div>
-
         <!-- Assignment Content -->
         <div id="assignmentContent" class="space-y-4">
-          <div id="personnelAssignmentInfo" class="space-y-4">
-            <!-- Personnel assignment info will be loaded here -->
-          </div>
+          <div id="personnelAssignmentInfo" class="space-y-4"></div>
         </div>
-
         <!-- Scheduled Visits Content -->
         <div id="visitsContent" class="hidden space-y-4">
-          <div class="flex justify-between items-center mb-6">
-            <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Scheduled Visits</h3>
-            <div class="flex items-center space-x-4">
+          <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+            <h3 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Scheduled Visits</h3>
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-4">
               <!-- Manual Refresh Button -->
               <button 
                 id="refreshVisitsBtn"
-                class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm"
+                class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm w-full sm:w-auto"
                 title="Refresh visits data"
               >
                 <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -451,16 +436,15 @@ export function DashboardPage() {
                 </svg>
                 Refresh
               </button>
-              
               <!-- Search and Filter Section -->
-              <div class="flex items-center space-x-3">
+              <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-3">
                 <!-- Search Input -->
                 <div class="relative">
                   <input 
                     type="text" 
                     id="visitsSearchInput"
                     placeholder="Search visits..."
-                    class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                    class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
                   >
                   <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -468,21 +452,19 @@ export function DashboardPage() {
                     </svg>
                   </div>
                 </div>
-                
                 <!-- Status Filter -->
                 <select 
                   id="visitStatusFilter"
-                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
                 >
                   <option value="all">All Status</option>
                   <option value="pending">Pending</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
-
                 <!-- Visitor Role Filter -->
                 <select 
                   id="visitorRoleFilter"
-                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
                 >
                   <option value="all">All Roles</option>
                   <option value="visitor">Visitor</option>
@@ -491,9 +473,8 @@ export function DashboardPage() {
               </div>
             </div>
           </div>
-
           <!-- Schedule Type Tabs -->
-          <div class="flex space-x-2 mb-4">
+          <div class="flex flex-row flex-wrap gap-2 mb-4">
             <button 
               id="allSchedulesTab"
               class="px-4 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm"
@@ -513,26 +494,22 @@ export function DashboardPage() {
               Future Schedules
             </button>
           </div>
-
-          <div id="scheduledVisitsList" class="space-y-4">
-            <!-- Scheduled visits will be loaded here -->
-          </div>
+          <div id="scheduledVisitsList" class="space-y-4"></div>
         </div>
-
         <!-- Finished Schedules Content -->
         <div id="finishedContent" class="hidden space-y-4">
-          <div class="flex justify-between items-center mb-6">
-            <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Finished Schedules</h3>
-            <div class="flex items-center space-x-4">
+          <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+            <h3 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Finished Schedules</h3>
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-4">
               <!-- Search and Filter Section -->
-              <div class="flex items-center space-x-3">
+              <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-3">
                 <!-- Search Input -->
                 <div class="relative">
                   <input 
                     type="text" 
                     id="finishedSearchInput"
                     placeholder="Search finished visits..."
-                    class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                    class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
                   >
                   <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -540,11 +517,10 @@ export function DashboardPage() {
                     </svg>
                   </div>
                 </div>
-
                 <!-- Date Filter -->
                 <select 
                   id="finishedDateFilter"
-                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
                 >
                   <option value="all">All Dates</option>
                   <option value="today">Today</option>
@@ -554,13 +530,12 @@ export function DashboardPage() {
                   <option value="this_month">This Month</option>
                   <option value="last_month">Last Month</option>
                 </select>
-
                 <!-- Specific Date Filter -->
                 <div class="relative">
                   <input 
                     type="date" 
                     id="finishedSpecificDateFilter"
-                    class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                    class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
                     placeholder="Select specific date"
                   >
                   <button 
@@ -571,11 +546,10 @@ export function DashboardPage() {
                     ×
                   </button>
                 </div>
-
                 <!-- Visitor Role Filter -->
                 <select 
                   id="finishedRoleFilter"
-                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
                 >
                   <option value="all">All Roles</option>
                   <option value="visitor">Visitor</option>
@@ -584,41 +558,37 @@ export function DashboardPage() {
               </div>
             </div>
           </div>
-
-          <div id="finishedVisitsList" class="space-y-4">
-            <!-- Finished visits will be loaded here -->
-          </div>
+          <div id="finishedVisitsList" class="space-y-4"></div>
         </div>
       </div>
 
       <!-- Visitor Dashboard Content -->
-      <div id="visitorContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">My Scheduled Visits</h2>
-          <div class="flex items-center space-x-4">
+      <div id="visitorContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+          <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">My Scheduled Visits</h2>
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-4">
             <button 
               id="refreshVisitorBtn"
-              class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 w-full sm:w-auto"
             >
               Refresh
             </button>
           </div>
         </div>
-
         <!-- Visitor Visits Content -->
         <div id="visitorVisitsContent" class="space-y-4">
-          <div class="flex justify-between items-center mb-6">
-            <h3 class="text-xl font-semibold text-gray-900 dark:text-white">My Visits</h3>
-            <div class="flex items-center space-x-4">
+          <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+            <h3 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">My Visits</h3>
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-4">
               <!-- Search and Filter Section -->
-              <div class="flex items-center space-x-3">
+              <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-3">
                 <!-- Search Input -->
                 <div class="relative">
                   <input 
                     type="text" 
                     id="visitorSearchInput"
                     placeholder="Search my visits..."
-                    class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                    class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
                   >
                   <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -626,11 +596,10 @@ export function DashboardPage() {
                     </svg>
                   </div>
                 </div>
-                
                 <!-- Status Filter -->
                 <select 
                   id="visitorStatusFilter"
-                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
                 >
                   <option value="all">All Status</option>
                   <option value="pending">Pending</option>
@@ -638,11 +607,10 @@ export function DashboardPage() {
                   <option value="cancelled">Cancelled</option>
                   <option value="unsuccessful">Unsuccessful</option>
                 </select>
-
                 <!-- Date Filter -->
                 <select 
                   id="visitorDateFilter"
-                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
                 >
                   <option value="all">All Dates</option>
                   <option value="today">Today</option>
@@ -652,10 +620,7 @@ export function DashboardPage() {
               </div>
             </div>
           </div>
-
-          <div id="visitorVisitsList" class="space-y-4">
-            <!-- Visitor visits will be loaded here -->
-          </div>
+          <div id="visitorVisitsList" class="space-y-4"></div>
         </div>
       </div>
 
@@ -933,7 +898,7 @@ async function loadPlaces() {
 }
 
 // Function to render places based on current filters
-function renderPlaces() {
+function renderPlaces(): void {
   const placesList = document.getElementById('placesList');
   if (placesList) {
     if (filteredPlaces.length === 0) {
@@ -945,7 +910,7 @@ function renderPlaces() {
       return;
     }
 
-    placesList.innerHTML = filteredPlaces.map((place: Place) => `
+    placesList.innerHTML = filteredPlaces.map((place: any) => `
       <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
         <div class="flex-1">
           <h3 class="text-lg font-medium text-gray-900 dark:text-white">${place.name}</h3>
@@ -964,7 +929,7 @@ function renderPlaces() {
             <div class="mt-2">
               <p class="text-sm text-gray-600 dark:text-gray-300 font-medium">Assigned Personnel:</p>
               <div class="mt-1 space-y-1">
-                ${place.assigned_personnel.map(personnel => `
+                ${(place.assigned_personnel as any[]).map((personnel: any) => `
                   <div class="flex items-center justify-between bg-white dark:bg-gray-600 rounded px-2 py-1">
                     <span class="text-sm text-gray-700 dark:text-gray-300">
                       ${personnel.first_name || personnel.last_name ? 
@@ -1079,7 +1044,7 @@ async function loadAccounts() {
 }
 
 // Function to render accounts based on current filters
-function renderAccounts() {
+function renderAccounts(): void {
   const accountsList = document.getElementById('accountsList');
   if (accountsList) {
     if (filteredAccounts.length === 0) {
@@ -1103,7 +1068,7 @@ function renderAccounts() {
             </tr>
           </thead>
           <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-            ${filteredAccounts.map((account: Account) => `
+            ${(filteredAccounts as any[]).map((account: any) => `
               <tr>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="flex flex-col">
@@ -1213,7 +1178,7 @@ async function loadLogs() {
 }
 
 // Function to render logs based on current filters
-async function renderLogs() {
+async function renderLogs(): Promise<void> {
   const logsList = document.getElementById('logsList');
   if (logsList) {
     if (filteredLogs.length === 0) {
@@ -1225,7 +1190,7 @@ async function renderLogs() {
 
     // Format all log details asynchronously
     const formattedDetails = await Promise.all(
-      filteredLogs.map(async (log: any) => {
+      (filteredLogs as any[]).map(async (log: any) => {
         const details = await formatLogDetails(log.details, log.action, log);
         // Determine action override for visit_scheduled logs
         let displayAction = log.action;
@@ -1260,7 +1225,7 @@ async function renderLogs() {
             </tr>
           </thead>
           <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-            ${formattedDetails.map((log: any) => `
+            ${(formattedDetails as any[]).map((log: any) => `
               <tr>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                   ${new Date(log.created_at).toLocaleString()}
@@ -1408,25 +1373,44 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
       case 'visit_scheduled': {
         const visitPlaceName = await getPlaceName(parsedDetails.place_id);
         let historyHtml = '';
-        if (Array.isArray(parsedDetails.history)) {
-          historyHtml = `<div class="mt-2"><span class="font-medium">History:</span><ul class="ml-4 mt-1 space-y-1">` +
-            parsedDetails.history.map((event: any) => {
-              const eventType = event.event ? event.event.charAt(0).toUpperCase() + event.event.slice(1) : 'Event';
-              const eventTime = event.timestamp ? new Date(event.timestamp).toLocaleString() : '';
-              let details = '';
-              if (event.details) {
-                if (event.details.by) {
-                  details += `<span class='text-xs text-gray-500'>(By: ${event.details.by})</span> `;
-                }
-                if (event.details.purpose) {
-                  details += `<span class='text-xs text-gray-500'>Purpose: ${event.details.purpose}</span> `;
-                }
-                if (event.details.note) {
-                  details += `<span class='text-xs text-gray-500'>Note: ${event.details.note}</span> `;
-                }
+        if (Array.isArray(parsedDetails.history) && parsedDetails.history.length > 0) {
+          const historyId = `history-${log?.id || Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          const historyItems = parsedDetails.history.map((event: any) => {
+            const eventType = event.event ? event.event.charAt(0).toUpperCase() + event.event.slice(1) : 'Event';
+            const eventTime = event.timestamp ? new Date(event.timestamp).toLocaleString() : '';
+            let details = '';
+            if (event.details) {
+              if (event.details.by) {
+                details += `<span class='text-xs text-gray-500'>(By: ${event.details.by})</span> `;
               }
-              return `<li><span class='font-semibold'>${eventType}</span> <span class='text-xs text-gray-400'>${eventTime}</span> ${details}</li>`;
-            }).join('') + '</ul></div>';
+              if (event.details.purpose) {
+                details += `<span class='text-xs text-gray-500'>Purpose: ${event.details.purpose}</span> `;
+              }
+              if (event.details.note) {
+                details += `<span class='text-xs text-gray-500'>Note: ${event.details.note}</span> `;
+              }
+            }
+            return `<li class="py-1 border-b border-gray-100 dark:border-gray-700 last:border-b-0"><span class='font-semibold'>${eventType}</span> <span class='text-xs text-gray-400'>${eventTime}</span> ${details}</li>`;
+          }).join('');
+          
+          historyHtml = `
+            <div class="mt-2">
+              <button 
+                onclick="toggleHistory('${historyId}')"
+                class="text-blue-600 hover:text-blue-800 dark:text-blue-500 dark:hover:text-blue-400 text-sm font-medium flex items-center gap-1"
+                id="btn-${historyId}"
+              >
+                <span>See History (${parsedDetails.history.length} events)</span>
+                <svg class="w-4 h-4 transition-transform" id="icon-${historyId}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </button>
+              <div class="hidden mt-2 bg-gray-50 dark:bg-gray-800 rounded-md p-3" id="${historyId}">
+                <ul class="space-y-1 text-sm">
+                  ${historyItems}
+                </ul>
+              </div>
+            </div>`;
         }
         return `<div><span class="font-medium">Visitor:</span> ${parsedDetails.visitor_name || 'Unknown visitor'}</div><div><span class="font-medium">Date:</span> ${new Date(parsedDetails.visit_date).toLocaleDateString()}</div><div><span class="font-medium">Place:</span> ${visitPlaceName}</div><div><span class="font-medium">Purpose:</span> ${parsedDetails.purpose || 'Not specified'}</div>${historyHtml}`;
       }
@@ -1696,7 +1680,7 @@ function setupDashboardEventListeners() {
     refreshPersonnelBtn.addEventListener('click', async () => {
       try {
         // Show loading state
-        refreshPersonnelBtn.disabled = true;
+        (refreshPersonnelBtn as HTMLButtonElement).disabled = true;
         refreshPersonnelBtn.textContent = 'Refreshing...';
         
         // Load personnel dashboard
@@ -1709,7 +1693,7 @@ function setupDashboardEventListeners() {
         showNotification('Error refreshing dashboard. Please try again.', 'error');
       } finally {
         // Reset button state
-        refreshPersonnelBtn.disabled = false;
+        (refreshPersonnelBtn as HTMLButtonElement).disabled = false;
         refreshPersonnelBtn.textContent = 'Refresh';
       }
     });
@@ -1721,13 +1705,12 @@ function setupDashboardEventListeners() {
     refreshVisitsBtn.addEventListener('click', async () => {
       try {
         // Show loading state
-        refreshVisitsBtn.disabled = true;
+        (refreshVisitsBtn as HTMLButtonElement).disabled = true;
         refreshVisitsBtn.innerHTML = `
           <svg class="w-4 h-4 inline mr-1 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
           </svg>
-          Refreshing...
-        `;
+          Refreshing...`;
         
         // Load scheduled visits with real-time data
         await loadScheduledVisits();
@@ -1739,13 +1722,12 @@ function setupDashboardEventListeners() {
         showNotification('Error refreshing visits. Please try again.', 'error');
       } finally {
         // Reset button state
-        refreshVisitsBtn.disabled = false;
+        (refreshVisitsBtn as HTMLButtonElement).disabled = false;
         refreshVisitsBtn.innerHTML = `
           <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
           </svg>
-          Refresh
-        `;
+          Refresh`;
       }
     });
   }
@@ -1838,14 +1820,14 @@ function setupDashboardEventListeners() {
   }
 
   // Refresh logs button
-  const refreshLogsBtn = document.getElementById('refreshLogsBtn') as HTMLButtonElement;
+  const refreshLogsBtn = document.getElementById('refreshLogsBtn');
   console.log('Refresh logs button found:', !!refreshLogsBtn);
   if (refreshLogsBtn) {
     refreshLogsBtn.addEventListener('click', async () => {
       console.log('Refresh logs button clicked');
       try {
         // Show loading state
-        refreshLogsBtn.disabled = true;
+        (refreshLogsBtn as HTMLButtonElement).disabled = true;
         refreshLogsBtn.textContent = 'Refreshing...';
         
         // Load logs
@@ -1858,7 +1840,7 @@ function setupDashboardEventListeners() {
         showNotification('Error refreshing logs. Please try again.', 'error');
       } finally {
         // Reset button state
-        refreshLogsBtn.disabled = false;
+        (refreshLogsBtn as HTMLButtonElement).disabled = false;
         refreshLogsBtn.textContent = 'Refresh Logs';
       }
     });
@@ -2598,7 +2580,7 @@ async function applyVisitsFilters() {
 }
 
 // Display filtered visits
-async function displayScheduledVisits(visits: any[]) {
+async function displayScheduledVisits(visits: any[]): Promise<void> {
   const visitsList = document.getElementById('scheduledVisitsList');
   if (!visitsList) return;
 
@@ -2645,14 +2627,14 @@ async function displayScheduledVisits(visits: any[]) {
           .select('place_id')
           .eq('personnel_id', user.id);
         
-        userAssignments = assignments?.map(a => a.place_id) || [];
+        userAssignments = (assignments as any[])?.map((a: any) => a.place_id) || [];
       }
     } catch (error) {
       console.error('Error checking user permissions:', error);
     }
   }
 
-  visitsList.innerHTML = visits.map(visit => {
+  visitsList.innerHTML = (visits as any[]).map((visit: any) => {
     const visitorName = `${visit.visitor_first_name} ${visit.visitor_last_name}`;
     const visitorEmail = visit.visitor_email || 'No email';
     const visitorRole = visit.visitor_role || 'guest';
@@ -2661,14 +2643,14 @@ async function displayScheduledVisits(visits: any[]) {
     const scheduledDate = new Date(visit.visit_date).toLocaleDateString();
     const scheduledTime = new Date(visit.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     
-    const statusColors = {
+    const statusColors: { [key: string]: string } = {
       pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
       completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
       cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
       unsuccessful: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
     };
 
-    const roleColors = {
+    const roleColors: { [key: string]: string } = {
       visitor: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
       guest: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
     };
@@ -2700,10 +2682,10 @@ async function displayScheduledVisits(visits: any[]) {
             </p>
           </div>
           <div class="flex space-x-2">
-            <span class="px-2 py-1 rounded-full text-xs font-medium ${statusColors[visit.status] || statusColors.pending}">
+            <span class="px-2 py-1 rounded-full text-xs font-medium ${(statusColors as any)[visit.status] || statusColors.pending}">
               ${visit.status}
             </span>
-            <span class="px-2 py-1 rounded-full text-xs font-medium ${roleColors[visitorRole] || roleColors.guest}">
+            <span class="px-2 py-1 rounded-full text-xs font-medium ${(roleColors as any)[visitorRole] || roleColors.guest}">
               ${visitorRole}
             </span>
           </div>
@@ -3235,7 +3217,7 @@ async function applyFinishedFilters() {
 }
 
 // Display filtered finished visits
-function displayFinishedVisits(visits: any[]) {
+function displayFinishedVisits(visits: any[]): void {
   const visitsList = document.getElementById('finishedVisitsList');
   if (!visitsList) return;
 
@@ -3253,7 +3235,7 @@ function displayFinishedVisits(visits: any[]) {
     return;
   }
 
-  visitsList.innerHTML = visits.map(visit => {
+  visitsList.innerHTML = (visits as any[]).map((visit: any) => {
     const visitorName = `${visit.visitor_first_name} ${visit.visitor_last_name}`;
     const visitorEmail = visit.visitor_email || 'No email';
     const visitorRole = visit.visitor_role || 'guest';
@@ -3272,7 +3254,7 @@ function displayFinishedVisits(visits: any[]) {
       completedByName = `Personnel (${visit.completed_by.substring(0, 8)}...)`;
     }
     
-    const roleColors = {
+    const roleColors: { [key: string]: string } = {
       visitor: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
       guest: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
     };
@@ -3298,7 +3280,7 @@ function displayFinishedVisits(visits: any[]) {
             <span class="px-2 py-1 rounded-full text-xs font-medium ${statusClass}">
               ${statusText}
             </span>
-            <span class="px-2 py-1 rounded-full text-xs font-medium ${roleColors[visitorRole] || roleColors.guest}">
+            <span class="px-2 py-1 rounded-full text-xs font-medium ${(roleColors as any)[visitorRole] || roleColors.guest}">
               ${visitorRole}
             </span>
           </div>
@@ -3563,7 +3545,7 @@ async function applyVisitorFilters() {
 }
 
 // Display filtered visitor visits
-async function displayVisitorVisits(visits: any[]) {
+async function displayVisitorVisits(visits: any[]): Promise<void> {
   const visitsList = document.getElementById('visitorVisitsList');
   if (!visitsList) return;
 
@@ -3581,20 +3563,20 @@ async function displayVisitorVisits(visits: any[]) {
     return;
   }
 
-  visitsList.innerHTML = visits.map(visit => {
+  visitsList.innerHTML = (visits as any[]).map((visit: any) => {
     const placeName = visit.place_name || 'Unknown Place';
     const placeLocation = visit.place_location || 'No location specified';
     const visitDate = new Date(visit.visit_date).toLocaleDateString();
     const scheduledTime = new Date(visit.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     
-    const statusColors = {
+    const statusColors: { [key: string]: string } = {
       pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
       completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
       cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
       unsuccessful: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
     };
 
-    const statusText = {
+    const statusText: { [key: string]: string } = {
       pending: 'Pending',
       completed: 'Completed',
       cancelled: 'Cancelled',
@@ -3609,8 +3591,8 @@ async function displayVisitorVisits(visits: any[]) {
             <p class="text-gray-600 dark:text-gray-400">${placeLocation}</p>
           </div>
           <div class="flex space-x-2">
-            <span class="px-2 py-1 rounded-full text-xs font-medium ${statusColors[visit.status] || statusColors.pending}">
-              ${statusText[visit.status] || 'Pending'}
+            <span class="px-2 py-1 rounded-full text-xs font-medium ${(statusColors as any)[visit.status] || statusColors.pending}">
+              ${(statusText as any)[visit.status] || 'Pending'}
             </span>
           </div>
         </div>
@@ -3835,3 +3817,35 @@ if (typeof window !== 'undefined') {
     startScheduleAutoRefresh();
   });
 }
+
+// Function to toggle history dropdown
+function toggleHistory(historyId: string) {
+  const historyDiv = document.getElementById(historyId);
+  const button = document.getElementById(`btn-${historyId}`);
+  const icon = document.getElementById(`icon-${historyId}`);
+  
+  if (historyDiv && button && icon) {
+    const isHidden = historyDiv.classList.contains('hidden');
+    
+    if (isHidden) {
+      // Show history
+      historyDiv.classList.remove('hidden');
+      icon.style.transform = 'rotate(180deg)';
+      const span = button.querySelector('span');
+      if (span) {
+        span.textContent = span.textContent?.replace('See History', 'Hide History');
+      }
+    } else {
+      // Hide history
+      historyDiv.classList.add('hidden');
+      icon.style.transform = 'rotate(0deg)';
+      const span = button.querySelector('span');
+      if (span) {
+        span.textContent = span.textContent?.replace('Hide History', 'See History');
+      }
+    }
+  }
+}
+
+// Make toggleHistory function available globally
+(window as any).toggleHistory = toggleHistory;
