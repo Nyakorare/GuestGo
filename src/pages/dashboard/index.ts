@@ -369,6 +369,7 @@ export function DashboardPage() {
                 <option value="personnel_availability_change">Personnel Availability Change</option>
                 <option value="visit_scheduled">Visit Scheduled</option>
                 <option value="visit_completed">Visit Completed</option>
+                <option value="visit_unsuccessful">Visit Unsuccessful</option>
               </select>
             </div>
             <button 
@@ -1373,6 +1374,17 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
       case 'visit_scheduled': {
         const visitPlaceName = await getPlaceName(parsedDetails.place_id);
         let historyHtml = '';
+        
+        // Check if the visit has a current status (e.g., marked as unsuccessful)
+        let statusHtml = '';
+        if (parsedDetails.current_status) {
+          const statusClass = parsedDetails.current_status === 'unsuccessful' 
+            ? 'text-red-600 dark:text-red-400 font-semibold' 
+            : 'text-green-600 dark:text-green-400 font-semibold';
+          const statusText = parsedDetails.current_status === 'unsuccessful' ? 'Unsuccessful' : 'Completed';
+          statusHtml = `<div><span class="font-medium">Current Status:</span> <span class="${statusClass}">${statusText}</span></div>`;
+        }
+        
         if (Array.isArray(parsedDetails.history) && parsedDetails.history.length > 0) {
           const historyId = `history-${log?.id || Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
           const historyItems = parsedDetails.history.map((event: any) => {
@@ -1388,6 +1400,12 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
               }
               if (event.details.note) {
                 details += `<span class='text-xs text-gray-500'>Note: ${event.details.note}</span> `;
+              }
+              if (event.details.reason) {
+                details += `<span class='text-xs text-red-500'>Reason: ${event.details.reason}</span> `;
+              }
+              if (event.details.auto_marked) {
+                details += `<span class='text-xs text-orange-500'>(Auto-marked by system)</span> `;
               }
             }
             return `<li class="py-1 border-b border-gray-100 dark:border-gray-700 last:border-b-0"><span class='font-semibold'>${eventType}</span> <span class='text-xs text-gray-400'>${eventTime}</span> ${details}</li>`;
@@ -1412,11 +1430,18 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
               </div>
             </div>`;
         }
-        return `<div><span class="font-medium">Visitor:</span> ${parsedDetails.visitor_name || 'Unknown visitor'}</div><div><span class="font-medium">Date:</span> ${new Date(parsedDetails.visit_date).toLocaleDateString()}</div><div><span class="font-medium">Place:</span> ${visitPlaceName}</div><div><span class="font-medium">Purpose:</span> ${parsedDetails.purpose || 'Not specified'}</div>${historyHtml}`;
+        return `<div><span class="font-medium">Visitor:</span> ${parsedDetails.visitor_name || 'Unknown visitor'}</div><div><span class="font-medium">Date:</span> ${new Date(parsedDetails.visit_date).toLocaleDateString()}</div><div><span class="font-medium">Place:</span> ${visitPlaceName}</div><div><span class="font-medium">Purpose:</span> ${parsedDetails.purpose || 'Not specified'}</div>${statusHtml}${historyHtml}`;
       }
       case 'visit_completed':
         const completedVisitPlaceName = await getPlaceName(parsedDetails.place_id);
         return `<div><span class="font-medium">Visit ID:</span> ${parsedDetails.visit_id ? parsedDetails.visit_id.substring(0, 8) + '...' : 'Unknown'}</div><div><span class="font-medium">Place:</span> ${completedVisitPlaceName}</div><div><span class="font-medium">Completed:</span> ${new Date(parsedDetails.completed_at).toLocaleString()}</div>`;
+      case 'visit_unsuccessful': {
+        // Show details for unsuccessful visits (system auto-mark)
+        let when = parsedDetails.marked_at || parsedDetails.executed_at || parsedDetails.completed_at;
+        let whenStr = when ? new Date(when).toLocaleString() : 'Unknown';
+        let reason = parsedDetails.reason || 'The visit was not completed on or before the scheduled date.';
+        return `<div>This visit was <span class="font-semibold text-red-600">automatically marked as unsuccessful by the system</span> on <span class="font-medium">${whenStr}</span>.<br><span class="font-medium">Reason:</span> ${reason}</div>`;
+      }
       default:
         return `<pre class="text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto">${JSON.stringify(parsedDetails, null, 2)}</pre>`;
     }
@@ -2519,6 +2544,9 @@ async function loadFinishedSchedules() {
 // Apply filters and search to visits
 async function applyVisitsFilters() {
   let filteredVisits = [...allScheduledVisits];
+
+  // Filter out unsuccessful visits from scheduled visits view
+  filteredVisits = filteredVisits.filter(visit => visit.status !== 'unsuccessful');
 
   // Apply schedule type filter using Philippine time
   const philippineToday = await getCurrentPhilippineDateFromDB();

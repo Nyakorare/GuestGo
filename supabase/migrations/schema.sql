@@ -423,6 +423,9 @@ RETURNS INTEGER AS $$
 DECLARE
     philippine_date DATE;
     affected_rows INTEGER;
+    visit_record RECORD;
+    log_row RECORD;
+    new_history JSONB;
 BEGIN
     -- Get current Philippine date (UTC+8) using the new function
     philippine_date := public.get_philippine_date();
@@ -437,6 +440,46 @@ BEGIN
       AND visit_date < philippine_date;
     
     GET DIAGNOSTICS affected_rows = ROW_COUNT;
+    
+    -- Update the original visit_scheduled log entries to reflect the status change
+    FOR visit_record IN 
+        SELECT id, visitor_user_id, visitor_role
+        FROM scheduled_visits 
+        WHERE status = 'unsuccessful' 
+          AND visit_date < philippine_date
+          AND completed_at >= (public.get_philippine_timestamp() - INTERVAL '1 minute')
+    LOOP
+        -- Find the original visit_scheduled log entry for this visit
+        SELECT * INTO log_row 
+        FROM logs 
+        WHERE details->>'visit_id' = visit_record.id::text 
+          AND action = 'visit_scheduled' 
+        ORDER BY created_at LIMIT 1;
+        
+        -- If we found the original log entry, update it with the unsuccessful status
+        IF log_row.id IS NOT NULL THEN
+            new_history := (log_row.details->'history') || jsonb_build_array(
+                jsonb_build_object(
+                    'event', 'marked_unsuccessful',
+                    'timestamp', public.get_philippine_timestamp(),
+                    'details', jsonb_build_object(
+                        'by', 'system',
+                        'reason', 'Visit was not completed on or before the scheduled date',
+                        'auto_marked', true
+                    )
+                )
+            );
+            
+            -- Update the log entry to reflect the unsuccessful status
+            UPDATE logs 
+            SET details = jsonb_set(
+                jsonb_set(log_row.details, '{history}', new_history),
+                '{current_status}',
+                '"unsuccessful"'
+            ) 
+            WHERE id = log_row.id;
+        END IF;
+    END LOOP;
     
     -- Log the action if any visits were marked as unsuccessful
     IF affected_rows > 0 THEN
