@@ -202,22 +202,40 @@ export function DashboardPage() {
 
   return `
     <div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-6 sm:py-12">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-        <div class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
-          <img src="/guestgo-logo.png" alt="GuestGo Logo" class="h-14 w-14 sm:h-16 sm:w-16" />
-          <div class="text-center sm:text-left">
-            <h1 class="text-2xl sm:text-4xl font-bold text-gray-900 dark:text-white transition-colors duration-200">
-              Dashboard
-            </h1>
-            <p class="text-base sm:text-xl text-gray-600 dark:text-gray-300 transition-colors duration-200">
-              Your current role: <span id="userRole" class="font-semibold text-blue-600 dark:text-blue-500">Loading...</span>
-            </p>
+      <div class="flex flex-col gap-4 mb-8">
+        <!-- Header Row 1: Logo, Title, and Clock -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
+            <img src="/guestgo-logo.png" alt="GuestGo Logo" class="h-14 w-14 sm:h-16 sm:w-16" />
+            <div class="text-center sm:text-left">
+              <h1 class="text-2xl sm:text-4xl font-bold text-gray-900 dark:text-white transition-colors duration-200">
+                Dashboard
+              </h1>
+              <p class="text-base sm:text-xl text-gray-600 dark:text-gray-300 transition-colors duration-200">
+                Your current role: <span id="userRole" class="font-semibold text-blue-600 dark:text-blue-500">Loading...</span>
+              </p>
+            </div>
+          </div>
+
+          <!-- Philippine Clock -->
+          <div id="philippineClock" class="flex flex-col items-center sm:items-end justify-center bg-white dark:bg-gray-800 rounded-lg shadow-md px-4 py-3 sm:px-6 sm:py-4 border border-gray-200 dark:border-gray-700 w-full sm:w-auto">
+            <div class="text-center">
+              <div class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white" id="philippineTime">
+                Loading...
+              </div>
+              <div class="text-xs sm:text-sm text-gray-600 dark:text-gray-400" id="philippineDate">
+                Loading...
+              </div>
+              <div class="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                🇵🇭 Philippine Time
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Admin Tabs -->
-        <div id="adminTabs" class="hidden w-full sm:w-auto">
-          <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+        <!-- Header Row 2: Admin Tabs (when visible) -->
+        <div id="adminTabs" class="hidden w-full">
+          <div class="flex flex-col sm:flex-row gap-2 w-full">
             <button 
               id="placesTab"
               class="w-full sm:w-auto px-4 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
@@ -236,21 +254,6 @@ export function DashboardPage() {
             >
               Logs
             </button>
-          </div>
-        </div>
-
-        <!-- Philippine Clock -->
-        <div id="philippineClock" class="flex flex-col items-end justify-center bg-white dark:bg-gray-800 rounded-lg shadow-md px-4 py-3 sm:px-6 sm:py-4 border border-gray-200 dark:border-gray-700 w-full sm:w-auto">
-          <div class="text-center">
-            <div class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white" id="philippineTime">
-              Loading...
-            </div>
-            <div class="text-xs sm:text-sm text-gray-600 dark:text-gray-400" id="philippineDate">
-              Loading...
-            </div>
-            <div class="text-xs text-gray-500 dark:text-gray-500 mt-1">
-              🇵🇭 Philippine Time
-            </div>
           </div>
         </div>
       </div>
@@ -335,18 +338,18 @@ export function DashboardPage() {
       </div>
 
       <div id="logsContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+        <div class="flex flex-col gap-4 mb-6">
           <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">System Logs</h2>
-          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-4">
+          <div class="flex flex-col gap-4">
             <!-- Search and Filter Section -->
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-3">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <!-- Search Input -->
-              <div class="relative">
+              <div class="relative flex-1">
                 <input 
                   type="text" 
                   id="logsSearchInput"
                   placeholder="Search logs..."
-                  class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
+                  class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
                 >
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -371,6 +374,8 @@ export function DashboardPage() {
                 <option value="visit_completed">Visit Completed</option>
                 <option value="visit_unsuccessful">Visit Unsuccessful</option>
               </select>
+              <button 
+                id="refreshLogsBtn"
             </div>
             <button 
               id="refreshLogsBtn"
@@ -1184,7 +1189,9 @@ async function renderLogs(): Promise<void> {
   if (logsList) {
     if (filteredLogs.length === 0) {
       logsList.innerHTML = `
-        <p class="text-gray-600 dark:text-gray-300">No logs found matching your criteria.</p>
+        <div class="text-center py-8">
+          <p class="text-gray-600 dark:text-gray-300">No logs found matching your criteria.</p>
+        </div>
       `;
       return;
     }
@@ -1215,7 +1222,8 @@ async function renderLogs(): Promise<void> {
     );
 
     logsList.innerHTML = `
-      <div class="overflow-x-auto">
+      <!-- Desktop Table View (hidden on mobile) -->
+      <div class="hidden lg:block overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead class="bg-gray-50 dark:bg-gray-800">
             <tr>
@@ -1267,6 +1275,58 @@ async function renderLogs(): Promise<void> {
             `).join('')}
           </tbody>
         </table>
+      </div>
+
+      <!-- Mobile Card View (visible on mobile and tablet) -->
+      <div class="lg:hidden space-y-4">
+        ${(formattedDetails as any[]).map((log: any) => `
+          <div class="bg-white dark:bg-gray-700 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 p-4">
+            <div class="flex flex-col space-y-3">
+              <!-- Header with timestamp and action -->
+              <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                <div class="flex-1">
+                  <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">
+                    ${new Date(log.created_at).toLocaleString()}
+                  </div>
+                  <div class="text-sm text-gray-900 dark:text-white font-medium">
+                    ${log.user_roles ? 
+                      `${log.user_roles.first_name || ''} ${log.user_roles.last_name || ''}`.trim() || 
+                      log.user_roles.email || 
+                      'Unknown User' 
+                      : 'Guest User'}
+                  </div>
+                  ${log.user_roles ? 
+                    `<div class="text-xs text-gray-500 font-mono">${log.user_id.substring(0, 8)}...</div>` 
+                    : ''}
+                </div>
+                <div class="flex-shrink-0">
+                  <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                    log.displayAction === 'password_change' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                    log.displayAction === 'place_update' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                    log.displayAction === 'place_availability_toggle' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                    log.displayAction === 'place_create' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                    log.displayAction === 'personnel_assignment' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+                    log.displayAction === 'personnel_removal' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
+                    log.displayAction === 'personnel_availability_change' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' :
+                    log.displayAction === 'visit_scheduled' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' :
+                    log.displayAction === 'visit_completed' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
+                    log.displayAction === 'visit_unsuccessful' ? 'bg-gray-200 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
+                    'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                  }">
+                    ${log.displayAction.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                  </span>
+                </div>
+              </div>
+              
+              <!-- Details section -->
+              <div class="border-t border-gray-200 dark:border-gray-600 pt-3">
+                <div class="text-sm text-gray-900 dark:text-white">
+                  ${log.formattedDetails}
+                </div>
+              </div>
+            </div>
+          </div>
+        `).join('')}
       </div>
     `;
   }
