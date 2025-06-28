@@ -830,10 +830,25 @@ export async function setupEventListeners() {
           philippineToday = getPhilippineDate();
         }
         
+        // Normalize current date to start of day for comparison
+        philippineToday.setHours(0, 0, 0, 0);
+        
         const selectedDate = new Date(visitDate);
         selectedDate.setHours(0, 0, 0, 0);
         const philippineSelectedDate = toPhilippineTime(selectedDate);
         philippineSelectedDate.setHours(0, 0, 0, 0);
+        
+        // Debug logging for form submission
+        console.log('Form Submission Date Validation Debug:', {
+          visitDate: visitDate,
+          selectedDate: selectedDate.toISOString(),
+          philippineSelectedDate: philippineSelectedDate.toISOString(),
+          philippineToday: philippineToday.toISOString(),
+          selectedTime: philippineSelectedDate.getTime(),
+          currentTime: philippineToday.getTime(),
+          isToday: philippineSelectedDate.getTime() === philippineToday.getTime(),
+          isPast: philippineSelectedDate.getTime() < philippineToday.getTime()
+        });
         
         if (philippineSelectedDate.getTime() < philippineToday.getTime()) {
           throw new Error(`Cannot schedule visits for past dates. Current Philippine date is ${philippineToday.toLocaleDateString()}. Please select today or a future date.`);
@@ -972,6 +987,11 @@ export async function setupEventListeners() {
         currentCode = null;
         enableVerificationInputs();
 
+        // Refresh the page after a short delay to update all content
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000); // 1 second delay to show the success message
+
       } catch (error: any) {
         console.error('Error scheduling visit:', error);
         alert('Error scheduling visit: ' + (error.message || 'Please try again'));
@@ -1051,6 +1071,21 @@ export async function setupEventListeners() {
         console.error('Exception getting current Philippine date from DB:', error);
         currentPhilippineDate = getPhilippineDate();
       }
+
+      // Normalize current date to start of day for comparison
+      currentPhilippineDate.setHours(0, 0, 0, 0);
+
+      // Debug logging
+      console.log('Modal Date Validation Debug:', {
+        selectedDate: visitDateInput.value,
+        selectedDateObj: selectedDate.toISOString(),
+        philippineSelectedDate: philippineSelectedDate.toISOString(),
+        currentPhilippineDate: currentPhilippineDate.toISOString(),
+        selectedTime: philippineSelectedDate.getTime(),
+        currentTime: currentPhilippineDate.getTime(),
+        isToday: philippineSelectedDate.getTime() === currentPhilippineDate.getTime(),
+        isPast: philippineSelectedDate.getTime() < currentPhilippineDate.getTime()
+      });
 
       // Clear previous validation
       visitDateInput.classList.remove('border-red-500', 'border-green-500', 'border-yellow-500', 'focus:border-red-500', 'focus:border-green-500', 'focus:border-yellow-500');

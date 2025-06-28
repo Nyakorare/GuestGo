@@ -198,6 +198,9 @@ export function DashboardPage() {
     if (profileSettingsBtn) {
       profileSettingsBtn.classList.remove('hidden');
     }
+
+    // Setup dashboard event listeners
+    setupDashboardEventListeners();
   }, 0);
 
   return `
@@ -376,13 +379,11 @@ export function DashboardPage() {
               </select>
               <button 
                 id="refreshLogsBtn"
+                class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 w-full sm:w-auto"
+              >
+                Refresh Logs
+              </button>
             </div>
-            <button 
-              id="refreshLogsBtn"
-              class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 w-full sm:w-auto"
-            >
-              Refresh Logs
-            </button>
           </div>
         </div>
         <div id="logsList" class="overflow-x-auto space-y-4"></div>
@@ -1634,8 +1635,22 @@ async function editPlace(placeId: string) {
     };
 
     // Remove any existing submit handlers and add the new one
+    // Use a submission flag to prevent duplicates while preserving form content
+    let isSubmitting = false;
+    const safeHandleSubmit = async (e: Event) => {
+      if (isSubmitting) {
+        e.preventDefault();
+        return;
+      }
+      isSubmitting = true;
+      await handleSubmit(e);
+      isSubmitting = false;
+    };
+    
+    // Remove existing listeners and add the safe one
     form.removeEventListener('submit', handleSubmit);
-    form.addEventListener('submit', handleSubmit);
+    form.removeEventListener('submit', safeHandleSubmit);
+    form.addEventListener('submit', safeHandleSubmit);
   }
 }
 
@@ -1847,9 +1862,14 @@ function setupDashboardEventListeners() {
 
         modal.classList.remove('hidden');
 
-        // Handle form submission for adding new place
+        // Create a unique handler function for this instance
         const handleSubmit = async (e: Event) => {
           e.preventDefault();
+          
+          // Prevent multiple submissions
+          if (submitBtn && submitBtn.disabled) {
+            return;
+          }
           
           // Show loading state
           if (submitBtn) {
@@ -1857,49 +1877,69 @@ function setupDashboardEventListeners() {
             submitBtn.textContent = 'Adding...';
           }
           
-          const { error } = await supabase
-            .from('places_to_visit')
-            .insert({
+          try {
+            // Debug: Log the form values before sending to database
+            console.log('Form values being sent to database:', {
               name: nameInput.value,
               description: descriptionInput.value,
+              descriptionLength: descriptionInput.value.length,
               location: locationInput.value
             });
+            
+            const { error } = await supabase
+              .from('places_to_visit')
+              .insert({
+                name: nameInput.value,
+                description: descriptionInput.value,
+                location: locationInput.value
+              });
 
-          if (error) {
-            console.error('Error adding place:', error);
+            if (error) {
+              console.error('Error adding place:', error);
+              showNotification('Error adding place. Please try again.', 'error');
+              return;
+            }
+
+            // Log the action
+            await logAction('place_create', {
+              place_name: nameInput.value,
+              place_description: descriptionInput.value,
+              place_location: locationInput.value
+            });
+
+            showNotification('Place added successfully!', 'success');
+            modal.classList.add('hidden');
+            loadPlaces(); // Reload the places list
+            
+          } catch (error) {
+            console.error('Error in place creation:', error);
             showNotification('Error adding place. Please try again.', 'error');
+          } finally {
             // Reset button state
             if (submitBtn) {
               submitBtn.disabled = false;
               submitBtn.textContent = 'Add Place';
             }
-            return;
           }
-
-          // Log the action
-          await logAction('place_create', {
-            place_name: nameInput.value,
-            place_description: descriptionInput.value,
-            place_location: locationInput.value
-          });
-
-          showNotification('Place added successfully!', 'success');
-          modal.classList.add('hidden');
-          loadPlaces(); // Reload the places list
-          
-          // Reset button state
-          if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Add Place';
-          }
-
-          // Remove the event listener to prevent conflicts
-          form.removeEventListener('submit', handleSubmit);
         };
 
         // Remove any existing submit handlers and add the new one
+        // Use a submission flag to prevent duplicates while preserving form content
+        let isSubmitting = false;
+        const safeHandleSubmit = async (e: Event) => {
+          if (isSubmitting) {
+            e.preventDefault();
+            return;
+          }
+          isSubmitting = true;
+          await handleSubmit(e);
+          isSubmitting = false;
+        };
+        
+        // Remove existing listeners and add the safe one
         form.removeEventListener('submit', handleSubmit);
-        form.addEventListener('submit', handleSubmit);
+        form.removeEventListener('submit', safeHandleSubmit);
+        form.addEventListener('submit', safeHandleSubmit);
       }
     });
   }
@@ -3671,6 +3711,86 @@ async function displayVisitorVisits(visits: any[]): Promise<void> {
       unsuccessful: 'Unsuccessful'
     };
 
+    // Format completion time if available
+    let completionInfo = '';
+    if (visit.completed_at) {
+      const completionTime = new Date(visit.completed_at).toLocaleString();
+      completionInfo = `
+        <div class="mb-4">
+          <p class="text-sm text-gray-500 dark:text-gray-400">
+            ${visit.status === 'completed' ? 'Completed at' : visit.status === 'unsuccessful' ? 'Marked as unsuccessful at' : 'Updated at'}
+          </p>
+          <p class="text-gray-900 dark:text-white font-medium">${completionTime}</p>
+        </div>
+      `;
+    }
+
+    // Add specific information for unsuccessful visits
+    let unsuccessfulInfo = '';
+    if (visit.status === 'unsuccessful') {
+      const today = new Date();
+      const visitDateObj = new Date(visit.visit_date);
+      const isPastDate = visitDateObj < today;
+      
+      unsuccessfulInfo = `
+        <div class="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border-l-4 border-gray-400">
+          <div class="flex items-start">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <h4 class="text-sm font-medium text-gray-800 dark:text-gray-200">
+                Visit Not Completed
+              </h4>
+              <div class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                <p>This visit was automatically marked as unsuccessful because it was not completed on or before the scheduled date.</p>
+                ${isPastDate ? `
+                  <p class="mt-1 font-medium">The scheduled date (${visitDate}) has passed.</p>
+                ` : ''}
+              </div>
+              <div class="mt-3">
+                <button 
+                  onclick="window.location.href='/#/'"
+                  class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                >
+                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Schedule New Visit
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Add specific information for completed visits
+    let completedInfo = '';
+    if (visit.status === 'completed') {
+      completedInfo = `
+        <div class="mt-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border-l-4 border-green-400">
+          <div class="flex items-start">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <h4 class="text-sm font-medium text-green-800 dark:text-green-200">
+                Visit Completed Successfully
+              </h4>
+              <div class="mt-2 text-sm text-green-600 dark:text-green-400">
+                <p>Your visit has been completed and marked as successful.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     return `
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <div class="flex justify-between items-start mb-4">
@@ -3702,6 +3822,10 @@ async function displayVisitorVisits(visits: any[]): Promise<void> {
             <p class="text-gray-900 dark:text-white">${visit.other_purpose}</p>
           </div>
         ` : ''}
+        
+        ${completionInfo}
+        ${unsuccessfulInfo}
+        ${completedInfo}
       </div>
     `;
   }).join('');

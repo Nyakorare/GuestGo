@@ -204,7 +204,7 @@ export function HomePage() {
       // Set default value to today
       visitDateInput.value = philippineToday.toISOString().split('T')[0];
       
-      // Add event listener to prevent selecting past dates
+      // Single consolidated event listener for date validation
       visitDateInput.addEventListener('change', async () => {
         const selectedDate = new Date(visitDateInput.value);
         selectedDate.setHours(0, 0, 0, 0);
@@ -226,41 +226,32 @@ export function HomePage() {
           currentPhilippineDate = getPhilippineDate();
         }
         
+        // Normalize current date to start of day for comparison
+        currentPhilippineDate.setHours(0, 0, 0, 0);
+        
+        // Check if date is in the past (excluding today)
         if (philippineSelectedDate.getTime() < currentPhilippineDate.getTime()) {
           alert('Cannot schedule visits for past dates. Please select today or a future date.');
           visitDateInput.value = currentPhilippineDate.toISOString().split('T')[0];
-        }
-      });
-      
-      // Add event listener to prevent selecting dates more than 1 month in the future
-      visitDateInput.addEventListener('change', async () => {
-        const selectedDate = new Date(visitDateInput.value);
-        selectedDate.setHours(0, 0, 0, 0);
-        const philippineSelectedDate = toPhilippineTime(selectedDate);
-        philippineSelectedDate.setHours(0, 0, 0, 0);
-        
-        // Get current Philippine date from database for real-time validation
-        let currentPhilippineDate: Date;
-        try {
-          const { data: currentDateData, error } = await supabase.rpc('get_philippine_date');
-          if (error) {
-            console.error('Error getting current Philippine date from DB:', error);
-            currentPhilippineDate = getPhilippineDate();
-          } else {
-            currentPhilippineDate = new Date(currentDateData);
-          }
-        } catch (error) {
-          console.error('Exception getting current Philippine date from DB:', error);
-          currentPhilippineDate = getPhilippineDate();
+          return;
         }
         
+        // Check if date is more than 1 month in the future
         const currentMaxDate = new Date(currentPhilippineDate);
         currentMaxDate.setMonth(currentMaxDate.getMonth() + 1);
         
         if (philippineSelectedDate.getTime() > currentMaxDate.getTime()) {
           alert('Cannot schedule visits more than 1 month in advance. Please select a date within the next month.');
           visitDateInput.value = currentMaxDate.toISOString().split('T')[0];
+          return;
         }
+        
+        // If we reach here, the date is valid (today or future within 1 month)
+        console.log('Date validation passed:', {
+          selected: philippineSelectedDate.toISOString(),
+          current: currentPhilippineDate.toISOString(),
+          isToday: philippineSelectedDate.getTime() === currentPhilippineDate.getTime()
+        });
       });
     }
 

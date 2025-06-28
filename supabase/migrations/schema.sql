@@ -426,6 +426,7 @@ DECLARE
     visit_record RECORD;
     log_row RECORD;
     new_history JSONB;
+    existing_unsuccessful_events INTEGER;
 BEGIN
     -- Get current Philippine date (UTC+8) using the new function
     philippine_date := public.get_philippine_date();
@@ -456,28 +457,36 @@ BEGIN
           AND action = 'visit_scheduled' 
         ORDER BY created_at LIMIT 1;
         
-        -- If we found the original log entry, update it with the unsuccessful status
+        -- If we found the original log entry, check if it already has an unsuccessful event
         IF log_row.id IS NOT NULL THEN
-            new_history := (log_row.details->'history') || jsonb_build_array(
-                jsonb_build_object(
-                    'event', 'marked_unsuccessful',
-                    'timestamp', public.get_philippine_timestamp(),
-                    'details', jsonb_build_object(
-                        'by', 'system',
-                        'reason', 'Visit was not completed on or before the scheduled date',
-                        'auto_marked', true
-                    )
-                )
-            );
+            -- Count existing 'marked_unsuccessful' events in the history
+            SELECT COUNT(*) INTO existing_unsuccessful_events
+            FROM jsonb_array_elements(log_row.details->'history') AS history_item
+            WHERE history_item->>'event' = 'marked_unsuccessful';
             
-            -- Update the log entry to reflect the unsuccessful status
-            UPDATE logs 
-            SET details = jsonb_set(
-                jsonb_set(log_row.details, '{history}', new_history),
-                '{current_status}',
-                '"unsuccessful"'
-            ) 
-            WHERE id = log_row.id;
+            -- Only add the unsuccessful event if it doesn't already exist
+            IF existing_unsuccessful_events = 0 THEN
+                new_history := (log_row.details->'history') || jsonb_build_array(
+                    jsonb_build_object(
+                        'event', 'marked_unsuccessful',
+                        'timestamp', public.get_philippine_timestamp(),
+                        'details', jsonb_build_object(
+                            'by', 'system',
+                            'reason', 'Visit was not completed on or before the scheduled date',
+                            'auto_marked', true
+                        )
+                    )
+                );
+                
+                -- Update the log entry to reflect the unsuccessful status
+                UPDATE logs 
+                SET details = jsonb_set(
+                    jsonb_set(log_row.details, '{history}', new_history),
+                    '{current_status}',
+                    '"unsuccessful"'
+                ) 
+                WHERE id = log_row.id;
+            END IF;
         END IF;
     END LOOP;
     
@@ -499,21 +508,6 @@ BEGIN
     RETURN affected_rows;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Create a function that will be called by the trigger to check and mark past visits
-CREATE OR REPLACE FUNCTION public.check_and_mark_past_visits()
-RETURNS TRIGGER AS $$
-BEGIN
-    -- Call the function to mark past visits as unsuccessful
-    PERFORM public.mark_past_visits_unsuccessful();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Create a trigger that runs on any insert/update to scheduled_visits to automatically mark past visits
-CREATE TRIGGER auto_mark_past_visits_trigger
-    AFTER INSERT OR UPDATE ON scheduled_visits
-    FOR EACH ROW EXECUTE FUNCTION public.check_and_mark_past_visits();
 
 -- Create a function to get current Philippine date (for use in other functions)
 CREATE OR REPLACE FUNCTION public.get_philippine_date()
@@ -947,5 +941,93 @@ RETURNS TEXT AS $$
 BEGIN
     -- Just return a success message to verify the function can be called
     RETURN 'complete_visit function is available and working';
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to clean up duplicate 'marked_unsuccessful' events from existing logs
+CREATE OR REPLACE FUNCTION public.cleanup_duplicate_unsuccessful_events()
+RETURNS INTEGER AS $$
+DECLARE
+    log_record RECORD;
+    cleaned_count INTEGER := 0;
+    new_history JSONB;
+    history_item JSONB;
+    unique_events JSONB := '[]'::JSONB;
+    event_key TEXT;
+BEGIN
+    -- Loop through all visit_scheduled logs that have history
+    FOR log_record IN 
+        SELECT id, details 
+        FROM logs 
+        WHERE action = 'visit_scheduled' 
+          AND details ? 'history'
+          AND jsonb_typeof(details->'history') = 'array'
+    LOOP
+        -- Reset unique events array for each log
+        unique_events := '[]'::JSONB;
+        
+        -- Process each history item
+        FOR history_item IN 
+            SELECT * FROM jsonb_array_elements(log_record.details->'history')
+        LOOP
+            -- For 'marked_unsuccessful' events, create a unique key and only keep the first one
+            IF history_item->>'event' = 'marked_unsuccessful' THEN
+                event_key := 'marked_unsuccessful';
+                
+                -- Check if we already have a 'marked_unsuccessful' event
+                IF NOT EXISTS (
+                    SELECT 1 FROM jsonb_array_elements(unique_events) AS existing_event
+                    WHERE existing_event->>'event' = 'marked_unsuccessful'
+                ) THEN
+                    -- Add the first 'marked_unsuccessful' event
+                    unique_events := unique_events || history_item;
+                END IF;
+            ELSE
+                -- For all other events, keep them as they are
+                unique_events := unique_events || history_item;
+            END IF;
+        END LOOP;
+        
+        -- Update the log if the history has changed
+        IF unique_events != log_record.details->'history' THEN
+            UPDATE logs 
+            SET details = jsonb_set(log_record.details, '{history}', unique_events)
+            WHERE id = log_record.id;
+            
+            cleaned_count := cleaned_count + 1;
+        END IF;
+    END LOOP;
+    
+    RETURN cleaned_count;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to manually trigger cleanup of past visits (for admin use)
+CREATE OR REPLACE FUNCTION public.trigger_daily_visit_status_check()
+RETURNS INTEGER AS $$
+DECLARE
+    affected_visits INTEGER;
+    cleaned_logs INTEGER;
+BEGIN
+    -- Mark past visits as unsuccessful
+    affected_visits := public.mark_past_visits_unsuccessful();
+    
+    -- Clean up any duplicate log entries
+    cleaned_logs := public.cleanup_duplicate_unsuccessful_events();
+    
+    -- Log the cleanup action
+    PERFORM public.log_action(
+        NULL, -- System action
+        'visit_unsuccessful',
+        jsonb_build_object(
+            'action', 'manual_trigger_cleanup',
+            'affected_visits', affected_visits,
+            'cleaned_logs', cleaned_logs,
+            'executed_at', public.get_philippine_timestamp(),
+            'executed_at_philippine_time', public.get_philippine_timestamp()
+        )
+    );
+    
+    RETURN affected_visits;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
