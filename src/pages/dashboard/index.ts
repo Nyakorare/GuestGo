@@ -160,6 +160,11 @@ export function DashboardPage() {
     });
 
     visitsTab?.addEventListener('click', async () => {
+      // Check if button is disabled
+      if (visitsTab.disabled) {
+        return;
+      }
+      
       visitsTab.classList.add('bg-blue-600', 'text-white');
       visitsTab.classList.remove('bg-gray-100', 'text-gray-700');
       assignmentTab?.classList.remove('bg-blue-600', 'text-white');
@@ -176,6 +181,11 @@ export function DashboardPage() {
     });
 
     finishedTab?.addEventListener('click', async () => {
+      // Check if button is disabled
+      if (finishedTab.disabled) {
+        return;
+      }
+      
       finishedTab.classList.add('bg-blue-600', 'text-white');
       finishedTab.classList.remove('bg-gray-100', 'text-gray-700');
       assignmentTab?.classList.remove('bg-blue-600', 'text-white');
@@ -1205,11 +1215,19 @@ async function renderLogs(): Promise<void> {
         let displayAction = log.action;
         if (log.action === 'visit_scheduled' && log.details) {
           let parsedDetails = typeof log.details === 'string' ? JSON.parse(log.details) : log.details;
-          if (Array.isArray(parsedDetails.history) && parsedDetails.history.length > 0) {
+          
+          // Check current_status first
+          if (parsedDetails.current_status === 'completed') {
+            displayAction = 'visit_completed';
+          } else if (parsedDetails.current_status === 'unsuccessful') {
+            displayAction = 'visit_unsuccessful';
+          }
+          // If no current_status, check history events
+          else if (Array.isArray(parsedDetails.history) && parsedDetails.history.length > 0) {
             const lastEvent = parsedDetails.history[parsedDetails.history.length - 1];
             if (lastEvent.event === 'completed') {
               displayAction = 'visit_completed';
-            } else if (lastEvent.event === 'unsuccessful' || lastEvent.event === 'failed') {
+            } else if (lastEvent.event === 'unsuccessful' || lastEvent.event === 'failed' || lastEvent.event === 'marked_unsuccessful') {
               displayAction = 'visit_unsuccessful';
             }
           }
@@ -1433,10 +1451,22 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
         const availabilityPlaceName = await getPlaceName(parsedDetails.place_id);
         return `<div><span class="font-medium">Place:</span> ${availabilityPlaceName}</div><div><span class="font-medium">Status:</span> <span class="${statusColor}">${status}</span></div>${reason}`;
       case 'visit_scheduled': {
-        const visitPlaceName = await getPlaceName(parsedDetails.place_id);
-        let historyHtml = '';
+        // Handle multi-place visits
+        let placesHtml = '';
+        let personnelHtml = '';
         
-        // Check if the visit has a current status (e.g., marked as unsuccessful)
+        // Check if this is a multi-place visit
+        if (parsedDetails.place_ids && Array.isArray(parsedDetails.place_ids) && parsedDetails.place_ids.length > 1) {
+          // Multi-place visit
+          const placeNames = parsedDetails.place_names || [];
+          placesHtml = `<div><span class="font-medium">Places (${parsedDetails.total_places || placeNames.length}):</span> ${placeNames.join(', ')}</div>`;
+        } else {
+          // Single place visit
+          const visitPlaceName = await getPlaceName(parsedDetails.place_id);
+          placesHtml = `<div><span class="font-medium">Place:</span> ${visitPlaceName}</div>`;
+        }
+        
+        // Check if the visit has a current status (e.g., marked as unsuccessful or completed)
         let statusHtml = '';
         if (parsedDetails.current_status) {
           const statusClass = parsedDetails.current_status === 'unsuccessful' 
@@ -1446,6 +1476,26 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
           statusHtml = `<div><span class="font-medium">Current Status:</span> <span class="${statusClass}">${statusText}</span></div>`;
         }
         
+        // Show personnel who completed places for multi-visit schedules
+        if (Array.isArray(parsedDetails.history) && parsedDetails.history.length > 0) {
+          const completedEvents = parsedDetails.history.filter((event: any) => 
+            event.event === 'place_completed' || event.event === 'completed'
+          );
+          
+          if (completedEvents.length > 0) {
+            const personnelIds = [...new Set(completedEvents.map((event: any) => event.details?.by).filter(id => id))];
+            if (personnelIds.length > 0) {
+              const personnelNames = await Promise.all(
+                personnelIds.map(async (personnelId: string) => {
+                  return await getUserName(personnelId);
+                })
+              );
+              personnelHtml = `<div><span class="font-medium">Completed by:</span> ${personnelNames.join(', ')}</div>`;
+            }
+          }
+        }
+        
+        let historyHtml = '';
         if (Array.isArray(parsedDetails.history) && parsedDetails.history.length > 0) {
           const historyId = `history-${log?.id || Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
           const historyItems = parsedDetails.history.map((event: any) => {
@@ -1467,6 +1517,12 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
               }
               if (event.details.auto_marked) {
                 details += `<span class='text-xs text-orange-500'>(Auto-marked by system)</span> `;
+              }
+              if (event.details.place_name) {
+                details += `<span class='text-xs text-blue-500'>Place: ${event.details.place_name}</span> `;
+              }
+              if (event.details.completed_places) {
+                details += `<span class='text-xs text-green-500'>Places: ${event.details.completed_places.join(', ')}</span> `;
               }
             }
             return `<li class="py-1 border-b border-gray-100 dark:border-gray-700 last:border-b-0"><span class='font-semibold'>${eventType}</span> <span class='text-xs text-gray-400'>${eventTime}</span> ${details}</li>`;
@@ -1491,17 +1547,41 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
               </div>
             </div>`;
         }
-        return `<div><span class="font-medium">Visitor:</span> ${parsedDetails.visitor_name || 'Unknown visitor'}</div><div><span class="font-medium">Date:</span> ${new Date(parsedDetails.visit_date).toLocaleDateString()}</div><div><span class="font-medium">Place:</span> ${visitPlaceName}</div><div><span class="font-medium">Purpose:</span> ${parsedDetails.purpose || 'Not specified'}</div>${statusHtml}${historyHtml}`;
+        return `<div><span class="font-medium">Visitor:</span> ${parsedDetails.visitor_name || 'Unknown visitor'}</div><div><span class="font-medium">Date:</span> ${new Date(parsedDetails.visit_date).toLocaleDateString()}</div>${placesHtml}<div><span class="font-medium">Purpose:</span> ${parsedDetails.purpose || 'Not specified'}</div>${personnelHtml}${statusHtml}${historyHtml}`;
       }
       case 'visit_completed':
         const completedVisitPlaceName = await getPlaceName(parsedDetails.place_id);
         return `<div><span class="font-medium">Visit ID:</span> ${parsedDetails.visit_id ? parsedDetails.visit_id.substring(0, 8) + '...' : 'Unknown'}</div><div><span class="font-medium">Place:</span> ${completedVisitPlaceName}</div><div><span class="font-medium">Completed:</span> ${new Date(parsedDetails.completed_at).toLocaleString()}</div>`;
       case 'visit_unsuccessful': {
-        // Show details for unsuccessful visits (system auto-mark)
+        // Show details for unsuccessful visits (system auto-mark or manual mark)
         let when = parsedDetails.marked_at || parsedDetails.executed_at || parsedDetails.completed_at;
         let whenStr = when ? new Date(when).toLocaleString() : 'Unknown';
         let reason = parsedDetails.reason || 'The visit was not completed on or before the scheduled date.';
-        return `<div>This visit was <span class="font-semibold text-red-600">automatically marked as unsuccessful by the system</span> on <span class="font-medium">${whenStr}</span>.<br><span class="font-medium">Reason:</span> ${reason}</div>`;
+        let visitPlaceName = '';
+        
+        // Try to get place name if place_id is available
+        if (parsedDetails.place_id) {
+          visitPlaceName = await getPlaceName(parsedDetails.place_id);
+        }
+        
+        let detailsHtml = `<div>This visit was <span class="font-semibold text-red-600">marked as unsuccessful</span> on <span class="font-medium">${whenStr}</span>.<br><span class="font-medium">Reason:</span> ${reason}</div>`;
+        
+        // Add place information if available
+        if (visitPlaceName) {
+          detailsHtml += `<div><span class="font-medium">Place:</span> ${visitPlaceName}</div>`;
+        }
+        
+        // Add visitor information if available
+        if (parsedDetails.visitor_name) {
+          detailsHtml += `<div><span class="font-medium">Visitor:</span> ${parsedDetails.visitor_name}</div>`;
+        }
+        
+        // Add visit date if available
+        if (parsedDetails.visit_date) {
+          detailsHtml += `<div><span class="font-medium">Scheduled Date:</span> ${new Date(parsedDetails.visit_date).toLocaleDateString()}</div>`;
+        }
+        
+        return detailsHtml;
       }
       default:
         return `<pre class="text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto">${JSON.stringify(parsedDetails, null, 2)}</pre>`;
@@ -2140,6 +2220,49 @@ function setupDashboardEventListeners() {
   console.log('Dashboard event listeners setup complete');
 }
 
+// Function to update schedule type tab visual states
+function updateScheduleTypeTabs() {
+  const allSchedulesTab = document.getElementById('allSchedulesTab') as HTMLButtonElement;
+  const todaySchedulesTab = document.getElementById('todaySchedulesTab') as HTMLButtonElement;
+  const futureSchedulesTab = document.getElementById('futureSchedulesTab') as HTMLButtonElement;
+
+  // Reset all tabs to inactive state
+  if (allSchedulesTab) {
+    allSchedulesTab.classList.remove('bg-blue-600', 'text-white');
+    allSchedulesTab.classList.add('bg-gray-100', 'text-gray-700');
+  }
+  if (todaySchedulesTab) {
+    todaySchedulesTab.classList.remove('bg-blue-600', 'text-white');
+    todaySchedulesTab.classList.add('bg-gray-100', 'text-gray-700');
+  }
+  if (futureSchedulesTab) {
+    futureSchedulesTab.classList.remove('bg-blue-600', 'text-white');
+    futureSchedulesTab.classList.add('bg-gray-100', 'text-gray-700');
+  }
+
+  // Set active tab based on current schedule type
+  switch (currentScheduleType) {
+    case 'all':
+      if (allSchedulesTab) {
+        allSchedulesTab.classList.add('bg-blue-600', 'text-white');
+        allSchedulesTab.classList.remove('bg-gray-100', 'text-gray-700');
+      }
+      break;
+    case 'today':
+      if (todaySchedulesTab) {
+        todaySchedulesTab.classList.add('bg-blue-600', 'text-white');
+        todaySchedulesTab.classList.remove('bg-gray-100', 'text-gray-700');
+      }
+      break;
+    case 'future':
+      if (futureSchedulesTab) {
+        futureSchedulesTab.classList.add('bg-blue-600', 'text-white');
+        futureSchedulesTab.classList.remove('bg-gray-100', 'text-gray-700');
+      }
+      break;
+  }
+}
+
 // Initialize dashboard event listeners
 setTimeout(() => {
   setupDashboardEventListeners();
@@ -2443,8 +2566,14 @@ async function loadPersonnelDashboard() {
       personnelContent.classList.remove('hidden');
     }
 
+    // Check if personnel is assigned to any places
+    const isAssigned = availabilityData && availabilityData.length > 0;
+    
+    // Update button states based on assignment
+    updatePersonnelButtonStates(isAssigned);
+
     if (personnelAssignmentInfo) {
-      if (availabilityData && availabilityData.length > 0) {
+      if (isAssigned) {
         const assignment = availabilityData[0]; // Personnel can only be assigned to one place
         personnelAssignmentInfo.innerHTML = `
           <div class="bg-white dark:bg-gray-700 rounded-lg shadow p-6">
@@ -2499,6 +2628,7 @@ async function loadPersonnelDashboard() {
               </svg>
               <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No Assignment</h3>
               <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">You are not currently assigned to any place.</p>
+              <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">Contact an administrator to get assigned to a place.</p>
             </div>
           </div>
         `;
@@ -2508,6 +2638,55 @@ async function loadPersonnelDashboard() {
     // Note: Scheduled visits will be loaded when the visits tab is clicked
   } catch (error) {
     console.error('Error in loadPersonnelDashboard:', error);
+  }
+}
+
+// Function to update personnel button states based on assignment
+function updatePersonnelButtonStates(isAssigned: boolean) {
+  const visitsTab = document.getElementById('visitsTab') as HTMLButtonElement;
+  const finishedTab = document.getElementById('finishedTab') as HTMLButtonElement;
+  const refreshVisitsBtn = document.getElementById('refreshVisitsBtn') as HTMLButtonElement;
+  
+  if (visitsTab) {
+    if (isAssigned) {
+      visitsTab.disabled = false;
+      visitsTab.classList.remove('opacity-50', 'cursor-not-allowed');
+      visitsTab.classList.add('hover:bg-gray-200');
+      visitsTab.title = 'View scheduled visits';
+    } else {
+      visitsTab.disabled = true;
+      visitsTab.classList.add('opacity-50', 'cursor-not-allowed');
+      visitsTab.classList.remove('hover:bg-gray-200');
+      visitsTab.title = 'You must be assigned to a place to view scheduled visits';
+    }
+  }
+  
+  if (finishedTab) {
+    if (isAssigned) {
+      finishedTab.disabled = false;
+      finishedTab.classList.remove('opacity-50', 'cursor-not-allowed');
+      finishedTab.classList.add('hover:bg-gray-200');
+      finishedTab.title = 'View finished schedules';
+    } else {
+      finishedTab.disabled = true;
+      finishedTab.classList.add('opacity-50', 'cursor-not-allowed');
+      finishedTab.classList.remove('hover:bg-gray-200');
+      finishedTab.title = 'You must be assigned to a place to view finished schedules';
+    }
+  }
+  
+  if (refreshVisitsBtn) {
+    if (isAssigned) {
+      refreshVisitsBtn.disabled = false;
+      refreshVisitsBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+      refreshVisitsBtn.classList.add('hover:bg-blue-700');
+      refreshVisitsBtn.title = 'Refresh visits data';
+    } else {
+      refreshVisitsBtn.disabled = true;
+      refreshVisitsBtn.classList.add('opacity-50', 'cursor-not-allowed');
+      refreshVisitsBtn.classList.remove('hover:bg-blue-700');
+      refreshVisitsBtn.title = 'You must be assigned to a place to refresh visits';
+    }
   }
 }
 
@@ -2534,16 +2713,111 @@ async function loadScheduledVisits() {
       return;
     }
 
+    console.log('Loading scheduled visits for user:', user.id);
+
+    // First, check if the user has personnel role
+    const { data: roleData, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single();
+
+    if (roleError) {
+      console.error('Error checking user role:', roleError);
+      showNotification('Error checking user permissions', 'error');
+      return;
+    }
+
+    if (roleData?.role !== 'personnel') {
+      console.log('User does not have personnel role:', roleData?.role);
+      showNotification('You do not have permission to view scheduled visits', 'error');
+      return;
+    }
+
+    // Check if the user is assigned to any places
+    const { data: assignments, error: assignmentError } = await supabase
+      .from('place_personnel')
+      .select('place_id')
+      .eq('personnel_id', user.id);
+
+    if (assignmentError) {
+      console.error('Error checking personnel assignments:', assignmentError);
+      showNotification('Error checking personnel assignments', 'error');
+      return;
+    }
+
+    if (!assignments || assignments.length === 0) {
+      console.log('User is not assigned to any places');
+      // Show empty state instead of error
+      allScheduledVisits = [];
+      await applyVisitsFilters();
+      return;
+    }
+
     // Get scheduled visits for this personnel
-    const { data: scheduledVisits, error } = await supabase.rpc('get_personnel_scheduled_visits', {
-      p_personnel_id: user.id
-    });
+    console.log('Calling get_personnel_scheduled_visits with personnel_id:', user.id);
+    console.log('User ID type:', typeof user.id);
+    console.log('User ID value:', user.id);
+    
+    // Test if RPC calls are working at all
+    try {
+      const { data: testData, error: testError } = await supabase.rpc('get_philippine_date');
+      console.log('Test RPC call result:', { data: testData, error: testError });
+    } catch (testErr) {
+      console.error('Test RPC call failed:', testErr);
+    }
+    
+    // Test basic table access
+    try {
+      const { data: tableTest, error: tableError } = await supabase
+        .from('user_roles')
+        .select('count')
+        .limit(1);
+      console.log('Table access test result:', { data: tableTest, error: tableError });
+    } catch (tableErr) {
+      console.error('Table access test failed:', tableErr);
+    }
+    
+    // Test if the function exists by calling it with a simple parameter
+    try {
+      const { data: funcTest, error: funcError } = await supabase.rpc('get_personnel_scheduled_visits', {
+        p_personnel_id: '00000000-0000-0000-0000-000000000000' // Test with dummy UUID
+      });
+      console.log('Function existence test result:', { data: funcTest, error: funcError });
+    } catch (funcErr) {
+      console.error('Function existence test failed:', funcErr);
+    }
+    
+    let scheduledVisits;
+    let error;
+    
+    try {
+      const result = await supabase.rpc('get_personnel_scheduled_visits', {
+        p_personnel_id: user.id
+      });
+      scheduledVisits = result.data;
+      error = result.error;
+    } catch (rpcError) {
+      console.error('RPC call threw an exception:', rpcError);
+      error = rpcError;
+    }
 
     if (error) {
       console.error('Error loading scheduled visits:', error);
-      showNotification('Error loading scheduled visits', 'error');
+      console.error('Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+        status: error.status,
+        statusText: error.statusText
+      });
+      console.error('Full error object:', JSON.stringify(error, null, 2));
+      showNotification('Error loading scheduled visits: ' + error.message, 'error');
       return;
     }
+
+    console.log('Scheduled visits loaded successfully:', scheduledVisits?.length || 0);
 
     // Store all visits for filtering
     allScheduledVisits = scheduledVisits || [];
@@ -2595,6 +2869,41 @@ async function loadFinishedSchedules() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       console.error('No user found');
+      return;
+    }
+
+    // Check if the user has personnel role
+    const { data: roleData, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single();
+
+    if (roleError) {
+      console.error('Error checking user role:', roleError);
+      return;
+    }
+
+    if (roleData?.role !== 'personnel') {
+      console.log('User does not have personnel role:', roleData?.role);
+      return;
+    }
+
+    // Check if the user is assigned to any places
+    const { data: assignments, error: assignmentError } = await supabase
+      .from('place_personnel')
+      .select('place_id')
+      .eq('personnel_id', user.id);
+
+    if (assignmentError) {
+      console.error('Error checking personnel assignments:', assignmentError);
+      return;
+    }
+
+    if (!assignments || assignments.length === 0) {
+      console.log('User is not assigned to any places');
+      allFinishedVisits = [];
+      applyFinishedFilters();
       return;
     }
 
@@ -2790,14 +3099,27 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
 
     const canComplete = userRole === 'personnel' && 
                        userAssignments.includes(visit.place_id) && 
-                       visit.status === 'pending' &&
+                       visit.place_status === 'pending' &&
                        visitDateStr === philippineToday.toISOString().split('T')[0];
 
     // Check if user meets basic requirements but visit is in the future
     const meetsBasicRequirements = userRole === 'personnel' && 
                                   userAssignments.includes(visit.place_id) && 
-                                  visit.status === 'pending';
+                                  visit.place_status === 'pending';
     const isFutureVisit = visitDateStr > philippineToday.toISOString().split('T')[0];
+
+    // Show multi-place visit indicator
+    const multiPlaceIndicator = visit.total_places > 1 ? `
+      <div class="mb-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-400">
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-medium text-blue-800 dark:text-blue-200">Multi-Place Visit</span>
+          <span class="text-sm text-blue-600 dark:text-blue-400">${visit.completed_places}/${visit.total_places} places completed</span>
+        </div>
+        <div class="mt-1 w-full bg-blue-200 dark:bg-blue-800 rounded-full h-1.5">
+          <div class="bg-blue-500 h-1.5 rounded-full transition-all duration-300" style="width: ${visit.total_places > 0 ? (visit.completed_places / visit.total_places) * 100 : 0}%"></div>
+        </div>
+      </div>
+    ` : '';
 
     return `
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
@@ -2819,6 +3141,8 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
           </div>
         </div>
         
+        ${multiPlaceIndicator}
+        
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
             <p class="text-sm text-gray-500 dark:text-gray-400">Scheduled Date</p>
@@ -2830,13 +3154,28 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
           </div>
         </div>
         
+        <div class="mb-4">
+          <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Your Assignment</p>
+          <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border-l-4 ${visit.place_status === 'completed' ? 'border-green-400' : visit.place_status === 'unsuccessful' ? 'border-red-400' : 'border-yellow-400'}">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-medium text-gray-900 dark:text-white">${visit.place_name || 'Unknown Place'}</p>
+                <p class="text-xs text-gray-600 dark:text-gray-400">${visit.place_location || 'No location specified'}</p>
+              </div>
+              <span class="px-2 py-1 rounded-full text-xs font-medium ${(statusColors as any)[visit.place_status] || statusColors.pending}">
+                ${visit.place_status === 'completed' ? 'Completed' : visit.place_status === 'unsuccessful' ? 'Unsuccessful' : 'Pending'}
+              </span>
+            </div>
+          </div>
+        </div>
+        
         ${canComplete ? `
           <div class="flex justify-end">
             <button 
-              onclick="completeVisit('${visit.visit_id}')"
+              onclick="completeVisitPlace('${visit.visit_id}', '${visit.place_id}')"
               class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-sm font-medium"
             >
-              Mark Complete
+              Mark Place Complete
             </button>
           </div>
         ` : meetsBasicRequirements && isFutureVisit ? `
@@ -2845,987 +3184,13 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
               Cannot complete - scheduled for future date (${scheduledDate})
             </div>
           </div>
-        ` : ''}
-      </div>
-    `;
-  }).join('') + `
-    <div class="text-center mt-6">
-      <div class="text-xs text-gray-400 dark:text-gray-500">
-        Last updated: ${new Date().toLocaleTimeString()} • Auto-refreshing every 10 seconds
-      </div>
-    </div>
-  `;
-}
-
-// Event listeners for search and filters
-document.addEventListener('DOMContentLoaded', function() {
-  // ... existing event listeners ...
-
-  // Search input event listener
-  const visitsSearchInput = document.getElementById('visitsSearchInput') as HTMLInputElement;
-  if (visitsSearchInput) {
-    visitsSearchInput.addEventListener('input', debounce(() => {
-      currentSearchTerm = visitsSearchInput.value;
-      applyVisitsFilters();
-    }, 300));
-  }
-
-  // Status filter event listener
-  const visitStatusFilter = document.getElementById('visitStatusFilter') as HTMLSelectElement;
-  if (visitStatusFilter) {
-    visitStatusFilter.addEventListener('change', async () => {
-      currentStatusFilter = visitStatusFilter.value;
-      await applyVisitsFilters();
-    });
-  }
-
-  // Role filter event listener
-  const visitorRoleFilter = document.getElementById('visitorRoleFilter') as HTMLSelectElement;
-  if (visitorRoleFilter) {
-    visitorRoleFilter.addEventListener('change', async () => {
-      currentRoleFilter = visitorRoleFilter.value;
-      await applyVisitsFilters();
-    });
-  }
-
-  // Schedule type tabs event listeners
-  const allSchedulesTab = document.getElementById('allSchedulesTab');
-  const todaySchedulesTab = document.getElementById('todaySchedulesTab');
-  const futureSchedulesTab = document.getElementById('futureSchedulesTab');
-
-  if (allSchedulesTab) {
-    allSchedulesTab.addEventListener('click', async () => {
-      currentScheduleType = 'all';
-      updateScheduleTypeTabs();
-      await applyVisitsFilters();
-    });
-  }
-
-  if (todaySchedulesTab) {
-    todaySchedulesTab.addEventListener('click', async () => {
-      currentScheduleType = 'today';
-      updateScheduleTypeTabs();
-      await applyVisitsFilters();
-    });
-  }
-
-  if (futureSchedulesTab) {
-    futureSchedulesTab.addEventListener('click', async () => {
-      currentScheduleType = 'future';
-      updateScheduleTypeTabs();
-      await applyVisitsFilters();
-    });
-  }
-});
-
-// Update schedule type tab styles
-function updateScheduleTypeTabs() {
-  const allSchedulesTab = document.getElementById('allSchedulesTab');
-  const todaySchedulesTab = document.getElementById('todaySchedulesTab');
-  const futureSchedulesTab = document.getElementById('futureSchedulesTab');
-
-  const activeClasses = 'bg-blue-600 text-white';
-  const inactiveClasses = 'bg-gray-100 text-gray-700 hover:bg-gray-200';
-
-  if (allSchedulesTab) {
-    allSchedulesTab.className = `px-4 py-2 rounded-md font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 text-sm ${currentScheduleType === 'all' ? activeClasses : inactiveClasses}`;
-  }
-
-  if (todaySchedulesTab) {
-    todaySchedulesTab.className = `px-4 py-2 rounded-md font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 text-sm ${currentScheduleType === 'today' ? activeClasses : inactiveClasses}`;
-  }
-
-  if (futureSchedulesTab) {
-    futureSchedulesTab.className = `px-4 py-2 rounded-md font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 text-sm ${currentScheduleType === 'future' ? activeClasses : inactiveClasses}`;
-  }
-}
-
-// Debounce function for search
-function debounce(func: Function, wait: number) {
-  let timeout: NodeJS.Timeout;
-  return function executedFunction(...args: any[]) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
-}
-
-// Function to complete a visit
-async function completeVisit(visitId: string) {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    console.error('No user found');
-    showNotification('Authentication error. Please login again.', 'error');
-    return;
-  }
-
-  try {
-    console.log('Attempting to complete visit:', visitId, 'by user:', user.id);
-    
-    // Check user role first
-    const { data: roleData, error: roleError } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
-    
-    if (roleError || !roleData) {
-      console.error('Error fetching user role:', roleError);
-      showNotification('Error fetching user role. Please try again.', 'error');
-      return;
-    }
-    
-    console.log('User role:', roleData.role);
-    
-    if (roleData.role !== 'personnel') {
-      console.error('User does not have personnel role:', roleData.role);
-      showNotification('Only personnel can complete visits. Please contact an administrator if you believe this is an error.', 'error');
-      return;
-    }
-    
-    // First, check if the visit exists and get its details for debugging
-    const { data: visitData, error: visitError } = await supabase
-      .from('scheduled_visits')
-      .select('*')
-      .eq('id', visitId)
-      .single();
-    
-    if (visitError || !visitData) {
-      console.error('Visit not found or error fetching visit:', visitError);
-      showNotification('Visit not found. The visit may have been deleted or you may not have permission to access it.', 'error');
-      return;
-    }
-    
-    console.log('Visit details:', visitData);
-    
-    // Check if personnel is assigned to this place
-    const { data: assignmentData, error: assignmentError } = await supabase
-      .from('place_personnel')
-      .select('id')
-      .eq('place_id', visitData.place_id)
-      .eq('personnel_id', user.id)
-      .single();
-    
-    if (assignmentError || !assignmentData) {
-      console.error('Personnel not assigned to this place:', assignmentError);
-      showNotification('You are not assigned to this place. Please contact an administrator to be assigned.', 'error');
-      return;
-    }
-    
-    console.log('Personnel assignment confirmed');
-    
-    // Test if the complete_visit function exists
-    try {
-      const { data: testData, error: testError } = await supabase.rpc('test_complete_visit_function');
-      console.log('Function test result:', { data: testData, error: testError });
-      if (testError) {
-        console.error('Function test failed:', testError);
-        showNotification('Database function not available. Please contact support.', 'error');
-        return;
-      }
-    } catch (testErr) {
-      console.error('Function test exception:', testErr);
-      showNotification('Database function test failed. Please contact support.', 'error');
-      return;
-    }
-    
-    // Add debugging for Philippine time comparison
-    const philippineToday = await getCurrentPhilippineDateFromDB();
-    const visitDate = parseDateAsPhilippine(visitData.visit_date);
-    visitDate.setHours(0, 0, 0, 0);
-    const philippineVisitDate = toPhilippineTime(visitDate);
-    philippineVisitDate.setHours(0, 0, 0, 0);
-    
-    // Simplified date comparison
-    const visitDateStr = visitData.visit_date;
-    const currentDateStr = philippineToday.toISOString().split('T')[0];
-    
-    console.log('Date comparison debug (simplified):', {
-      visitDateStr,
-      currentDateStr,
-      philippineToday: philippineToday.toISOString(),
-      philippineTodayLocal: philippineToday.toLocaleDateString(),
-      visitDate: visitData.visit_date,
-      visitDateLocal: visitDate.toLocaleDateString(),
-      philippineVisitDate: philippineVisitDate.toISOString(),
-      philippineVisitDateLocal: philippineVisitDate.toLocaleDateString(),
-      canComplete: visitDateStr <= currentDateStr,
-      stringComparison: `${visitDateStr} <= ${currentDateStr} = ${visitDateStr <= currentDateStr}`
-    });
-    
-    // Pre-check using simplified comparison before calling RPC
-    if (visitDateStr > currentDateStr) {
-      console.error('Frontend validation: Visit is scheduled for future date');
-      showNotification('Cannot complete visits scheduled for future dates. Please wait until the scheduled date.', 'error');
-      return;
-    }
-    
-    // Call the database function directly - it handles all validation
-    const { data: rpcData, error } = await supabase.rpc('complete_visit', {
-      p_visit_id: visitId,
-      p_completed_by: user.id
-    });
-
-    console.log('RPC response:', { data: rpcData, error });
-
-    if (error) {
-      console.error('Error completing visit:', error);
-      console.error('Error details:', {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
-        status: error.status,
-        statusText: error.statusText
-      });
-      
-      // Provide specific error messages based on the error
-      let errorMsg = error.message || 'Unknown error';
-      if (error.details) errorMsg += `\nDetails: ${error.details}`;
-      if (error.hint) errorMsg += `\nHint: ${error.hint}`;
-      if (error.code) errorMsg += `\nCode: ${error.code}`;
-      
-      // Provide user-friendly error messages
-      if (error.message?.includes('Only personnel can complete visits')) {
-        errorMsg = 'Only personnel can complete visits. Please contact an administrator if you believe this is an error.';
-      } else if (error.message?.includes('Cannot complete visits scheduled for future dates')) {
-        errorMsg = 'Cannot complete visits scheduled for future dates. Please wait until the scheduled date.';
-      } else if (error.message?.includes('Personnel is not assigned to this place')) {
-        errorMsg = 'You are not assigned to this place. Please contact an administrator to be assigned.';
-      } else if (error.message?.includes('Visit not found')) {
-        errorMsg = 'Visit not found. The visit may have been deleted or you may not have permission to access it.';
-      }
-      
-      showNotification(`Error completing visit: ${errorMsg}`, 'error');
-      return;
-    }
-
-    console.log('Visit completed successfully:', rpcData);
-    showNotification('Visit marked as completed successfully', 'success');
-    
-    // Reload both scheduled visits and finished schedules to reflect the change
-    await loadScheduledVisits();
-    await loadFinishedSchedules();
-    
-    // Note: Logging is now handled by the database function, no need to call logAction here
-  } catch (error) {
-    console.error('Error completing visit:', error);
-    showNotification('Error completing visit. Please try again.', 'error');
-  }
-}
-
-// Make function available globally
-(window as any).completeVisit = completeVisit;
-
-// Function to toggle personnel availability
-async function togglePersonnelAvailability(placeId: string, currentAvailability: boolean) {
-  const modal = document.getElementById('personnelAvailabilityModal');
-  const availabilityForm = document.getElementById('availabilityForm') as HTMLFormElement;
-  const placeIdInput = document.getElementById('availabilityPlaceId') as HTMLInputElement;
-  const availableRadio = document.getElementById('availableRadio') as HTMLInputElement;
-  const unavailableRadio = document.getElementById('unavailableRadio') as HTMLInputElement;
-  const reasonField = document.getElementById('reasonField');
-  const reasonTextarea = document.getElementById('unavailabilityReason') as HTMLTextAreaElement;
-  const errorDiv = document.getElementById('availabilityError');
-  const successDiv = document.getElementById('availabilitySuccess');
-  const updateBtn = document.getElementById('updateAvailabilityBtn') as HTMLButtonElement;
-
-  if (modal && availabilityForm && placeIdInput) {
-    // Set the place ID
-    placeIdInput.value = placeId;
-    
-    // Set current availability state
-    if (currentAvailability) {
-      availableRadio.checked = true;
-      unavailableRadio.checked = false;
-      if (reasonField) reasonField.classList.add('hidden');
-    } else {
-      availableRadio.checked = false;
-      unavailableRadio.checked = true;
-      if (reasonField) reasonField.classList.remove('hidden');
-    }
-
-    // Clear previous messages
-    if (errorDiv) {
-      errorDiv.classList.add('hidden');
-      errorDiv.textContent = '';
-    }
-    if (successDiv) {
-      successDiv.classList.add('hidden');
-      successDiv.textContent = '';
-    }
-
-    // Show modal
-    modal.classList.remove('hidden');
-
-    // Handle radio button changes
-    const handleRadioChange = () => {
-      if (unavailableRadio.checked) {
-        if (reasonField) reasonField.classList.remove('hidden');
-        if (reasonTextarea) reasonTextarea.required = true;
-      } else {
-        if (reasonField) reasonField.classList.add('hidden');
-        if (reasonTextarea) reasonTextarea.required = false;
-      }
-    };
-
-    availableRadio.addEventListener('change', handleRadioChange);
-    unavailableRadio.addEventListener('change', handleRadioChange);
-
-    // Handle form submission
-    const handleSubmit = async (e: Event) => {
-      e.preventDefault();
-      
-      const isAvailable = availableRadio.checked;
-      const reason = unavailableRadio.checked ? reasonTextarea.value.trim() : null;
-
-      if (unavailableRadio.checked && (!reason || reason.length === 0)) {
-        if (errorDiv) {
-          errorDiv.textContent = 'Please provide a reason for unavailability';
-          errorDiv.classList.remove('hidden');
-        }
-        return;
-      }
-
-      // Show loading state
-      updateBtn.disabled = true;
-      updateBtn.textContent = 'Updating...';
-
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          throw new Error('User not authenticated');
-        }
-
-        const { data, error } = await supabase.rpc('update_personnel_availability', {
-          p_personnel_id: user.id,
-          p_place_id: placeId,
-          p_is_available: isAvailable,
-          p_unavailability_reason: reason,
-          p_updated_by: user.id
-        });
-
-        if (error) throw error;
-
-        // Log the action
-        await logAction('personnel_availability_change', {
-          place_id: placeId,
-          is_available: isAvailable,
-          unavailability_reason: reason,
-          updated_at: new Date().toISOString()
-        });
-
-        // Show success message
-        if (successDiv) {
-          successDiv.textContent = 'Availability updated successfully!';
-          successDiv.classList.remove('hidden');
-        }
-
-        // Close modal after 2 seconds and reload dashboard
-        setTimeout(() => {
-          modal.classList.add('hidden');
-          loadPersonnelDashboard();
-        }, 2000);
-
-      } catch (err: any) {
-        if (errorDiv) {
-          errorDiv.textContent = err.message || 'Error updating availability';
-          errorDiv.classList.remove('hidden');
-        }
-      } finally {
-        // Reset button state
-        updateBtn.disabled = false;
-        updateBtn.textContent = 'Update Availability';
-      }
-    };
-
-    // Remove existing listeners and add new ones
-    availabilityForm.removeEventListener('submit', handleSubmit);
-    availabilityForm.addEventListener('submit', handleSubmit);
-  }
-} 
-
-// Apply filters and search to finished visits
-async function applyFinishedFilters() {
-  let filteredVisits = [...allFinishedVisits];
-
-  // Apply role filter
-  if (currentFinishedRoleFilter !== 'all') {
-    filteredVisits = filteredVisits.filter(visit => {
-      const visitorRole = visit.visitor_role || 'guest';
-      return visitorRole === currentFinishedRoleFilter;
-    });
-  }
-
-  // Apply date filter using Philippine time
-  if (currentFinishedDateFilter !== 'all') {
-    const philippineToday = await getCurrentPhilippineDateFromDB();
-
-    switch (currentFinishedDateFilter) {
-      case 'today':
-        filteredVisits = filteredVisits.filter(visit => {
-          const visitDate = parseDateAsPhilippine(visit.visit_date);
-          visitDate.setHours(0, 0, 0, 0);
-          const philippineVisitDate = toPhilippineTime(visitDate);
-          philippineVisitDate.setHours(0, 0, 0, 0);
-          return philippineVisitDate.getTime() === philippineToday.getTime();
-        });
-        break;
-      case 'yesterday':
-        const philippineYesterday = new Date(philippineToday);
-        philippineYesterday.setDate(philippineYesterday.getDate() - 1);
-        filteredVisits = filteredVisits.filter(visit => {
-          const visitDate = parseDateAsPhilippine(visit.visit_date);
-          visitDate.setHours(0, 0, 0, 0);
-          const philippineVisitDate = toPhilippineTime(visitDate);
-          philippineVisitDate.setHours(0, 0, 0, 0);
-          return philippineVisitDate.getTime() === philippineYesterday.getTime();
-        });
-        break;
-      case 'this_week':
-        const philippineWeekStart = new Date(philippineToday);
-        philippineWeekStart.setDate(philippineToday.getDate() - philippineToday.getDay());
-        philippineWeekStart.setHours(0, 0, 0, 0);
-        const philippineWeekEnd = new Date(philippineWeekStart);
-        philippineWeekEnd.setDate(philippineWeekStart.getDate() + 6);
-        philippineWeekEnd.setHours(23, 59, 59, 999);
-        filteredVisits = filteredVisits.filter(visit => {
-          const visitDate = parseDateAsPhilippine(visit.visit_date);
-          const philippineVisitDate = toPhilippineTime(visitDate);
-          return philippineVisitDate >= philippineWeekStart && philippineVisitDate <= philippineWeekEnd;
-        });
-        break;
-      case 'this_month':
-        const philippineMonthStart = new Date(philippineToday.getFullYear(), philippineToday.getMonth(), 1);
-        const philippineMonthEnd = new Date(philippineToday.getFullYear(), philippineToday.getMonth() + 1, 0, 23, 59, 59, 999);
-        filteredVisits = filteredVisits.filter(visit => {
-          const visitDate = parseDateAsPhilippine(visit.visit_date);
-          const philippineVisitDate = toPhilippineTime(visitDate);
-          return philippineVisitDate >= philippineMonthStart && philippineVisitDate <= philippineMonthEnd;
-        });
-        break;
-      case 'specific_date':
-        if (currentFinishedSpecificDate) {
-          const specificDate = new Date(currentFinishedSpecificDate);
-          specificDate.setHours(0, 0, 0, 0);
-          const philippineSpecificDate = toPhilippineTime(specificDate);
-          philippineSpecificDate.setHours(0, 0, 0, 0);
-          filteredVisits = filteredVisits.filter(visit => {
-            const visitDate = parseDateAsPhilippine(visit.visit_date);
-            visitDate.setHours(0, 0, 0, 0);
-            const philippineVisitDate = toPhilippineTime(visitDate);
-            philippineVisitDate.setHours(0, 0, 0, 0);
-            return philippineVisitDate.getTime() === philippineSpecificDate.getTime();
-          });
-        }
-        break;
-    }
-  }
-
-  // Apply search filter
-  if (currentFinishedSearchTerm.trim()) {
-    const searchLower = currentFinishedSearchTerm.toLowerCase();
-    filteredVisits = filteredVisits.filter(visit => {
-      const visitorName = `${visit.visitor_first_name} ${visit.visitor_last_name}`;
-      const visitorEmail = visit.visitor_email || '';
-      const purpose = visit.purpose || '';
-      const status = visit.status || '';
-      
-      return visitorName.toLowerCase().includes(searchLower) ||
-             visitorEmail.toLowerCase().includes(searchLower) ||
-             purpose.toLowerCase().includes(searchLower) ||
-             status.toLowerCase().includes(searchLower);
-    });
-  }
-
-  await displayFinishedVisits(filteredVisits);
-}
-
-// Display filtered finished visits
-function displayFinishedVisits(visits: any[]): void {
-  const visitsList = document.getElementById('finishedVisitsList');
-  if (!visitsList) return;
-
-  if (visits.length === 0) {
-    visitsList.innerHTML = `
-      <div class="text-center py-8">
-        <div class="text-gray-500 dark:text-gray-400 text-lg">No finished schedules found</div>
-        <div class="text-gray-400 dark:text-gray-500 text-sm mt-2">
-          ${currentFinishedSearchTerm || currentFinishedRoleFilter !== 'all' 
-            ? 'Try adjusting your search or filters' 
-            : 'No visits have been completed or marked as unsuccessful yet'}
-        </div>
-      </div>
-    `;
-    return;
-  }
-
-  visitsList.innerHTML = (visits as any[]).map((visit: any) => {
-    const visitorName = `${visit.visitor_first_name} ${visit.visitor_last_name}`;
-    const visitorEmail = visit.visitor_email || 'No email';
-    const visitorRole = visit.visitor_role || 'guest';
-    const isLoggedIn = visit.visitor_user_id !== null;
-    const visitorId = isLoggedIn ? visit.visitor_user_id : 'guest';
-    const visitDate = new Date(visit.visit_date).toLocaleDateString();
-    const completedDate = new Date(visit.completed_at).toLocaleDateString();
-    const completedTime = new Date(visit.completed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
-    // Get personnel name who completed the visit
-    let completedByName = 'Unknown';
-    if (visit.completed_by_info) {
-      const personnel = visit.completed_by_info;
-      completedByName = `${personnel.first_name || ''} ${personnel.last_name || ''}`.trim() || personnel.email || 'Unknown Personnel';
-    } else if (visit.completed_by) {
-      completedByName = `Personnel (${visit.completed_by.substring(0, 8)}...)`;
-    }
-    
-    const roleColors: { [key: string]: string } = {
-      visitor: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-      guest: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
-    };
-
-    const statusClass = visit.status === 'completed' 
-      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-      : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
-    
-    const statusText = visit.status === 'completed' ? 'Completed' : 'Unsuccessful';
-    const actionText = visit.status === 'completed' ? 'Completed' : 'Marked';
-
-    return `
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <div class="flex justify-between items-start mb-4">
-          <div>
-            <h4 class="text-lg font-semibold text-gray-900 dark:text-white">${visitorName}</h4>
-            <p class="text-gray-600 dark:text-gray-400">${visitorEmail}</p>
-            <p class="text-xs text-gray-500 dark:text-gray-400">
-              ${isLoggedIn ? 'Logged-in User' : 'Guest User'} • ID: ${visitorId}
-            </p>
-          </div>
-          <div class="flex space-x-2">
-            <span class="px-2 py-1 rounded-full text-xs font-medium ${statusClass}">
-              ${statusText}
-            </span>
-            <span class="px-2 py-1 rounded-full text-xs font-medium ${(roleColors as any)[visitorRole] || roleColors.guest}">
-              ${visitorRole}
-            </span>
-          </div>
-        </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Visit Date</p>
-            <p class="text-gray-900 dark:text-white font-medium">${visitDate}</p>
-          </div>
-          <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Purpose</p>
-            <p class="text-gray-900 dark:text-white">${visit.purpose || 'No purpose specified'}</p>
-          </div>
-          <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">${actionText} Date</p>
-            <p class="text-gray-900 dark:text-white font-medium">${completedDate} at ${completedTime}</p>
-          </div>
-          <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">${actionText} By</p>
-            <p class="text-gray-900 dark:text-white font-medium">${completedByName}</p>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-// Update clear date button visibility
-function updateClearDateButton() {
-  const clearBtn = document.getElementById('clearSpecificDateBtn');
-  if (clearBtn) {
-    if (currentFinishedSpecificDate) {
-      clearBtn.classList.remove('hidden');
-    } else {
-      clearBtn.classList.add('hidden');
-    }
-  }
-}
-
-// Function to check if current user can complete a visit
-async function canCompleteVisit(visitPlaceId: string): Promise<boolean> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return false;
-
-  try {
-    // Check if user has personnel role
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!roleData || roleData.role !== 'personnel') {
-      return false;
-    }
-
-    // Check if personnel is assigned to this place
-    const { data: assignmentData } = await supabase
-      .from('place_personnel')
-      .select('id')
-      .eq('place_id', visitPlaceId)
-      .eq('personnel_id', user.id)
-      .single();
-
-    return !!assignmentData;
-  } catch (error) {
-    console.error('Error checking visit completion permissions:', error);
-    return false;
-  }
-}
-
-// Function to load visitor dashboard
-async function loadVisitorDashboard() {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.error('No user found');
-      return;
-    }
-
-    // Load visitor's scheduled visits
-    await loadVisitorVisits();
-
-    // Setup visitor dashboard event listeners with a small delay to ensure DOM is ready
-    setTimeout(() => {
-      setupVisitorDashboardEventListeners();
-    }, 100);
-    
-    console.log('Visitor dashboard loaded successfully');
-  } catch (error) {
-    console.error('Error in loadVisitorDashboard:', error);
-  }
-}
-
-// Global function for manual refresh (for debugging)
-(window as any).refreshVisitorVisits = async () => {
-  console.log('Manual refresh triggered');
-  await loadVisitorVisits();
-  showNotification('Manual refresh completed', 'success');
-};
-
-// Global function to manually trigger daily visit status check (for testing)
-(window as any).triggerDailyVisitStatusCheck = async () => {
-  try {
-    console.log('Triggering daily visit status check...');
-    const { data, error } = await supabase.rpc('trigger_daily_visit_status_check');
-    
-    if (error) {
-      console.error('Error triggering daily visit status check:', error);
-      showNotification('Error triggering daily check: ' + error.message, 'error');
-      return;
-    }
-    
-    console.log('Daily visit status check completed. Affected visits:', data);
-    showNotification(`Daily visit status check completed. ${data} visits marked as unsuccessful.`, 'success');
-    
-    // Reload visits to reflect changes
-    await loadScheduledVisits();
-    await loadFinishedSchedules();
-    await loadVisitorVisits();
-  } catch (error) {
-    console.error('Error in triggerDailyVisitStatusCheck:', error);
-    showNotification('Error triggering daily visit status check', 'error');
-  }
-};
-
-// Global function to create sample visits for testing
-(window as any).createSampleVisits = async () => {
-  try {
-    console.log('Creating sample visits...');
-    const { data, error } = await supabase.rpc('create_sample_visits');
-    
-    if (error) {
-      console.error('Error creating sample visits:', error);
-      showNotification('Error creating sample visits: ' + error.message, 'error');
-      return;
-    }
-    
-    console.log('Sample visits created successfully');
-    showNotification('Sample visits created successfully', 'success');
-    
-    // Reload visits to reflect changes
-    await loadScheduledVisits();
-    await loadFinishedSchedules();
-    await loadVisitorVisits();
-  } catch (error) {
-    console.error('Error in createSampleVisits:', error);
-    showNotification('Error creating sample visits', 'error');
-  }
-};
-
-// Global function to get all visits for debugging
-(window as any).getAllVisits = async () => {
-  try {
-    console.log('Getting all visits...');
-    const { data, error } = await supabase.rpc('get_all_visits_for_admin');
-    
-    if (error) {
-      console.error('Error getting all visits:', error);
-      showNotification('Error getting all visits: ' + error.message, 'error');
-      return;
-    }
-    
-    console.log('All visits:', data);
-    showNotification(`Found ${data?.length || 0} visits`, 'success');
-    return data;
-  } catch (error) {
-    console.error('Error in getAllVisits:', error);
-    showNotification('Error getting all visits', 'error');
-  }
-};
-
-// Global variables for visitor visits
-let allVisitorVisits: any[] = [];
-let currentVisitorSearchTerm = '';
-let currentVisitorStatusFilter = 'all';
-let currentVisitorDateFilter = 'all';
-
-// Function to load visitor's scheduled visits
-async function loadVisitorVisits() {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.error('No user found');
-      return;
-    }
-
-    const { data, error } = await supabase.rpc('get_visitor_scheduled_visits', {
-      p_visitor_user_id: user.id
-    });
-
-    if (error) throw error;
-
-    allVisitorVisits = data || [];
-    await applyVisitorFilters();
-  } catch (error) {
-    console.error('Error loading visitor visits:', error);
-    showNotification('Error loading your visits', 'error');
-  }
-}
-
-// Apply filters and search to visitor visits
-async function applyVisitorFilters() {
-  let filteredVisits = [...allVisitorVisits];
-
-  // Apply status filter
-  if (currentVisitorStatusFilter !== 'all') {
-    filteredVisits = filteredVisits.filter(visit => visit.status === currentVisitorStatusFilter);
-  }
-
-  // Apply date filter using Philippine time
-  if (currentVisitorDateFilter !== 'all') {
-    const philippineToday = await getCurrentPhilippineDateFromDB();
-
-    switch (currentVisitorDateFilter) {
-      case 'today':
-        filteredVisits = filteredVisits.filter(visit => {
-          const visitDate = parseDateAsPhilippine(visit.visit_date);
-          visitDate.setHours(0, 0, 0, 0);
-          const philippineVisitDate = toPhilippineTime(visitDate);
-          philippineVisitDate.setHours(0, 0, 0, 0);
-          return philippineVisitDate.getTime() === philippineToday.getTime();
-        });
-        break;
-      case 'future':
-        filteredVisits = filteredVisits.filter(visit => {
-          const visitDate = parseDateAsPhilippine(visit.visit_date);
-          visitDate.setHours(0, 0, 0, 0);
-          const philippineVisitDate = toPhilippineTime(visitDate);
-          philippineVisitDate.setHours(0, 0, 0, 0);
-          return philippineVisitDate.getTime() > philippineToday.getTime();
-        });
-        break;
-      case 'past':
-        filteredVisits = filteredVisits.filter(visit => {
-          const visitDate = parseDateAsPhilippine(visit.visit_date);
-          visitDate.setHours(0, 0, 0, 0);
-          const philippineVisitDate = toPhilippineTime(visitDate);
-          philippineVisitDate.setHours(0, 0, 0, 0);
-          return philippineVisitDate.getTime() < philippineToday.getTime();
-        });
-        break;
-    }
-  }
-
-  // Apply search filter
-  if (currentVisitorSearchTerm.trim()) {
-    const searchLower = currentVisitorSearchTerm.toLowerCase();
-    filteredVisits = filteredVisits.filter(visit => {
-      const placeName = visit.place_name || '';
-      const purpose = visit.purpose || '';
-      const status = visit.status || '';
-      
-      return placeName.toLowerCase().includes(searchLower) ||
-             purpose.toLowerCase().includes(searchLower) ||
-             status.toLowerCase().includes(searchLower);
-    });
-  }
-
-  await displayVisitorVisits(filteredVisits);
-}
-
-// Display filtered visitor visits
-async function displayVisitorVisits(visits: any[]): Promise<void> {
-  const visitsList = document.getElementById('visitorVisitsList');
-  if (!visitsList) return;
-
-  if (visits.length === 0) {
-    visitsList.innerHTML = `
-      <div class="text-center py-8">
-        <div class="text-gray-500 dark:text-gray-400 text-lg">No visits found</div>
-        <div class="text-gray-400 dark:text-gray-500 text-sm mt-2">
-          ${currentVisitorSearchTerm || currentVisitorStatusFilter !== 'all' || currentVisitorDateFilter !== 'all' 
-            ? 'Try adjusting your search or filters' 
-            : 'You haven\'t scheduled any visits yet'}
-        </div>
-      </div>
-    `;
-    return;
-  }
-
-  visitsList.innerHTML = (visits as any[]).map((visit: any) => {
-    const placeName = visit.place_name || 'Unknown Place';
-    const placeLocation = visit.place_location || 'No location specified';
-    const visitDate = new Date(visit.visit_date).toLocaleDateString();
-    const scheduledTime = new Date(visit.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
-    const statusColors: { [key: string]: string } = {
-      pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-      completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-      unsuccessful: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-    };
-
-    const statusText: { [key: string]: string } = {
-      pending: 'Pending',
-      completed: 'Completed',
-      cancelled: 'Cancelled',
-      unsuccessful: 'Unsuccessful'
-    };
-
-    // Format completion time if available
-    let completionInfo = '';
-    if (visit.completed_at) {
-      const completionTime = new Date(visit.completed_at).toLocaleString();
-      completionInfo = `
-        <div class="mb-4">
-          <p class="text-sm text-gray-500 dark:text-gray-400">
-            ${visit.status === 'completed' ? 'Completed at' : visit.status === 'unsuccessful' ? 'Marked as unsuccessful at' : 'Updated at'}
-          </p>
-          <p class="text-gray-900 dark:text-white font-medium">${completionTime}</p>
-        </div>
-      `;
-    }
-
-    // Add specific information for unsuccessful visits
-    let unsuccessfulInfo = '';
-    if (visit.status === 'unsuccessful') {
-      const today = new Date();
-      const visitDateObj = new Date(visit.visit_date);
-      const isPastDate = visitDateObj < today;
-      
-      unsuccessfulInfo = `
-        <div class="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border-l-4 border-gray-400">
-          <div class="flex items-start">
-            <div class="flex-shrink-0">
-              <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
+        ` : visit.place_status === 'completed' ? `
+          <div class="flex justify-end">
+            <div class="px-4 py-2 bg-green-100 text-green-700 rounded-md text-sm font-medium">
+              ✓ Place completed
             </div>
-            <div class="ml-3">
-              <h4 class="text-sm font-medium text-gray-800 dark:text-gray-200">
-                Visit Not Completed
-              </h4>
-              <div class="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                <p>This visit was automatically marked as unsuccessful because it was not completed on or before the scheduled date.</p>
-                ${isPastDate ? `
-                  <p class="mt-1 font-medium">The scheduled date (${visitDate}) has passed.</p>
-                ` : ''}
-              </div>
-              <div class="mt-3">
-                <button 
-                  onclick="window.location.href='/#/'"
-                  class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-                >
-                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                  Schedule New Visit
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    // Add specific information for completed visits
-    let completedInfo = '';
-    if (visit.status === 'completed') {
-      completedInfo = `
-        <div class="mt-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border-l-4 border-green-400">
-          <div class="flex items-start">
-            <div class="flex-shrink-0">
-              <svg class="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div class="ml-3">
-              <h4 class="text-sm font-medium text-green-800 dark:text-green-200">
-                Visit Completed Successfully
-              </h4>
-              <div class="mt-2 text-sm text-green-600 dark:text-green-400">
-                <p>Your visit has been completed and marked as successful.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    return `
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <div class="flex justify-between items-start mb-4">
-          <div>
-            <h4 class="text-lg font-semibold text-gray-900 dark:text-white">${placeName}</h4>
-            <p class="text-gray-600 dark:text-gray-400">${placeLocation}</p>
-          </div>
-          <div class="flex space-x-2">
-            <span class="px-2 py-1 rounded-full text-xs font-medium ${(statusColors as any)[visit.status] || statusColors.pending}">
-              ${(statusText as any)[visit.status] || 'Pending'}
-            </span>
-          </div>
-        </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Visit Date</p>
-            <p class="text-gray-900 dark:text-white font-medium">${visitDate} at ${scheduledTime}</p>
-          </div>
-          <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Purpose</p>
-            <p class="text-gray-900 dark:text-white">${visit.purpose || 'No purpose specified'}</p>
-          </div>
-        </div>
-        
-        ${visit.other_purpose ? `
-          <div class="mb-4">
-            <p class="text-sm text-gray-500 dark:text-gray-400">Additional Details</p>
-            <p class="text-gray-900 dark:text-white">${visit.other_purpose}</p>
           </div>
         ` : ''}
-        
-        ${completionInfo}
-        ${unsuccessfulInfo}
-        ${completedInfo}
       </div>
     `;
   }).join('');
@@ -4061,3 +3426,628 @@ function toggleHistory(historyId: string) {
 
 // Make toggleHistory function available globally
 (window as any).toggleHistory = toggleHistory;
+
+// Function to calculate visit progress
+function calculateVisitProgress(visit: any): { percentage: number; status: string; color: string } {
+  const now = new Date();
+  const visitDate = new Date(visit.visit_date);
+  const scheduledAt = new Date(visit.scheduled_at);
+  
+  // If visit is already completed or unsuccessful, show 100%
+  if (visit.status === 'completed') {
+    return { percentage: 100, status: 'Completed', color: 'bg-green-500' };
+  }
+  
+  if (visit.status === 'unsuccessful') {
+    return { percentage: 100, status: 'Unsuccessful', color: 'bg-red-500' };
+  }
+  
+  if (visit.status === 'cancelled') {
+    return { percentage: 100, status: 'Cancelled', color: 'bg-gray-500' };
+  }
+  
+  // For pending visits, calculate progress based on time
+  const totalDuration = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+  const timeSinceScheduled = now.getTime() - scheduledAt.getTime();
+  
+  // If it's a future visit, show 0% progress
+  if (timeSinceScheduled < 0) {
+    return { percentage: 0, status: 'Scheduled', color: 'bg-blue-500' };
+  }
+  
+  // If it's past the visit date, show 100% (should be marked as unsuccessful)
+  if (now.getTime() > visitDate.getTime() + totalDuration) {
+    return { percentage: 100, status: 'Overdue', color: 'bg-red-500' };
+  }
+  
+  // Calculate percentage based on time elapsed
+  const percentage = Math.min(100, Math.max(0, (timeSinceScheduled / totalDuration) * 100));
+  
+  let status = 'In Progress';
+  let color = 'bg-blue-500';
+  
+  if (percentage < 25) {
+    status = 'Scheduled';
+    color = 'bg-blue-500';
+  } else if (percentage < 50) {
+    status = 'Approaching';
+    color = 'bg-yellow-500';
+  } else if (percentage < 75) {
+    status = 'Due Soon';
+    color = 'bg-orange-500';
+  } else {
+    status = 'Overdue';
+    color = 'bg-red-500';
+  }
+  
+  return { percentage, status, color };
+}
+
+// Function to complete a specific place in a visit
+async function completeVisitPlace(visitId: string, placeId: string) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      showNotification('You must be logged in to complete visits', 'error');
+      return;
+    }
+
+    // Show confirmation dialog
+    const confirmed = confirm('Are you sure you want to mark this place as completed?');
+    if (!confirmed) {
+      return;
+    }
+
+    // Call the database function to complete the specific place
+    const { data, error } = await supabase.rpc('complete_visit_place', {
+      p_visit_id: visitId,
+      p_place_id: placeId,
+      p_completed_by: user.id
+    });
+
+    if (error) {
+      console.error('Error completing visit place:', error);
+      showNotification('Error completing visit place: ' + error.message, 'error');
+      return;
+    }
+
+    showNotification('Place marked as completed successfully!', 'success');
+    
+    // Reload the visits to reflect the changes
+    await loadScheduledVisits();
+    await loadFinishedSchedules();
+  } catch (error) {
+    console.error('Error in completeVisitPlace:', error);
+    showNotification('Error completing visit place', 'error');
+  }
+}
+
+// Make function available globally
+(window as any).completeVisitPlace = completeVisitPlace;
+
+// Function to complete an entire visit (all places)
+async function completeVisit(visitId: string) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      showNotification('You must be logged in to complete visits', 'error');
+      return;
+    }
+
+    // Show confirmation dialog
+    const confirmed = confirm('Are you sure you want to mark this entire visit as completed? This will complete all places in the visit.');
+    if (!confirmed) {
+      return;
+    }
+
+    // Call the database function to complete the entire visit
+    const { data, error } = await supabase.rpc('complete_visit', {
+      p_visit_id: visitId,
+      p_completed_by: user.id
+    });
+
+    if (error) {
+      console.error('Error completing visit:', error);
+      showNotification('Error completing visit: ' + error.message, 'error');
+      return;
+    }
+
+    showNotification('Visit completed successfully!', 'success');
+    
+    // Reload the visits to reflect the changes
+    await loadScheduledVisits();
+    await loadFinishedSchedules();
+  } catch (error) {
+    console.error('Error in completeVisit:', error);
+    showNotification('Error completing visit', 'error');
+  }
+}
+
+// Function to toggle personnel availability
+async function togglePersonnelAvailability(placeId: string, currentAvailability: boolean) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      showNotification('You must be logged in to update availability', 'error');
+      return;
+    }
+
+    // Show modal for availability update
+    const modal = document.getElementById('personnelAvailabilityModal');
+    const errorDiv = document.getElementById('availabilityError');
+    const successDiv = document.getElementById('availabilitySuccess');
+    const reasonTextarea = document.getElementById('unavailabilityReason') as HTMLTextAreaElement;
+    const submitBtn = document.getElementById('availabilitySubmitBtn') as HTMLButtonElement;
+    
+    if (modal && errorDiv && successDiv && reasonTextarea && submitBtn) {
+      // Clear previous messages
+      errorDiv.classList.add('hidden');
+      errorDiv.textContent = '';
+      successDiv.classList.add('hidden');
+      successDiv.textContent = '';
+      reasonTextarea.value = '';
+      
+      // Set up the form submission
+      const handleSubmit = async (e: Event) => {
+        e.preventDefault();
+        
+        // Prevent multiple submissions
+        if (submitBtn.disabled) {
+          return;
+        }
+        
+        // Show loading state
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Updating...';
+        
+        try {
+          const newAvailability = !currentAvailability;
+          const unavailabilityReason = reasonTextarea.value.trim();
+          
+          // Validate reason if marking as unavailable
+          if (!newAvailability && !unavailabilityReason) {
+            errorDiv.textContent = 'Please provide a reason for unavailability.';
+            errorDiv.classList.remove('hidden');
+            return;
+          }
+          
+          // Call the database function to update availability
+          const { data, error } = await supabase.rpc('update_personnel_availability', {
+            p_personnel_id: user.id,
+            p_place_id: placeId,
+            p_is_available: newAvailability,
+            p_unavailability_reason: unavailabilityReason || null,
+            p_updated_by: user.id
+          });
+          
+          if (error) {
+            console.error('Error updating availability:', error);
+            errorDiv.textContent = 'Error updating availability: ' + error.message;
+            errorDiv.classList.remove('hidden');
+            return;
+          }
+          
+          // Show success message
+          successDiv.textContent = `Successfully marked as ${newAvailability ? 'available' : 'unavailable'}.`;
+          successDiv.classList.remove('hidden');
+          
+          // Close modal after a short delay
+          setTimeout(() => {
+            modal.classList.add('hidden');
+            // Reload personnel dashboard to reflect changes
+            loadPersonnelDashboard();
+          }, 1500);
+          
+        } catch (error) {
+          console.error('Error in availability update:', error);
+          errorDiv.textContent = 'Error updating availability. Please try again.';
+          errorDiv.classList.remove('hidden');
+        } finally {
+          // Reset button state
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Update Availability';
+        }
+      };
+      
+      // Remove any existing event listeners and add new one
+      const form = modal.querySelector('form');
+      if (form) {
+        form.removeEventListener('submit', handleSubmit);
+        form.addEventListener('submit', handleSubmit);
+      }
+      
+      // Show the modal
+      modal.classList.remove('hidden');
+    } else {
+      showNotification('Error: Availability modal not found', 'error');
+    }
+  } catch (error) {
+    console.error('Error in togglePersonnelAvailability:', error);
+    showNotification('Error updating availability', 'error');
+  }
+}
+
+// Make function available globally
+(window as any).togglePersonnelAvailability = togglePersonnelAvailability;
+
+// Debounce function for search inputs
+function debounce(func: Function, wait: number) {
+  let timeout: NodeJS.Timeout;
+  return function executedFunction(...args: any[]) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+// Function to load visitor dashboard
+async function loadVisitorDashboard() {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error('No user found');
+      return;
+    }
+
+    // Load visitor's scheduled visits
+    await loadVisitorVisits();
+
+    // Setup visitor dashboard event listeners with a small delay to ensure DOM is ready
+    setTimeout(() => {
+      setupVisitorDashboardEventListeners();
+    }, 100);
+    
+    console.log('Visitor dashboard loaded successfully');
+  } catch (error) {
+    console.error('Error in loadVisitorDashboard:', error);
+  }
+}
+
+// Function to load visitor's scheduled visits
+async function loadVisitorVisits() {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error('No user found');
+      return;
+    }
+
+    // Get visitor's scheduled visits
+    const { data: visits, error } = await supabase.rpc('get_visitor_scheduled_visits', {
+      p_visitor_user_id: user.id
+    });
+
+    if (error) {
+      console.error('Error loading visitor visits:', error);
+      showNotification('Error loading visits: ' + error.message, 'error');
+      return;
+    }
+
+    // Display the visits
+    await displayVisitorVisits(visits || []);
+    
+    console.log('Visitor visits loaded successfully:', visits?.length || 0);
+  } catch (error) {
+    console.error('Error in loadVisitorVisits:', error);
+    showNotification('Error loading visits', 'error');
+  }
+}
+
+// Function to display visitor's scheduled visits
+async function displayVisitorVisits(visits: any[]): Promise<void> {
+  const visitorVisitsList = document.getElementById('visitorVisitsList');
+  if (!visitorVisitsList) {
+    console.error('Visitor visits list container not found');
+    return;
+  }
+
+  if (visits.length === 0) {
+    visitorVisitsList.innerHTML = `
+      <div class="text-center py-8">
+        <div class="text-gray-500 dark:text-gray-400">
+          <svg class="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <p class="text-lg font-medium">No scheduled visits found</p>
+          <p class="text-sm">You haven't scheduled any visits yet.</p>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  let visitsHtml = '';
+  
+  for (const visit of visits) {
+    const visitDate = new Date(visit.visit_date);
+    const isToday = visitDate.toDateString() === new Date().toDateString();
+    const isPast = visitDate < new Date();
+    
+    // Calculate progress for the visit
+    const progress = calculateVisitProgress(visit);
+    
+    // Parse places data
+    const places = Array.isArray(visit.places) ? visit.places : [];
+    const completedPlaces = places.filter((place: any) => place.status === 'completed').length;
+    const totalPlaces = places.length;
+    
+    visitsHtml += `
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="p-4 sm:p-6">
+          <!-- Visit Header -->
+          <div class="flex items-start justify-between mb-4">
+            <div class="flex-1">
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                Visit on ${visitDate.toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Purpose: ${visit.purpose}${visit.other_purpose ? ` - ${visit.other_purpose}` : ''}
+              </p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="px-3 py-1 rounded-full text-xs font-medium ${
+                visit.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                visit.status === 'unsuccessful' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                visit.status === 'cancelled' ? 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
+                'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+              }">
+                ${visit.status.charAt(0).toUpperCase() + visit.status.slice(1)}
+              </span>
+              ${isToday ? '<span class="px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded-full text-xs font-medium">Today</span>' : ''}
+            </div>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="mb-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Progress</span>
+              <span class="text-sm text-gray-500 dark:text-gray-400">${completedPlaces}/${totalPlaces} places completed</span>
+            </div>
+            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div class="h-2 rounded-full ${progress.color}" style="width: ${progress.percentage}%"></div>
+            </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${progress.status}</p>
+          </div>
+
+          <!-- Places List -->
+          ${places.length > 0 ? `
+            <div class="space-y-3">
+              <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Places to visit:</h4>
+              ${places.map((place: any) => `
+                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div class="flex-1">
+                    <h5 class="text-sm font-medium text-gray-900 dark:text-white">${place.place_name}</h5>
+                    ${place.place_location ? `<p class="text-xs text-gray-600 dark:text-gray-400">${place.place_location}</p>` : ''}
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <span class="px-2 py-1 rounded-full text-xs font-medium ${
+                      place.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                      place.status === 'unsuccessful' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                      place.status === 'cancelled' ? 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
+                      'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                    }">
+                      ${place.status.charAt(0).toUpperCase() + place.status.slice(1)}
+                    </span>
+                    ${place.completed_at ? `
+                      <span class="text-xs text-gray-500 dark:text-gray-400">
+                        ${new Date(place.completed_at).toLocaleDateString()}
+                      </span>
+                    ` : ''}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          ` : `
+            <div class="text-center py-4">
+              <p class="text-sm text-gray-500 dark:text-gray-400">No places assigned to this visit</p>
+            </div>
+          `}
+
+          <!-- Visit Details -->
+          <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div>
+                <span class="font-medium text-gray-700 dark:text-gray-300">Scheduled:</span>
+                <span class="text-gray-600 dark:text-gray-400 ml-2">
+                  ${new Date(visit.scheduled_at).toLocaleDateString()} at ${new Date(visit.scheduled_at).toLocaleTimeString()}
+                </span>
+              </div>
+              ${visit.completed_at ? `
+                <div>
+                  <span class="font-medium text-gray-700 dark:text-gray-300">Completed:</span>
+                  <span class="text-gray-600 dark:text-gray-400 ml-2">
+                    ${new Date(visit.completed_at).toLocaleDateString()} at ${new Date(visit.completed_at).toLocaleTimeString()}
+                  </span>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  visitorVisitsList.innerHTML = visitsHtml;
+}
+
+// Apply filters and search to finished visits
+function applyFinishedFilters() {
+  let filteredVisits = [...allFinishedVisits];
+
+  // Apply role filter
+  if (currentFinishedRoleFilter !== 'all') {
+    filteredVisits = filteredVisits.filter(visit => {
+      const visitorRole = visit.visitor_role || 'guest';
+      return visitorRole === currentFinishedRoleFilter;
+    });
+  }
+
+  // Apply date filter
+  if (currentFinishedDateFilter !== 'all') {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay());
+    
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    
+    const startOfLastWeek = new Date(startOfWeek);
+    startOfLastWeek.setDate(startOfWeek.getDate() - 7);
+    
+    const endOfLastWeek = new Date(startOfLastWeek);
+    endOfLastWeek.setDate(startOfLastWeek.getDate() + 6);
+    
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    
+    const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+
+    filteredVisits = filteredVisits.filter(visit => {
+      const visitDate = new Date(visit.visit_date);
+      
+      switch (currentFinishedDateFilter) {
+        case 'today':
+          return visitDate.toDateString() === today.toDateString();
+        case 'yesterday':
+          return visitDate.toDateString() === yesterday.toDateString();
+        case 'this_week':
+          return visitDate >= startOfWeek && visitDate <= endOfWeek;
+        case 'last_week':
+          return visitDate >= startOfLastWeek && visitDate <= endOfLastWeek;
+        case 'this_month':
+          return visitDate >= startOfMonth && visitDate <= endOfMonth;
+        case 'last_month':
+          return visitDate >= startOfLastMonth && visitDate <= endOfLastMonth;
+        default:
+          return true;
+      }
+    });
+  }
+
+  // Apply specific date filter
+  if (currentFinishedSpecificDate) {
+    const specificDate = new Date(currentFinishedSpecificDate);
+    filteredVisits = filteredVisits.filter(visit => {
+      const visitDate = new Date(visit.visit_date);
+      return visitDate.toDateString() === specificDate.toDateString();
+    });
+  }
+
+  // Apply search filter
+  if (currentFinishedSearchTerm.trim()) {
+    const searchLower = currentFinishedSearchTerm.toLowerCase();
+    filteredVisits = filteredVisits.filter(visit => {
+      const visitorName = `${visit.visitor_first_name} ${visit.visitor_last_name}`;
+      const visitorEmail = visit.visitor_email || '';
+      const purpose = visit.purpose || '';
+      const status = visit.status || '';
+      const placeName = visit.place_name || '';
+      
+      return visitorName.toLowerCase().includes(searchLower) ||
+             visitorEmail.toLowerCase().includes(searchLower) ||
+             purpose.toLowerCase().includes(searchLower) ||
+             status.toLowerCase().includes(searchLower) ||
+             placeName.toLowerCase().includes(searchLower);
+    });
+  }
+
+  displayFinishedVisits(filteredVisits);
+}
+
+// Display filtered finished visits
+function displayFinishedVisits(visits: any[]): void {
+  const finishedVisitsList = document.getElementById('finishedVisitsList');
+  if (!finishedVisitsList) return;
+
+  if (visits.length === 0) {
+    finishedVisitsList.innerHTML = `
+      <div class="text-center py-8">
+        <div class="text-gray-500 dark:text-gray-400 text-lg">No finished visits found</div>
+        <div class="text-gray-400 dark:text-gray-500 text-sm mt-2">
+          ${currentFinishedSearchTerm || currentFinishedRoleFilter !== 'all' || currentFinishedDateFilter !== 'all' || currentFinishedSpecificDate
+            ? 'Try adjusting your search or filters' 
+            : 'No visits have been completed or marked as unsuccessful'}
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  finishedVisitsList.innerHTML = visits.map(visit => {
+    const visitorName = `${visit.visitor_first_name} ${visit.visitor_last_name}`;
+    const visitorEmail = visit.visitor_email || 'No email';
+    const visitorRole = visit.visitor_role || 'guest';
+    const isLoggedIn = visit.visitor_user_id !== null;
+    const visitorId = isLoggedIn ? visit.visitor_user_id : 'guest';
+    const visitDate = new Date(visit.visit_date).toLocaleDateString();
+    const completedDate = visit.completed_at ? new Date(visit.completed_at).toLocaleDateString() : 'N/A';
+    const completedTime = visit.completed_at ? new Date(visit.completed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A';
+    
+    const statusColors: { [key: string]: string } = {
+      completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+      unsuccessful: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+    };
+
+    const roleColors: { [key: string]: string } = {
+      visitor: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+      guest: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+    };
+
+    const completedByInfo = visit.completed_by_info ? 
+      `${visit.completed_by_info.first_name} ${visit.completed_by_info.last_name}` : 
+      'Unknown';
+
+    return `
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h4 class="text-lg font-semibold text-gray-900 dark:text-white">${visitorName}</h4>
+            <p class="text-gray-600 dark:text-gray-400">${visitorEmail}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              ${isLoggedIn ? 'Logged-in User' : 'Guest User'} • ID: ${visitorId}
+            </p>
+          </div>
+          <div class="flex space-x-2">
+            <span class="px-2 py-1 rounded-full text-xs font-medium ${(statusColors as any)[visit.status] || statusColors.completed}">
+              ${visit.status}
+            </span>
+            <span class="px-2 py-1 rounded-full text-xs font-medium ${(roleColors as any)[visitorRole] || roleColors.guest}">
+              ${visitorRole}
+            </span>
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <p class="text-sm text-gray-600 dark:text-gray-400"><strong>Visit Date:</strong> ${visitDate}</p>
+            <p class="text-sm text-gray-600 dark:text-gray-400"><strong>Purpose:</strong> ${visit.purpose}</p>
+            ${visit.other_purpose ? `<p class="text-sm text-gray-600 dark:text-gray-400"><strong>Additional Details:</strong> ${visit.other_purpose}</p>` : ''}
+          </div>
+          <div>
+            <p class="text-sm text-gray-600 dark:text-gray-400"><strong>Place:</strong> ${visit.place_name}</p>
+            <p class="text-sm text-gray-600 dark:text-gray-400"><strong>Completed:</strong> ${completedDate} at ${completedTime}</p>
+            <p class="text-sm text-gray-600 dark:text-gray-400"><strong>Completed By:</strong> ${completedByInfo}</p>
+          </div>
+        </div>
+        
+        <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            Scheduled: ${new Date(visit.scheduled_at).toLocaleDateString()} at ${new Date(visit.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </p>
+        </div>
+      </div>
+    `;
+  }).join('');
+}

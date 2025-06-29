@@ -907,20 +907,18 @@ export async function setupEventListeners() {
             throw new Error('Please select at least one place to visit');
           }
 
-          // Schedule visits for each selected place
-          for (const placeId of selectedPlaces) {
-            await supabase.rpc('schedule_visit', {
-              p_visitor_first_name: firstName,
-              p_visitor_last_name: lastName,
-              p_visitor_email: email,
-              p_visitor_phone: phone,
-              p_place_id: placeId,
-              p_visit_date: visitDate,
-              p_purpose: purpose === 'other' ? otherPurpose : purpose,
-              p_other_purpose: purpose === 'other' ? otherPurpose : null,
-              p_visitor_user_id: visitorUserId
-            });
-          }
+          // Schedule visit for all selected places in a single call
+          await supabase.rpc('schedule_visit', {
+            p_visitor_first_name: firstName,
+            p_visitor_last_name: lastName,
+            p_visitor_email: email,
+            p_visitor_phone: phone,
+            p_place_ids: selectedPlaces,
+            p_visit_date: visitDate,
+            p_purpose: purpose === 'other' ? otherPurpose : purpose,
+            p_other_purpose: purpose === 'other' ? otherPurpose : null,
+            p_visitor_user_id: visitorUserId
+          });
         } else {
           // Schedule visit for single place
           await supabase.rpc('schedule_visit', {
@@ -928,7 +926,7 @@ export async function setupEventListeners() {
             p_visitor_last_name: lastName,
             p_visitor_email: email,
             p_visitor_phone: phone,
-            p_place_id: placeToVisit,
+            p_place_ids: [placeToVisit],
             p_visit_date: visitDate,
             p_purpose: purpose === 'other' ? otherPurpose : purpose,
             p_other_purpose: purpose === 'other' ? otherPurpose : null,

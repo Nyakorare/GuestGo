@@ -179,3 +179,71 @@ BEGIN
         
     RAISE NOTICE 'Sample users created/updated successfully';
 END $$; 
+
+-- Add sample places to visit
+-- This will create 2 sample places for testing purposes
+
+DO $$
+DECLARE
+    place1_id UUID;
+    place2_id UUID;
+    admin_user_id UUID;
+BEGIN
+    -- Get admin user ID for assignment
+    SELECT id INTO admin_user_id 
+    FROM auth.users 
+    WHERE email = 'g1galba042804@gmail.com';
+    
+    -- Insert first sample place if not exists
+    IF NOT EXISTS (SELECT 1 FROM places_to_visit WHERE name = 'Main Office Building') THEN
+        INSERT INTO places_to_visit (name, description, location)
+        VALUES (
+            'Main Office Building',
+            'The primary office building where most administrative work is conducted. Features modern facilities and meeting rooms.',
+            '123 Business District, Metro Manila'
+        ) RETURNING id INTO place1_id;
+        
+        RAISE NOTICE 'Created sample place 1: Main Office Building with ID: %', place1_id;
+    ELSE
+        SELECT id INTO place1_id FROM places_to_visit WHERE name = 'Main Office Building';
+        RAISE NOTICE 'Sample place 1 already exists: Main Office Building with ID: %', place1_id;
+    END IF;
+    
+    -- Insert second sample place if not exists
+    IF NOT EXISTS (SELECT 1 FROM places_to_visit WHERE name = 'Research & Development Center') THEN
+        INSERT INTO places_to_visit (name, description, location)
+        VALUES (
+            'Research & Development Center',
+            'State-of-the-art facility dedicated to research, innovation, and product development. Equipped with advanced laboratories and testing equipment.',
+            '456 Innovation Park, Quezon City'
+        ) RETURNING id INTO place2_id;
+        
+        RAISE NOTICE 'Created sample place 2: Research & Development Center with ID: %', place2_id;
+    ELSE
+        SELECT id INTO place2_id FROM places_to_visit WHERE name = 'Research & Development Center';
+        RAISE NOTICE 'Sample place 2 already exists: Research & Development Center with ID: %', place2_id;
+    END IF;
+    
+    -- Assign personnel to the first place if admin exists
+    IF admin_user_id IS NOT NULL THEN
+        -- Get personnel user ID
+        DECLARE
+            personnel_user_id UUID;
+        BEGIN
+            SELECT id INTO personnel_user_id 
+            FROM auth.users 
+            WHERE email = 'gamerboy282004@yahoo.com';
+            
+            -- Assign personnel to Main Office Building
+            IF personnel_user_id IS NOT NULL AND place1_id IS NOT NULL THEN
+                INSERT INTO place_personnel (place_id, personnel_id, assigned_by)
+                VALUES (place1_id, personnel_user_id, admin_user_id)
+                ON CONFLICT (place_id, personnel_id) DO NOTHING;
+                
+                RAISE NOTICE 'Assigned personnel to Main Office Building';
+            END IF;
+        END;
+    END IF;
+    
+    RAISE NOTICE 'Sample places created/updated successfully';
+END $$; 

@@ -5,6 +5,7 @@ DROP TABLE IF EXISTS personnel_availability CASCADE;
 DROP TABLE IF EXISTS user_roles CASCADE;
 DROP TABLE IF EXISTS places_to_visit CASCADE;
 DROP TABLE IF EXISTS scheduled_visits CASCADE;
+DROP TABLE IF EXISTS scheduled_visit_places CASCADE;
 
 -- Drop the enum type if it exists
 DROP TYPE IF EXISTS user_role CASCADE;
@@ -77,7 +78,6 @@ CREATE TABLE scheduled_visits (
     visitor_phone VARCHAR(20) NOT NULL,
     visitor_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     visitor_role user_role NOT NULL,
-    place_id UUID REFERENCES places_to_visit(id) ON DELETE CASCADE,
     visit_date DATE NOT NULL,
     purpose VARCHAR(255) NOT NULL,
     other_purpose TEXT,
@@ -301,13 +301,13 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Create function to schedule a visit
+-- Create function to schedule a visit with multiple places
 CREATE OR REPLACE FUNCTION public.schedule_visit(
     p_visitor_first_name VARCHAR(100),
     p_visitor_last_name VARCHAR(100),
     p_visitor_email VARCHAR(255),
     p_visitor_phone VARCHAR(20),
-    p_place_id UUID,
+    p_place_ids UUID[], -- Changed to array of place IDs
     p_visit_date DATE,
     p_purpose VARCHAR(255),
     p_other_purpose TEXT DEFAULT NULL,
@@ -324,12 +324,20 @@ DECLARE
     visits_this_week INTEGER;
     user_role_check user_role;
     log_id UUID;
+    place_id UUID;
+    place_names TEXT[] := '{}';
+    place_name TEXT;
 BEGIN
     -- Debug: Log the received date and current Philippine date
     RAISE NOTICE 'DEBUG: Received visit_date: %, Type: %', p_visit_date, pg_typeof(p_visit_date);
     
     philippine_date := public.get_philippine_date();
     RAISE NOTICE 'DEBUG: Current Philippine date: %', philippine_date;
+    
+    -- Validate that at least one place is provided
+    IF array_length(p_place_ids, 1) IS NULL OR array_length(p_place_ids, 1) = 0 THEN
+        RAISE EXCEPTION 'At least one place must be selected for the visit.';
+    END IF;
     
     max_schedule_date := philippine_date + INTERVAL '1 month';
     IF p_visit_date < philippine_date THEN
@@ -344,6 +352,8 @@ BEGIN
             RAISE EXCEPTION 'Only users with visitor role can schedule visits. Current user role: %.', COALESCE(user_role_check, 'none');
         END IF;
     END IF;
+    
+    -- Check weekly visit limit (now counts visits, not individual place bookings)
     week_start := p_visit_date - (EXTRACT(DOW FROM p_visit_date)::INTEGER * INTERVAL '1 day');
     week_end := week_start + INTERVAL '6 days';
     SELECT COUNT(*) INTO visits_this_week
@@ -354,11 +364,14 @@ BEGIN
     IF visits_this_week >= 2 THEN
         RAISE EXCEPTION 'Maximum of 2 visits per week allowed per email address. You have already scheduled % visits for the week of %.', visits_this_week, week_start;
     END IF;
+    
     IF p_visitor_user_id IS NOT NULL THEN
         visitor_role := 'visitor';
     ELSE
         visitor_role := 'guest';
     END IF;
+    
+    -- Create the main visit record
     INSERT INTO scheduled_visits (
         visitor_first_name,
         visitor_last_name,
@@ -366,7 +379,6 @@ BEGIN
         visitor_phone,
         visitor_user_id,
         visitor_role,
-        place_id,
         visit_date,
         purpose,
         other_purpose
@@ -378,14 +390,25 @@ BEGIN
         p_visitor_phone,
         p_visitor_user_id,
         visitor_role,
-        p_place_id,
         p_visit_date,
         p_purpose,
         p_other_purpose
     )
     RETURNING id INTO visit_id;
     
-    -- Log all visits, including guest visits
+    -- Add all places to the visit
+    FOREACH place_id IN ARRAY p_place_ids
+    LOOP
+        -- Get place name for logging
+        SELECT name INTO place_name FROM places_to_visit WHERE id = place_id;
+        place_names := array_append(place_names, place_name);
+        
+        -- Insert into scheduled_visit_places
+        INSERT INTO scheduled_visit_places (visit_id, place_id, status)
+        VALUES (visit_id, place_id, 'pending');
+    END LOOP;
+    
+    -- Log the visit with all places
     log_id := public.log_action(
         p_visitor_user_id, -- This will be NULL for guest visits, which is fine
         'visit_scheduled',
@@ -394,10 +417,12 @@ BEGIN
             'visitor_name', p_visitor_first_name || ' ' || p_visitor_last_name,
             'visitor_email', p_visitor_email,
             'visitor_role', visitor_role,
-            'place_id', p_place_id,
             'visit_date', p_visit_date,
             'purpose', p_purpose,
             'is_guest', visitor_role = 'guest',
+            'place_ids', p_place_ids,
+            'place_names', place_names,
+            'total_places', array_length(p_place_ids, 1),
             'scheduled_at_philippine_time', public.get_philippine_timestamp(),
             'history', jsonb_build_array(
                 jsonb_build_object(
@@ -406,7 +431,8 @@ BEGIN
                     'details', jsonb_build_object(
                         'by', p_visitor_user_id,
                         'purpose', p_purpose,
-                        'scheduled_as_guest', visitor_role = 'guest'
+                        'scheduled_as_guest', visitor_role = 'guest',
+                        'places_count', array_length(p_place_ids, 1)
                     )
                 )
             )
@@ -414,6 +440,89 @@ BEGIN
     );
     
     RETURN visit_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create function to add places to an existing visit
+CREATE OR REPLACE FUNCTION public.add_places_to_visit(
+    p_visit_id UUID,
+    p_place_ids UUID[],
+    p_added_by UUID DEFAULT NULL
+)
+RETURNS BOOLEAN AS $$
+DECLARE
+    place_id UUID;
+    place_names TEXT[] := '{}';
+    place_name TEXT;
+    existing_place_count INTEGER;
+    new_place_count INTEGER;
+    log_row RECORD;
+    new_history JSONB;
+BEGIN
+    -- Check if visit exists and is still pending
+    IF NOT EXISTS (
+        SELECT 1 FROM scheduled_visits 
+        WHERE id = p_visit_id AND status = 'pending'
+    ) THEN
+        RAISE EXCEPTION 'Visit not found or cannot be modified (not pending).';
+    END IF;
+    
+    -- Validate that at least one place is provided
+    IF array_length(p_place_ids, 1) IS NULL OR array_length(p_place_ids, 1) = 0 THEN
+        RAISE EXCEPTION 'At least one place must be selected.';
+    END IF;
+    
+    -- Get current place count
+    SELECT COUNT(*) INTO existing_place_count 
+    FROM scheduled_visit_places 
+    WHERE visit_id = p_visit_id;
+    
+    -- Add new places
+    FOREACH place_id IN ARRAY p_place_ids
+    LOOP
+        -- Check if place is already in this visit
+        IF NOT EXISTS (
+            SELECT 1 FROM scheduled_visit_places 
+            WHERE visit_id = p_visit_id AND place_id = place_id
+        ) THEN
+            -- Get place name for logging
+            SELECT name INTO place_name FROM places_to_visit WHERE id = place_id;
+            place_names := array_append(place_names, place_name);
+            
+            -- Insert into scheduled_visit_places
+            INSERT INTO scheduled_visit_places (visit_id, place_id, status)
+            VALUES (p_visit_id, place_id, 'pending');
+        END IF;
+    END LOOP;
+    
+    -- Get new place count
+    SELECT COUNT(*) INTO new_place_count 
+    FROM scheduled_visit_places 
+    WHERE visit_id = p_visit_id;
+    
+    -- Update the log entry if places were added
+    IF array_length(place_names, 1) > 0 THEN
+        SELECT * INTO log_row FROM logs WHERE details->>'visit_id' = p_visit_id::text AND action = 'visit_scheduled' ORDER BY created_at LIMIT 1;
+        
+        IF log_row.id IS NOT NULL THEN
+            new_history := (log_row.details->'history') || jsonb_build_array(
+                jsonb_build_object(
+                    'event', 'places_added',
+                    'timestamp', public.get_philippine_timestamp(),
+                    'details', jsonb_build_object(
+                        'by', p_added_by,
+                        'added_places', place_names,
+                        'places_count', array_length(place_names, 1),
+                        'total_places', new_place_count
+                    )
+                )
+            );
+            
+            UPDATE logs SET details = jsonb_set(log_row.details, '{history}', new_history) WHERE id = log_row.id;
+        END IF;
+    END IF;
+    
+    RETURN TRUE;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -583,68 +692,75 @@ RETURNS TABLE (
     visitor_phone VARCHAR(20),
     visitor_user_id UUID,
     visitor_role user_role,
-    place_id UUID,
-    place_name VARCHAR(255),
-    place_location VARCHAR(255),
     visit_date DATE,
     purpose VARCHAR(255),
     other_purpose TEXT,
     status visit_status,
     scheduled_at TIMESTAMP WITH TIME ZONE,
     completed_at TIMESTAMP WITH TIME ZONE,
-    completed_by UUID
+    completed_by UUID,
+    place_id UUID,
+    place_name VARCHAR(255),
+    place_description TEXT,
+    place_location VARCHAR(255),
+    place_status visit_status,
+    place_completed_at TIMESTAMP WITH TIME ZONE,
+    place_completed_by UUID,
+    total_places BIGINT,
+    completed_places BIGINT
 ) AS $$
 BEGIN
-    -- First, automatically mark any past pending visits as unsuccessful
-    PERFORM public.mark_past_visits_unsuccessful();
-    
     RETURN QUERY
     SELECT 
-        scheduled_visits.id as visit_id,
-        scheduled_visits.visitor_first_name,
-        scheduled_visits.visitor_last_name,
-        scheduled_visits.visitor_email,
-        scheduled_visits.visitor_phone,
-        scheduled_visits.visitor_user_id,
-        scheduled_visits.visitor_role,
-        scheduled_visits.place_id,
-        places_to_visit.name as place_name,
-        places_to_visit.location as place_location,
-        scheduled_visits.visit_date,
-        scheduled_visits.purpose,
-        scheduled_visits.other_purpose,
-        scheduled_visits.status,
-        scheduled_visits.scheduled_at,
-        scheduled_visits.completed_at,
-        scheduled_visits.completed_by
-    FROM scheduled_visits
-    INNER JOIN places_to_visit ON scheduled_visits.place_id = places_to_visit.id
-    INNER JOIN place_personnel ON places_to_visit.id = place_personnel.place_id
-    WHERE place_personnel.personnel_id = p_personnel_id
-    ORDER BY scheduled_visits.visit_date ASC, scheduled_visits.scheduled_at DESC;
+        sv.id as visit_id,
+        sv.visitor_first_name,
+        sv.visitor_last_name,
+        sv.visitor_email,
+        sv.visitor_phone,
+        sv.visitor_user_id,
+        sv.visitor_role,
+        sv.visit_date,
+        sv.purpose,
+        sv.other_purpose,
+        sv.status,
+        sv.scheduled_at,
+        sv.completed_at,
+        sv.completed_by,
+        svp.place_id,
+        ptv.name as place_name,
+        ptv.description as place_description,
+        ptv.location as place_location,
+        svp.status as place_status,
+        svp.completed_at as place_completed_at,
+        svp.completed_by as place_completed_by,
+        (SELECT COUNT(*) FROM scheduled_visit_places svp2 WHERE svp2.visit_id = sv.id) as total_places,
+        (SELECT COUNT(*) FROM scheduled_visit_places svp3 WHERE svp3.visit_id = sv.id AND svp3.status = 'completed') as completed_places
+    FROM scheduled_visits sv
+    JOIN scheduled_visit_places svp ON sv.id = svp.visit_id
+    LEFT JOIN places_to_visit ptv ON svp.place_id = ptv.id
+    WHERE svp.place_id IN (
+        SELECT pp.place_id FROM place_personnel pp WHERE pp.personnel_id = p_personnel_id
+    )
+    AND sv.status IN ('pending', 'completed')
+    ORDER BY sv.visit_date ASC, sv.scheduled_at DESC;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Refactor complete_visit to handle cases where no log entry exists (for guest visits)
-CREATE OR REPLACE FUNCTION public.complete_visit(
+-- Create function to complete a specific place in a visit
+CREATE OR REPLACE FUNCTION public.complete_visit_place(
     p_visit_id UUID,
+    p_place_id UUID,
     p_completed_by UUID
 )
 RETURNS BOOLEAN AS $$
 DECLARE
     personnel_role user_role;
-    visit_place_id UUID;
-    v_visit_date DATE;
-    v_visitor_user_id UUID;
-    v_visitor_email VARCHAR(255);
-    v_visitor_first_name VARCHAR(100);
-    v_visitor_last_name VARCHAR(100);
-    v_visitor_role user_role;
-    v_purpose VARCHAR(255);
-    philippine_date DATE;
+    visit_record RECORD;
+    place_record RECORD;
+    all_places_completed BOOLEAN;
     log_row RECORD;
     new_history JSONB;
-    visit_details JSONB;
+    place_name TEXT;
 BEGIN
     -- Check if the user completing is personnel
     SELECT role INTO personnel_role FROM user_roles WHERE user_id = p_completed_by;
@@ -652,41 +768,151 @@ BEGIN
         RAISE EXCEPTION 'Only personnel can complete visits';
     END IF;
     
-    -- Get all visit details
-    SELECT 
-        place_id, visit_date, visitor_user_id, visitor_email, 
-        visitor_first_name, visitor_last_name, visitor_role, purpose
-    INTO 
-        visit_place_id, v_visit_date, v_visitor_user_id, v_visitor_email,
-        v_visitor_first_name, v_visitor_last_name, v_visitor_role, v_purpose
-    FROM scheduled_visits WHERE id = p_visit_id;
-    
-    -- Check if visit exists
-    IF visit_place_id IS NULL THEN
+    -- Get visit details
+    SELECT * INTO visit_record FROM scheduled_visits WHERE id = p_visit_id;
+    IF visit_record.id IS NULL THEN
         RAISE EXCEPTION 'Visit not found';
     END IF;
     
-    -- Debug: Log the visit date and current Philippine date
-    RAISE NOTICE 'DEBUG: Visit date from DB: %, Type: %', v_visit_date, pg_typeof(v_visit_date);
+    -- Get place details
+    SELECT * INTO place_record FROM scheduled_visit_places WHERE visit_id = p_visit_id AND place_id = p_place_id;
+    IF place_record.id IS NULL THEN
+        RAISE EXCEPTION 'Place not found in this visit';
+    END IF;
     
-    -- Get current Philippine date and validate
-    philippine_date := public.get_philippine_date();
-    RAISE NOTICE 'DEBUG: Current Philippine date: %, Type: %', philippine_date, pg_typeof(philippine_date);
-    RAISE NOTICE 'DEBUG: Comparison: visit_date > philippine_date = %', v_visit_date > philippine_date;
-    
-    IF v_visit_date > philippine_date THEN
-        RAISE EXCEPTION 'Cannot complete visits scheduled for future dates. Visit date is % but current Philippine date is %.', v_visit_date, philippine_date;
+    -- Check if place is already completed
+    IF place_record.status = 'completed' THEN
+        RAISE EXCEPTION 'This place has already been completed';
     END IF;
     
     -- Check if personnel is assigned to this place
     IF NOT EXISTS (
         SELECT 1 FROM place_personnel 
-        WHERE place_id = visit_place_id AND personnel_id = p_completed_by
+        WHERE place_id = p_place_id AND personnel_id = p_completed_by
     ) THEN
         RAISE EXCEPTION 'Personnel is not assigned to this place';
     END IF;
     
-    -- Update the visit status
+    -- Mark the specific place as completed
+    UPDATE scheduled_visit_places 
+    SET 
+        status = 'completed',
+        completed_at = public.get_philippine_timestamp(),
+        completed_by = p_completed_by
+    WHERE visit_id = p_visit_id AND place_id = p_place_id;
+    
+    -- Get place name for logging
+    SELECT name INTO place_name FROM places_to_visit WHERE id = p_place_id;
+    
+    -- Check if all places in this visit are now completed
+    SELECT COUNT(*) = 0 INTO all_places_completed
+    FROM scheduled_visit_places 
+    WHERE visit_id = p_visit_id AND status != 'completed';
+    
+    -- If all places are completed, mark the entire visit as completed
+    IF all_places_completed THEN
+        UPDATE scheduled_visits 
+        SET 
+            status = 'completed',
+            completed_at = public.get_philippine_timestamp(),
+            completed_by = p_completed_by
+        WHERE id = p_visit_id;
+    END IF;
+    
+    -- Update the log entry
+    SELECT * INTO log_row FROM logs WHERE details->>'visit_id' = p_visit_id::text AND action = 'visit_scheduled' ORDER BY created_at LIMIT 1;
+    
+    IF log_row.id IS NOT NULL THEN
+        new_history := (log_row.details->'history') || jsonb_build_array(
+            jsonb_build_object(
+                'event', 'place_completed',
+                'timestamp', public.get_philippine_timestamp(),
+                'details', jsonb_build_object(
+                    'by', p_completed_by,
+                    'place_id', p_place_id,
+                    'place_name', place_name,
+                    'all_places_completed', all_places_completed
+                )
+            )
+        );
+        
+        -- Update the log entry with history and current_status if all places are completed
+        IF all_places_completed THEN
+            UPDATE logs SET details = jsonb_set(
+                jsonb_set(log_row.details, '{history}', new_history),
+                '{current_status}',
+                '"completed"'
+            ) WHERE id = log_row.id;
+        ELSE
+            UPDATE logs SET details = jsonb_set(log_row.details, '{history}', new_history) WHERE id = log_row.id;
+        END IF;
+    END IF;
+    
+    RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Update the existing complete_visit function to handle the new structure
+CREATE OR REPLACE FUNCTION public.complete_visit(
+    p_visit_id UUID,
+    p_completed_by UUID
+)
+RETURNS BOOLEAN AS $$
+DECLARE
+    personnel_role user_role;
+    visit_record RECORD;
+    place_record RECORD;
+    log_row RECORD;
+    new_history JSONB;
+    place_names TEXT[] := '{}';
+    place_name TEXT;
+BEGIN
+    -- Check if the user completing is personnel
+    SELECT role INTO personnel_role FROM user_roles WHERE user_id = p_completed_by;
+    IF personnel_role != 'personnel' THEN
+        RAISE EXCEPTION 'Only personnel can complete visits';
+    END IF;
+    
+    -- Get visit details
+    SELECT * INTO visit_record FROM scheduled_visits WHERE id = p_visit_id;
+    IF visit_record.id IS NULL THEN
+        RAISE EXCEPTION 'Visit not found';
+    END IF;
+    
+    -- Check if visit is already completed
+    IF visit_record.status = 'completed' THEN
+        RAISE EXCEPTION 'Visit is already completed';
+    END IF;
+    
+    -- Get all places for this visit
+    FOR place_record IN 
+        SELECT svp.*, ptv.name as place_name
+        FROM scheduled_visit_places svp
+        LEFT JOIN places_to_visit ptv ON svp.place_id = ptv.id
+        WHERE svp.visit_id = p_visit_id
+    LOOP
+        -- Check if personnel is assigned to this place
+        IF NOT EXISTS (
+            SELECT 1 FROM place_personnel 
+            WHERE place_id = place_record.place_id AND personnel_id = p_completed_by
+        ) THEN
+            RAISE EXCEPTION 'Personnel is not assigned to place: %', place_record.place_name;
+        END IF;
+        
+        -- Mark place as completed if not already
+        IF place_record.status != 'completed' THEN
+            UPDATE scheduled_visit_places 
+            SET 
+                status = 'completed',
+                completed_at = public.get_philippine_timestamp(),
+                completed_by = p_completed_by
+            WHERE visit_id = p_visit_id AND place_id = place_record.place_id;
+            
+            place_names := array_append(place_names, place_record.place_name);
+        END IF;
+    END LOOP;
+    
+    -- Mark the entire visit as completed
     UPDATE scheduled_visits 
     SET 
         status = 'completed',
@@ -694,50 +920,47 @@ BEGIN
         completed_by = p_completed_by
     WHERE id = p_visit_id;
     
-    -- Try to find existing log entry for this visit
+    -- Update the log entry
     SELECT * INTO log_row FROM logs WHERE details->>'visit_id' = p_visit_id::text AND action = 'visit_scheduled' ORDER BY created_at LIMIT 1;
     
     IF log_row.id IS NOT NULL THEN
-        -- Update existing log entry
         new_history := (log_row.details->'history') || jsonb_build_array(
-        jsonb_build_object(
+            jsonb_build_object(
                 'event', 'completed',
                 'timestamp', public.get_philippine_timestamp(),
                 'details', jsonb_build_object(
-                    'by', p_completed_by
-                )
-            )
-        );
-        UPDATE logs SET details = jsonb_set(log_row.details, '{history}', new_history) WHERE id = log_row.id;
-    ELSE
-        -- Create new log entry for guest visits or visits without existing logs
-        visit_details := jsonb_build_object(
-            'visit_id', p_visit_id,
-            'visitor_name', v_visitor_first_name || ' ' || v_visitor_last_name,
-            'visitor_email', v_visitor_email,
-            'visitor_role', v_visitor_role,
-            'place_id', visit_place_id,
-            'visit_date', v_visit_date,
-            'purpose', v_purpose,
-            'is_guest', v_visitor_role = 'guest',
-            'scheduled_at_philippine_time', public.get_philippine_timestamp(),
-            'history', jsonb_build_array(
-                jsonb_build_object(
-                    'event', 'completed',
-                    'timestamp', public.get_philippine_timestamp(),
-                    'details', jsonb_build_object(
-                        'by', p_completed_by,
-                        'note', 'Visit was scheduled as guest or log entry was missing'
-                    )
+                    'by', p_completed_by,
+                    'completed_places', place_names,
+                    'total_places', array_length(place_names, 1)
                 )
             )
         );
         
-        -- Create log entry with the personnel who completed it as the user_id
+        -- Update the log entry with history and current_status
+        UPDATE logs SET details = jsonb_set(
+            jsonb_set(log_row.details, '{history}', new_history),
+            '{current_status}',
+            '"completed"'
+        ) WHERE id = log_row.id;
+    ELSE
+        -- Create new log entry for visits without existing logs
         PERFORM public.log_action(
             p_completed_by,
-            'visit_scheduled',
-            visit_details
+            'visit_completed',
+            jsonb_build_object(
+                'visit_id', p_visit_id,
+                'visitor_name', visit_record.visitor_first_name || ' ' || visit_record.visitor_last_name,
+                'visitor_email', visit_record.visitor_email,
+                'visitor_role', visit_record.visitor_role,
+                'visit_date', visit_record.visit_date,
+                'purpose', visit_record.purpose,
+                'is_guest', visit_record.visitor_role = 'guest',
+                'completed_at', public.get_philippine_timestamp(),
+                'completed_by', p_completed_by,
+                'completed_places', place_names,
+                'total_places', array_length(place_names, 1),
+                'note', 'Visit was scheduled as guest or log entry was missing'
+            )
         );
     END IF;
     
@@ -789,6 +1012,8 @@ RETURNS BOOLEAN AS $$
 DECLARE
     admin_role user_role;
     visit_place_id UUID;
+    log_row RECORD;
+    new_history JSONB;
 BEGIN
     -- Check if the user marking is an admin
     SELECT role INTO admin_role 
@@ -812,17 +1037,40 @@ BEGIN
         completed_by = p_marked_by
     WHERE id = p_visit_id;
     
-    -- Log the visit marking as unsuccessful
-    PERFORM public.log_action(
-        p_marked_by,
-        'visit_unsuccessful',
-        jsonb_build_object(
-            'visit_id', p_visit_id,
-            'place_id', visit_place_id,
-            'marked_at', public.get_philippine_timestamp(),
-            'marked_at_philippine_time', public.get_philippine_timestamp()
-        )
-    );
+    -- Try to find existing log entry for this visit
+    SELECT * INTO log_row FROM logs WHERE details->>'visit_id' = p_visit_id::text AND action = 'visit_scheduled' ORDER BY created_at LIMIT 1;
+    
+    IF log_row.id IS NOT NULL THEN
+        -- Update existing log entry
+        new_history := (log_row.details->'history') || jsonb_build_array(
+            jsonb_build_object(
+                'event', 'marked_unsuccessful',
+                'timestamp', public.get_philippine_timestamp(),
+                'details', jsonb_build_object(
+                    'by', p_marked_by,
+                    'reason', 'Manually marked as unsuccessful by admin'
+                )
+            )
+        );
+        UPDATE logs SET details = jsonb_set(
+            jsonb_set(log_row.details, '{history}', new_history),
+            '{current_status}',
+            '"unsuccessful"'
+        ) WHERE id = log_row.id;
+    ELSE
+        -- Create new log entry for visits without existing logs
+        PERFORM public.log_action(
+            p_marked_by,
+            'visit_unsuccessful',
+            jsonb_build_object(
+                'visit_id', p_visit_id,
+                'place_id', visit_place_id,
+                'marked_at', public.get_philippine_timestamp(),
+                'marked_at_philippine_time', public.get_philippine_timestamp(),
+                'reason', 'Manually marked as unsuccessful by admin'
+            )
+        );
+    END IF;
     
     RETURN FOUND;
 END;
@@ -847,7 +1095,9 @@ RETURNS TABLE (
     status visit_status,
     scheduled_at TIMESTAMP WITH TIME ZONE,
     completed_at TIMESTAMP WITH TIME ZONE,
-    completed_by UUID
+    completed_by UUID,
+    total_places BIGINT,
+    completed_places BIGINT
 ) AS $$
 DECLARE
     philippine_date DATE;
@@ -855,7 +1105,7 @@ BEGIN
     -- First, automatically mark any past pending visits as unsuccessful
     PERFORM public.mark_past_visits_unsuccessful();
     
-    -- Return all visits
+    -- Return all visits with place information
     RETURN QUERY
     SELECT 
         sv.id as visit_id,
@@ -865,70 +1115,81 @@ BEGIN
         sv.visitor_phone,
         sv.visitor_user_id,
         sv.visitor_role,
-        sv.place_id,
-        p.name as place_name,
-        p.location as place_location,
+        svp.place_id,
+        ptv.name as place_name,
+        ptv.location as place_location,
         sv.visit_date,
         sv.purpose,
         sv.other_purpose,
         sv.status,
         sv.scheduled_at,
         sv.completed_at,
-        sv.completed_by
+        sv.completed_by,
+        (SELECT COUNT(*) FROM scheduled_visit_places svp2 WHERE svp2.visit_id = sv.id) as total_places,
+        (SELECT COUNT(*) FROM scheduled_visit_places svp3 WHERE svp3.visit_id = sv.id AND svp3.status = 'completed') as completed_places
     FROM scheduled_visits sv
-    JOIN places_to_visit p ON sv.place_id = p.id
+    JOIN scheduled_visit_places svp ON sv.id = svp.visit_id
+    LEFT JOIN places_to_visit ptv ON svp.place_id = ptv.id
     ORDER BY sv.visit_date DESC, sv.scheduled_at DESC;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Create function to get scheduled visits for a visitor
+-- Create function to get visitor's scheduled visits including unsuccessful ones
 CREATE OR REPLACE FUNCTION public.get_visitor_scheduled_visits(p_visitor_user_id UUID)
 RETURNS TABLE (
-    visit_id UUID,
+    id UUID,
     visitor_first_name VARCHAR(100),
     visitor_last_name VARCHAR(100),
     visitor_email VARCHAR(255),
     visitor_phone VARCHAR(20),
     visitor_user_id UUID,
     visitor_role user_role,
-    place_id UUID,
-    place_name VARCHAR(255),
-    place_location VARCHAR(255),
     visit_date DATE,
     purpose VARCHAR(255),
     other_purpose TEXT,
     status visit_status,
     scheduled_at TIMESTAMP WITH TIME ZONE,
     completed_at TIMESTAMP WITH TIME ZONE,
-    completed_by UUID
+    completed_by UUID,
+    places JSONB -- Changed to JSONB to include all places for this visit
 ) AS $$
 BEGIN
-    -- First, automatically mark any past pending visits as unsuccessful
-    PERFORM public.mark_past_visits_unsuccessful();
-    
     RETURN QUERY
     SELECT 
-        sv.id as visit_id,
+        sv.id,
         sv.visitor_first_name,
         sv.visitor_last_name,
         sv.visitor_email,
         sv.visitor_phone,
         sv.visitor_user_id,
         sv.visitor_role,
-        sv.place_id,
-        p.name as place_name,
-        p.location as place_location,
         sv.visit_date,
         sv.purpose,
         sv.other_purpose,
         sv.status,
         sv.scheduled_at,
         sv.completed_at,
-        sv.completed_by
+        sv.completed_by,
+        COALESCE(
+            (SELECT jsonb_agg(
+                jsonb_build_object(
+                    'place_id', svp.place_id,
+                    'place_name', ptv.name,
+                    'place_description', ptv.description,
+                    'place_location', ptv.location,
+                    'status', svp.status,
+                    'completed_at', svp.completed_at,
+                    'completed_by', svp.completed_by
+                )
+            )
+            FROM scheduled_visit_places svp
+            LEFT JOIN places_to_visit ptv ON svp.place_id = ptv.id
+            WHERE svp.visit_id = sv.id),
+            '[]'::jsonb
+        ) as places
     FROM scheduled_visits sv
-    JOIN places_to_visit p ON sv.place_id = p.id
     WHERE sv.visitor_user_id = p_visitor_user_id
-    ORDER BY sv.visit_date ASC, sv.scheduled_at DESC;
+    ORDER BY sv.visit_date DESC, sv.scheduled_at DESC;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -1031,3 +1292,18 @@ BEGIN
     RETURN affected_visits;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 1. Drop old foreign key and column if exists
+ALTER TABLE scheduled_visits DROP CONSTRAINT IF EXISTS scheduled_visits_place_id_fkey;
+ALTER TABLE scheduled_visits DROP COLUMN IF EXISTS place_id;
+
+-- 2. Create scheduled_visit_places table
+CREATE TABLE scheduled_visit_places (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    visit_id UUID REFERENCES scheduled_visits(id) ON DELETE CASCADE,
+    place_id UUID REFERENCES places_to_visit(id) ON DELETE CASCADE,
+    status visit_status DEFAULT 'pending',
+    completed_at TIMESTAMP WITH TIME ZONE,
+    completed_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    UNIQUE(visit_id, place_id)
+);
