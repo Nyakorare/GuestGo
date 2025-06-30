@@ -532,10 +532,13 @@ RETURNS INTEGER AS $$
 DECLARE
     philippine_date DATE;
     affected_rows INTEGER;
+    additional_affected_rows INTEGER;
     visit_record RECORD;
     log_row RECORD;
     new_history JSONB;
     existing_unsuccessful_events INTEGER;
+    total_places INTEGER;
+    completed_places INTEGER;
 BEGIN
     -- Get current Philippine date (UTC+8) using the new function
     philippine_date := public.get_philippine_date();
@@ -551,13 +554,43 @@ BEGIN
     
     GET DIAGNOSTICS affected_rows = ROW_COUNT;
     
+    -- Also mark visits as unsuccessful if they are from today but not all places are completed
+    UPDATE scheduled_visits 
+    SET 
+        status = 'unsuccessful',
+        completed_at = public.get_philippine_timestamp(),
+        completed_by = NULL -- System action, no specific user
+    WHERE status = 'pending' 
+      AND visit_date = philippine_date
+      AND id IN (
+          -- Find visits where not all places are completed
+          SELECT sv.id
+          FROM scheduled_visits sv
+          WHERE sv.status = 'pending'
+            AND sv.visit_date = philippine_date
+            AND EXISTS (
+                SELECT 1 
+                FROM scheduled_visit_places svp 
+                WHERE svp.visit_id = sv.id 
+                  AND svp.status != 'completed'
+            )
+      );
+    
+    GET DIAGNOSTICS additional_affected_rows = ROW_COUNT;
+    affected_rows := affected_rows + additional_affected_rows;
+    
     -- Update the original visit_scheduled log entries to reflect the status change
     FOR visit_record IN 
         SELECT id, visitor_user_id, visitor_role
         FROM scheduled_visits 
         WHERE status = 'unsuccessful' 
-          AND visit_date < philippine_date
-          AND completed_at >= (public.get_philippine_timestamp() - INTERVAL '1 minute')
+          AND (
+              visit_date < philippine_date
+              OR (
+                  visit_date = philippine_date
+                  AND completed_at >= (public.get_philippine_timestamp() - INTERVAL '1 minute')
+              )
+          )
     LOOP
         -- Find the original visit_scheduled log entry for this visit
         SELECT * INTO log_row 
@@ -575,14 +608,31 @@ BEGIN
             
             -- Only add the unsuccessful event if it doesn't already exist
             IF existing_unsuccessful_events = 0 THEN
+                -- Get place completion statistics for logging
+                SELECT 
+                    COUNT(*) INTO total_places
+                FROM scheduled_visit_places 
+                WHERE visit_id = visit_record.id;
+                
+                SELECT 
+                    COUNT(*) INTO completed_places
+                FROM scheduled_visit_places 
+                WHERE visit_id = visit_record.id AND status = 'completed';
+                
                 new_history := (log_row.details->'history') || jsonb_build_array(
                     jsonb_build_object(
                         'event', 'marked_unsuccessful',
                         'timestamp', public.get_philippine_timestamp(),
                         'details', jsonb_build_object(
                             'by', 'system',
-                            'reason', 'Visit was not completed on or before the scheduled date',
-                            'auto_marked', true
+                            'reason', CASE 
+                                WHEN visit_record.visit_date < philippine_date THEN 'Visit was not completed on or before the scheduled date'
+                                ELSE 'Not all places were completed by the end of the scheduled day'
+                            END,
+                            'auto_marked', true,
+                            'total_places', total_places,
+                            'completed_places', completed_places,
+                            'incomplete_places', total_places - completed_places
                         )
                     )
                 );

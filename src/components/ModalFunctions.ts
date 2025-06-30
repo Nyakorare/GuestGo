@@ -86,10 +86,18 @@ export async function setupEventListeners() {
       placeToVisitSelect.appendChild(option);
     });
 
+    // Check if user is logged in
+    const { data: { user } } = await supabase.auth.getUser();
+    const isLoggedIn = !!user;
+
     // Add "Multiple Places" option at the end
     const multipleOption = document.createElement('option');
     multipleOption.value = 'multiple';
-    if (availablePlacesCount < 2) {
+    
+    if (!isLoggedIn) {
+      multipleOption.textContent = 'Multiple Places (login required)';
+      multipleOption.disabled = true;
+    } else if (availablePlacesCount < 2) {
       multipleOption.textContent = 'Multiple Places (requires at least 2 available places)';
       multipleOption.disabled = true;
     } else {
@@ -100,7 +108,10 @@ export async function setupEventListeners() {
     // Update help text
     const helpText = placeToVisitSelect.parentElement?.querySelector('p');
     if (helpText) {
-      if (availablePlacesCount < 2) {
+      if (!isLoggedIn) {
+        helpText.textContent = 'Multiple Places option requires login. Please login to access this feature.';
+        helpText.className = 'mt-1 text-sm text-blue-600 dark:text-blue-400';
+      } else if (availablePlacesCount < 2) {
         helpText.textContent = `Multiple Places option is disabled (only ${availablePlacesCount} available place)`;
         helpText.className = 'mt-1 text-sm text-orange-600 dark:text-orange-400';
       } else {
@@ -113,7 +124,7 @@ export async function setupEventListeners() {
       const target = e.target as HTMLSelectElement;
       const multiplePlacesContainer = document.getElementById('multiplePlacesContainer');
       if (multiplePlacesContainer) {
-        if (target.value === 'multiple' && availablePlacesCount >= 2) {
+        if (target.value === 'multiple' && isLoggedIn && availablePlacesCount >= 2) {
           multiplePlacesContainer.classList.remove('hidden');
           // Clear existing checkboxes
           multiplePlacesContainer.innerHTML = '';
