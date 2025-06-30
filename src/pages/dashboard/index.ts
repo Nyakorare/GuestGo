@@ -201,6 +201,9 @@ export function DashboardPage() {
       
       // Load finished schedules when switching to finished tab
       await loadFinishedSchedules();
+      
+      // Initialize finished schedule type tabs
+      updateFinishedScheduleTypeTabs();
     });
 
     // Show profile settings button when logged in
@@ -574,6 +577,21 @@ export function DashboardPage() {
                 </select>
               </div>
             </div>
+          </div>
+          <!-- Finished Schedule Type Tabs -->
+          <div class="flex flex-row flex-wrap gap-2 mb-4">
+            <button 
+              id="todayFinishedSchedulesTab"
+              class="px-4 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm"
+            >
+              Today Finished
+            </button>
+            <button 
+              id="pastFinishedSchedulesTab"
+              class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm"
+            >
+              Past Finished
+            </button>
           </div>
           <div id="finishedVisitsList" class="space-y-4"></div>
         </div>
@@ -1349,6 +1367,11 @@ async function renderLogs(): Promise<void> {
       </div>
     `;
   }
+  
+  // Set up history button event listeners after rendering
+  setTimeout(() => {
+    setupHistoryButtonListeners();
+  }, 100);
 }
 
 // Function to format log details for display
@@ -1531,12 +1554,12 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
           historyHtml = `
             <div class="mt-2">
               <button 
-                onclick="toggleHistory('${historyId}')"
-                class="text-blue-600 hover:text-blue-800 dark:text-blue-500 dark:hover:text-blue-400 text-sm font-medium flex items-center gap-1"
+                class="text-blue-600 hover:text-blue-800 dark:text-blue-500 dark:hover:text-blue-400 text-sm font-medium flex items-center gap-1 w-full justify-between p-2 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors duration-200 touch-manipulation"
                 id="btn-${historyId}"
+                style="min-height: 44px; -webkit-tap-highlight-color: transparent;"
               >
                 <span>See History (${parsedDetails.history.length} events)</span>
-                <svg class="w-4 h-4 transition-transform" id="icon-${historyId}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 transition-transform duration-200 flex-shrink-0" id="icon-${historyId}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                 </svg>
               </button>
@@ -2217,6 +2240,30 @@ function setupDashboardEventListeners() {
     });
   }
 
+  // Finished schedule type tabs event listeners
+  const todayFinishedSchedulesTab = document.getElementById('todayFinishedSchedulesTab');
+  const pastFinishedSchedulesTab = document.getElementById('pastFinishedSchedulesTab');
+
+  if (todayFinishedSchedulesTab) {
+    todayFinishedSchedulesTab.addEventListener('click', async () => {
+      currentFinishedScheduleType = 'today';
+      updateFinishedScheduleTypeTabs();
+      applyFinishedFilters();
+    });
+  }
+
+  if (pastFinishedSchedulesTab) {
+    pastFinishedSchedulesTab.addEventListener('click', async () => {
+      currentFinishedScheduleType = 'past';
+      updateFinishedScheduleTypeTabs();
+      applyFinishedFilters();
+    });
+  }
+
+  // Initialize tab visual states
+  updateScheduleTypeTabs();
+  updateFinishedScheduleTypeTabs();
+
   console.log('Dashboard event listeners setup complete');
 }
 
@@ -2258,6 +2305,46 @@ function updateScheduleTypeTabs() {
       if (futureSchedulesTab) {
         futureSchedulesTab.classList.add('bg-blue-600', 'text-white');
         futureSchedulesTab.classList.remove('bg-gray-100', 'text-gray-700');
+      }
+      break;
+  }
+}
+
+// Function to update finished schedule type tab visual states
+function updateFinishedScheduleTypeTabs() {
+  const todayFinishedSchedulesTab = document.getElementById('todayFinishedSchedulesTab') as HTMLButtonElement;
+  const pastFinishedSchedulesTab = document.getElementById('pastFinishedSchedulesTab') as HTMLButtonElement;
+
+  // Reset all tabs to inactive state
+  if (todayFinishedSchedulesTab) {
+    todayFinishedSchedulesTab.classList.remove('bg-blue-600', 'text-white');
+    todayFinishedSchedulesTab.classList.add('bg-gray-100', 'text-gray-700');
+  }
+  if (pastFinishedSchedulesTab) {
+    pastFinishedSchedulesTab.classList.remove('bg-blue-600', 'text-white');
+    pastFinishedSchedulesTab.classList.add('bg-gray-100', 'text-gray-700');
+  }
+
+  // Set active tab based on current finished schedule type
+  switch (currentFinishedScheduleType) {
+    case 'today':
+      if (todayFinishedSchedulesTab) {
+        todayFinishedSchedulesTab.classList.add('bg-blue-600', 'text-white');
+        todayFinishedSchedulesTab.classList.remove('bg-gray-100', 'text-gray-700');
+      }
+      break;
+    case 'past':
+      if (pastFinishedSchedulesTab) {
+        pastFinishedSchedulesTab.classList.add('bg-blue-600', 'text-white');
+        pastFinishedSchedulesTab.classList.remove('bg-gray-100', 'text-gray-700');
+      }
+      break;
+    default:
+      // Default to 'today' if no valid state
+      currentFinishedScheduleType = 'today';
+      if (todayFinishedSchedulesTab) {
+        todayFinishedSchedulesTab.classList.add('bg-blue-600', 'text-white');
+        todayFinishedSchedulesTab.classList.remove('bg-gray-100', 'text-gray-700');
       }
       break;
   }
@@ -2694,6 +2781,7 @@ function updatePersonnelButtonStates(isAssigned: boolean) {
 let allScheduledVisits: any[] = [];
 let allFinishedVisits: any[] = [];
 let currentScheduleType = 'all'; // 'all', 'today', 'future'
+let currentFinishedScheduleType = 'today'; // 'today', 'past'
 let currentSearchTerm = '';
 let currentStatusFilter = 'all';
 let currentRoleFilter = 'all';
@@ -3397,30 +3485,50 @@ if (typeof window !== 'undefined') {
 
 // Function to toggle history dropdown
 function toggleHistory(historyId: string) {
+  console.log('toggleHistory called with historyId:', historyId);
   const historyDiv = document.getElementById(historyId);
   const button = document.getElementById(`btn-${historyId}`);
   const icon = document.getElementById(`icon-${historyId}`);
-  
+
+  // Mobile: show modal popup
+  if (window.innerWidth <= 768) {
+    ensureHistoryModalExists();
+    if (historyDiv) {
+      const modal = document.getElementById('historyModal');
+      const modalContent = document.getElementById('historyModalContent');
+      if (modal && modalContent) {
+        // Copy the history list HTML only
+        const ul = historyDiv.querySelector('ul');
+        modalContent.innerHTML = ul ? ul.outerHTML : '<div class="text-gray-500">No history events.</div>';
+        modal.classList.remove('hidden');
+      }
+    }
+    return;
+  }
+
+  // Desktop: toggle dropdown
   if (historyDiv && button && icon) {
     const isHidden = historyDiv.classList.contains('hidden');
-    
+    console.log('Current state - isHidden:', isHidden);
     if (isHidden) {
-      // Show history
       historyDiv.classList.remove('hidden');
       icon.style.transform = 'rotate(180deg)';
       const span = button.querySelector('span');
       if (span) {
         span.textContent = span.textContent?.replace('See History', 'Hide History');
       }
+      console.log('History shown');
     } else {
-      // Hide history
       historyDiv.classList.add('hidden');
       icon.style.transform = 'rotate(0deg)';
       const span = button.querySelector('span');
       if (span) {
         span.textContent = span.textContent?.replace('Hide History', 'See History');
       }
+      console.log('History hidden');
     }
+  } else {
+    console.error('Could not find required elements for history toggle');
   }
 }
 
@@ -3882,6 +3990,55 @@ async function displayVisitorVisits(visits: any[]): Promise<void> {
 function applyFinishedFilters() {
   let filteredVisits = [...allFinishedVisits];
 
+  // Apply finished schedule type filter using Philippine time
+  const philippineToday = new Date();
+  // Convert to Philippine time (UTC+8)
+  philippineToday.setHours(philippineToday.getHours() + 8);
+
+  switch (currentFinishedScheduleType) {
+    case 'today':
+      // Show finished visits that were completed today
+      filteredVisits = filteredVisits.filter(visit => {
+        const completedDate = visit.completed_at ? new Date(visit.completed_at) : new Date(visit.visit_date);
+        const visitDate = new Date(visit.visit_date);
+        const today = new Date(philippineToday);
+        today.setHours(0, 0, 0, 0);
+        
+        // Check if the visit was completed today or if it was scheduled for today and is finished
+        const completedToday = completedDate.toDateString() === today.toDateString();
+        const scheduledToday = visitDate.toDateString() === today.toDateString();
+        
+        return completedToday || scheduledToday;
+      });
+      break;
+    case 'past':
+      // Show finished visits from past dates
+      filteredVisits = filteredVisits.filter(visit => {
+        const visitDate = new Date(visit.visit_date);
+        const today = new Date(philippineToday);
+        today.setHours(0, 0, 0, 0);
+        visitDate.setHours(0, 0, 0, 0);
+        
+        return visitDate.getTime() < today.getTime();
+      });
+      break;
+    default:
+      // Default to 'today' if no valid state
+      currentFinishedScheduleType = 'today';
+      filteredVisits = filteredVisits.filter(visit => {
+        const completedDate = visit.completed_at ? new Date(visit.completed_at) : new Date(visit.visit_date);
+        const visitDate = new Date(visit.visit_date);
+        const today = new Date(philippineToday);
+        today.setHours(0, 0, 0, 0);
+        
+        const completedToday = completedDate.toDateString() === today.toDateString();
+        const scheduledToday = visitDate.toDateString() === today.toDateString();
+        
+        return completedToday || scheduledToday;
+      });
+      break;
+  }
+
   // Apply role filter
   if (currentFinishedRoleFilter !== 'all') {
     filteredVisits = filteredVisits.filter(visit => {
@@ -3976,7 +4133,7 @@ function displayFinishedVisits(visits: any[]): void {
       <div class="text-center py-8">
         <div class="text-gray-500 dark:text-gray-400 text-lg">No finished visits found</div>
         <div class="text-gray-400 dark:text-gray-500 text-sm mt-2">
-          ${currentFinishedSearchTerm || currentFinishedRoleFilter !== 'all' || currentFinishedDateFilter !== 'all' || currentFinishedSpecificDate
+          ${currentFinishedSearchTerm || currentFinishedRoleFilter !== 'all' || currentFinishedDateFilter !== 'all' || currentFinishedSpecificDate || currentFinishedScheduleType !== 'today'
             ? 'Try adjusting your search or filters' 
             : 'No visits have been completed or marked as unsuccessful'}
         </div>
@@ -4050,4 +4207,68 @@ function displayFinishedVisits(visits: any[]): void {
       </div>
     `;
   }).join('');
+}
+
+// Make toggleHistory function available globally
+(window as any).toggleHistory = toggleHistory;
+
+// Function to set up history button event listeners (more reliable on mobile)
+function setupHistoryButtonListeners() {
+  // Find all history buttons and add event listeners
+  const historyButtons = document.querySelectorAll('[id^="btn-"]');
+  
+  historyButtons.forEach(button => {
+    // Remove any existing listeners to prevent duplicates
+    button.removeEventListener('click', handleHistoryButtonClick);
+    
+    // Add click listener (works on both desktop and mobile)
+    button.addEventListener('click', handleHistoryButtonClick);
+  });
+}
+
+// Handle history button click
+function handleHistoryButtonClick(event: Event) {
+  event.preventDefault();
+  event.stopPropagation();
+  
+  const button = event.currentTarget as HTMLElement;
+  const historyId = button.id.replace('btn-', '');
+  
+  console.log('History button clicked via event listener:', historyId);
+  toggleHistory(historyId);
+}
+
+// Handle history button touch (for mobile)
+function handleHistoryButtonTouch(event: TouchEvent) {
+  event.preventDefault();
+  event.stopPropagation();
+  
+  const button = event.currentTarget as HTMLElement;
+  const historyId = button.id.replace('btn-', '');
+  
+  console.log('History button touched via event listener:', historyId);
+  toggleHistory(historyId);
+}
+
+// Add this function to inject the modal HTML if it doesn't exist
+function ensureHistoryModalExists() {
+  if (!document.getElementById('historyModal')) {
+    const modal = document.createElement('div');
+    modal.id = 'historyModal';
+    modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 hidden';
+    modal.innerHTML = `
+      <div class="bg-white dark:bg-gray-900 rounded-lg shadow-lg max-w-md w-full mx-4 p-4 relative">
+        <button id="closeHistoryModal" class="absolute top-2 right-2 text-gray-400 hover:text-gray-700 dark:hover:text-white text-2xl font-bold">&times;</button>
+        <div id="historyModalContent" class="max-h-[60vh] overflow-y-auto"></div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    document.getElementById('closeHistoryModal')?.addEventListener('click', () => {
+      modal.classList.add('hidden');
+    });
+    // Also close on background click
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.classList.add('hidden');
+    });
+  }
 }
