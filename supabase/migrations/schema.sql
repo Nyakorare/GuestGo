@@ -531,37 +531,44 @@ CREATE OR REPLACE FUNCTION public.mark_past_visits_unsuccessful()
 RETURNS INTEGER AS $$
 DECLARE
     philippine_date DATE;
+    philippine_timestamp TIMESTAMP WITH TIME ZONE;
     affected_rows INTEGER;
     additional_affected_rows INTEGER;
+    end_of_day_affected_rows INTEGER;
     visit_record RECORD;
     log_row RECORD;
     new_history JSONB;
     existing_unsuccessful_events INTEGER;
     total_places INTEGER;
     completed_places INTEGER;
+    place_details JSONB;
+    end_of_day_time TIME := '23:59:59';
 BEGIN
-    -- Get current Philippine date (UTC+8) using the new function
+    -- Get current Philippine date and timestamp (UTC+8) using the new function
     philippine_date := public.get_philippine_date();
+    philippine_timestamp := public.get_philippine_timestamp();
     
     -- Mark pending visits from past dates as unsuccessful
     UPDATE scheduled_visits 
     SET 
         status = 'unsuccessful',
-        completed_at = public.get_philippine_timestamp(),
+        completed_at = philippine_timestamp,
         completed_by = NULL -- System action, no specific user
     WHERE status = 'pending' 
       AND visit_date < philippine_date;
     
     GET DIAGNOSTICS affected_rows = ROW_COUNT;
     
-    -- Also mark visits as unsuccessful if they are from today but not all places are completed
+    -- Mark visits as unsuccessful if they are from today but not all places are completed
+    -- AND it's past end of day (23:59:59 Philippine time)
     UPDATE scheduled_visits 
     SET 
         status = 'unsuccessful',
-        completed_at = public.get_philippine_timestamp(),
+        completed_at = philippine_timestamp,
         completed_by = NULL -- System action, no specific user
     WHERE status = 'pending' 
       AND visit_date = philippine_date
+      AND (philippine_timestamp::TIME > end_of_day_time)
       AND id IN (
           -- Find visits where not all places are completed
           SELECT sv.id
@@ -576,19 +583,19 @@ BEGIN
             )
       );
     
-    GET DIAGNOSTICS additional_affected_rows = ROW_COUNT;
-    affected_rows := affected_rows + additional_affected_rows;
+    GET DIAGNOSTICS end_of_day_affected_rows = ROW_COUNT;
+    affected_rows := affected_rows + end_of_day_affected_rows;
     
     -- Update the original visit_scheduled log entries to reflect the status change
     FOR visit_record IN 
-        SELECT id, visitor_user_id, visitor_role
+        SELECT id, visitor_user_id, visitor_role, visit_date
         FROM scheduled_visits 
         WHERE status = 'unsuccessful' 
           AND (
               visit_date < philippine_date
               OR (
                   visit_date = philippine_date
-                  AND completed_at >= (public.get_philippine_timestamp() - INTERVAL '1 minute')
+                  AND completed_at >= (philippine_timestamp - INTERVAL '1 minute')
               )
           )
     LOOP
@@ -608,7 +615,7 @@ BEGIN
             
             -- Only add the unsuccessful event if it doesn't already exist
             IF existing_unsuccessful_events = 0 THEN
-                -- Get place completion statistics for logging
+                -- Get place completion statistics and place names for logging
                 SELECT 
                     COUNT(*) INTO total_places
                 FROM scheduled_visit_places 
@@ -619,20 +626,37 @@ BEGIN
                 FROM scheduled_visit_places 
                 WHERE visit_id = visit_record.id AND status = 'completed';
                 
+                -- Get place names for this visit
+                SELECT 
+                    jsonb_agg(
+                        jsonb_build_object(
+                            'place_id', svp.place_id,
+                            'place_name', ptv.name,
+                            'place_location', ptv.location,
+                            'status', svp.status
+                        )
+                    ) INTO place_details
+                FROM scheduled_visit_places svp
+                LEFT JOIN places_to_visit ptv ON svp.place_id = ptv.id
+                WHERE svp.visit_id = visit_record.id;
+                
                 new_history := (log_row.details->'history') || jsonb_build_array(
                     jsonb_build_object(
                         'event', 'marked_unsuccessful',
-                        'timestamp', public.get_philippine_timestamp(),
+                        'timestamp', philippine_timestamp,
                         'details', jsonb_build_object(
                             'by', 'system',
                             'reason', CASE 
                                 WHEN visit_record.visit_date < philippine_date THEN 'Visit was not completed on or before the scheduled date'
-                                ELSE 'Not all places were completed by the end of the scheduled day'
+                                ELSE 'Not all places were completed by the end of the scheduled day (23:59:59)'
                             END,
                             'auto_marked', true,
                             'total_places', total_places,
                             'completed_places', completed_places,
-                            'incomplete_places', total_places - completed_places
+                            'incomplete_places', total_places - completed_places,
+                            'places', place_details,
+                            'philippine_date', philippine_date,
+                            'philippine_time', philippine_timestamp::TIME
                         )
                     )
                 );
@@ -657,9 +681,12 @@ BEGIN
             jsonb_build_object(
                 'action', 'auto_mark_past_visits',
                 'affected_visits', affected_rows,
+                'past_date_visits', affected_rows - end_of_day_affected_rows,
+                'end_of_day_visits', end_of_day_affected_rows,
                 'philippine_date', philippine_date,
-                'executed_at', public.get_philippine_timestamp(),
-                'executed_at_philippine_time', public.get_philippine_timestamp()
+                'philippine_timestamp', philippine_timestamp,
+                'executed_at', philippine_timestamp,
+                'executed_at_philippine_time', philippine_timestamp
             )
         );
     END IF;
@@ -1064,6 +1091,7 @@ DECLARE
     visit_place_id UUID;
     log_row RECORD;
     new_history JSONB;
+    place_details JSONB;
 BEGIN
     -- Check if the user marking is an admin
     SELECT role INTO admin_role 
@@ -1108,6 +1136,20 @@ BEGIN
             '"unsuccessful"'
         ) WHERE id = log_row.id;
     ELSE
+        -- Get place information for this visit
+        SELECT 
+            jsonb_agg(
+                jsonb_build_object(
+                    'place_id', svp.place_id,
+                    'place_name', ptv.name,
+                    'place_location', ptv.location,
+                    'status', svp.status
+                )
+            ) INTO place_details
+        FROM scheduled_visit_places svp
+        LEFT JOIN places_to_visit ptv ON svp.place_id = ptv.id
+        WHERE svp.visit_id = p_visit_id;
+        
         -- Create new log entry for visits without existing logs
         PERFORM public.log_action(
             p_marked_by,
@@ -1115,6 +1157,7 @@ BEGIN
             jsonb_build_object(
                 'visit_id', p_visit_id,
                 'place_id', visit_place_id,
+                'places', place_details,
                 'marked_at', public.get_philippine_timestamp(),
                 'marked_at_philippine_time', public.get_philippine_timestamp(),
                 'reason', 'Manually marked as unsuccessful by admin'
@@ -1340,6 +1383,32 @@ BEGIN
     );
     
     RETURN affected_visits;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to manually trigger the cleanup (for testing and admin use)
+CREATE OR REPLACE FUNCTION public.manual_cleanup_past_visits()
+RETURNS TEXT AS $$
+DECLARE
+    affected_visits INTEGER;
+    philippine_date DATE;
+    philippine_timestamp TIMESTAMP WITH TIME ZONE;
+BEGIN
+    -- Get current Philippine date and timestamp
+    philippine_date := public.get_philippine_date();
+    philippine_timestamp := public.get_philippine_timestamp();
+    
+    -- Call the cleanup function
+    affected_visits := public.mark_past_visits_unsuccessful();
+    
+    -- Return a detailed message
+    RETURN json_build_object(
+        'message', 'Manual cleanup completed successfully',
+        'affected_visits', affected_visits,
+        'philippine_date', philippine_date,
+        'philippine_timestamp', philippine_timestamp,
+        'executed_at', philippine_timestamp
+    )::TEXT;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

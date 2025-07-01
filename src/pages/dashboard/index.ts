@@ -400,6 +400,12 @@ export function DashboardPage() {
               >
                 Refresh Logs
               </button>
+              <button 
+                id="cleanupVisitsBtn"
+                class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 w-full sm:w-auto"
+              >
+                Cleanup Past Visits
+              </button>
             </div>
           </div>
         </div>
@@ -1487,10 +1493,16 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
           // Multi-place visit
           const placeNames = parsedDetails.place_names || [];
           placesHtml = `<div><span class="font-medium">Places (${parsedDetails.total_places || placeNames.length}):</span> ${placeNames.join(', ')}</div>`;
-        } else {
-          // Single place visit
-          const visitPlaceName = await getPlaceName(parsedDetails.place_id);
+        } else if (parsedDetails.place_names && Array.isArray(parsedDetails.place_names) && parsedDetails.place_names.length === 1) {
+          // Single place visit - use the place name from the log
+          placesHtml = `<div><span class="font-medium">Place:</span> ${parsedDetails.place_names[0]}</div>`;
+        } else if (parsedDetails.place_ids && Array.isArray(parsedDetails.place_ids) && parsedDetails.place_ids.length === 1) {
+          // Single place visit - try to get place name from database
+          const visitPlaceName = await getPlaceName(parsedDetails.place_ids[0]);
           placesHtml = `<div><span class="font-medium">Place:</span> ${visitPlaceName}</div>`;
+        } else {
+          // Fallback
+          placesHtml = `<div><span class="font-medium">Place:</span> Unknown</div>`;
         }
         
         // Check if the visit has a current status (e.g., marked as unsuccessful or completed)
@@ -1584,18 +1596,35 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
         let when = parsedDetails.marked_at || parsedDetails.executed_at || parsedDetails.completed_at;
         let whenStr = when ? new Date(when).toLocaleString() : 'Unknown';
         let reason = parsedDetails.reason || 'The visit was not completed on or before the scheduled date.';
-        let visitPlaceName = '';
+        let placesHtml = '';
         
-        // Try to get place name if place_id is available
-        if (parsedDetails.place_id) {
-          visitPlaceName = await getPlaceName(parsedDetails.place_id);
+        // Handle place information - could be single place_id or array of places
+        if (parsedDetails.places && Array.isArray(parsedDetails.places)) {
+          // Multi-place visit from cleanup logs
+          const placeNames = parsedDetails.places.map((place: any) => {
+            const statusClass = place.status === 'completed' ? 'text-green-600' : 'text-red-600';
+            return `<span class="${statusClass}">${place.place_name || 'Unknown Place'}</span>`;
+          }).join(', ');
+          placesHtml = `<div><span class="font-medium">Places:</span> ${placeNames}</div>`;
+        } else if (parsedDetails.place_names && Array.isArray(parsedDetails.place_names)) {
+          // Multi-place visit from original scheduling
+          const placeNames = parsedDetails.place_names.map((name: string) => 
+            `<span class="text-blue-600">${name}</span>`
+          ).join(', ');
+          placesHtml = `<div><span class="font-medium">Places:</span> ${placeNames}</div>`;
+        } else if (parsedDetails.place_id) {
+          // Single place visit - try to get place name from database
+          const visitPlaceName = await getPlaceName(parsedDetails.place_id);
+          if (visitPlaceName) {
+            placesHtml = `<div><span class="font-medium">Place:</span> ${visitPlaceName}</div>`;
+          }
         }
         
         let detailsHtml = `<div>This visit was <span class="font-semibold text-red-600">marked as unsuccessful</span> on <span class="font-medium">${whenStr}</span>.<br><span class="font-medium">Reason:</span> ${reason}</div>`;
         
         // Add place information if available
-        if (visitPlaceName) {
-          detailsHtml += `<div><span class="font-medium">Place:</span> ${visitPlaceName}</div>`;
+        if (placesHtml) {
+          detailsHtml += placesHtml;
         }
         
         // Add visitor information if available
@@ -1606,6 +1635,20 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
         // Add visit date if available
         if (parsedDetails.visit_date) {
           detailsHtml += `<div><span class="font-medium">Scheduled Date:</span> ${new Date(parsedDetails.visit_date).toLocaleDateString()}</div>`;
+        }
+        
+        // Add additional details for auto-marked visits
+        if (parsedDetails.action === 'auto_mark_past_visits') {
+          detailsHtml += `<div><span class="font-medium">Action:</span> <span class="text-blue-600">Automatic system cleanup</span></div>`;
+          if (parsedDetails.affected_visits) {
+            detailsHtml += `<div><span class="font-medium">Total visits affected:</span> ${parsedDetails.affected_visits}</div>`;
+          }
+          if (parsedDetails.past_date_visits) {
+            detailsHtml += `<div><span class="font-medium">Past date visits:</span> ${parsedDetails.past_date_visits}</div>`;
+          }
+          if (parsedDetails.end_of_day_visits) {
+            detailsHtml += `<div><span class="font-medium">End of day visits:</span> ${parsedDetails.end_of_day_visits}</div>`;
+          }
         }
         
         return detailsHtml;
@@ -2078,6 +2121,49 @@ function setupDashboardEventListeners() {
     });
   } else {
     console.warn('Refresh logs button not found');
+  }
+
+  // Cleanup visits button
+  const cleanupVisitsBtn = document.getElementById('cleanupVisitsBtn');
+  console.log('Cleanup visits button found:', !!cleanupVisitsBtn);
+  if (cleanupVisitsBtn) {
+    cleanupVisitsBtn.addEventListener('click', async () => {
+      console.log('Cleanup visits button clicked');
+      try {
+        // Show confirmation dialog
+        const confirmed = confirm('Are you sure you want to cleanup past visits? This will mark all pending visits from past dates as unsuccessful.');
+        if (!confirmed) {
+          return;
+        }
+
+        // Show loading state
+        (cleanupVisitsBtn as HTMLButtonElement).disabled = true;
+        cleanupVisitsBtn.textContent = 'Cleaning up...';
+        
+        // Call the cleanup function
+        const { data, error } = await supabase.rpc('manual_cleanup_past_visits');
+        
+        if (error) {
+          console.error('Error cleaning up past visits:', error);
+          showNotification('Error cleaning up past visits: ' + error.message, 'error');
+        } else {
+          const result = JSON.parse(data);
+          showNotification(`Cleanup completed! ${result.affected_visits} visits marked as unsuccessful.`, 'success');
+          
+          // Reload logs to show the cleanup action
+          await loadLogs();
+        }
+      } catch (error) {
+        console.error('Error in cleanup:', error);
+        showNotification('Error cleaning up past visits', 'error');
+      } finally {
+        // Reset button state
+        (cleanupVisitsBtn as HTMLButtonElement).disabled = false;
+        cleanupVisitsBtn.textContent = 'Cleanup Past Visits';
+      }
+    });
+  } else {
+    console.warn('Cleanup visits button not found');
   }
 
   // Search and filter event listeners
@@ -2593,46 +2679,46 @@ async function assignPersonnelToPlace(placeId: string) {
       await actuallyAssignPersonnel();
 
       async function actuallyAssignPersonnel() {
-        // Show loading state
-        assignBtn.disabled = true;
-        assignBtn.textContent = 'Assigning...';
-        try {
-          const { data, error } = await supabase.rpc('assign_personnel_to_place', {
-            p_place_id: placeId,
-            p_personnel_id: selectedPersonnelId,
-            p_assigned_by: (await supabase.auth.getUser()).data.user?.id
-          });
+      // Show loading state
+      assignBtn.disabled = true;
+      assignBtn.textContent = 'Assigning...';
+      try {
+        const { data, error } = await supabase.rpc('assign_personnel_to_place', {
+          p_place_id: placeId,
+          p_personnel_id: selectedPersonnelId,
+          p_assigned_by: (await supabase.auth.getUser()).data.user?.id
+        });
 
-          if (error) throw error;
+        if (error) throw error;
 
-          // Log the action
-          await logAction('personnel_assignment', {
-            place_id: placeId,
-            personnel_id: selectedPersonnelId,
-            assigned_at: new Date().toISOString()
-          });
+        // Log the action
+        await logAction('personnel_assignment', {
+          place_id: placeId,
+          personnel_id: selectedPersonnelId,
+          assigned_at: new Date().toISOString()
+        });
 
-          // Show success message
-          if (successDiv) {
-            successDiv.textContent = 'Personnel assigned successfully!';
-            successDiv.classList.remove('hidden');
-          }
+        // Show success message
+        if (successDiv) {
+          successDiv.textContent = 'Personnel assigned successfully!';
+          successDiv.classList.remove('hidden');
+        }
 
-          // Close modal after 2 seconds
-          setTimeout(() => {
-            modal.classList.add('hidden');
-            loadPlaces(); // Reload places
-          }, 2000);
+        // Close modal after 2 seconds
+        setTimeout(() => {
+          modal.classList.add('hidden');
+          loadPlaces(); // Reload places
+        }, 2000);
 
         } catch (err) {
-          if (errorDiv) {
-            errorDiv.textContent = err.message || 'Error assigning personnel';
-            errorDiv.classList.remove('hidden');
-          }
-        } finally {
-          // Reset button state
-          assignBtn.disabled = false;
-          assignBtn.textContent = 'Assign Personnel';
+        if (errorDiv) {
+          errorDiv.textContent = err.message || 'Error assigning personnel';
+          errorDiv.classList.remove('hidden');
+        }
+      } finally {
+        // Reset button state
+        assignBtn.disabled = false;
+        assignBtn.textContent = 'Assign Personnel';
         }
       }
     };
@@ -2929,7 +3015,20 @@ async function loadScheduledVisits() {
         currentPlaceFilter = 'all';
       }
     }
-    // --- MISSING: Get scheduled visits for this personnel ---
+    
+    // --- Call database function to mark past visits as unsuccessful ---
+    try {
+      const { data: markResult, error: markError } = await supabase.rpc('mark_past_visits_unsuccessful');
+      if (markError) {
+        console.error('Error marking past visits as unsuccessful:', markError);
+      } else if (markResult && markResult > 0) {
+        console.log(`Marked ${markResult} past visits as unsuccessful`);
+      }
+    } catch (markErr) {
+      console.error('Error calling mark_past_visits_unsuccessful:', markErr);
+    }
+    
+    // --- Get scheduled visits for this personnel ---
     let scheduledVisits;
     let error;
     try {
@@ -2947,11 +3046,11 @@ async function loadScheduledVisits() {
       showNotification('Error loading scheduled visits: ' + error.message, 'error');
       return;
     }
+    
     // Store all visits for filtering
     allScheduledVisits = scheduledVisits || [];
     // Apply filters and display
     await applyVisitsFilters();
-    // ... existing code ...
   } catch (error) {
     console.error('Error loading scheduled visits:', error);
     showNotification('Error loading scheduled visits', 'error');
@@ -3075,7 +3174,7 @@ async function loadFinishedSchedules() {
 async function applyVisitsFilters() {
   let filteredVisits = [...allScheduledVisits];
 
-  // Filter out unsuccessful visits from scheduled visits view
+  // Filter out unsuccessful visits from scheduled visits view (personnel should not see unsuccessful visits)
   filteredVisits = filteredVisits.filter(visit => visit.status !== 'unsuccessful');
 
   // Apply schedule type filter using Philippine time
@@ -3105,7 +3204,7 @@ async function applyVisitsFilters() {
     // 'all' case - no filtering needed
   }
 
-  // Apply status filter
+  // Apply status filter (but still exclude unsuccessful visits)
   if (currentStatusFilter !== 'all') {
     filteredVisits = filteredVisits.filter(visit => visit.status === currentStatusFilter);
   }
