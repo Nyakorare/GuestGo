@@ -29,6 +29,10 @@ interface Account {
   last_name?: string;
 }
 
+// Place filter for scheduled visits (global scope)
+let currentPlaceFilter = 'all';
+let placeFilterOptions = [];
+
 export function DashboardPage() {
   // Initialize the page
   setTimeout(async () => {
@@ -2525,47 +2529,111 @@ async function assignPersonnelToPlace(placeId: string) {
         return;
       }
 
-      // Show loading state
-      assignBtn.disabled = true;
-      assignBtn.textContent = 'Assigning...';
-
+      // Check if this personnel is already assigned to another place
+      let alreadyAssignedPlace = null;
       try {
-        const { data, error } = await supabase.rpc('assign_personnel_to_place', {
-          p_place_id: placeId,
-          p_personnel_id: selectedPersonnelId,
-          p_assigned_by: (await supabase.auth.getUser()).data.user?.id
-        });
-
-        if (error) throw error;
-
-        // Log the action
-        await logAction('personnel_assignment', {
-          place_id: placeId,
-          personnel_id: selectedPersonnelId,
-          assigned_at: new Date().toISOString()
-        });
-
-        // Show success message
-        if (successDiv) {
-          successDiv.textContent = 'Personnel assigned successfully!';
-          successDiv.classList.remove('hidden');
+        const { data: assignments, error: assignmentError } = await supabase
+          .from('place_personnel')
+          .select('place_id')
+          .eq('personnel_id', selectedPersonnelId);
+        if (assignmentError) throw assignmentError;
+        if (assignments && assignments.length > 0) {
+          // If assigned to a different place (not this one)
+          if (!assignments.some(a => a.place_id === placeId)) {
+            alreadyAssignedPlace = assignments[0].place_id;
+          }
         }
-
-        // Close modal after 2 seconds
-        setTimeout(() => {
-          modal.classList.add('hidden');
-          loadPlaces(); // Reload places
-        }, 2000);
-
-      } catch (err: any) {
+      } catch (err) {
         if (errorDiv) {
-          errorDiv.textContent = err.message || 'Error assigning personnel';
+          errorDiv.textContent = 'Error checking personnel assignment';
           errorDiv.classList.remove('hidden');
         }
-      } finally {
+        return;
+      }
+
+      // If already assigned elsewhere, show double confirmation modal
+      if (alreadyAssignedPlace) {
+        // Create or show a custom confirmation modal
+        let doubleConfirmModal = document.getElementById('doubleConfirmModal');
+        if (!doubleConfirmModal) {
+          doubleConfirmModal = document.createElement('div');
+          doubleConfirmModal.id = 'doubleConfirmModal';
+          doubleConfirmModal.className = 'fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50';
+          doubleConfirmModal.innerHTML = `
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 max-w-md w-full mx-4">
+              <h2 class="text-xl font-bold mb-4 text-red-600">Personnel Already Assigned</h2>
+              <p class="mb-6 text-gray-700 dark:text-gray-200">This personnel is already assigned to another place. Are you sure you want to assign them to this place as well?</p>
+              <div class="flex justify-end gap-2">
+                <button id="doubleConfirmCancel" class="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400 text-gray-800">Cancel</button>
+                <button id="doubleConfirmProceed" class="px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-white">Yes, Assign</button>
+              </div>
+            </div>
+          `;
+          document.body.appendChild(doubleConfirmModal);
+        } else {
+          doubleConfirmModal.classList.remove('hidden');
+        }
+        // Add event listeners
+        document.getElementById('doubleConfirmCancel').onclick = () => {
+          doubleConfirmModal.classList.add('hidden');
+          assignBtn.disabled = false;
+          assignBtn.textContent = 'Assign Personnel';
+        };
+        document.getElementById('doubleConfirmProceed').onclick = async () => {
+          doubleConfirmModal.classList.add('hidden');
+          await actuallyAssignPersonnel();
+        };
         // Reset button state
         assignBtn.disabled = false;
         assignBtn.textContent = 'Assign Personnel';
+        return;
+      }
+
+      // If not already assigned elsewhere, proceed as normal
+      await actuallyAssignPersonnel();
+
+      async function actuallyAssignPersonnel() {
+        // Show loading state
+        assignBtn.disabled = true;
+        assignBtn.textContent = 'Assigning...';
+        try {
+          const { data, error } = await supabase.rpc('assign_personnel_to_place', {
+            p_place_id: placeId,
+            p_personnel_id: selectedPersonnelId,
+            p_assigned_by: (await supabase.auth.getUser()).data.user?.id
+          });
+
+          if (error) throw error;
+
+          // Log the action
+          await logAction('personnel_assignment', {
+            place_id: placeId,
+            personnel_id: selectedPersonnelId,
+            assigned_at: new Date().toISOString()
+          });
+
+          // Show success message
+          if (successDiv) {
+            successDiv.textContent = 'Personnel assigned successfully!';
+            successDiv.classList.remove('hidden');
+          }
+
+          // Close modal after 2 seconds
+          setTimeout(() => {
+            modal.classList.add('hidden');
+            loadPlaces(); // Reload places
+          }, 2000);
+
+        } catch (err) {
+          if (errorDiv) {
+            errorDiv.textContent = err.message || 'Error assigning personnel';
+            errorDiv.classList.remove('hidden');
+          }
+        } finally {
+          // Reset button state
+          assignBtn.disabled = false;
+          assignBtn.textContent = 'Assign Personnel';
+        }
       }
     };
 
@@ -2636,7 +2704,7 @@ async function loadPersonnelDashboard() {
   }
 
   try {
-    // Get personnel's assigned place and availability
+    // Get personnel's assigned places and availability
     const { data: availabilityData, error } = await supabase.rpc('get_personnel_availability', {
       p_personnel_id: user.id
     });
@@ -2655,15 +2723,13 @@ async function loadPersonnelDashboard() {
 
     // Check if personnel is assigned to any places
     const isAssigned = availabilityData && availabilityData.length > 0;
-    
-    // Update button states based on assignment
     updatePersonnelButtonStates(isAssigned);
 
     if (personnelAssignmentInfo) {
       if (isAssigned) {
-        const assignment = availabilityData[0]; // Personnel can only be assigned to one place
-        personnelAssignmentInfo.innerHTML = `
-          <div class="bg-white dark:bg-gray-700 rounded-lg shadow p-6">
+        // Show all assignments
+        personnelAssignmentInfo.innerHTML = availabilityData.map((assignment: any) => `
+          <div class="bg-white dark:bg-gray-700 rounded-lg shadow p-6 mb-4">
             <div class="flex items-center justify-between mb-4">
               <h3 class="text-xl font-semibold text-gray-900 dark:text-white">${assignment.place_name}</h3>
               <span class="inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
@@ -2674,7 +2740,6 @@ async function loadPersonnelDashboard() {
                 ${assignment.is_available ? 'Available' : 'Unavailable'}
               </span>
             </div>
-            
             <div class="space-y-3">
               <div>
                 <p class="text-sm text-gray-600 dark:text-gray-300">${assignment.place_description || 'No description available'}</p>
@@ -2695,7 +2760,6 @@ async function loadPersonnelDashboard() {
                 <p class="text-sm text-gray-600 dark:text-gray-300"><strong>Last updated:</strong> ${new Date(assignment.updated_at).toLocaleString()}</p>
               </div>
             </div>
-            
             <div class="mt-6">
               <button 
                 onclick="window.togglePersonnelAvailability('${assignment.place_id}', ${assignment.is_available})"
@@ -2705,7 +2769,7 @@ async function loadPersonnelDashboard() {
               </button>
             </div>
           </div>
-        `;
+        `).join('');
       } else {
         personnelAssignmentInfo.innerHTML = `
           <div class="bg-white dark:bg-gray-700 rounded-lg shadow p-6">
@@ -2721,7 +2785,6 @@ async function loadPersonnelDashboard() {
         `;
       }
     }
-
     // Note: Scheduled visits will be loaded when the visits tab is clicked
   } catch (error) {
     console.error('Error in loadPersonnelDashboard:', error);
@@ -2825,60 +2888,50 @@ async function loadScheduledVisits() {
     // Check if the user is assigned to any places
     const { data: assignments, error: assignmentError } = await supabase
       .from('place_personnel')
-      .select('place_id')
+      .select('place_id, place:place_id(name)')
       .eq('personnel_id', user.id);
-
     if (assignmentError) {
       console.error('Error checking personnel assignments:', assignmentError);
       showNotification('Error checking personnel assignments', 'error');
       return;
     }
-
     if (!assignments || assignments.length === 0) {
       console.log('User is not assigned to any places');
-      // Show empty state instead of error
       allScheduledVisits = [];
       await applyVisitsFilters();
       return;
     }
-
-    // Get scheduled visits for this personnel
-    console.log('Calling get_personnel_scheduled_visits with personnel_id:', user.id);
-    console.log('User ID type:', typeof user.id);
-    console.log('User ID value:', user.id);
-    
-    // Test if RPC calls are working at all
-    try {
-      const { data: testData, error: testError } = await supabase.rpc('get_philippine_date');
-      console.log('Test RPC call result:', { data: testData, error: testError });
-    } catch (testErr) {
-      console.error('Test RPC call failed:', testErr);
+    // --- Place filter UI ---
+    const visitsContent = document.getElementById('visitsContent');
+    let placeFilterDiv = document.getElementById('placeFilterDiv');
+    if (!placeFilterDiv && visitsContent) {
+      placeFilterDiv = document.createElement('div');
+      placeFilterDiv.id = 'placeFilterDiv';
+      placeFilterDiv.className = 'mb-4';
+      visitsContent.prepend(placeFilterDiv);
     }
-    
-    // Test basic table access
-    try {
-      const { data: tableTest, error: tableError } = await supabase
-        .from('user_roles')
-        .select('count')
-        .limit(1);
-      console.log('Table access test result:', { data: tableTest, error: tableError });
-    } catch (tableErr) {
-      console.error('Table access test failed:', tableErr);
+    if (placeFilterDiv) {
+      if (assignments.length > 1) {
+        placeFilterOptions = assignments.map((a: any) => ({ id: a.place_id, name: a.place?.name || a.place_id }));
+        placeFilterDiv.innerHTML = `<label for="placeFilterSelect" class="mr-2 font-medium">Filter by Place:</label>
+          <select id="placeFilterSelect" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+            <option value="all">All</option>
+            ${placeFilterOptions.map((opt: any) => `<option value="${opt.id}">${opt.name}</option>`).join('')}
+          </select>`;
+        const placeFilterSelect = document.getElementById('placeFilterSelect') as HTMLSelectElement;
+        placeFilterSelect.value = currentPlaceFilter;
+        placeFilterSelect.onchange = (e) => {
+          currentPlaceFilter = (e.target as HTMLSelectElement).value;
+          applyVisitsFilters();
+        };
+      } else {
+        placeFilterDiv.innerHTML = '';
+        currentPlaceFilter = 'all';
+      }
     }
-    
-    // Test if the function exists by calling it with a simple parameter
-    try {
-      const { data: funcTest, error: funcError } = await supabase.rpc('get_personnel_scheduled_visits', {
-        p_personnel_id: '00000000-0000-0000-0000-000000000000' // Test with dummy UUID
-      });
-      console.log('Function existence test result:', { data: funcTest, error: funcError });
-    } catch (funcErr) {
-      console.error('Function existence test failed:', funcErr);
-    }
-    
+    // --- MISSING: Get scheduled visits for this personnel ---
     let scheduledVisits;
     let error;
-    
     try {
       const result = await supabase.rpc('get_personnel_scheduled_visits', {
         p_personnel_id: user.id
@@ -2889,36 +2942,16 @@ async function loadScheduledVisits() {
       console.error('RPC call threw an exception:', rpcError);
       error = rpcError;
     }
-
     if (error) {
       console.error('Error loading scheduled visits:', error);
-      console.error('Error details:', {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
-        status: error.status,
-        statusText: error.statusText
-      });
-      console.error('Full error object:', JSON.stringify(error, null, 2));
       showNotification('Error loading scheduled visits: ' + error.message, 'error');
       return;
     }
-
-    console.log('Scheduled visits loaded successfully:', scheduledVisits?.length || 0);
-
     // Store all visits for filtering
     allScheduledVisits = scheduledVisits || [];
-
     // Apply filters and display
     await applyVisitsFilters();
-
-    // Update last refresh time
-    lastVisitsRefresh = Date.now();
-
-    // Start auto-refresh if not already running
-    startVisitsAutoRefresh();
-
+    // ... existing code ...
   } catch (error) {
     console.error('Error loading scheduled visits:', error);
     showNotification('Error loading scheduled visits', 'error');
@@ -3099,6 +3132,11 @@ async function applyVisitsFilters() {
              purpose.toLowerCase().includes(searchLower) ||
              status.toLowerCase().includes(searchLower);
     });
+  }
+
+  // Place filter for personnel
+  if (currentPlaceFilter !== 'all') {
+    filteredVisits = filteredVisits.filter(visit => visit.place_id === currentPlaceFilter);
   }
 
   await displayScheduledVisits(filteredVisits);
