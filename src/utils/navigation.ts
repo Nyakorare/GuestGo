@@ -2,6 +2,7 @@ import { HomePage } from '../pages/Home';
 import { AboutPage } from '../pages/about';
 import { ContactPage } from '../pages/contact';
 import { DashboardPage } from '../pages/dashboard';
+import { setupAboutPageInteractivity } from './eventHandlers';
 
 export function renderPage(path: string) {
   // Hide welcome message and profile settings by default
@@ -40,6 +41,9 @@ export function updateNavigation() {
     
     mainContent.innerHTML = '';
     mainContent.appendChild(content);
+    if (path === '/about') {
+      setupAboutPageInteractivity();
+    }
   }
 
   // Update active navigation link

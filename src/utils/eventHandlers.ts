@@ -375,3 +375,82 @@ export function setupEventListeners() {
     updateAuthMenu(!!session);
   });
 }
+
+export function setupAboutPageInteractivity() {
+  // FAQ Dropdown
+  document.querySelectorAll('.faq-question').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const answer = this.parentElement.querySelector('.faq-answer');
+      const icon = this.querySelector('svg');
+      const expanded = answer.style.maxHeight && answer.style.maxHeight !== '0px';
+      if (!expanded) {
+        answer.style.maxHeight = answer.scrollHeight + 'px';
+        icon.style.transform = 'rotate(180deg)';
+      } else {
+        answer.style.maxHeight = '0px';
+        icon.style.transform = 'rotate(0deg)';
+      }
+    });
+  });
+
+  // Team Member Popup
+  const teamDetails = {
+    glenn: { name: 'Glenn', title: 'Founder & CEO', bio: 'Visionary leader with a passion for guest experience and technology.', img: '/glenn.jpg' },
+    justine: { name: 'Justine', title: 'Product Manager', bio: 'Ensures GuestGo delivers value and innovation to every client.', img: '/justine.jpg' },
+    ken: { name: 'Ken', title: 'Lead Developer', bio: 'Architects robust, scalable systems for seamless guest management.', img: '/ken.jpg' },
+    kurt: { name: 'Kurt', title: 'UI/UX Designer', bio: 'Designs intuitive and beautiful interfaces for all users.', img: '/kurt.jpg' },
+    walter: { name: 'Walter', title: 'QA Engineer', bio: 'Guarantees quality and reliability across the platform.', img: '/walter.jpg' },
+  };
+  document.querySelectorAll('.team-member').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const member = this.getAttribute('data-member');
+      const details = teamDetails[member];
+      if (details) {
+        document.getElementById('team-modal-content').innerHTML = `
+          <img src="${details.img}" alt="${details.name}" class="w-24 h-24 rounded-full mx-auto mb-4">
+          <h3 class="text-2xl font-bold mb-2">${details.name}</h3>
+          <p class="text-blue-600 dark:text-blue-400 font-semibold mb-2">${details.title}</p>
+          <p class="text-gray-700 dark:text-gray-300">${details.bio}</p>
+        `;
+        document.getElementById('team-modal').classList.remove('hidden');
+      }
+    });
+  });
+  const closeBtn = document.getElementById('close-team-modal');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      document.getElementById('team-modal').classList.add('hidden');
+    });
+  }
+
+  // Guests Managed Counter (from DB)
+  (async () => {
+    const el = document.getElementById('guests-managed');
+    if (el) {
+      const { count, error } = await supabase
+        .from('scheduled_visits')
+        .select('*', { count: 'exact', head: true });
+      if (!error) {
+        animateCounter(el, count || 0);
+      }
+    }
+  })();
+  // Uptime Counter (placeholder, e.g. 99.98)
+  const uptimeEl = document.getElementById('uptime');
+  if (uptimeEl) animateCounter(uptimeEl, 99.98, 2);
+
+  function animateCounter(el, target, decimals = 0) {
+    let count = 0;
+    const increment = Math.max(1, Math.floor(target / 100));
+    function update() {
+      if (count < target) {
+        count = Math.min(target, count + increment);
+        el.innerText = decimals ? count.toFixed(decimals) : count.toLocaleString();
+        setTimeout(update, 20);
+      } else {
+        el.innerText = decimals ? target.toFixed(decimals) : target.toLocaleString();
+      }
+    }
+    update();
+  }
+}
