@@ -22,7 +22,7 @@ CREATE TYPE user_role AS ENUM ('admin', 'log', 'personnel', 'visitor', 'guest');
 CREATE TYPE log_action AS ENUM ('password_change', 'place_update', 'place_availability_toggle', 'place_create', 'personnel_assignment', 'personnel_removal', 'personnel_availability_change', 'visit_scheduled', 'visit_completed', 'visit_unsuccessful');
 
 -- Create enum for visit status
-CREATE TYPE visit_status AS ENUM ('pending', 'completed', 'cancelled', 'unsuccessful');
+CREATE TYPE visit_status AS ENUM ('pending', 'completed', 'cancelled', 'unsuccessful', 'failed');
 
 -- Create places_to_visit table
 CREATE TABLE places_to_visit (
@@ -327,6 +327,7 @@ DECLARE
     place_id UUID;
     place_names TEXT[] := '{}';
     place_name TEXT;
+    place_details JSONB;
 BEGIN
     -- Debug: Log the received date and current Philippine date
     RAISE NOTICE 'DEBUG: Received visit_date: %, Type: %', p_visit_date, pg_typeof(p_visit_date);
@@ -408,6 +409,20 @@ BEGIN
         VALUES (visit_id, place_id, 'pending');
     END LOOP;
     
+    -- Get detailed place information for logging
+    SELECT 
+        jsonb_agg(
+            jsonb_build_object(
+                'place_id', ptv.id,
+                'place_name', ptv.name,
+                'place_description', ptv.description,
+                'place_location', ptv.location,
+                'status', 'pending'
+            )
+        ) INTO place_details
+    FROM places_to_visit ptv
+    WHERE ptv.id = ANY(p_place_ids);
+    
     -- Log the visit with all places
     log_id := public.log_action(
         p_visitor_user_id, -- This will be NULL for guest visits, which is fine
@@ -424,6 +439,7 @@ BEGIN
             'place_names', place_names,
             'total_places', array_length(p_place_ids, 1),
             'scheduled_at_philippine_time', public.get_philippine_timestamp(),
+            'places', place_details,
             'history', jsonb_build_array(
                 jsonb_build_object(
                     'event', 'scheduled',
@@ -432,7 +448,8 @@ BEGIN
                         'by', p_visitor_user_id,
                         'purpose', p_purpose,
                         'scheduled_as_guest', visitor_role = 'guest',
-                        'places_count', array_length(p_place_ids, 1)
+                        'places_count', array_length(p_place_ids, 1),
+                        'places', place_details
                     )
                 )
             )
@@ -559,6 +576,20 @@ BEGIN
     
     GET DIAGNOSTICS affected_rows = ROW_COUNT;
     
+    -- Mark places as failed for visits that were just marked as unsuccessful
+    UPDATE scheduled_visit_places 
+    SET 
+        status = 'failed',
+        completed_at = philippine_timestamp,
+        completed_by = NULL
+    WHERE visit_id IN (
+        SELECT id FROM scheduled_visits 
+        WHERE status = 'unsuccessful' 
+          AND visit_date < philippine_date
+          AND completed_at >= (philippine_timestamp - INTERVAL '1 minute')
+    )
+    AND status = 'pending';
+    
     -- Mark visits as unsuccessful if they are from today but not all places are completed
     -- AND it's past end of day (23:59:59 Philippine time)
     UPDATE scheduled_visits 
@@ -585,6 +616,20 @@ BEGIN
     
     GET DIAGNOSTICS end_of_day_affected_rows = ROW_COUNT;
     affected_rows := affected_rows + end_of_day_affected_rows;
+    
+    -- Mark places as failed for end-of-day visits that were just marked as unsuccessful
+    UPDATE scheduled_visit_places 
+    SET 
+        status = 'failed',
+        completed_at = philippine_timestamp,
+        completed_by = NULL
+    WHERE visit_id IN (
+        SELECT id FROM scheduled_visits 
+        WHERE status = 'unsuccessful' 
+          AND visit_date = philippine_date
+          AND completed_at >= (philippine_timestamp - INTERVAL '1 minute')
+    )
+    AND status = 'pending';
     
     -- Update the original visit_scheduled log entries to reflect the status change
     FOR visit_record IN 
@@ -1088,7 +1133,6 @@ CREATE OR REPLACE FUNCTION public.mark_visit_unsuccessful(
 RETURNS BOOLEAN AS $$
 DECLARE
     admin_role user_role;
-    visit_place_id UUID;
     log_row RECORD;
     new_history JSONB;
     place_details JSONB;
@@ -1102,10 +1146,7 @@ BEGIN
         RAISE EXCEPTION 'Only admins can mark visits as unsuccessful';
     END IF;
     
-    -- Get the place ID for this visit
-    SELECT place_id INTO visit_place_id
-    FROM scheduled_visits
-    WHERE id = p_visit_id;
+
     
     -- Update the visit status
     UPDATE scheduled_visits 
@@ -1115,10 +1156,33 @@ BEGIN
         completed_by = p_marked_by
     WHERE id = p_visit_id;
     
+    -- Mark all pending places in this visit as failed
+    UPDATE scheduled_visit_places 
+    SET 
+        status = 'failed',
+        completed_at = public.get_philippine_timestamp(),
+        completed_by = p_marked_by
+    WHERE visit_id = p_visit_id 
+      AND status = 'pending';
+    
     -- Try to find existing log entry for this visit
     SELECT * INTO log_row FROM logs WHERE details->>'visit_id' = p_visit_id::text AND action = 'visit_scheduled' ORDER BY created_at LIMIT 1;
     
     IF log_row.id IS NOT NULL THEN
+        -- Get updated place information for this visit
+        SELECT 
+            jsonb_agg(
+                jsonb_build_object(
+                    'place_id', svp.place_id,
+                    'place_name', ptv.name,
+                    'place_location', ptv.location,
+                    'status', svp.status
+                )
+            ) INTO place_details
+        FROM scheduled_visit_places svp
+        LEFT JOIN places_to_visit ptv ON svp.place_id = ptv.id
+        WHERE svp.visit_id = p_visit_id;
+        
         -- Update existing log entry
         new_history := (log_row.details->'history') || jsonb_build_array(
             jsonb_build_object(
@@ -1126,7 +1190,8 @@ BEGIN
                 'timestamp', public.get_philippine_timestamp(),
                 'details', jsonb_build_object(
                     'by', p_marked_by,
-                    'reason', 'Manually marked as unsuccessful by admin'
+                    'reason', 'Manually marked as unsuccessful by admin',
+                    'places', place_details
                 )
             )
         );
@@ -1156,7 +1221,6 @@ BEGIN
             'visit_unsuccessful',
             jsonb_build_object(
                 'visit_id', p_visit_id,
-                'place_id', visit_place_id,
                 'places', place_details,
                 'marked_at', public.get_philippine_timestamp(),
                 'marked_at_philippine_time', public.get_philippine_timestamp(),

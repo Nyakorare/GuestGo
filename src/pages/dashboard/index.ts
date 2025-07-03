@@ -3309,7 +3309,8 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
       pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
       completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
       cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-      unsuccessful: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+      unsuccessful: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
+      failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
     };
 
     const roleColors: { [key: string]: string } = {
@@ -3381,14 +3382,14 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
         
         <div class="mb-4">
           <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Your Assignment</p>
-          <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border-l-4 ${visit.place_status === 'completed' ? 'border-green-400' : visit.place_status === 'unsuccessful' ? 'border-red-400' : 'border-yellow-400'}">
+          <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border-l-4 ${visit.place_status === 'completed' ? 'border-green-400' : visit.place_status === 'unsuccessful' || visit.place_status === 'failed' ? 'border-red-400' : 'border-yellow-400'}">
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-sm font-medium text-gray-900 dark:text-white">${visit.place_name || 'Unknown Place'}</p>
                 <p class="text-xs text-gray-600 dark:text-gray-400">${visit.place_location || 'No location specified'}</p>
               </div>
               <span class="px-2 py-1 rounded-full text-xs font-medium ${(statusColors as any)[visit.place_status] || statusColors.pending}">
-                ${visit.place_status === 'completed' ? 'Completed' : visit.place_status === 'unsuccessful' ? 'Unsuccessful' : 'Pending'}
+                ${visit.place_status === 'completed' ? 'Completed' : visit.place_status === 'unsuccessful' || visit.place_status === 'failed' ? 'Failed' : 'Pending'}
               </span>
             </div>
           </div>
@@ -3683,8 +3684,8 @@ function calculateVisitProgress(visit: any): { percentage: number; status: strin
     return { percentage: 100, status: 'Completed', color: 'bg-green-500' };
   }
   
-  if (visit.status === 'unsuccessful') {
-    return { percentage: 100, status: 'Unsuccessful', color: 'bg-red-500' };
+  if (visit.status === 'unsuccessful' || visit.status === 'failed') {
+    return { percentage: 100, status: visit.status === 'failed' ? 'Failed' : 'Unsuccessful', color: 'bg-red-500' };
   }
   
   if (visit.status === 'cancelled') {
@@ -4040,11 +4041,11 @@ async function displayVisitorVisits(visits: any[]): Promise<void> {
             <div class="flex items-center space-x-2">
               <span class="px-3 py-1 rounded-full text-xs font-medium ${
                 visit.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                visit.status === 'unsuccessful' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                visit.status === 'unsuccessful' || visit.status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
                 visit.status === 'cancelled' ? 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
                 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
               }">
-                ${visit.status.charAt(0).toUpperCase() + visit.status.slice(1)}
+                ${visit.status === 'failed' ? 'Failed' : visit.status.charAt(0).toUpperCase() + visit.status.slice(1)}
               </span>
               ${isToday ? '<span class="px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded-full text-xs font-medium">Today</span>' : ''}
             </div>
@@ -4075,11 +4076,11 @@ async function displayVisitorVisits(visits: any[]): Promise<void> {
                   <div class="flex items-center space-x-2">
                     <span class="px-2 py-1 rounded-full text-xs font-medium ${
                       place.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                      place.status === 'unsuccessful' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                      place.status === 'unsuccessful' || place.status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
                       place.status === 'cancelled' ? 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
                       'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
                     }">
-                      ${place.status.charAt(0).toUpperCase() + place.status.slice(1)}
+                      ${place.status === 'failed' ? 'Failed' : place.status.charAt(0).toUpperCase() + place.status.slice(1)}
                     </span>
                     ${place.completed_at ? `
                       <span class="text-xs text-gray-500 dark:text-gray-400">
@@ -4291,7 +4292,8 @@ function displayFinishedVisits(visits: any[]): void {
     
     const statusColors: { [key: string]: string } = {
       completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      unsuccessful: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+      unsuccessful: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+      failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
     };
 
     const roleColors: { [key: string]: string } = {
