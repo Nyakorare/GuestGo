@@ -1433,19 +1433,6 @@ BEGIN
     -- Clean up any duplicate log entries
     cleaned_logs := public.cleanup_duplicate_unsuccessful_events();
     
-    -- Log the cleanup action
-    PERFORM public.log_action(
-        NULL, -- System action
-        'visit_unsuccessful',
-        jsonb_build_object(
-            'action', 'manual_trigger_cleanup',
-            'affected_visits', affected_visits,
-            'cleaned_logs', cleaned_logs,
-            'executed_at', public.get_philippine_timestamp(),
-            'executed_at_philippine_time', public.get_philippine_timestamp()
-        )
-    );
-    
     RETURN affected_visits;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
