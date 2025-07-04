@@ -377,23 +377,57 @@ export function setupEventListeners() {
 }
 
 export function setupAboutPageInteractivity() {
-  // FAQ Dropdown
+  // FAQ Dropdown with improved animations
   document.querySelectorAll('.faq-question').forEach(btn => {
     btn.addEventListener('click', function() {
+      const faqItem = this.closest('.faq-item');
       const answer = this.parentElement.querySelector('.faq-answer');
-      const icon = this.querySelector('svg');
-      const expanded = answer.style.maxHeight && answer.style.maxHeight !== '0px';
-      if (!expanded) {
-        answer.style.maxHeight = answer.scrollHeight + 'px';
-        icon.style.transform = 'rotate(180deg)';
+      const icon = this.querySelector('.faq-icon');
+      
+      // Close all other FAQ items
+      document.querySelectorAll('.faq-item').forEach(item => {
+        if (item !== faqItem) {
+          item.classList.remove('active');
+          const otherAnswer = item.querySelector('.faq-answer');
+          const otherIcon = item.querySelector('.faq-icon');
+          if (otherAnswer) {
+            otherAnswer.style.maxHeight = '0px';
+            otherAnswer.style.paddingTop = '0rem';
+            otherAnswer.style.paddingBottom = '0rem';
+          }
+          if (otherIcon) {
+            otherIcon.style.transform = 'rotate(0deg)';
+          }
+        }
+      });
+      
+      // Toggle current FAQ item
+      const isActive = faqItem.classList.contains('active');
+      if (isActive) {
+        faqItem.classList.remove('active');
+        if (answer) {
+          answer.style.maxHeight = '0px';
+          answer.style.paddingTop = '0rem';
+          answer.style.paddingBottom = '0rem';
+        }
+        if (icon) {
+          icon.style.transform = 'rotate(0deg)';
+        }
       } else {
-        answer.style.maxHeight = '0px';
-        icon.style.transform = 'rotate(0deg)';
+        faqItem.classList.add('active');
+        if (answer) {
+          answer.style.maxHeight = answer.scrollHeight + 'px';
+          answer.style.paddingTop = '1rem';
+          answer.style.paddingBottom = '1rem';
+        }
+        if (icon) {
+          icon.style.transform = 'rotate(180deg)';
+        }
       }
     });
   });
 
-  // Team Member Popup
+  // Team Member Popup with smooth animations
   const teamDetails = {
     glenn: { name: 'Glenn', title: 'Founder & CEO', bio: 'Visionary leader with a passion for guest experience and technology.', img: '/glenn.jpg' },
     justine: { name: 'Justine', title: 'Product Manager', bio: 'Ensures GuestGo delivers value and innovation to every client.', img: '/justine.jpg' },
@@ -401,29 +435,70 @@ export function setupAboutPageInteractivity() {
     kurt: { name: 'Kurt', title: 'UI/UX Designer', bio: 'Designs intuitive and beautiful interfaces for all users.', img: '/kurt.jpg' },
     walter: { name: 'Walter', title: 'QA Engineer', bio: 'Guarantees quality and reliability across the platform.', img: '/walter.jpg' },
   };
+  
   document.querySelectorAll('.team-member').forEach(btn => {
     btn.addEventListener('click', function() {
       const member = this.getAttribute('data-member');
       const details = teamDetails[member];
       if (details) {
-        document.getElementById('team-modal-content').innerHTML = `
-          <img src="${details.img}" alt="${details.name}" class="w-24 h-24 rounded-full mx-auto mb-4">
-          <h3 class="text-2xl font-bold mb-2">${details.name}</h3>
-          <p class="text-blue-600 dark:text-blue-400 font-semibold mb-2">${details.title}</p>
-          <p class="text-gray-700 dark:text-gray-300">${details.bio}</p>
-        `;
-        document.getElementById('team-modal').classList.remove('hidden');
+        const modal = document.getElementById('team-modal');
+        const modalContent = document.getElementById('team-modal-content');
+        
+        if (modalContent) {
+          modalContent.innerHTML = `
+            <img src="${details.img}" alt="${details.name}" class="w-24 h-24 rounded-full mx-auto mb-4 object-cover">
+            <h3 class="text-2xl font-bold mb-2">${details.name}</h3>
+            <p class="text-blue-600 dark:text-blue-400 font-semibold mb-2">${details.title}</p>
+            <p class="text-gray-700 dark:text-gray-300">${details.bio}</p>
+          `;
+        }
+        
+        if (modal) {
+          modal.classList.remove('hidden');
+          
+          // Small delay to ensure the modal is visible before animating
+          setTimeout(() => {
+            modal.classList.add('show');
+          }, 10);
+        }
       }
     });
   });
+  
+  // Close team modal with smooth animation
   const closeBtn = document.getElementById('close-team-modal');
   if (closeBtn) {
     closeBtn.addEventListener('click', () => {
-      document.getElementById('team-modal').classList.add('hidden');
+      const modal = document.getElementById('team-modal');
+      if (modal) {
+        // Start exit animation
+        modal.classList.remove('show');
+        
+        // Wait for animation to complete before hiding
+        setTimeout(() => {
+          modal.classList.add('hidden');
+        }, 500);
+      }
+    });
+  }
+  
+  // Close modal when clicking outside
+  const teamModal = document.getElementById('team-modal');
+  if (teamModal) {
+    teamModal.addEventListener('click', (e) => {
+      if (e.target === teamModal) {
+        // Start exit animation
+        teamModal.classList.remove('show');
+        
+        // Wait for animation to complete before hiding
+        setTimeout(() => {
+          teamModal.classList.add('hidden');
+        }, 500);
+      }
     });
   }
 
-  // Guests Managed Counter (from DB)
+  // Guests Managed Counter (from DB) with improved animation
   (async () => {
     const el = document.getElementById('guests-managed');
     if (el) {
@@ -435,6 +510,7 @@ export function setupAboutPageInteractivity() {
       }
     }
   })();
+  
   // Uptime Counter (placeholder, e.g. 99.98)
   const uptimeEl = document.getElementById('uptime');
   if (uptimeEl) animateCounter(uptimeEl, 99.98, 2);
@@ -442,13 +518,25 @@ export function setupAboutPageInteractivity() {
   function animateCounter(el, target, decimals = 0) {
     let count = 0;
     const increment = Math.max(1, Math.floor(target / 100));
+    const duration = 2000; // 2 seconds
+    const steps = 60; // 60 steps for smooth animation
+    const stepDuration = duration / steps;
+    
     function update() {
       if (count < target) {
         count = Math.min(target, count + increment);
         el.innerText = decimals ? count.toFixed(decimals) : count.toLocaleString();
-        setTimeout(update, 20);
+        
+        // Add a subtle scale effect during counting
+        el.style.transform = 'scale(1.1)';
+        setTimeout(() => {
+          el.style.transform = 'scale(1)';
+        }, 100);
+        
+        setTimeout(update, stepDuration);
       } else {
         el.innerText = decimals ? target.toFixed(decimals) : target.toLocaleString();
+        el.style.transform = 'scale(1)';
       }
     }
     update();
