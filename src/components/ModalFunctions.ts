@@ -918,21 +918,38 @@ export async function setupEventListeners() {
             throw new Error('Please select at least one place to visit');
           }
 
-          // Schedule visit for all selected places in a single call
-          await supabase.rpc('schedule_visit', {
-            p_visitor_first_name: firstName,
-            p_visitor_last_name: lastName,
-            p_visitor_email: email,
-            p_visitor_phone: phone,
-            p_place_ids: selectedPlaces,
-            p_visit_date: visitDate,
-            p_purpose: purpose === 'other' ? otherPurpose : purpose,
-            p_other_purpose: purpose === 'other' ? otherPurpose : null,
-            p_visitor_user_id: visitorUserId
-          });
+                  // Schedule visit for all selected places in a single call
+        const { data: visitData, error: scheduleError } = await supabase.rpc('schedule_visit', {
+          p_visitor_first_name: firstName,
+          p_visitor_last_name: lastName,
+          p_visitor_email: email,
+          p_visitor_phone: phone,
+          p_place_ids: selectedPlaces,
+          p_visit_date: visitDate,
+          p_purpose: purpose === 'other' ? otherPurpose : purpose,
+          p_other_purpose: purpose === 'other' ? otherPurpose : null,
+          p_visitor_user_id: visitorUserId
+        });
+
+        if (scheduleError) {
+          // Handle specific database validation errors
+          if (scheduleError.message.includes('Maximum of 2 visits per week allowed per user account')) {
+            throw new Error('Weekly visit limit exceeded. You can only schedule 2 visits per week per user account.');
+          } else if (scheduleError.message.includes('Maximum of 2 visits per week allowed per email address')) {
+            throw new Error('Weekly visit limit exceeded. You can only schedule 2 visits per week per email address.');
+          } else if (scheduleError.message.includes('Cannot schedule visits for past dates')) {
+            throw new Error('Cannot schedule visits for past dates. Please select today or a future date.');
+          } else if (scheduleError.message.includes('Cannot schedule visits more than 1 month in advance')) {
+            throw new Error('Cannot schedule visits more than 1 month in advance. Please select a date within the next month.');
+          } else if (scheduleError.message.includes('Only users with visitor role can schedule visits')) {
+            throw new Error('Only visitors can schedule visits. Please contact an administrator if you need access.');
+          } else {
+            throw new Error(`Scheduling failed: ${scheduleError.message}`);
+          }
+        }
         } else {
           // Schedule visit for single place
-          await supabase.rpc('schedule_visit', {
+          const { data: visitData, error: scheduleError } = await supabase.rpc('schedule_visit', {
             p_visitor_first_name: firstName,
             p_visitor_last_name: lastName,
             p_visitor_email: email,
@@ -943,6 +960,23 @@ export async function setupEventListeners() {
             p_other_purpose: purpose === 'other' ? otherPurpose : null,
             p_visitor_user_id: visitorUserId
           });
+
+          if (scheduleError) {
+            // Handle specific database validation errors
+            if (scheduleError.message.includes('Maximum of 2 visits per week allowed per user account')) {
+              throw new Error('Weekly visit limit exceeded. You can only schedule 2 visits per week per user account.');
+            } else if (scheduleError.message.includes('Maximum of 2 visits per week allowed per email address')) {
+              throw new Error('Weekly visit limit exceeded. You can only schedule 2 visits per week per email address.');
+            } else if (scheduleError.message.includes('Cannot schedule visits for past dates')) {
+              throw new Error('Cannot schedule visits for past dates. Please select today or a future date.');
+            } else if (scheduleError.message.includes('Cannot schedule visits more than 1 month in advance')) {
+              throw new Error('Cannot schedule visits more than 1 month in advance. Please select a date within the next month.');
+            } else if (scheduleError.message.includes('Only users with visitor role can schedule visits')) {
+              throw new Error('Only visitors can schedule visits. Please contact an administrator if you need access.');
+            } else {
+              throw new Error(`Scheduling failed: ${scheduleError.message}`);
+            }
+          }
         }
 
         // Show success message
@@ -1272,13 +1306,27 @@ export async function setupEventListeners() {
       }
 
       // Check if weekly visit count is already displayed
-      if (document.getElementById('modalWeeklyVisitCount')) return;
+      if (document.getElementById('modalWeeklyVisitCount')) {
+        return;
+      }
 
       const visitDateInput = document.getElementById('visitDate');
       if (!visitDateInput) return;
 
-      // Get current Philippine date
-      const philippineToday = getPhilippineDate();
+      // Get current Philippine date from database
+      let philippineToday: Date;
+      try {
+        const { data: philippineDateData, error } = await supabase.rpc('get_philippine_date');
+        if (error) {
+          console.error('Error getting Philippine date from DB:', error);
+          philippineToday = getPhilippineDate();
+        } else {
+          philippineToday = new Date(philippineDateData);
+        }
+      } catch (error) {
+        console.error('Exception getting Philippine date from DB:', error);
+        philippineToday = getPhilippineDate();
+      }
       
       // Calculate the week boundaries (Sunday to Saturday)
       const weekStart = new Date(philippineToday);
@@ -1289,13 +1337,12 @@ export async function setupEventListeners() {
       weekEnd.setDate(weekStart.getDate() + 6);
       weekEnd.setHours(23, 59, 59, 999);
 
-      // Query the database for visits in the current week
+      // Query the database for all pending and completed visits for the current user
+      // For logged-in users, check by visitor_user_id; for guests, check by visitor_email
       const { data: visits, error } = await supabase
         .from('scheduled_visits')
         .select('visit_date, status')
-        .eq('visitor_email', user.email)
-        .gte('visit_date', weekStart.toISOString().split('T')[0])
-        .lte('visit_date', weekEnd.toISOString().split('T')[0])
+        .eq('visitor_user_id', user.id)
         .in('status', ['pending', 'completed']);
 
       if (error) {
@@ -1303,25 +1350,27 @@ export async function setupEventListeners() {
         return;
       }
 
-      // Count the visits
+      // Debug logging
+      console.log('Modal Weekly Visit Count Debug:', {
+        userId: user.id,
+        visitsFound: visits,
+        visitCount: visits?.length || 0,
+        query: {
+          table: 'scheduled_visits',
+          filters: {
+            visitor_user_id: user.id,
+            status_in: ['pending', 'completed']
+          }
+        }
+      });
+
+      // Count the pending and completed visits
       const visitCount = visits?.length || 0;
-      const remainingVisits = Math.max(0, 2 - visitCount);
 
-      // Format the week range for display
-      const weekStartFormatted = weekStart.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric' 
-      });
-      const weekEndFormatted = weekEnd.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric' 
-      });
+      // Count pending vs completed for display
+      const pendingCount = visits?.filter(v => v.status === 'pending').length || 0;
+      const completedCount = visits?.filter(v => v.status === 'completed').length || 0;
 
-      // Create the weekly visit count display
-      const weeklyVisitDiv = document.createElement('div');
-      weeklyVisitDiv.id = 'modalWeeklyVisitCount';
-      weeklyVisitDiv.className = 'mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md';
-      
       let statusText = '';
       let statusColor = '';
       
@@ -1336,6 +1385,11 @@ export async function setupEventListeners() {
         statusColor = 'text-red-600 dark:text-red-400';
       }
 
+      // Create the weekly visit count display
+      const weeklyVisitDiv = document.createElement('div');
+      weeklyVisitDiv.id = 'modalWeeklyVisitCount';
+      weeklyVisitDiv.className = 'mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md';
+      
       weeklyVisitDiv.innerHTML = `
         <div class="flex items-center text-sm">
           <svg class="h-4 w-4 text-blue-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1343,11 +1397,11 @@ export async function setupEventListeners() {
           </svg>
           <span class="font-medium ${statusColor}">${statusText}</span>
           <span class="text-gray-600 dark:text-gray-400 ml-1">
-            for the week of ${weekStartFormatted} - ${weekEndFormatted}
+            (${pendingCount} pending, ${completedCount} completed)
           </span>
         </div>
         <div class="mt-1 text-xs text-blue-600 dark:text-blue-400">
-          Maximum 2 visits per week per email address
+          Maximum 2 visits per week per user account
         </div>
       `;
 
@@ -1373,26 +1427,101 @@ export async function setupEventListeners() {
           .eq('user_id', user.id)
           .single();
         
-        // Only refresh modal weekly visit count for visitor roles
+        // Only refresh weekly visit count for visitor roles
         if (roleData?.role !== 'visitor') {
           return;
         }
       } catch (error) {
-        console.error('Error checking user role for modal refresh:', error);
+        console.error('Error checking user role for refresh:', error);
         return;
       }
 
-      // Check if weekly visit count is already displayed
-      if (document.getElementById('modalWeeklyVisitCount')) {
-        // Remove existing weekly visit count
-        const weeklyVisitDiv = document.getElementById('modalWeeklyVisitCount');
-        if (weeklyVisitDiv) {
-          weeklyVisitDiv.remove();
+      const modalWeeklyVisitCount = document.getElementById('modalWeeklyVisitCount');
+      if (!modalWeeklyVisitCount) return;
+
+      // Get current Philippine date from database
+      let philippineToday: Date;
+      try {
+        const { data: philippineDateData, error } = await supabase.rpc('get_philippine_date');
+        if (error) {
+          console.error('Error getting Philippine date from DB:', error);
+          philippineToday = getPhilippineDate();
+        } else {
+          philippineToday = new Date(philippineDateData);
         }
+      } catch (error) {
+        console.error('Exception getting Philippine date from DB:', error);
+        philippineToday = getPhilippineDate();
+      }
+      
+      // Calculate the week boundaries (Sunday to Saturday)
+      const weekStart = new Date(philippineToday);
+      weekStart.setDate(philippineToday.getDate() - philippineToday.getDay());
+      weekStart.setHours(0, 0, 0, 0);
+      
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      weekEnd.setHours(23, 59, 59, 999);
+
+      // Query the database for all pending and completed visits for the current user
+      // For logged-in users, check by visitor_user_id; for guests, check by visitor_email
+      const { data: visits, error } = await supabase
+        .from('scheduled_visits')
+        .select('visit_date, status')
+        .eq('visitor_user_id', user.id)
+        .in('status', ['pending', 'completed']);
+
+      if (error) {
+        console.error('Error refreshing weekly visit count for modal:', error);
+        return;
       }
 
-      // Add new weekly visit count
-      await addWeeklyVisitCountToModal();
+      // Debug logging
+      console.log('Refresh Modal Weekly Visit Count Debug:', {
+        userId: user.id,
+        visitsFound: visits,
+        visitCount: visits?.length || 0,
+        query: {
+          table: 'scheduled_visits',
+          filters: {
+            visitor_user_id: user.id,
+            status_in: ['pending', 'completed']
+          }
+        }
+      });
+
+      // Count the pending and completed visits
+      const visitCount = visits?.length || 0;
+
+      // Count pending vs completed for display
+      const pendingCount = visits?.filter(v => v.status === 'pending').length || 0;
+      const completedCount = visits?.filter(v => v.status === 'completed').length || 0;
+
+      let statusText = '';
+      let statusColor = '';
+      
+      if (visitCount === 0) {
+        statusText = '2 visits remaining';
+        statusColor = 'text-green-600 dark:text-green-400';
+      } else if (visitCount === 1) {
+        statusText = '1 visit remaining';
+        statusColor = 'text-yellow-600 dark:text-yellow-400';
+      } else {
+        statusText = 'No visits remaining';
+        statusColor = 'text-red-600 dark:text-red-400';
+      }
+
+      // Update the display
+      const statusSpan = modalWeeklyVisitCount.querySelector('.font-medium');
+      if (statusSpan) {
+        statusSpan.textContent = statusText;
+        statusSpan.className = `font-medium ${statusColor}`;
+      }
+
+      const weekSpan = modalWeeklyVisitCount.querySelector('.text-gray-600');
+      if (weekSpan) {
+        weekSpan.textContent = ` (${pendingCount} pending, ${completedCount} completed)`;
+      }
 
     } catch (error) {
       console.error('Error refreshing modal weekly visit count:', error);

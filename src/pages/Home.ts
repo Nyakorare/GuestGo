@@ -59,8 +59,20 @@ async function loadWeeklyVisitCount(userEmail: string) {
     weeklyVisitCountDiv.classList.remove('hidden');
     weeklyVisitText.textContent = 'Loading...';
 
-    // Get current Philippine date
-    const philippineToday = getPhilippineDate();
+    // Get current Philippine date from database
+    let philippineToday: Date;
+    try {
+      const { data: philippineDateData, error } = await supabase.rpc('get_philippine_date');
+      if (error) {
+        console.error('Error getting Philippine date from DB:', error);
+        philippineToday = getPhilippineDate();
+      } else {
+        philippineToday = new Date(philippineDateData);
+      }
+    } catch (error) {
+      console.error('Exception getting Philippine date from DB:', error);
+      philippineToday = getPhilippineDate();
+    }
     
     // Calculate the week boundaries (Sunday to Saturday)
     const weekStart = new Date(philippineToday);
@@ -71,14 +83,19 @@ async function loadWeeklyVisitCount(userEmail: string) {
     weekEnd.setDate(weekStart.getDate() + 6);
     weekEnd.setHours(23, 59, 59, 999);
 
-    // Query the database for visits in the current week
+    // Query the database for all pending and completed visits for the current user
+    // For logged-in users, check by visitor_user_id; for guests, check by visitor_email
     const { data: visits, error } = await supabase
       .from('scheduled_visits')
       .select('visit_date, status')
-      .eq('visitor_email', userEmail)
-      .gte('visit_date', weekStart.toISOString().split('T')[0])
-      .lte('visit_date', weekEnd.toISOString().split('T')[0])
+      .eq('visitor_user_id', user.id)
       .in('status', ['pending', 'completed']);
+
+    // Also check for all visits by this user (for debugging)
+    const { data: allVisits, error: allVisitsError } = await supabase
+      .from('scheduled_visits')
+      .select('visit_date, status, visitor_email')
+      .eq('visitor_user_id', user.id);
 
     if (error) {
       console.error('Error loading weekly visit count:', error);
@@ -86,9 +103,32 @@ async function loadWeeklyVisitCount(userEmail: string) {
       return;
     }
 
-    // Count the visits
+    // Debug logging
+    console.log('Weekly Visit Count Debug:', {
+      userId: user.id,
+      userEmail: userEmail,
+      philippineToday: philippineToday.toISOString().split('T')[0],
+      visitsFound: visits,
+      visitCount: visits?.length || 0,
+      allVisitsFound: allVisits,
+      allVisitsCount: allVisits?.length || 0,
+      allVisitsError: allVisitsError,
+      query: {
+        table: 'scheduled_visits',
+        filters: {
+          visitor_user_id: user.id,
+          status_in: ['pending', 'completed']
+        }
+      }
+    });
+
+    // Count the pending and completed visits
     const visitCount = visits?.length || 0;
     const remainingVisits = Math.max(0, 2 - visitCount);
+
+    // Count pending vs completed for display
+    const pendingCount = visits?.filter(v => v.status === 'pending').length || 0;
+    const completedCount = visits?.filter(v => v.status === 'completed').length || 0;
 
     // Format the week range for display
     const weekStartFormatted = weekStart.toLocaleDateString('en-US', { 
@@ -104,24 +144,24 @@ async function loadWeeklyVisitCount(userEmail: string) {
     if (visitCount === 0) {
       weeklyVisitText.innerHTML = `
         <span class="font-medium text-green-600 dark:text-green-400">2 visits remaining</span> 
-        for the week of ${weekStartFormatted} - ${weekEndFormatted}
+        (no scheduled visits)
       `;
     } else if (visitCount === 1) {
       weeklyVisitText.innerHTML = `
         <span class="font-medium text-yellow-600 dark:text-yellow-400">1 visit remaining</span> 
-        for the week of ${weekStartFormatted} - ${weekEndFormatted}
+        (${pendingCount} pending, ${completedCount} completed)
       `;
     } else {
       weeklyVisitText.innerHTML = `
         <span class="font-medium text-red-600 dark:text-red-400">No visits remaining</span> 
-        for the week of ${weekStartFormatted} - ${weekEndFormatted}
+        (${pendingCount} pending, ${completedCount} completed)
       `;
     }
 
     // Add a small note about the limit
     const noteElement = document.createElement('div');
     noteElement.className = 'mt-1 text-xs text-blue-600 dark:text-blue-400';
-    noteElement.textContent = 'Maximum 2 visits per week per email address';
+    noteElement.textContent = 'Maximum 2 visits per week per user account';
     
     // Remove existing note if present
     const existingNote = weeklyVisitCountDiv.querySelector('.text-xs');
@@ -166,6 +206,88 @@ async function loadWeeklyVisitCount(userEmail: string) {
     await loadWeeklyVisitCount(user.email);
   } catch (error) {
     console.error('Error refreshing weekly visit count:', error);
+  }
+};
+
+// Test function to debug weekly visit count
+(window as any).testWeeklyVisitCount = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.log('No user found');
+      return;
+    }
+
+    console.log('=== VISITS COUNT TEST ===');
+    console.log('User ID:', user.id);
+    console.log('User Email:', user.email);
+
+    // Test 1: Get all visits for this user
+    const { data: allVisits, error: allError } = await supabase
+      .from('scheduled_visits')
+      .select('*')
+      .eq('visitor_user_id', user.id);
+
+    console.log('All visits for user:', allVisits);
+    console.log('All visits count:', allVisits?.length || 0);
+
+    // Test 2: Get pending and completed visits for this user
+    const { data: activeVisits, error: activeError } = await supabase
+      .from('scheduled_visits')
+      .select('*')
+      .eq('visitor_user_id', user.id)
+      .in('status', ['pending', 'completed']);
+
+    console.log('Active visits (pending + completed):', activeVisits);
+    console.log('Active visits count:', activeVisits?.length || 0);
+
+    // Test 3: Get pending visits for this user
+    const { data: pendingVisits, error: pendingError } = await supabase
+      .from('scheduled_visits')
+      .select('*')
+      .eq('visitor_user_id', user.id)
+      .eq('status', 'pending');
+
+    console.log('Pending visits:', pendingVisits);
+    console.log('Pending visits count:', pendingVisits?.length || 0);
+
+    // Test 4: Get completed visits for this user
+    const { data: completedVisits, error: completedError } = await supabase
+      .from('scheduled_visits')
+      .select('*')
+      .eq('visitor_user_id', user.id)
+      .eq('status', 'completed');
+
+    console.log('Completed visits:', completedVisits);
+    console.log('Completed visits count:', completedVisits?.length || 0);
+
+    // Test 5: Check if there are any visits at all in the database
+    const { data: anyVisits, error: anyError } = await supabase
+      .from('scheduled_visits')
+      .select('*')
+      .limit(5);
+
+    console.log('Any visits in database:', anyVisits);
+    console.log('Any visits count:', anyVisits?.length || 0);
+
+    // Test 6: Calculate remaining visits
+    const activeCount = activeVisits?.length || 0;
+    const pendingCount = pendingVisits?.length || 0;
+    const completedCount = completedVisits?.length || 0;
+    const remainingVisits = Math.max(0, 2 - activeCount);
+    
+    console.log('Active visits (pending + completed):', activeCount);
+    console.log('Pending visits:', pendingCount);
+    console.log('Completed visits:', completedCount);
+    console.log('Remaining visits:', remainingVisits);
+    console.log('Status:', activeCount === 0 ? '2 visits remaining' : 
+                       activeCount === 1 ? '1 visit remaining' : 
+                       'No visits remaining');
+
+    console.log('=== END TEST ===');
+
+  } catch (error) {
+    console.error('Error in test:', error);
   }
 };
 
@@ -460,7 +582,7 @@ export function HomePage() {
                   min=""
                   max=""
                 >
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Scheduling is available up to 1 month in advance. Maximum 2 visits per week per email address.</p>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Scheduling is available up to 1 month in advance. Maximum 2 visits per week per user account.</p>
               </div>
               <div>
                 <label for="placeToVisit" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Place to Visit</label>

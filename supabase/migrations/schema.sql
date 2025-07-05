@@ -357,13 +357,28 @@ BEGIN
     -- Check weekly visit limit (now counts visits, not individual place bookings)
     week_start := p_visit_date - (EXTRACT(DOW FROM p_visit_date)::INTEGER * INTERVAL '1 day');
     week_end := week_start + INTERVAL '6 days';
-    SELECT COUNT(*) INTO visits_this_week
-    FROM scheduled_visits
-    WHERE visitor_email = p_visitor_email
-      AND visit_date BETWEEN week_start AND week_end
-      AND status IN ('pending', 'completed');
-    IF visits_this_week >= 2 THEN
-        RAISE EXCEPTION 'Maximum of 2 visits per week allowed per email address. You have already scheduled % visits for the week of %.', visits_this_week, week_start;
+    
+    -- Check weekly visit limit based on user type
+    IF p_visitor_user_id IS NOT NULL THEN
+        -- For logged-in users, check by visitor_user_id
+        SELECT COUNT(*) INTO visits_this_week
+        FROM scheduled_visits
+        WHERE visitor_user_id = p_visitor_user_id
+          AND visit_date BETWEEN week_start AND week_end
+          AND status IN ('pending', 'completed');
+        IF visits_this_week >= 2 THEN
+            RAISE EXCEPTION 'Maximum of 2 visits per week allowed per user account. You have already scheduled % visits for the week of %.', visits_this_week, week_start;
+        END IF;
+    ELSE
+        -- For guests, check by visitor_email
+        SELECT COUNT(*) INTO visits_this_week
+        FROM scheduled_visits
+        WHERE visitor_email = p_visitor_email
+          AND visit_date BETWEEN week_start AND week_end
+          AND status IN ('pending', 'completed');
+        IF visits_this_week >= 2 THEN
+            RAISE EXCEPTION 'Maximum of 2 visits per week allowed per email address. You have already scheduled % visits for the week of %.', visits_this_week, week_start;
+        END IF;
     END IF;
     
     IF p_visitor_user_id IS NOT NULL THEN
@@ -718,23 +733,10 @@ BEGIN
         END IF;
     END LOOP;
     
-    -- Log the action if any visits were marked as unsuccessful
-    IF affected_rows > 0 THEN
-        PERFORM public.log_action(
-            NULL, -- System action
-            'visit_unsuccessful',
-            jsonb_build_object(
-                'action', 'auto_mark_past_visits',
-                'affected_visits', affected_rows,
-                'past_date_visits', affected_rows - end_of_day_affected_rows,
-                'end_of_day_visits', end_of_day_affected_rows,
-                'philippine_date', philippine_date,
-                'philippine_timestamp', philippine_timestamp,
-                'executed_at', philippine_timestamp,
-                'executed_at_philippine_time', philippine_timestamp
-            )
-        );
-    END IF;
+    -- Note: We don't create a separate visit_unsuccessful log entry here
+    -- because we already update the existing visit_scheduled log entries
+    -- with the unsuccessful status in their history. This prevents duplication.
+    -- The affected_visits count is still returned for monitoring purposes.
     
     RETURN affected_rows;
 END;
