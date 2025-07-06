@@ -40,7 +40,7 @@ export default function setupApp() {
             <a href="#/about" class="nav-link">About</a>
             <a href="#/contact" class="nav-link">Contact Us</a>
             <a href="#/dashboard" class="nav-link hidden" id="dashboard-link">Dashboard</a>
-            <a href="#/qr-scanner" class="nav-link">QR Scanner</a>
+            <a href="#/qr-scanner" class="nav-link hidden" id="qr-scanner-link">QR Scanner</a>
           </div>
 
           <!-- Right side menu -->
@@ -100,7 +100,7 @@ export default function setupApp() {
             <a href="#/about" class="block px-3 py-2 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500">About</a>
             <a href="#/contact" class="block px-3 py-2 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500">Contact Us</a>
             <a href="#/dashboard" class="block px-3 py-2 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500 hidden" id="mobile-dashboard-link">Dashboard</a>
-            <a href="#/qr-scanner" class="block px-3 py-2 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500">QR Scanner</a>
+            <a href="#/qr-scanner" class="block px-3 py-2 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500 hidden" id="mobile-qr-scanner-link">QR Scanner</a>
             <div id="mobile-auth-buttons" style="display: none;">
               <!-- Content will be dynamically updated based on auth state -->
             </div>

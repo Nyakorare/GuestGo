@@ -129,6 +129,9 @@ export function setupEventListeners() {
     mobileMenu?.classList.toggle('hidden');
   });
 
+  // Update navigation based on user role
+  updateNavigationBasedOnRole();
+
   // Profile settings dropdown functionality
   const profileSettingsBtn = document.getElementById('profileSettingsBtn');
   const profileDropdown = document.getElementById('profile-dropdown');
@@ -373,6 +376,8 @@ export function setupEventListeners() {
   // Listen for auth state changes
   supabase.auth.onAuthStateChange((_event, session) => {
     updateAuthMenu(!!session);
+    // Update navigation based on role when auth state changes
+    updateNavigationBasedOnRole();
   });
 }
 
@@ -540,5 +545,57 @@ export function setupAboutPageInteractivity() {
       }
     }
     update();
+  }
+}
+
+// Function to update navigation based on user role
+async function updateNavigationBasedOnRole() {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (user) {
+      // Get user's role
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+
+      if (roleData) {
+        const userRole = roleData.role;
+        
+        // Get navigation elements
+        const qrScannerLink = document.getElementById('qr-scanner-link');
+        const mobileQrScannerLink = document.getElementById('mobile-qr-scanner-link');
+        const dashboardLink = document.getElementById('dashboard-link');
+        const mobileDashboardLink = document.getElementById('mobile-dashboard-link');
+        
+        // Show/hide QR Scanner links based on role
+        if (userRole === 'personnel') {
+          qrScannerLink?.classList.remove('hidden');
+          mobileQrScannerLink?.classList.remove('hidden');
+        } else {
+          qrScannerLink?.classList.add('hidden');
+          mobileQrScannerLink?.classList.add('hidden');
+        }
+        
+        // Show dashboard link for all authenticated users
+        dashboardLink?.classList.remove('hidden');
+        mobileDashboardLink?.classList.remove('hidden');
+      }
+    } else {
+      // Hide QR Scanner links for non-authenticated users
+      const qrScannerLink = document.getElementById('qr-scanner-link');
+      const mobileQrScannerLink = document.getElementById('mobile-qr-scanner-link');
+      const dashboardLink = document.getElementById('dashboard-link');
+      const mobileDashboardLink = document.getElementById('mobile-dashboard-link');
+      
+      qrScannerLink?.classList.add('hidden');
+      mobileQrScannerLink?.classList.add('hidden');
+      dashboardLink?.classList.add('hidden');
+      mobileDashboardLink?.classList.add('hidden');
+    }
+  } catch (error) {
+    console.error('Error updating navigation based on role:', error);
   }
 }

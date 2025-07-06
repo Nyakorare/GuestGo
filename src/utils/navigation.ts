@@ -34,9 +34,28 @@ export function renderPage(path: string) {
   }
 }
 
-export function updateNavigation() {
+export async function updateNavigation() {
   const path = window.location.hash.slice(1) || '/';
   const mainContent = document.querySelector('main');
+  
+  // Check if user is authenticated and get their role
+  let userRole = null;
+  try {
+    const { data: { user } } = await import('../config/supabase').then(m => m.default.auth.getUser());
+    if (user) {
+      const { data: roleData } = await import('../config/supabase').then(m => m.default
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single());
+      if (roleData) {
+        userRole = roleData.role;
+      }
+    }
+  } catch (error) {
+    console.log('User not authenticated or role not found');
+  }
+  
   if (mainContent) {
     const content = document.createElement('div');
     content.className = 'page-transition';
@@ -48,6 +67,12 @@ export function updateNavigation() {
       setupAboutPageInteractivity();
     }
     if (path === '/qr-scanner') {
+      // Check if user has personnel role before allowing access
+      if (userRole !== 'personnel') {
+        // Redirect to home page if not personnel
+        window.location.hash = '/';
+        return;
+      }
       // Import and initialize QR scanner functionality
       import('../pages/QRScanner').then(({ initializeQRScanner }) => {
         setTimeout(() => {
