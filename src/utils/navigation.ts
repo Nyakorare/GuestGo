@@ -2,6 +2,7 @@ import { HomePage } from '../pages/Home';
 import { AboutPage } from '../pages/about';
 import { ContactPage } from '../pages/contact';
 import { DashboardPage } from '../pages/dashboard';
+import { QRScannerPage } from '../pages/QRScanner';
 import { setupAboutPageInteractivity } from './eventHandlers';
 
 export function renderPage(path: string) {
@@ -26,6 +27,8 @@ export function renderPage(path: string) {
       return ContactPage();
     case '/dashboard':
       return DashboardPage();
+    case '/qr-scanner':
+      return QRScannerPage();
     default:
       return HomePage();
   }
@@ -43,6 +46,14 @@ export function updateNavigation() {
     mainContent.appendChild(content);
     if (path === '/about') {
       setupAboutPageInteractivity();
+    }
+    if (path === '/qr-scanner') {
+      // Import and initialize QR scanner functionality
+      import('../pages/QRScanner').then(({ initializeQRScanner }) => {
+        setTimeout(() => {
+          initializeQRScanner();
+        }, 100);
+      });
     }
   }
 

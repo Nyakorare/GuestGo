@@ -1,5 +1,6 @@
 import supabase from '../../config/supabase';
 import { logAction, getLogs } from '../../utils/logging';
+import { generateVisitQRCode, openPrintableVisitCard, type VisitQRData } from '../../utils/qrCode';
 
 interface Place {
   id: string;
@@ -4048,6 +4049,16 @@ async function displayVisitorVisits(visits: any[]): Promise<void> {
                 ${visit.status === 'failed' ? 'Failed' : visit.status.charAt(0).toUpperCase() + visit.status.slice(1)}
               </span>
               ${isToday ? '<span class="px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded-full text-xs font-medium">Today</span>' : ''}
+              <button 
+                onclick="printVisitCard('${visit.id}')"
+                class="px-3 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded-full text-xs font-medium hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors duration-200 flex items-center space-x-1"
+                title="Print Visit Card with QR Code"
+              >
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                </svg>
+                <span>Print</span>
+              </button>
             </div>
           </div>
 
@@ -4411,3 +4422,121 @@ function ensureHistoryModalExists() {
     });
   }
 }
+
+// Global function to print visit card (accessible from onclick)
+(window as any).printVisitCard = async function(visitId: string) {
+  try {
+    // Show loading state
+    const button = event?.target as HTMLElement;
+    const originalContent = button?.innerHTML;
+    if (button) {
+      button.innerHTML = `
+        <svg class="w-3 h-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+        </svg>
+        <span>Generating...</span>
+      `;
+      button.setAttribute('disabled', 'true');
+    }
+
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Fetch visit data from the database
+    const { data: visitsData, error } = await supabase
+      .rpc('get_visitor_scheduled_visits', { p_visitor_user_id: user.id });
+
+    if (error) {
+      throw new Error('Failed to fetch visit data');
+    }
+
+    // Find the specific visit
+    const visit = visitsData.find((v: any) => v.id === visitId);
+    if (!visit) {
+      throw new Error('Visit not found');
+    }
+
+    // Debug: Log the visit data to see the structure
+    console.log('Visit data for QR code:', visit);
+    console.log('Places data:', visit.places);
+
+    // Prepare visit data for QR code
+    // Ensure places data is properly formatted
+    let places = [];
+    try {
+      if (visit.places && Array.isArray(visit.places)) {
+        places = visit.places;
+      } else if (visit.places && typeof visit.places === 'object') {
+        // If places is a JSONB object, convert it to array
+        places = Array.isArray(visit.places) ? visit.places : [visit.places];
+      } else if (visit.places && typeof visit.places === 'string') {
+        // If places is a JSON string, parse it
+        try {
+          const parsedPlaces = JSON.parse(visit.places);
+          places = Array.isArray(parsedPlaces) ? parsedPlaces : [parsedPlaces];
+        } catch (parseError) {
+          console.error('Error parsing places JSON:', parseError);
+          places = [];
+        }
+      }
+    } catch (error) {
+      console.error('Error processing places data:', error);
+      places = [];
+    }
+    
+    console.log('Processed places array:', places);
+    
+    // Ensure each place has the required properties
+    places = places.map((place: any) => {
+      const processedPlace = {
+        placeId: place.place_id || place.placeId || '',
+        placeName: place.place_name || place.placeName || 'Unknown Place',
+        placeLocation: place.place_location || place.placeLocation || '',
+        status: place.status || 'pending'
+      };
+      console.log('Processed place:', processedPlace);
+      return processedPlace;
+    });
+
+    const qrVisitData: VisitQRData = {
+      visitId: visit.id,
+      visitorName: `${visit.visitor_first_name} ${visit.visitor_last_name}`,
+      visitorEmail: visit.visitor_email,
+      visitDate: visit.visit_date,
+      purpose: visit.purpose,
+      places: places,
+      status: visit.status,
+      scheduledAt: visit.scheduled_at
+    };
+
+    console.log('Final QR visit data:', qrVisitData);
+
+    // Generate QR code
+    const qrCodeDataUrl = await generateVisitQRCode(qrVisitData);
+
+    // Open printable card
+    openPrintableVisitCard(qrVisitData, qrCodeDataUrl);
+
+    // Show success notification
+    showNotification('Visit card generated successfully!', 'success');
+
+  } catch (error) {
+    console.error('Error printing visit card:', error);
+    showNotification('Failed to generate visit card. Please try again.', 'error');
+  } finally {
+    // Restore button state
+    const button = event?.target as HTMLElement;
+    if (button) {
+      button.removeAttribute('disabled');
+      button.innerHTML = `
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+        </svg>
+        <span>Print</span>
+      `;
+    }
+  }
+};
