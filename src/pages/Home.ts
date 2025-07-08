@@ -432,14 +432,14 @@ export function HomePage() {
   // Setup event listeners (this will also load places from database)
   setupEventListeners();
 
-  return `    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div class="flex items-center space-x-4 mb-8">
-        <img src="/guestgo-logo.png" alt="GuestGo Logo" class="h-16 w-16" />
-        <div>
-          <h1 class="text-4xl font-bold text-gray-900 dark:text-white transition-colors duration-200">
+  return `    <div class="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8 md:py-12">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-4 sm:space-y-0 mb-8">
+        <img src="/guestgo-logo.png" alt="GuestGo Logo" class="h-14 w-14 sm:h-16 sm:w-16 mx-auto sm:mx-0" />
+        <div class="text-center sm:text-left">
+          <h1 class="text-2xl sm:text-4xl font-bold text-gray-900 dark:text-white transition-colors duration-200">
             Welcome to GuestGo
           </h1>
-          <p class="text-xl text-gray-600 dark:text-gray-300 transition-colors duration-200">
+          <p class="text-base sm:text-xl text-gray-600 dark:text-gray-300 transition-colors duration-200">
             Your one-stop solution for guest management and hospitality services.
           </p>
         </div>
@@ -468,14 +468,14 @@ export function HomePage() {
 
       <button 
         id="scheduleNowBtn"
-        class="bg-blue-600 text-white px-6 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors duration-200"
+        class="w-full sm:w-auto bg-blue-600 text-white px-6 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors duration-200 mb-4"
       >
         Schedule Now
       </button>
 
       <!-- Schedule Modal -->
-      <div id="scheduleModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
-        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
+      <div id="scheduleModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-10 mx-auto p-3 sm:p-5 border w-full max-w-sm sm:max-w-md md:max-w-lg shadow-lg rounded-md bg-white dark:bg-gray-800">
           <div class="mt-3">
             <div class="flex justify-between items-center mb-4">
               <h3 class="text-lg font-medium text-gray-900 dark:text-white">Schedule a Visit</h3>
@@ -489,7 +489,7 @@ export function HomePage() {
               </button>
             </div>
             <form class="space-y-4" id="scheduleForm">
-              <div class="grid grid-cols-2 gap-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label for="scheduleFirstName" class="block text-sm font-medium text-gray-700 dark:text-gray-300">First Name</label>
                   <input 
@@ -513,7 +513,7 @@ export function HomePage() {
               </div>
               <div id="emailVerificationSection">
                 <label for="scheduleEmail" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
-                <div class="flex space-x-2">
+                <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                   <input 
                     type="email" 
                     id="scheduleEmail" 
@@ -533,7 +533,7 @@ export function HomePage() {
                 <!-- Real-time validation status - always visible -->
                 <div id="emailValidationStatus" class="mt-1 text-sm"></div>
                 <div id="verificationCodeContainer" class="hidden mt-2">
-                  <div class="flex space-x-2">
+                  <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                     <input 
                       type="text" 
                       id="verificationCode" 
@@ -624,16 +624,16 @@ export function HomePage() {
                   maxlength="50"
                   class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 ></textarea>
-                <div class="mt-1 flex justify-between text-sm text-gray-500 dark:text-gray-400">
+                <div class="mt-1 flex flex-col sm:flex-row justify-between text-sm text-gray-500 dark:text-gray-400 space-y-1 sm:space-y-0">
                   <span>Word count: <span id="wordCount">0</span>/10</span>
                   <span>Character count: <span id="charCount">0</span>/50</span>
                 </div>
               </div>
-              <div class="flex justify-end">
+              <div class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
                 <button 
                   type="submit"
                   id="scheduleSubmitBtn"
-                  class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  class="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled
                 >
                   Schedule Visit
@@ -645,8 +645,8 @@ export function HomePage() {
       </div>
 
       <!-- Sign Up Modal -->
-      <div id="signUpModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
-        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
+      <div id="signUpModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-10 mx-auto p-3 sm:p-5 border w-full max-w-sm sm:max-w-md md:max-w-lg shadow-lg rounded-md bg-white dark:bg-gray-800">
           <div class="mt-3">
             <div class="flex justify-between items-center mb-4">
               <h3 class="text-lg font-medium text-gray-900 dark:text-white">Sign Up</h3>
@@ -660,7 +660,7 @@ export function HomePage() {
               </button>
             </div>
             <form class="space-y-4">
-              <div class="grid grid-cols-2 gap-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label for="signupFirstName" class="block text-sm font-medium text-gray-700 dark:text-gray-300">First Name</label>
                   <input 
@@ -702,10 +702,10 @@ export function HomePage() {
                   required
                 >
               </div>
-              <div class="flex justify-end">
+              <div class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
                 <button 
                   type="submit"
-                  class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  class="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 >
                   Sign Up
                 </button>

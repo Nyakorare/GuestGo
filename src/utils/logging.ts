@@ -84,6 +84,20 @@ export async function getLogs(): Promise<any[]> {
       user_roles: log.user_id ? userInfo[log.user_id] : null
     }));
 
+    // Debug: Log any logs with potentially problematic details
+    logsWithUsers.forEach((log, index) => {
+      if (log.details && typeof log.details !== 'object' && typeof log.details !== 'string') {
+        console.warn(`Log ${index} has unexpected details type:`, typeof log.details, log.details);
+      }
+      if (typeof log.details === 'string') {
+        try {
+          JSON.parse(log.details);
+        } catch (error) {
+          console.error(`Log ${index} has invalid JSON in details:`, log.details, error);
+        }
+      }
+    });
+
     return logsWithUsers;
   } catch (error) {
     console.error('Error in getLogs:', error);

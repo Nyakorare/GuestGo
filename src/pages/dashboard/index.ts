@@ -34,6 +34,13 @@ interface Account {
 let currentPlaceFilter = 'all';
 let placeFilterOptions = [];
 
+// Visitor dashboard filters (global scope)
+let currentVisitorSearchTerm = '';
+let currentVisitorStatusFilter = 'all';
+let currentVisitorDateFilter = 'all';
+let allVisitorVisits: any[] = [];
+let filteredVisitorVisits: any[] = [];
+
 export function DashboardPage() {
   // Initialize the page
   setTimeout(async () => {
@@ -621,10 +628,29 @@ export function DashboardPage() {
             </button>
           </div>
         </div>
-        <!-- Visitor Visits Content -->
-        <div id="visitorVisitsContent" class="space-y-4">
+
+        <!-- Visitor Dashboard Tabs -->
+        <div class="border-b border-gray-200 dark:border-gray-700 mb-6">
+          <nav class="-mb-px flex space-x-8">
+            <button 
+              id="visitorCurrentTab"
+              class="border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 px-1 py-2 text-sm font-medium"
+            >
+              Current Visits
+            </button>
+            <button 
+              id="visitorPastTab"
+              class="border-b-2 border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600 px-1 py-2 text-sm font-medium"
+            >
+              Past Schedules
+            </button>
+          </nav>
+        </div>
+
+        <!-- Current Visits Content -->
+        <div id="visitorCurrentContent" class="space-y-4">
           <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-            <h3 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">My Visits</h3>
+            <h3 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Current Visits</h3>
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-4">
               <!-- Search and Filter Section -->
               <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-3">
@@ -632,8 +658,8 @@ export function DashboardPage() {
                 <div class="relative">
                   <input 
                     type="text" 
-                    id="visitorSearchInput"
-                    placeholder="Search my visits..."
+                    id="visitorCurrentSearchInput"
+                    placeholder="Search current visits..."
                     class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
                   >
                   <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -644,7 +670,7 @@ export function DashboardPage() {
                 </div>
                 <!-- Status Filter -->
                 <select 
-                  id="visitorStatusFilter"
+                  id="visitorCurrentStatusFilter"
                   class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
                 >
                   <option value="all">All Status</option>
@@ -655,7 +681,7 @@ export function DashboardPage() {
                 </select>
                 <!-- Date Filter -->
                 <select 
-                  id="visitorDateFilter"
+                  id="visitorCurrentDateFilter"
                   class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
                 >
                   <option value="all">All Dates</option>
@@ -666,7 +692,63 @@ export function DashboardPage() {
               </div>
             </div>
           </div>
-          <div id="visitorVisitsList" class="space-y-4"></div>
+          <div id="visitorCurrentVisitsList" class="space-y-4"></div>
+        </div>
+
+        <!-- Past Schedules Content -->
+        <div id="visitorPastContent" class="hidden space-y-4">
+          <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+            <h3 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Past Schedules</h3>
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-4">
+              <!-- Search and Filter Section -->
+              <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-3">
+                <!-- Search Input -->
+                <div class="relative">
+                  <input 
+                    type="text" 
+                    id="visitorPastSearchInput"
+                    placeholder="Search past schedules..."
+                    class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
+                  >
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                  </div>
+                </div>
+                <!-- Status Filter -->
+                <select 
+                  id="visitorPastStatusFilter"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
+                >
+                  <option value="all">All Status</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                  <option value="unsuccessful">Unsuccessful</option>
+                </select>
+                <!-- Date Range Filter -->
+                <select 
+                  id="visitorPastDateFilter"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
+                >
+                  <option value="all">All Time</option>
+                  <option value="last7days">Last 7 Days</option>
+                  <option value="last30days">Last 30 Days</option>
+                  <option value="last3months">Last 3 Months</option>
+                  <option value="last6months">Last 6 Months</option>
+                  <option value="lastyear">Last Year</option>
+                </select>
+                <!-- Place Filter -->
+                <select 
+                  id="visitorPastPlaceFilter"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
+                >
+                  <option value="all">All Places</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div id="visitorPastVisitsList" class="space-y-4"></div>
         </div>
       </div>
 
@@ -1390,7 +1472,28 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
   if (!details) return 'No details available';
   
   try {
-    const parsedDetails = typeof details === 'string' ? JSON.parse(details) : details;
+    let parsedDetails;
+    
+    // Handle different types of details data
+    if (typeof details === 'string') {
+      try {
+        parsedDetails = JSON.parse(details);
+      } catch (parseError) {
+        console.error('Failed to parse details string:', details, parseError);
+        return `<div class="text-red-600 dark:text-red-400">Invalid JSON format in details</div>`;
+      }
+    } else if (typeof details === 'object' && details !== null) {
+      parsedDetails = details;
+    } else {
+      console.error('Unexpected details type:', typeof details, details);
+      return `<div class="text-red-600 dark:text-red-400">Unexpected details format</div>`;
+    }
+    
+    // Ensure parsedDetails is valid
+    if (!parsedDetails || typeof parsedDetails !== 'object') {
+      console.error('Parsed details is invalid:', parsedDetails);
+      return `<div class="text-red-600 dark:text-red-400">Invalid details structure</div>`;
+    }
     
     // Helper function to get user display name
     const getUserDisplayName = (userId: string) => {
@@ -1452,47 +1555,23 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
     switch (action) {
       case 'password_change':
         return `Password changed for user`;
-      case 'place_update':
-        const changes = [];
-        if (parsedDetails.old_name !== parsedDetails.new_name) {
-          changes.push(`<div class="mb-1"><span class="font-medium">Name:</span> <span class="text-red-600 dark:text-red-400">"${parsedDetails.old_name}"</span> <span class="text-gray-500">→</span> <span class="text-green-600 dark:text-green-400">"${parsedDetails.new_name}"</span></div>`);
-        }
-        if (parsedDetails.old_description !== parsedDetails.new_description) {
-          changes.push(`<div class="mb-1"><span class="font-medium">Description:</span> <span class="text-red-600 dark:text-red-400">"${parsedDetails.old_description || 'None'}"</span> <span class="text-gray-500">→</span> <span class="text-green-600 dark:text-green-400">"${parsedDetails.new_description || 'None'}"</span></div>`);
-        }
-        if (parsedDetails.old_location !== parsedDetails.new_location) {
-          changes.push(`<div class="mb-1"><span class="font-medium">Location:</span> <span class="text-red-600 dark:text-red-400">"${parsedDetails.old_location}"</span> <span class="text-gray-500">→</span> <span class="text-green-600 dark:text-green-400">"${parsedDetails.new_location}"</span></div>`);
-        }
-        return changes.length > 0 ? `<div class="space-y-1">${changes.join('')}</div>` : 'Place details updated';
-      case 'place_availability_toggle':
-        const statusClass = parsedDetails.is_available ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
-        const statusText = parsedDetails.is_available ? 'Available' : 'Unavailable';
-        return `<div><span class="font-medium">Place:</span> ${parsedDetails.name || 'Unknown place'}</div><div><span class="font-medium">Status:</span> <span class="${statusClass}">${statusText}</span></div>`;
-      case 'place_create':
-        return `<div><span class="font-medium">Name:</span> ${parsedDetails.place_name || 'Unknown place'}</div><div><span class="font-medium">Location:</span> ${parsedDetails.place_location || 'Unknown location'}</div>`;
-      case 'personnel_assignment':
-        const personnelName = await getUserName(parsedDetails.personnel_id);
-        const assignmentPlaceName = await getPlaceName(parsedDetails.place_id);
-        return `<div><span class="font-medium">Personnel:</span> ${personnelName}</div><div><span class="font-medium">Place:</span> ${assignmentPlaceName}</div>`;
-      case 'personnel_removal':
-        const removedPersonnelName = await getUserName(parsedDetails.personnel_id);
-        const removalPlaceName = await getPlaceName(parsedDetails.place_id);
-        return `<div><span class="font-medium">Personnel:</span> ${removedPersonnelName}</div><div><span class="font-medium">Place:</span> ${removalPlaceName}</div>`;
-      case 'personnel_availability_change':
-        const status = parsedDetails.is_available ? 'Available' : 'Unavailable';
-        const statusColor = parsedDetails.is_available ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
-        const reason = parsedDetails.unavailability_reason ? `<div><span class="font-medium">Reason:</span> ${parsedDetails.unavailability_reason}</div>` : '';
-        const availabilityPlaceName = await getPlaceName(parsedDetails.place_id);
-        return `<div><span class="font-medium">Place:</span> ${availabilityPlaceName}</div><div><span class="font-medium">Status:</span> <span class="${statusColor}">${status}</span></div>${reason}`;
       case 'visit_scheduled': {
         // Handle multi-place visits
         let placesHtml = '';
         let personnelHtml = '';
         
+        // Validate required fields
+        if (!parsedDetails.visitor_name && !parsedDetails.visitor_first_name) {
+          return `<div class="text-red-600 dark:text-red-400">Missing visitor information</div>`;
+        }
+        
+        const visitorName = parsedDetails.visitor_name || 
+          `${parsedDetails.visitor_first_name || ''} ${parsedDetails.visitor_last_name || ''}`.trim();
+        
         // Check if this is a multi-place visit
         if (parsedDetails.place_ids && Array.isArray(parsedDetails.place_ids) && parsedDetails.place_ids.length > 1) {
           // Multi-place visit
-          const placeNames = parsedDetails.place_names || [];
+          const placeNames = Array.isArray(parsedDetails.place_names) ? parsedDetails.place_names : [];
           placesHtml = `<div><span class="font-medium">Places (${parsedDetails.total_places || placeNames.length}):</span> ${placeNames.join(', ')}</div>`;
         } else if (parsedDetails.place_names && Array.isArray(parsedDetails.place_names) && parsedDetails.place_names.length === 1) {
           // Single place visit - use the place name from the log
@@ -1530,7 +1609,10 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
                   return await getUserName(personnelId);
                 })
               );
-              personnelHtml = `<div><span class="font-medium">Completed by:</span> ${personnelNames.join(', ')}</div>`;
+              const validPersonnelNames = Array.isArray(personnelNames) ? personnelNames.filter(name => name) : [];
+              if (validPersonnelNames.length > 0) {
+                personnelHtml = `<div><span class="font-medium">Completed by:</span> ${validPersonnelNames.join(', ')}</div>`;
+              }
             }
           }
         }
@@ -1539,34 +1621,42 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
         if (Array.isArray(parsedDetails.history) && parsedDetails.history.length > 0) {
           const historyId = `history-${log?.id || Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
           const historyItems = parsedDetails.history.map((event: any) => {
-            const eventType = event.event ? event.event.charAt(0).toUpperCase() + event.event.slice(1) : 'Event';
-            const eventTime = event.timestamp ? new Date(event.timestamp).toLocaleString() : '';
-            let details = '';
-            if (event.details) {
-              if (event.details.by) {
-                details += `<span class='text-xs text-gray-500'>(By: ${event.details.by})</span> `;
+            try {
+              const eventType = event.event ? event.event.charAt(0).toUpperCase() + event.event.slice(1) : 'Event';
+              const eventTime = event.timestamp ? new Date(event.timestamp).toLocaleString() : '';
+              let details = '';
+              if (event.details) {
+                if (event.details.by) {
+                  details += `<span class='text-xs text-gray-500'>(By: ${event.details.by})</span> `;
+                }
+                if (event.details.purpose) {
+                  details += `<span class='text-xs text-gray-500'>Purpose: ${event.details.purpose}</span> `;
+                }
+                if (event.details.note) {
+                  details += `<span class='text-xs text-gray-500'>Note: ${event.details.note}</span> `;
+                }
+                if (event.details.reason) {
+                  details += `<span class='text-xs text-red-500'>Reason: ${event.details.reason}</span> `;
+                }
+                if (event.details.auto_marked) {
+                  details += `<span class='text-xs text-orange-500'>(Auto-marked by system)</span> `;
+                }
+                if (event.details.place_name) {
+                  details += `<span class='text-xs text-blue-500'>Place: ${event.details.place_name}</span> `;
+                }
+                if (event.details.completed_places) {
+                  const completedPlaces = Array.isArray(event.details.completed_places) 
+                    ? event.details.completed_places.join(', ')
+                    : String(event.details.completed_places);
+                  details += `<span class='text-xs text-green-500'>Places: ${completedPlaces}</span> `;
+                }
               }
-              if (event.details.purpose) {
-                details += `<span class='text-xs text-gray-500'>Purpose: ${event.details.purpose}</span> `;
-              }
-              if (event.details.note) {
-                details += `<span class='text-xs text-gray-500'>Note: ${event.details.note}</span> `;
-              }
-              if (event.details.reason) {
-                details += `<span class='text-xs text-red-500'>Reason: ${event.details.reason}</span> `;
-              }
-              if (event.details.auto_marked) {
-                details += `<span class='text-xs text-orange-500'>(Auto-marked by system)</span> `;
-              }
-              if (event.details.place_name) {
-                details += `<span class='text-xs text-blue-500'>Place: ${event.details.place_name}</span> `;
-              }
-              if (event.details.completed_places) {
-                details += `<span class='text-xs text-green-500'>Places: ${event.details.completed_places.join(', ')}</span> `;
-              }
+              return `<li class="py-1 border-b border-gray-100 dark:border-gray-700 last:border-b-0"><span class='font-semibold'>${eventType}</span> <span class='text-xs text-gray-400'>${eventTime}</span> ${details}</li>`;
+            } catch (error) {
+              console.error('Error processing history event:', error, event);
+              return `<li class="py-1 border-b border-gray-100 dark:border-gray-700 last:border-b-0"><span class='font-semibold text-red-600'>Error processing event</span></li>`;
             }
-            return `<li class="py-1 border-b border-gray-100 dark:border-gray-700 last:border-b-0"><span class='font-semibold'>${eventType}</span> <span class='text-xs text-gray-400'>${eventTime}</span> ${details}</li>`;
-          }).join('');
+          }).filter(item => item).join('');
           
           historyHtml = `
             <div class="mt-2">
@@ -1587,8 +1677,41 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
               </div>
             </div>`;
         }
-        return `<div><span class="font-medium">Visitor:</span> ${parsedDetails.visitor_name || 'Unknown visitor'}</div><div><span class="font-medium">Date:</span> ${new Date(parsedDetails.visit_date).toLocaleDateString()}</div>${placesHtml}<div><span class="font-medium">Purpose:</span> ${parsedDetails.purpose || 'Not specified'}</div>${personnelHtml}${statusHtml}${historyHtml}`;
+        return `<div><span class="font-medium">Visitor:</span> ${visitorName || 'Unknown visitor'}</div><div><span class="font-medium">Date:</span> ${parsedDetails.visit_date ? new Date(parsedDetails.visit_date).toLocaleDateString() : 'Unknown date'}</div>${placesHtml}<div><span class="font-medium">Purpose:</span> ${parsedDetails.purpose || 'Not specified'}</div>${personnelHtml}${statusHtml}${historyHtml}`;
       }
+      case 'place_update':
+        const changes = [];
+        if (parsedDetails.old_name !== parsedDetails.new_name) {
+          changes.push(`<div class="mb-1"><span class="font-medium">Name:</span> <span class="text-red-600 dark:text-red-400">"${parsedDetails.old_name}"</span> <span class="text-gray-500">→</span> <span class="text-green-600 dark:text-green-400">"${parsedDetails.new_name}"</span></div>`);
+        }
+        if (parsedDetails.old_description !== parsedDetails.new_description) {
+          changes.push(`<div class="mb-1"><span class="font-medium">Description:</span> <span class="text-red-600 dark:text-red-400">"${parsedDetails.old_description || 'None'}"</span> <span class="text-gray-500">→</span> <span class="text-green-600 dark:text-green-400">"${parsedDetails.new_description || 'None'}"</span></div>`);
+        }
+        if (parsedDetails.old_location !== parsedDetails.new_location) {
+          changes.push(`<div class="mb-1"><span class="font-medium">Location:</span> <span class="text-red-600 dark:text-red-400">"${parsedDetails.old_location}"</span> <span class="text-gray-500">→</span> <span class="text-green-600 dark:text-green-400">"${parsedDetails.new_location}"</span></div>`);
+        }
+        return changes.length > 0 ? `<div class="space-y-1">${changes.join('')}</div>` : 'Place details updated';
+      case 'place_availability_toggle':
+        const statusClass = parsedDetails.is_available ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
+        const statusText = parsedDetails.is_available ? 'Available' : 'Unavailable';
+        return `<div><span class="font-medium">Place:</span> ${parsedDetails.name || 'Unknown place'}</div><div><span class="font-medium">Status:</span> <span class="${statusClass}">${statusText}</span></div>`;
+      case 'place_create':
+        return `<div><span class="font-medium">Name:</span> ${parsedDetails.place_name || 'Unknown place'}</div><div><span class="font-medium">Location:</span> ${parsedDetails.place_location || 'Unknown location'}</div>`;
+      case 'personnel_assignment':
+        const personnelName = await getUserName(parsedDetails.personnel_id);
+        const assignmentPlaceName = await getPlaceName(parsedDetails.place_id);
+        return `<div><span class="font-medium">Personnel:</span> ${personnelName}</div><div><span class="font-medium">Place:</span> ${assignmentPlaceName}</div>`;
+      case 'personnel_removal':
+        const removedPersonnelName = await getUserName(parsedDetails.personnel_id);
+        const removalPlaceName = await getPlaceName(parsedDetails.place_id);
+        return `<div><span class="font-medium">Personnel:</span> ${removedPersonnelName}</div><div><span class="font-medium">Place:</span> ${removalPlaceName}</div>`;
+      case 'personnel_availability_change':
+        const status = parsedDetails.is_available ? 'Available' : 'Unavailable';
+        const statusColor = parsedDetails.is_available ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
+        const reason = parsedDetails.unavailability_reason ? `<div><span class="font-medium">Reason:</span> ${parsedDetails.unavailability_reason}</div>` : '';
+        const availabilityPlaceName = await getPlaceName(parsedDetails.place_id);
+        return `<div><span class="font-medium">Place:</span> ${availabilityPlaceName}</div><div><span class="font-medium">Status:</span> <span class="${statusColor}">${status}</span></div>${reason}`;
+
       case 'visit_completed':
         const completedVisitPlaceName = await getPlaceName(parsedDetails.place_id);
         return `<div><span class="font-medium">Visit ID:</span> ${parsedDetails.visit_id ? parsedDetails.visit_id.substring(0, 8) + '...' : 'Unknown'}</div><div><span class="font-medium">Place:</span> ${completedVisitPlaceName}</div><div><span class="font-medium">Completed:</span> ${new Date(parsedDetails.completed_at).toLocaleString()}</div>`;
@@ -1603,15 +1726,25 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
         if (parsedDetails.places && Array.isArray(parsedDetails.places)) {
           // Multi-place visit from cleanup logs
           const placeNames = parsedDetails.places.map((place: any) => {
-            const statusClass = place.status === 'completed' ? 'text-green-600' : 'text-red-600';
-            return `<span class="${statusClass}">${place.place_name || 'Unknown Place'}</span>`;
-          }).join(', ');
+            try {
+              const statusClass = place.status === 'completed' ? 'text-green-600' : 'text-red-600';
+              return `<span class="${statusClass}">${place.place_name || 'Unknown Place'}</span>`;
+            } catch (error) {
+              console.error('Error processing place in visit_unsuccessful:', error, place);
+              return `<span class="text-red-600">Unknown Place</span>`;
+            }
+          }).filter(name => name).join(', ');
           placesHtml = `<div><span class="font-medium">Places:</span> ${placeNames}</div>`;
         } else if (parsedDetails.place_names && Array.isArray(parsedDetails.place_names)) {
           // Multi-place visit from original scheduling
-          const placeNames = parsedDetails.place_names.map((name: string) => 
-            `<span class="text-blue-600">${name}</span>`
-          ).join(', ');
+          const placeNames = parsedDetails.place_names.map((name: string) => {
+            try {
+              return `<span class="text-blue-600">${name || 'Unknown Place'}</span>`;
+            } catch (error) {
+              console.error('Error processing place name in visit_unsuccessful:', error, name);
+              return `<span class="text-red-600">Unknown Place</span>`;
+            }
+          }).filter(name => name).join(', ');
           placesHtml = `<div><span class="font-medium">Places:</span> ${placeNames}</div>`;
         } else if (parsedDetails.place_id) {
           // Single place visit - try to get place name from database
@@ -1658,7 +1791,8 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
         return `<pre class="text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto">${JSON.stringify(parsedDetails, null, 2)}</pre>`;
     }
   } catch (error) {
-    return 'Error parsing details';
+    console.error('Error in formatLogDetails:', error, 'Action:', action, 'Details:', details);
+    return `<div class="text-red-600 dark:text-red-400">Error formatting details: ${error instanceof Error ? error.message : 'Unknown error'}</div>`;
   }
 }
 
@@ -3437,6 +3571,10 @@ function setupVisitorDashboardEventListeners() {
         // Reload visitor visits
         await loadVisitorVisits();
         
+        // Re-apply current filters
+        await applyVisitorCurrentFilters();
+        await applyVisitorPastFilters();
+        
         // Show success notification
         showNotification('Visits refreshed successfully', 'success');
       } catch (error) {
@@ -3453,34 +3591,222 @@ function setupVisitorDashboardEventListeners() {
     console.error('Refresh button not found');
   }
 
-  // Search input event listener
-  const visitorSearchInput = document.getElementById('visitorSearchInput') as HTMLInputElement;
-  if (visitorSearchInput) {
-    visitorSearchInput.addEventListener('input', debounce(() => {
-      currentVisitorSearchTerm = visitorSearchInput.value;
-      applyVisitorFilters();
+  // Tab switching event listeners
+  const visitorCurrentTab = document.getElementById('visitorCurrentTab');
+  const visitorPastTab = document.getElementById('visitorPastTab');
+  const visitorCurrentContent = document.getElementById('visitorCurrentContent');
+  const visitorPastContent = document.getElementById('visitorPastContent');
+
+  visitorCurrentTab?.addEventListener('click', () => {
+    visitorCurrentTab.classList.add('border-blue-500', 'text-blue-600', 'dark:text-blue-400');
+    visitorCurrentTab.classList.remove('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+    visitorPastTab?.classList.remove('border-blue-500', 'text-blue-600', 'dark:text-blue-400');
+    visitorPastTab?.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+    visitorCurrentContent?.classList.remove('hidden');
+    visitorPastContent?.classList.add('hidden');
+  });
+
+  visitorPastTab?.addEventListener('click', () => {
+    visitorPastTab.classList.add('border-blue-500', 'text-blue-600', 'dark:text-blue-400');
+    visitorPastTab.classList.remove('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+    visitorCurrentTab?.classList.remove('border-blue-500', 'text-blue-600', 'dark:text-blue-400');
+    visitorCurrentTab?.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+    visitorPastContent?.classList.remove('hidden');
+    visitorCurrentContent?.classList.add('hidden');
+  });
+
+  // Current visits search and filter event listeners
+  const visitorCurrentSearchInput = document.getElementById('visitorCurrentSearchInput') as HTMLInputElement;
+  if (visitorCurrentSearchInput) {
+    visitorCurrentSearchInput.addEventListener('input', debounce(() => {
+      currentVisitorSearchTerm = visitorCurrentSearchInput.value;
+      applyVisitorCurrentFilters();
     }, 300));
   }
 
-  // Status filter event listener
-  const visitorStatusFilter = document.getElementById('visitorStatusFilter') as HTMLSelectElement;
-  if (visitorStatusFilter) {
-    visitorStatusFilter.addEventListener('change', async () => {
-      currentVisitorStatusFilter = visitorStatusFilter.value;
-      await applyVisitorFilters();
+  const visitorCurrentStatusFilter = document.getElementById('visitorCurrentStatusFilter') as HTMLSelectElement;
+  if (visitorCurrentStatusFilter) {
+    visitorCurrentStatusFilter.addEventListener('change', async () => {
+      currentVisitorStatusFilter = visitorCurrentStatusFilter.value;
+      await applyVisitorCurrentFilters();
     });
   }
 
-  // Date filter event listener
-  const visitorDateFilter = document.getElementById('visitorDateFilter') as HTMLSelectElement;
-  if (visitorDateFilter) {
-    visitorDateFilter.addEventListener('change', async () => {
-      currentVisitorDateFilter = visitorDateFilter.value;
-      await applyVisitorFilters();
+  const visitorCurrentDateFilter = document.getElementById('visitorCurrentDateFilter') as HTMLSelectElement;
+  if (visitorCurrentDateFilter) {
+    visitorCurrentDateFilter.addEventListener('change', async () => {
+      currentVisitorDateFilter = visitorCurrentDateFilter.value;
+      await applyVisitorCurrentFilters();
+    });
+  }
+
+  // Past visits search and filter event listeners
+  const visitorPastSearchInput = document.getElementById('visitorPastSearchInput') as HTMLInputElement;
+  if (visitorPastSearchInput) {
+    visitorPastSearchInput.addEventListener('input', debounce(() => {
+      currentVisitorSearchTerm = visitorPastSearchInput.value;
+      applyVisitorPastFilters();
+    }, 300));
+  }
+
+  const visitorPastStatusFilter = document.getElementById('visitorPastStatusFilter') as HTMLSelectElement;
+  if (visitorPastStatusFilter) {
+    visitorPastStatusFilter.addEventListener('change', async () => {
+      currentVisitorStatusFilter = visitorPastStatusFilter.value;
+      await applyVisitorPastFilters();
+    });
+  }
+
+  const visitorPastDateFilter = document.getElementById('visitorPastDateFilter') as HTMLSelectElement;
+  if (visitorPastDateFilter) {
+    visitorPastDateFilter.addEventListener('change', async () => {
+      currentVisitorDateFilter = visitorPastDateFilter.value;
+      await applyVisitorPastFilters();
+    });
+  }
+
+  const visitorPastPlaceFilter = document.getElementById('visitorPastPlaceFilter') as HTMLSelectElement;
+  if (visitorPastPlaceFilter) {
+    visitorPastPlaceFilter.addEventListener('change', async () => {
+      await applyVisitorPastFilters();
     });
   }
 
   console.log('Visitor dashboard event listeners setup complete');
+}
+
+// Function to apply filters for current visits
+async function applyVisitorCurrentFilters() {
+  const currentDate = new Date();
+  currentDate.setHours(0, 0, 0, 0);
+  
+  let filteredVisits = allVisitorVisits.filter(visit => {
+    const visitDate = new Date(visit.visit_date);
+    return visitDate >= currentDate || visit.status === 'pending';
+  });
+
+  // Apply search filter
+  if (currentVisitorSearchTerm.trim()) {
+    const searchTerm = currentVisitorSearchTerm.toLowerCase();
+    filteredVisits = filteredVisits.filter(visit => {
+      const purpose = (visit.purpose || '').toLowerCase();
+      const otherPurpose = (visit.other_purpose || '').toLowerCase();
+      const places = Array.isArray(visit.places) ? visit.places : [];
+      const placeNames = places.map((place: any) => (place.place_name || '').toLowerCase()).join(' ');
+      
+      return purpose.includes(searchTerm) || 
+             otherPurpose.includes(searchTerm) || 
+             placeNames.includes(searchTerm);
+    });
+  }
+
+  // Apply status filter
+  if (currentVisitorStatusFilter !== 'all') {
+    filteredVisits = filteredVisits.filter(visit => visit.status === currentVisitorStatusFilter);
+  }
+
+  // Apply date filter
+  if (currentVisitorDateFilter !== 'all') {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    filteredVisits = filteredVisits.filter(visit => {
+      const visitDate = new Date(visit.visit_date);
+      visitDate.setHours(0, 0, 0, 0);
+      
+      switch (currentVisitorDateFilter) {
+        case 'today':
+          return visitDate.getTime() === today.getTime();
+        case 'future':
+          return visitDate.getTime() > today.getTime();
+        case 'past':
+          return visitDate.getTime() < today.getTime();
+        default:
+          return true;
+      }
+    });
+  }
+
+  await displayVisitorCurrentVisits(filteredVisits);
+}
+
+// Function to apply filters for past visits
+async function applyVisitorPastFilters() {
+  const currentDate = new Date();
+  currentDate.setHours(0, 0, 0, 0);
+  
+  let filteredVisits = allVisitorVisits.filter(visit => {
+    const visitDate = new Date(visit.visit_date);
+    return visitDate < currentDate && visit.status !== 'pending';
+  });
+
+  // Apply search filter
+  if (currentVisitorSearchTerm.trim()) {
+    const searchTerm = currentVisitorSearchTerm.toLowerCase();
+    filteredVisits = filteredVisits.filter(visit => {
+      const purpose = (visit.purpose || '').toLowerCase();
+      const otherPurpose = (visit.other_purpose || '').toLowerCase();
+      const places = Array.isArray(visit.places) ? visit.places : [];
+      const placeNames = places.map((place: any) => (place.place_name || '').toLowerCase()).join(' ');
+      
+      return purpose.includes(searchTerm) || 
+             otherPurpose.includes(searchTerm) || 
+             placeNames.includes(searchTerm);
+    });
+  }
+
+  // Apply status filter
+  if (currentVisitorStatusFilter !== 'all') {
+    filteredVisits = filteredVisits.filter(visit => visit.status === currentVisitorStatusFilter);
+  }
+
+  // Apply date range filter
+  if (currentVisitorDateFilter !== 'all') {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    filteredVisits = filteredVisits.filter(visit => {
+      const visitDate = new Date(visit.visit_date);
+      visitDate.setHours(0, 0, 0, 0);
+      
+      switch (currentVisitorDateFilter) {
+        case 'last7days':
+          const sevenDaysAgo = new Date(today);
+          sevenDaysAgo.setDate(today.getDate() - 7);
+          return visitDate >= sevenDaysAgo;
+        case 'last30days':
+          const thirtyDaysAgo = new Date(today);
+          thirtyDaysAgo.setDate(today.getDate() - 30);
+          return visitDate >= thirtyDaysAgo;
+        case 'last3months':
+          const threeMonthsAgo = new Date(today);
+          threeMonthsAgo.setMonth(today.getMonth() - 3);
+          return visitDate >= threeMonthsAgo;
+        case 'last6months':
+          const sixMonthsAgo = new Date(today);
+          sixMonthsAgo.setMonth(today.getMonth() - 6);
+          return visitDate >= sixMonthsAgo;
+        case 'lastyear':
+          const oneYearAgo = new Date(today);
+          oneYearAgo.setFullYear(today.getFullYear() - 1);
+          return visitDate >= oneYearAgo;
+        default:
+          return true;
+      }
+    });
+  }
+
+  // Apply place filter
+  const visitorPastPlaceFilter = document.getElementById('visitorPastPlaceFilter') as HTMLSelectElement;
+  if (visitorPastPlaceFilter && visitorPastPlaceFilter.value !== 'all') {
+    const selectedPlace = visitorPastPlaceFilter.value;
+    filteredVisits = filteredVisits.filter(visit => {
+      const places = Array.isArray(visit.places) ? visit.places : [];
+      return places.some((place: any) => place.place_name === selectedPlace);
+    });
+  }
+
+  await displayVisitorPastVisits(filteredVisits);
 }
 
 // Helper function to get current Philippine time
@@ -3939,7 +4265,7 @@ async function loadVisitorDashboard() {
       return;
     }
 
-    // Load visitor's scheduled visits
+    // Load visitor's scheduled visits (both current and past)
     await loadVisitorVisits();
 
     // Setup visitor dashboard event listeners with a small delay to ensure DOM is ready
@@ -3973,26 +4299,53 @@ async function loadVisitorVisits() {
       return;
     }
 
-    // Display the visits
-    await displayVisitorVisits(visits || []);
+    // Store all visits globally
+    allVisitorVisits = visits || [];
     
-    console.log('Visitor visits loaded successfully:', visits?.length || 0);
+    // Separate current and past visits
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
+    
+    const currentVisits = allVisitorVisits.filter(visit => {
+      const visitDate = new Date(visit.visit_date);
+      return visitDate >= currentDate || visit.status === 'pending';
+    });
+    
+    const pastVisits = allVisitorVisits.filter(visit => {
+      const visitDate = new Date(visit.visit_date);
+      return visitDate < currentDate && visit.status !== 'pending';
+    });
+
+    // Display current visits
+    await displayVisitorCurrentVisits(currentVisits);
+    
+    // Display past visits
+    await displayVisitorPastVisits(pastVisits);
+    
+    // Populate place filter options for past visits
+    populatePastPlaceFilterOptions(pastVisits);
+    
+    console.log('Visitor visits loaded successfully:', {
+      total: allVisitorVisits.length,
+      current: currentVisits.length,
+      past: pastVisits.length
+    });
   } catch (error) {
     console.error('Error in loadVisitorVisits:', error);
     showNotification('Error loading visits', 'error');
   }
 }
 
-// Function to display visitor's scheduled visits
-async function displayVisitorVisits(visits: any[]): Promise<void> {
-  const visitorVisitsList = document.getElementById('visitorVisitsList');
-  if (!visitorVisitsList) {
-    console.error('Visitor visits list container not found');
+// Function to display visitor's current visits
+async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
+  const visitorCurrentVisitsList = document.getElementById('visitorCurrentVisitsList');
+  if (!visitorCurrentVisitsList) {
+    console.error('Visitor current visits list container not found');
     return;
   }
 
   if (visits.length === 0) {
-    visitorVisitsList.innerHTML = `
+    visitorCurrentVisitsList.innerHTML = `
       <div class="text-center py-8">
         <div class="text-gray-500 dark:text-gray-400">
           <svg class="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -4049,7 +4402,7 @@ async function displayVisitorVisits(visits: any[]): Promise<void> {
                 ${visit.status === 'failed' ? 'Failed' : visit.status.charAt(0).toUpperCase() + visit.status.slice(1)}
               </span>
               ${isToday ? '<span class="px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded-full text-xs font-medium">Today</span>' : ''}
-              ${visit.status !== 'unsuccessful' && visit.status !== 'failed' ? `
+              ${visit.status !== 'unsuccessful' && visit.status !== 'failed' && visit.status !== 'completed' ? `
                 <button 
                   onclick="printVisitCard('${visit.id}')"
                   class="px-3 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded-full text-xs font-medium hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors duration-200 flex items-center space-x-1"
@@ -4134,7 +4487,175 @@ async function displayVisitorVisits(visits: any[]): Promise<void> {
     `;
   }
 
-  visitorVisitsList.innerHTML = visitsHtml;
+  visitorCurrentVisitsList.innerHTML = visitsHtml;
+}
+
+// Function to display visitor's past visits
+async function displayVisitorPastVisits(visits: any[]): Promise<void> {
+  const visitorPastVisitsList = document.getElementById('visitorPastVisitsList');
+  if (!visitorPastVisitsList) {
+    console.error('Visitor past visits list container not found');
+    return;
+  }
+
+  if (visits.length === 0) {
+    visitorPastVisitsList.innerHTML = `
+      <div class="text-center py-8">
+        <div class="text-gray-500 dark:text-gray-400">
+          <svg class="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p class="text-lg font-medium">No past schedules found</p>
+          <p class="text-sm">You haven't completed any visits yet.</p>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  let visitsHtml = '';
+  
+  for (const visit of visits) {
+    const visitDate = new Date(visit.visit_date);
+    
+    // Calculate progress for the visit
+    const progress = calculateVisitProgress(visit);
+    
+    // Parse places data
+    const places = Array.isArray(visit.places) ? visit.places : [];
+    const completedPlaces = places.filter((place: any) => place.status === 'completed').length;
+    const totalPlaces = places.length;
+    
+    visitsHtml += `
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="p-4 sm:p-6">
+          <!-- Visit Header -->
+          <div class="flex items-start justify-between mb-4">
+            <div class="flex-1">
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                Visit on ${visitDate.toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Purpose: ${visit.purpose}${visit.other_purpose ? ` - ${visit.other_purpose}` : ''}
+              </p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="px-3 py-1 rounded-full text-xs font-medium ${
+                visit.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                visit.status === 'unsuccessful' || visit.status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                visit.status === 'cancelled' ? 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
+                'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+              }">
+                ${visit.status === 'failed' ? 'Failed' : visit.status.charAt(0).toUpperCase() + visit.status.slice(1)}
+              </span>
+            </div>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="mb-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Progress</span>
+              <span class="text-sm text-gray-500 dark:text-gray-400">${completedPlaces}/${totalPlaces} places completed</span>
+            </div>
+            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div class="h-2 rounded-full ${progress.color}" style="width: ${progress.percentage}%"></div>
+            </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${progress.status}</p>
+          </div>
+
+          <!-- Places List -->
+          ${places.length > 0 ? `
+            <div class="space-y-3">
+              <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Places visited:</h4>
+              ${places.map((place: any) => `
+                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div class="flex-1">
+                    <h5 class="text-sm font-medium text-gray-900 dark:text-white">${place.place_name}</h5>
+                    ${place.place_location ? `<p class="text-xs text-gray-600 dark:text-gray-400">${place.place_location}</p>` : ''}
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <span class="px-2 py-1 rounded-full text-xs font-medium ${
+                      place.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                      place.status === 'unsuccessful' || place.status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                      place.status === 'cancelled' ? 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
+                      'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                    }">
+                      ${place.status === 'failed' ? 'Failed' : place.status.charAt(0).toUpperCase() + place.status.slice(1)}
+                    </span>
+                    ${place.completed_at ? `
+                      <span class="text-xs text-gray-500 dark:text-gray-400">
+                        ${new Date(place.completed_at).toLocaleDateString()}
+                      </span>
+                    ` : ''}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          ` : `
+            <div class="text-center py-4">
+              <p class="text-sm text-gray-500 dark:text-gray-400">No places assigned to this visit</p>
+            </div>
+          `}
+
+          <!-- Visit Details -->
+          <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div>
+                <span class="font-medium text-gray-700 dark:text-gray-300">Scheduled:</span>
+                <span class="text-gray-600 dark:text-gray-400 ml-2">
+                  ${new Date(visit.scheduled_at).toLocaleDateString()} at ${new Date(visit.scheduled_at).toLocaleTimeString()}
+                </span>
+              </div>
+              ${visit.completed_at ? `
+                <div>
+                  <span class="font-medium text-gray-700 dark:text-gray-300">Completed:</span>
+                  <span class="text-gray-600 dark:text-gray-400 ml-2">
+                    ${new Date(visit.completed_at).toLocaleDateString()} at ${new Date(visit.completed_at).toLocaleTimeString()}
+                  </span>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  visitorPastVisitsList.innerHTML = visitsHtml;
+}
+
+// Function to populate place filter options for past visits
+function populatePastPlaceFilterOptions(pastVisits: any[]): void {
+  const placeFilter = document.getElementById('visitorPastPlaceFilter') as HTMLSelectElement;
+  if (!placeFilter) return;
+
+  // Get unique places from past visits
+  const uniquePlaces = new Set<string>();
+  pastVisits.forEach(visit => {
+    if (Array.isArray(visit.places)) {
+      visit.places.forEach((place: any) => {
+        if (place.place_name) {
+          uniquePlaces.add(place.place_name);
+        }
+      });
+    }
+  });
+
+  // Clear existing options except "All Places"
+  placeFilter.innerHTML = '<option value="all">All Places</option>';
+
+  // Add place options
+  Array.from(uniquePlaces).sort().forEach(placeName => {
+    const option = document.createElement('option');
+    option.value = placeName;
+    option.textContent = placeName;
+    placeFilter.appendChild(option);
+  });
 }
 
 // Apply filters and search to finished visits
