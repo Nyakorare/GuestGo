@@ -4,7 +4,7 @@ Ongoing:
  - GuestGo Visit Card Design and Detail Overhaul
 
 Planned:
- - Entrance and Exit before and afetr scheduling
+ - Entrance and Exit before and after scheduling
  - Email Notification for Scheduled Visits
  - AI Facial Recogtnition before completion of Scheduling Visits (Phase 1)
  - AI Facial Verfication on Entrance and Exit on given data on Scheduled visit (Phase 2)
@@ -29,3 +29,36 @@ Completed:
  - Scheduled Visits Print Option
  - Screen Responsive Pages
  - Email OTP for Guests Scheduling (EmailJS)
+ - Dark Mode Theme Toggle System
+ - Real-time Notification System (Success/Error Messages)
+ - Advanced Search and Filtering System (Dashboard, Logs, Visits, Places, Accounts)
+ - Auto-refresh Dashboard System (30-second intervals for real-time updates)
+ - Mobile Responsive Design (All pages and components)
+ - Personnel Visit Completion System (Individual places and entire visits)
+ - Visitor Dashboard with Current/Past Visits
+ - Visit Progress Tracking and Status Management
+ - History Tracking System for Visit Events
+ - Philippine Time Zone Integration
+ - Multi-place Visit Scheduling
+ - Personnel Availability Management
+ - Place Assignment and Management System
+ - Account Role Management (Admin can change user roles)
+ - Comprehensive Logging System with Detailed History
+ - QR Code Generation and Scanning System
+ - Manual QR Code Input System
+ - Visit Card Printing System
+ - Mobile-optimized Dashboard Views
+ - Real-time Philippine Clock Display
+ - Visit Status Progress Bars
+ - Personnel Assignment Validation
+ - Guest vs Logged-in User Differentiation
+ - Email Verification System for Guest Scheduling
+ - Weekly Visit Count Tracking
+ - Visit Completion Confirmation System
+ - Personnel Place Assignment Validation
+ - Visit History Modal System (Mobile-friendly)
+ - Auto-cleanup System for Past Visits
+ - Real-time Dashboard Updates
+ - Comprehensive Error Handling
+ - User-friendly Mobile Navigation
+ - Responsive Table/Card Views for Different Screen Sizes
