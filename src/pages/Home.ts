@@ -83,80 +83,99 @@ async function loadWeeklyVisitCount(userEmail: string) {
     weekEnd.setDate(weekStart.getDate() + 6);
     weekEnd.setHours(23, 59, 59, 999);
 
-    // Query the database for all pending and completed visits for the current user
-    // For logged-in users, check by visitor_user_id; for guests, check by visitor_email
+    // Calculate previous week boundaries
+    const prevWeekStart = new Date(weekStart);
+    prevWeekStart.setDate(weekStart.getDate() - 7);
+    prevWeekStart.setHours(0, 0, 0, 0);
+    const prevWeekEnd = new Date(prevWeekStart);
+    prevWeekEnd.setDate(prevWeekStart.getDate() + 6);
+    prevWeekEnd.setHours(23, 59, 59, 999);
+
+    // Query the database for all pending and completed visits for the current week
     const { data: visits, error } = await supabase
       .from('scheduled_visits')
       .select('visit_date, status')
       .eq('visitor_user_id', user.id)
-      .in('status', ['pending', 'completed']);
+      .in('status', ['pending', 'completed'])
+      .gte('visit_date', weekStart.toISOString())
+      .lte('visit_date', weekEnd.toISOString());
 
-    // Also check for all visits by this user (for debugging)
-    const { data: allVisits, error: allVisitsError } = await supabase
+    // Query the database for all pending and completed visits for the previous week
+    const { data: prevWeekVisits, error: prevWeekError } = await supabase
       .from('scheduled_visits')
-      .select('visit_date, status, visitor_email')
-      .eq('visitor_user_id', user.id);
+      .select('visit_date, status')
+      .eq('visitor_user_id', user.id)
+      .in('status', ['pending', 'completed'])
+      .gte('visit_date', prevWeekStart.toISOString())
+      .lte('visit_date', prevWeekEnd.toISOString());
 
     if (error) {
       console.error('Error loading weekly visit count:', error);
       weeklyVisitText.textContent = 'Error loading visit count';
       return;
     }
+    if (prevWeekError) {
+      console.error('Error loading previous week visits:', prevWeekError);
+    }
 
-    // Debug logging
-    console.log('Weekly Visit Count Debug:', {
-      userId: user.id,
-      userEmail: userEmail,
-      philippineToday: philippineToday.toISOString().split('T')[0],
-      visitsFound: visits,
-      visitCount: visits?.length || 0,
-      allVisitsFound: allVisits,
-      allVisitsCount: allVisits?.length || 0,
-      allVisitsError: allVisitsError,
-      query: {
-        table: 'scheduled_visits',
-        filters: {
-          visitor_user_id: user.id,
-          status_in: ['pending', 'completed']
-        }
-      }
-    });
-
-    // Count the pending and completed visits
+    // Count the pending and completed visits for the current week
     const visitCount = visits?.length || 0;
-    const remainingVisits = Math.max(0, 2 - visitCount);
-
-    // Count pending vs completed for display
     const pendingCount = visits?.filter(v => v.status === 'pending').length || 0;
     const completedCount = visits?.filter(v => v.status === 'completed').length || 0;
 
-    // Format the week range for display
-    const weekStartFormatted = weekStart.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric' 
-    });
-    const weekEndFormatted = weekEnd.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric' 
-    });
+    // Count the pending and completed visits for the previous week
+    const prevPendingCount = prevWeekVisits?.filter(v => v.status === 'pending').length || 0;
+    const prevCompletedCount = prevWeekVisits?.filter(v => v.status === 'completed').length || 0;
+    const prevTotalCount = prevWeekVisits?.length || 0;
 
-    // Update the display based on the count
-    if (visitCount === 0) {
-      weeklyVisitText.innerHTML = `
-        <span class="font-medium text-green-600 dark:text-green-400">2 visits remaining</span> 
-        (no scheduled visits)
-      `;
-    } else if (visitCount === 1) {
-      weeklyVisitText.innerHTML = `
-        <span class="font-medium text-yellow-600 dark:text-yellow-400">1 visit remaining</span> 
-        (${pendingCount} pending, ${completedCount} completed)
-      `;
-    } else {
-      weeklyVisitText.innerHTML = `
-        <span class="font-medium text-red-600 dark:text-red-400">No visits remaining</span> 
-        (${pendingCount} pending, ${completedCount} completed)
-      `;
+    // Determine if the week should be refreshed
+    // New logic:
+    // - 2 pending = no refresh
+    // - 1 pending, 1 completed/unsuccessful = 1 refresh
+    // - 2 completed/unsuccessful = 2 refresh
+    let refreshSlots = 2; // default: allow 2 visits
+    if (prevTotalCount > 0) {
+      if (prevPendingCount === 2) {
+        refreshSlots = 0; // 2 pending = no refresh
+      } else if (prevPendingCount === 1 && prevCompletedCount === 1) {
+        refreshSlots = 1; // 1 pending, 1 completed = 1 refresh
+      } else if (prevPendingCount === 0 && prevCompletedCount === 2) {
+        refreshSlots = 2; // 2 completed = 2 refresh
+      } else {
+        // For any other combination (e.g., only 1 visit last week)
+        refreshSlots = 2 - prevPendingCount; // e.g., 1 completed, 0 pending = 1 refresh
+      }
     }
+
+    // Calculate remaining visits for this week
+    const remainingVisits = Math.max(0, refreshSlots - visitCount);
+
+    // Format the week range for display (e.g., July 6-12, 2025)
+    const weekStartMonth = weekStart.toLocaleString('en-US', { month: 'short' });
+    const weekStartDay = weekStart.getDate();
+    const weekEndMonth = weekEnd.toLocaleString('en-US', { month: 'short' });
+    const weekEndDay = weekEnd.getDate();
+    const weekYear = weekEnd.getFullYear();
+    let weekRangeStr = '';
+    if (weekStartMonth === weekEndMonth) {
+      weekRangeStr = `${weekStartMonth} ${weekStartDay}-${weekEndDay}, ${weekYear}`;
+    } else {
+      weekRangeStr = `${weekStartMonth} ${weekStartDay} - ${weekEndMonth} ${weekEndDay}, ${weekYear}`;
+    }
+
+    // Update the display based on the count and week range
+    let statusHtml = '';
+    if (refreshSlots === 0) {
+      statusHtml = `<span class="font-medium text-gray-600 dark:text-gray-400">No new visits allowed until previous week is cleared</span>`;
+    } else if (remainingVisits === 2) {
+      statusHtml = `<span class="font-medium text-green-600 dark:text-green-400">2 visits remaining</span> (no scheduled visits)`;
+    } else if (remainingVisits === 1) {
+      statusHtml = `<span class="font-medium text-yellow-600 dark:text-yellow-400">1 visit remaining</span> (${pendingCount} pending, ${completedCount} completed)`;
+    } else {
+      statusHtml = `<span class="font-medium text-red-600 dark:text-red-400">No visits remaining</span> (${pendingCount} pending, ${completedCount} completed)`;
+    }
+
+    weeklyVisitText.innerHTML = `<span class="block font-semibold">Week of ${weekRangeStr}</span>${statusHtml}`;
 
     // Add a small note about the limit
     const noteElement = document.createElement('div');
