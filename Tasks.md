@@ -1,8 +1,8 @@
 Ongoing:
-
  - Home/Landing Page Design Overhaul
  - GuestGo Visit Card Design and Detail Overhaul
  - Entrance and Exit before and after scheduling
+ - Dashboard Loading Pagination
 
 Planned:
 
