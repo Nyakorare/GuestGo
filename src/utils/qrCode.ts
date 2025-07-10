@@ -17,6 +17,17 @@ export interface VisitQRData {
   scheduledAt: string;
 }
 
+export interface GateQRData {
+  gateId: string;
+  gateName: string;
+  gateDescription?: string;
+  gateLocation?: string;
+  gateType: 'entrance' | 'exit' | 'both';
+  status: 'open' | 'closed';
+  createdAt: string;
+  updatedAt: string;
+}
+
 /**
  * Generate a QR code for a scheduled visit
  * @param visitData - The visit data to encode in the QR code
@@ -82,11 +93,75 @@ export async function generateSimpleVisitQRCode(visitId: string): Promise<string
 }
 
 /**
+ * Generate a QR code for a gate
+ * @param gateData - The gate data to encode in the QR code
+ * @returns Promise<string> - Base64 encoded QR code image
+ */
+export async function generateGateQRCode(gateData: GateQRData): Promise<string> {
+  try {
+    // Create a JSON string with the gate data
+    const qrData = JSON.stringify(gateData);
+    
+    // Generate QR code as data URL
+    const qrCodeDataUrl = await QRCode.toDataURL(qrData, {
+      errorCorrectionLevel: 'M',
+      type: 'image/png',
+      quality: 0.92,
+      margin: 1,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      },
+      width: 256
+    });
+    
+    return qrCodeDataUrl;
+  } catch (error) {
+    console.error('Error generating gate QR code:', error);
+    throw new Error('Failed to generate gate QR code');
+  }
+}
+
+/**
+ * Generate a simple QR code for a gate (for scanning)
+ * @param gateId - The gate ID
+ * @returns Promise<string> - Base64 encoded QR code image
+ */
+export async function generateSimpleGateQRCode(gateId: string): Promise<string> {
+  try {
+    // Create a simple data structure for scanning
+    const qrData = JSON.stringify({
+      type: 'gate',
+      id: gateId,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Generate QR code as data URL
+    const qrCodeDataUrl = await QRCode.toDataURL(qrData, {
+      errorCorrectionLevel: 'L',
+      type: 'image/png',
+      quality: 0.92,
+      margin: 1,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      },
+      width: 200
+    });
+    
+    return qrCodeDataUrl;
+  } catch (error) {
+    console.error('Error generating simple gate QR code:', error);
+    throw new Error('Failed to generate gate QR code');
+  }
+}
+
+/**
  * Parse QR code data from a scanned QR code
  * @param qrData - The data from the scanned QR code
- * @returns VisitQRData | null - Parsed visit data or null if invalid
+ * @returns VisitQRData | GateQRData | null - Parsed data or null if invalid
  */
-export function parseQRCodeData(qrData: string): VisitQRData | null {
+export function parseQRCodeData(qrData: string): VisitQRData | GateQRData | null {
   try {
     const parsed = JSON.parse(qrData);
     
@@ -95,9 +170,19 @@ export function parseQRCodeData(qrData: string): VisitQRData | null {
       return null; // This is a simple QR code, needs to be resolved from database
     }
     
+    // Check if it's a simple gate QR code (just gate ID)
+    if (parsed.type === 'gate' && parsed.id) {
+      return null; // This is a simple QR code, needs to be resolved from database
+    }
+    
     // Check if it's a full visit QR code
     if (parsed.visitId && parsed.visitorName && parsed.visitDate) {
       return parsed as VisitQRData;
+    }
+    
+    // Check if it's a full gate QR code
+    if (parsed.gateId && parsed.gateName && parsed.gateType) {
+      return parsed as GateQRData;
     }
     
     return null;
@@ -440,6 +525,319 @@ export async function getVisitDataById(visitId: string): Promise<VisitQRData | n
     return null;
   } catch (error) {
     console.error('Error fetching visit data:', error);
+    return null;
+  }
+}
+
+/**
+ * Create a printable gate card with QR code
+ * @param gateData - The gate data
+ * @param qrCodeDataUrl - The QR code image data URL
+ * @returns string - HTML for the printable card
+ */
+export function createPrintableGateCard(gateData: GateQRData, qrCodeDataUrl: string): string {
+  const createdAt = new Date(gateData.createdAt);
+  const updatedAt = new Date(gateData.updatedAt);
+  
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Gate Card - ${gateData.gateName}</title>
+      <style>
+        @media print {
+          body { margin: 0; }
+          .no-print { display: none !important; }
+        }
+        
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          margin: 0;
+          padding: 20px;
+          background-color: #f5f5f5;
+        }
+        
+        .gate-card {
+          max-width: 400px;
+          margin: 0 auto;
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          overflow: hidden;
+          border: 2px solid #e5e7eb;
+        }
+        
+        .card-header {
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          color: white;
+          padding: 20px;
+          text-align: center;
+        }
+        
+        .card-header h1 {
+          margin: 0;
+          font-size: 24px;
+          font-weight: 600;
+        }
+        
+        .card-header p {
+          margin: 5px 0 0 0;
+          opacity: 0.9;
+          font-size: 14px;
+        }
+        
+        .qr-section {
+          padding: 20px;
+          text-align: center;
+          border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .qr-code {
+          width: 150px;
+          height: 150px;
+          margin: 0 auto 15px;
+          border: 2px solid #e5e7eb;
+          border-radius: 8px;
+          padding: 10px;
+          background: white;
+        }
+        
+        .qr-code img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+        }
+        
+        .gate-details {
+          padding: 20px;
+        }
+        
+        .detail-row {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 12px;
+          padding-bottom: 8px;
+          border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .detail-label {
+          font-weight: 600;
+          color: #374151;
+          font-size: 14px;
+        }
+        
+        .detail-value {
+          color: #1f2937;
+          font-size: 14px;
+          text-align: right;
+          max-width: 200px;
+          word-wrap: break-word;
+        }
+        
+        .status-badge {
+          display: inline-block;
+          padding: 2px 8px;
+          border-radius: 12px;
+          font-size: 11px;
+          font-weight: 500;
+          text-transform: uppercase;
+        }
+        
+        .status-open {
+          background: #dcfce7;
+          color: #166534;
+        }
+        
+        .status-closed {
+          background: #fee2e2;
+          color: #dc2626;
+        }
+        
+        .type-badge {
+          display: inline-block;
+          padding: 2px 8px;
+          border-radius: 12px;
+          font-size: 11px;
+          font-weight: 500;
+          text-transform: uppercase;
+        }
+        
+        .type-entrance {
+          background: #dbeafe;
+          color: #1e40af;
+        }
+        
+        .type-exit {
+          background: #fef3c7;
+          color: #92400e;
+        }
+        
+        .type-both {
+          background: #e0e7ff;
+          color: #3730a3;
+        }
+        
+        .footer {
+          padding: 15px 20px;
+          background: #f9fafb;
+          text-align: center;
+          font-size: 12px;
+          color: #6b7280;
+          border-top: 1px solid #e5e7eb;
+        }
+        
+        .print-button {
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: #10b981;
+          color: white;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-weight: 500;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .print-button:hover {
+          background: #059669;
+        }
+        
+        @media print {
+          .print-button {
+            display: none;
+          }
+          
+          body {
+            background: white;
+            padding: 0;
+          }
+          
+          .gate-card {
+            box-shadow: none;
+            border: 1px solid #e5e7eb;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <button class="print-button no-print" onclick="window.print()">
+        🖨️ Print Card
+      </button>
+      
+      <div class="gate-card">
+        <div class="card-header">
+          <h1>GuestGo Gate Card</h1>
+          <p>Scan QR code for details</p>
+        </div>
+        
+        <div class="qr-section">
+          <div class="qr-code">
+            <img src="${qrCodeDataUrl}" alt="Gate QR Code">
+          </div>
+          <p style="margin: 0; color: #6b7280; font-size: 12px;">
+            Scan this QR code to view gate details
+          </p>
+        </div>
+        
+        <div class="gate-details">
+          <div class="detail-row">
+            <span class="detail-label">Gate Name:</span>
+            <span class="detail-value">${gateData.gateName}</span>
+          </div>
+          
+          ${gateData.gateDescription ? `
+            <div class="detail-row">
+              <span class="detail-label">Description:</span>
+              <span class="detail-value">${gateData.gateDescription}</span>
+            </div>
+          ` : ''}
+          
+          ${gateData.gateLocation ? `
+            <div class="detail-row">
+              <span class="detail-label">Location:</span>
+              <span class="detail-value">📍 ${gateData.gateLocation}</span>
+            </div>
+          ` : ''}
+          
+          <div class="detail-row">
+            <span class="detail-label">Type:</span>
+            <span class="detail-value">
+              <span class="type-badge type-${gateData.gateType}">
+                ${gateData.gateType}
+              </span>
+            </span>
+          </div>
+          
+          <div class="detail-row">
+            <span class="detail-label">Status:</span>
+            <span class="detail-value">
+              <span class="status-badge status-${gateData.status}">
+                ${gateData.status}
+              </span>
+            </span>
+          </div>
+          
+          <div class="detail-row">
+            <span class="detail-label">Created:</span>
+            <span class="detail-value">${createdAt.toLocaleDateString()} ${createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+          
+          <div class="detail-row">
+            <span class="detail-label">Last Updated:</span>
+            <span class="detail-value">${updatedAt.toLocaleDateString()} ${updatedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+        </div>
+        
+        <div class="footer">
+          <p>Generated by GuestGo • ${new Date().toLocaleDateString()}</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+/**
+ * Open a printable gate card in a new window
+ * @param gateData - The gate data
+ * @param qrCodeDataUrl - The QR code image data URL
+ */
+export function openPrintableGateCard(gateData: GateQRData, qrCodeDataUrl: string): void {
+  const cardHtml = createPrintableGateCard(gateData, qrCodeDataUrl);
+  const newWindow = window.open('', '_blank');
+  
+  if (newWindow) {
+    newWindow.document.write(cardHtml);
+    newWindow.document.close();
+  } else {
+    // Fallback: create a blob and download
+    const blob = new Blob([cardHtml], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `gate-card-${gateData.gateId}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+}
+
+/**
+ * Get gate data from database by gate ID (for QR code scanning)
+ * @param gateId - The gate ID
+ * @returns Promise<GateQRData | null> - Gate data or null if not found
+ */
+export async function getGateDataById(gateId: string): Promise<GateQRData | null> {
+  try {
+    // This function would need to be implemented to fetch gate data from your database
+    // For now, returning null as placeholder
+    console.log('Fetching gate data for ID:', gateId);
+    return null;
+  } catch (error) {
+    console.error('Error fetching gate data:', error);
     return null;
   }
 } 

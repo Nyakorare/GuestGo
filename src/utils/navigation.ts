@@ -3,6 +3,7 @@ import { AboutPage } from '../pages/about';
 import { ContactPage } from '../pages/contact';
 import { DashboardPage } from '../pages/dashboard';
 import { QRScannerPage } from '../pages/QRScanner';
+import { GatePage, setupGatePage } from '../pages/GatePage';
 import { setupAboutPageInteractivity } from './eventHandlers';
 
 export function renderPage(path: string) {
@@ -16,6 +17,14 @@ export function renderPage(path: string) {
   if (path === '/dashboard') {
     if (welcomeMessage) welcomeMessage.classList.remove('hidden');
     if (profileSettingsBtn) profileSettingsBtn.classList.remove('hidden');
+  }
+
+  // Handle gate page routes
+  if (path.startsWith('/gate/')) {
+    const gateId = path.split('/')[2];
+    if (gateId) {
+      return GatePage(gateId);
+    }
   }
 
   switch (path) {
@@ -79,6 +88,23 @@ export async function updateNavigation() {
           initializeQRScanner();
         }, 100);
       });
+    }
+    
+    // Handle gate page setup
+    if (path.startsWith('/gate/')) {
+      const gateId = path.split('/')[2];
+      if (gateId) {
+        // Check if user has admin role before allowing access
+        if (userRole !== 'admin') {
+          // Redirect to dashboard if not admin
+          window.location.hash = '/dashboard';
+          return;
+        }
+        // Setup gate page functionality
+        setTimeout(() => {
+          setupGatePage(gateId);
+        }, 100);
+      }
     }
   }
 

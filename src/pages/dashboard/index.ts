@@ -68,9 +68,11 @@ export function DashboardPage() {
         const logsTab = document.getElementById('logsTab');
         const placesTab = document.getElementById('placesTab');
         const accountsTab = document.getElementById('accountsTab');
+        const gatesTab = document.getElementById('gatesTab');
         const placesContent = document.getElementById('placesContent');
         const accountsContent = document.getElementById('accountsContent');
         const logsContent = document.getElementById('logsContent');
+        const gatesContent = document.getElementById('gatesContent');
 
         if (roleData.role === 'log') {
           // Only show logs tab and content
@@ -78,9 +80,11 @@ export function DashboardPage() {
           if (logsTab) logsTab.classList.remove('hidden');
           if (placesTab) placesTab.classList.add('hidden');
           if (accountsTab) accountsTab.classList.add('hidden');
+          if (gatesTab) gatesTab.classList.add('hidden');
           if (placesContent) placesContent.classList.add('hidden');
           if (accountsContent) accountsContent.classList.add('hidden');
           if (logsContent) logsContent.classList.remove('hidden');
+          if (gatesContent) gatesContent.classList.add('hidden');
           
           // Hide visitor content
           const visitorContent = document.getElementById('visitorContent');
@@ -89,14 +93,16 @@ export function DashboardPage() {
           // Load logs immediately
           loadLogs();
         } else if (roleData.role === 'admin') {
-          // Admin: show admin tabs, hide logs
+          // Admin: show admin tabs including gates, hide logs
           if (adminTabs) adminTabs.classList.remove('hidden');
           if (logsTab) logsTab.classList.add('hidden');
           if (placesTab) placesTab.classList.remove('bg-blue-600', 'text-white');
           if (accountsTab) accountsTab.classList.remove('bg-gray-100', 'text-gray-700');
+          if (gatesTab) gatesTab.classList.remove('hidden');
           if (placesContent) placesContent.classList.remove('hidden');
           if (accountsContent) accountsContent.classList.add('hidden');
           if (logsContent) logsContent.classList.add('hidden');
+          if (gatesContent) gatesContent.classList.add('hidden');
           
           // Hide visitor content
           const visitorContent = document.getElementById('visitorContent');
@@ -282,6 +288,12 @@ export function DashboardPage() {
             >
               Logs
             </button>
+            <button 
+              id="gatesTab"
+              class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+            >
+              Gates
+            </button>
           </div>
         </div>
       </div>
@@ -418,6 +430,10 @@ export function DashboardPage() {
           </div>
         </div>
         <div id="logsList" class="overflow-x-auto space-y-4"></div>
+      </div>
+
+      <div id="gatesContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
+        <!-- Gates Management Content will be loaded here -->
       </div>
 
       <!-- Personnel Dashboard Content -->
@@ -2589,8 +2605,10 @@ window.addEventListener('beforeunload', () => {
 function setupAdminTabEventListeners() {
   const placesTab = document.getElementById('placesTab');
   const accountsTab = document.getElementById('accountsTab');
+  const gatesTab = document.getElementById('gatesTab');
   const placesContent = document.getElementById('placesContent');
   const accountsContent = document.getElementById('accountsContent');
+  const gatesContent = document.getElementById('gatesContent');
 
   // Places tab event listener
   placesTab?.addEventListener('click', () => {
@@ -2598,8 +2616,15 @@ function setupAdminTabEventListeners() {
     placesTab.classList.remove('bg-gray-100', 'text-gray-700');
     accountsTab?.classList.remove('bg-blue-600', 'text-white');
     accountsTab?.classList.add('bg-gray-100', 'text-gray-700');
+    gatesTab?.classList.remove('bg-blue-600', 'text-white');
+    gatesTab?.classList.add('bg-gray-100', 'text-gray-700');
     placesContent?.classList.remove('hidden');
     accountsContent?.classList.add('hidden');
+    gatesContent?.classList.add('hidden');
+    // Clear gates content when switching away
+    if (gatesContent) {
+      gatesContent.innerHTML = '';
+    }
     loadPlaces();
   });
 
@@ -2609,9 +2634,35 @@ function setupAdminTabEventListeners() {
     accountsTab.classList.remove('bg-gray-100', 'text-gray-700');
     placesTab?.classList.remove('bg-blue-600', 'text-white');
     placesTab?.classList.add('bg-gray-100', 'text-gray-700');
+    gatesTab?.classList.remove('bg-blue-600', 'text-white');
+    gatesTab?.classList.add('bg-gray-100', 'text-gray-700');
     accountsContent?.classList.remove('hidden');
     placesContent?.classList.add('hidden');
+    gatesContent?.classList.add('hidden');
+    // Clear gates content when switching away
+    if (gatesContent) {
+      gatesContent.innerHTML = '';
+    }
     loadAccounts();
+  });
+
+  // Gates tab event listener
+  gatesTab?.addEventListener('click', () => {
+    gatesTab.classList.add('bg-blue-600', 'text-white');
+    gatesTab.classList.remove('bg-gray-100', 'text-gray-700');
+    placesTab?.classList.remove('bg-blue-600', 'text-white');
+    placesTab?.classList.add('bg-gray-100', 'text-gray-700');
+    accountsTab?.classList.remove('bg-blue-600', 'text-white');
+    accountsTab?.classList.add('bg-gray-100', 'text-gray-700');
+    gatesContent?.classList.remove('hidden');
+    placesContent?.classList.add('hidden');
+    accountsContent?.classList.add('hidden');
+    // Dynamically import and render the Gates tab content
+    import('./Gates').then(module => {
+      gatesContent.innerHTML = module.renderGates();
+      // Setup event listeners after rendering
+      module.setupGatesEventListeners();
+    });
   });
 }
 
@@ -5063,3 +5114,4 @@ function ensureHistoryModalExists() {
     }
   }
 };
+

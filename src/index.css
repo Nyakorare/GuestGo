@@ -106,3 +106,48 @@
 .contact-card {
   transition: transform 0.2s, box-shadow 0.2s;
 }
+
+/* Gate status badges */
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.status-open {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-closed {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* Gate type badges */
+.type-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.type-entrance {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.type-exit {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.type-both {
+  background: #e0e7ff;
+  color: #3730a3;
+}
