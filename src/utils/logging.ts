@@ -1,6 +1,6 @@
 import supabase from '../config/supabase';
 
-export type LogAction = 'password_change' | 'place_update' | 'place_availability_toggle' | 'place_create' | 'personnel_assignment' | 'personnel_removal' | 'personnel_availability_change' | 'visit_scheduled' | 'visit_completed';
+export type LogAction = 'password_change' | 'place_update' | 'place_availability_toggle' | 'place_create' | 'personnel_assignment' | 'personnel_removal' | 'personnel_availability_change' | 'visit_scheduled' | 'visit_completed' | 'gate_create' | 'gate_update' | 'gate_status_change';
 
 export interface LogDetails {
   [key: string]: any;

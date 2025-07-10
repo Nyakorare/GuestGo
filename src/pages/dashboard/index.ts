@@ -111,6 +111,7 @@ export function DashboardPage() {
           loadPlaces();
           // Setup admin tab event listeners
           setupAdminTabEventListeners();
+          // Do NOT call loadLogs() here; logs will load when logs tab is clicked
         } else if (roleData.role === 'personnel') {
           // Personnel: show personnel content, hide admin tabs
           if (adminTabs) adminTabs.classList.add('hidden');
@@ -1407,6 +1408,9 @@ async function renderLogs(): Promise<void> {
                     log.displayAction === 'visit_scheduled' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' :
                     log.displayAction === 'visit_completed' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
                     log.displayAction === 'visit_unsuccessful' ? 'bg-gray-200 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
+                    log.displayAction === 'gate_create' ? 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200' :
+                    log.displayAction === 'gate_update' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
+                    log.displayAction === 'gate_status_change' ? 'bg-lime-100 text-lime-800 dark:bg-lime-900 dark:text-lime-200' :
                     'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
                   }">
                     ${log.displayAction.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
@@ -1457,6 +1461,9 @@ async function renderLogs(): Promise<void> {
                     log.displayAction === 'visit_scheduled' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' :
                     log.displayAction === 'visit_completed' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
                     log.displayAction === 'visit_unsuccessful' ? 'bg-gray-200 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
+                    log.displayAction === 'gate_create' ? 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200' :
+                    log.displayAction === 'gate_update' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
+                    log.displayAction === 'gate_status_change' ? 'bg-lime-100 text-lime-800 dark:bg-lime-900 dark:text-lime-200' :
                     'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
                   }">
                     ${log.displayAction.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
@@ -1799,6 +1806,83 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
           if (parsedDetails.end_of_day_visits) {
             detailsHtml += `<div><span class="font-medium">End of day visits:</span> ${parsedDetails.end_of_day_visits}</div>`;
           }
+        }
+        
+        return detailsHtml;
+      }
+      case 'gate_create': {
+        const gateTypeClass = parsedDetails.gate_type === 'entrance' ? 'text-blue-600 dark:text-blue-400' : 
+                             parsedDetails.gate_type === 'exit' ? 'text-red-600 dark:text-red-400' : 
+                             'text-purple-600 dark:text-purple-400';
+        const gateTypeText = parsedDetails.gate_type === 'entrance' ? 'Entrance Gate' : 
+                           parsedDetails.gate_type === 'exit' ? 'Exit Gate' : 
+                           'Entrance/Exit Gate';
+        
+        let detailsHtml = `<div><span class="font-medium">Gate Name:</span> <span class="font-semibold">${parsedDetails.gate_name || 'Unknown Gate'}</span></div>`;
+        
+        if (parsedDetails.gate_description) {
+          detailsHtml += `<div><span class="font-medium">Description:</span> ${parsedDetails.gate_description}</div>`;
+        }
+        
+        if (parsedDetails.gate_location) {
+          detailsHtml += `<div><span class="font-medium">Location:</span> 📍 ${parsedDetails.gate_location}</div>`;
+        }
+        
+        detailsHtml += `<div><span class="font-medium">Type:</span> <span class="${gateTypeClass} font-semibold">${gateTypeText}</span></div>`;
+        detailsHtml += `<div><span class="font-medium">Initial Status:</span> <span class="text-gray-600 dark:text-gray-400">Closed</span></div>`;
+        
+        if (parsedDetails.created_at) {
+          detailsHtml += `<div><span class="font-medium">Created:</span> ${new Date(parsedDetails.created_at).toLocaleString()}</div>`;
+        }
+        
+        return detailsHtml;
+      }
+      case 'gate_update': {
+        // Handle both regular updates and deletions
+        if (parsedDetails.action === 'deleted') {
+          return `<div><span class="font-medium">Gate Deleted:</span> <span class="font-semibold text-red-600">${parsedDetails.gate_name || 'Unknown Gate'}</span></div>
+                  <div><span class="font-medium">Deleted:</span> ${parsedDetails.deleted_at ? new Date(parsedDetails.deleted_at).toLocaleString() : 'Unknown time'}</div>`;
+        }
+        
+        // Regular gate update
+        const changes = [];
+        
+        if (parsedDetails.old_name !== parsedDetails.new_name) {
+          changes.push(`<div class="mb-1"><span class="font-medium">Name:</span> <span class="text-red-600 dark:text-red-400">"${parsedDetails.old_name}"</span> <span class="text-gray-500">→</span> <span class="text-green-600 dark:text-green-400">"${parsedDetails.new_name}"</span></div>`);
+        }
+        
+        if (parsedDetails.old_description !== parsedDetails.new_description) {
+          changes.push(`<div class="mb-1"><span class="font-medium">Description:</span> <span class="text-red-600 dark:text-red-400">"${parsedDetails.old_description || 'None'}"</span> <span class="text-gray-500">→</span> <span class="text-green-600 dark:text-green-400">"${parsedDetails.new_description || 'None'}"</span></div>`);
+        }
+        
+        if (parsedDetails.old_location !== parsedDetails.new_location) {
+          changes.push(`<div class="mb-1"><span class="font-medium">Location:</span> <span class="text-red-600 dark:text-red-400">"${parsedDetails.old_location || 'None'}"</span> <span class="text-gray-500">→</span> <span class="text-green-600 dark:text-green-400">"${parsedDetails.new_location || 'None'}"</span></div>`);
+        }
+        
+        if (parsedDetails.old_gate_type !== parsedDetails.new_gate_type) {
+          const oldTypeClass = parsedDetails.old_gate_type === 'entrance' ? 'text-blue-600' : 
+                              parsedDetails.old_gate_type === 'exit' ? 'text-red-600' : 'text-purple-600';
+          const newTypeClass = parsedDetails.new_gate_type === 'entrance' ? 'text-blue-600' : 
+                              parsedDetails.new_gate_type === 'exit' ? 'text-red-600' : 'text-purple-600';
+          changes.push(`<div class="mb-1"><span class="font-medium">Type:</span> <span class="${oldTypeClass}">"${parsedDetails.old_gate_type}"</span> <span class="text-gray-500">→</span> <span class="${newTypeClass}">"${parsedDetails.new_gate_type}"</span></div>`);
+        }
+        
+        if (parsedDetails.updated_at) {
+          changes.push(`<div class="mb-1"><span class="font-medium">Updated:</span> ${new Date(parsedDetails.updated_at).toLocaleString()}</div>`);
+        }
+        
+        return changes.length > 0 ? `<div class="space-y-1">${changes.join('')}</div>` : 'Gate details updated';
+      }
+      case 'gate_status_change': {
+        const statusClass = parsedDetails.new_status === 'open' ? 'text-green-600 dark:text-green-400 font-semibold' : 'text-red-600 dark:text-red-400 font-semibold';
+        const statusText = parsedDetails.new_status === 'open' ? 'Opened' : 'Closed';
+        const oldStatusClass = parsedDetails.old_status === 'open' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
+        
+        let detailsHtml = `<div><span class="font-medium">Gate:</span> <span class="font-semibold">${parsedDetails.gate_name || 'Unknown Gate'}</span></div>`;
+        detailsHtml += `<div><span class="font-medium">Status Change:</span> <span class="${oldStatusClass}">${parsedDetails.old_status}</span> <span class="text-gray-500">→</span> <span class="${statusClass}">${statusText}</span></div>`;
+        
+        if (parsedDetails.updated_at) {
+          detailsHtml += `<div><span class="font-medium">Changed:</span> ${new Date(parsedDetails.updated_at).toLocaleString()}</div>`;
         }
         
         return detailsHtml;

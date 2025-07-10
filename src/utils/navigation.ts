@@ -1,6 +1,6 @@
 import { HomePage } from '../pages/Home';
-import { AboutPage } from '../pages/about';
-import { ContactPage } from '../pages/contact';
+import { AboutPage } from '../pages/About';
+import { ContactPage } from '../pages/Contact';
 import { DashboardPage } from '../pages/dashboard';
 import { QRScannerPage } from '../pages/QRScanner';
 import { GatePage, setupGatePage } from '../pages/GatePage';
@@ -132,3 +132,14 @@ export async function updateNavigation() {
     }
   }
 }
+
+// Track previous hash for transition detection
+let previousHash = window.location.hash;
+window.addEventListener('hashchange', () => {
+  const newHash = window.location.hash;
+  // If navigating from a gate details page to dashboard, force reload
+  if (previousHash.startsWith('#/gate/') && newHash === '#/dashboard') {
+    window.location.reload();
+  }
+  previousHash = newHash;
+});
