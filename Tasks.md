@@ -1,10 +1,11 @@
 Ongoing:
- - QR Code Feature
+
  - Home/Landing Page Design Overhaul
  - GuestGo Visit Card Design and Detail Overhaul
+- Entrance and Exit before and after scheduling
 
 Planned:
- - Entrance and Exit before and after scheduling
+
  - Email Notification for Scheduled Visits
  - AI Facial Recogtnition before completion of Scheduling Visits (Phase 1)
  - AI Facial Verfication on Entrance and Exit on given data on Scheduled visit (Phase 2)
@@ -62,3 +63,4 @@ Completed:
  - Comprehensive Error Handling
  - User-friendly Mobile Navigation
  - Responsive Table/Card Views for Different Screen Sizes
+ - QR Code Feature
