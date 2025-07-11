@@ -1,8 +1,60 @@
 import { getThemePreference, updateTheme } from './utils/theme';
-import { updateNavigation } from './utils/navigation';
+import { updateNavigation, clearUserCache } from './utils/navigation';
 import { setupEventListeners } from './utils/eventHandlers';
 import { createLoginModal, createSignupModal, setupAuthEventListeners } from './components/AuthModals';
 import supabase from './config/supabase';
+
+// Cache for DOM elements to avoid repeated queries
+const domCache = new Map<string, HTMLElement>();
+
+// Get cached DOM element
+function getCachedElement(id: string): HTMLElement | null {
+  if (!domCache.has(id)) {
+    const element = document.getElementById(id);
+    if (element) {
+      domCache.set(id, element);
+    }
+    return element;
+  }
+  return domCache.get(id) || null;
+}
+
+// Optimized auth state update
+function updateAuthUI(session: any) {
+  const dashboardLink = getCachedElement('dashboard-link');
+  const mobileDashboardLink = getCachedElement('mobile-dashboard-link');
+  const welcomeMessage = getCachedElement('welcome-message');
+  const qrScannerLink = getCachedElement('qr-scanner-link');
+  const mobileQrScannerLink = getCachedElement('mobile-qr-scanner-link');
+
+  if (session?.user) {
+    // Show dashboard link
+    if (dashboardLink) dashboardLink.classList.remove('hidden');
+    if (mobileDashboardLink) mobileDashboardLink.classList.remove('hidden');
+
+    // Show welcome message
+    if (welcomeMessage) {
+      const firstName = session.user.user_metadata?.first_name || 'User';
+      welcomeMessage.textContent = `Welcome, ${firstName}`;
+      welcomeMessage.classList.remove('hidden');
+    }
+
+    // Show QR scanner link for personnel
+    if (qrScannerLink) qrScannerLink.classList.remove('hidden');
+    if (mobileQrScannerLink) mobileQrScannerLink.classList.remove('hidden');
+  } else {
+    // Hide dashboard link
+    if (dashboardLink) dashboardLink.classList.add('hidden');
+    if (mobileDashboardLink) mobileDashboardLink.classList.add('hidden');
+
+    // Hide welcome message
+    if (welcomeMessage) welcomeMessage.classList.add('hidden');
+
+    // Hide QR scanner link
+    if (qrScannerLink) qrScannerLink.classList.add('hidden');
+    if (mobileQrScannerLink) mobileQrScannerLink.classList.add('hidden');
+  }
+}
 
 export default function setupApp() {
   // Initialize theme
@@ -201,99 +253,50 @@ export default function setupApp() {
   setupAuthEventListeners();
 
   // Theme toggle functionality
-  const themeToggleButton = document.getElementById('theme-toggle');
+  const themeToggleButton = getCachedElement('theme-toggle');
   themeToggleButton?.addEventListener('click', () => {
     const isDark = document.documentElement.classList.contains('dark');
     updateTheme(isDark ? 'light' : 'dark');
   });
 
-  // Handle navigation
-  window.addEventListener('hashchange', updateNavigation);
-
-  // Check auth state and update UI
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    if (session?.user) {
-      // Show dashboard link
-      const dashboardLink = document.getElementById('dashboard-link');
-      const mobileDashboardLink = document.getElementById('mobile-dashboard-link');
-      if (dashboardLink) dashboardLink.classList.remove('hidden');
-      if (mobileDashboardLink) mobileDashboardLink.classList.remove('hidden');
-
-      // Show welcome message
-      const welcomeMessage = document.getElementById('welcome-message');
-      if (welcomeMessage) {
-        const firstName = session.user.user_metadata?.first_name || 'User';
-        welcomeMessage.textContent = `Welcome, ${firstName}`;
-        welcomeMessage.classList.remove('hidden');
-      }
-    }
-  });
-
-  // Listen for auth state changes
-  supabase.auth.onAuthStateChange((_event, session) => {
-    const dashboardLink = document.getElementById('dashboard-link');
-    const mobileDashboardLink = document.getElementById('mobile-dashboard-link');
-    const welcomeMessage = document.getElementById('welcome-message');
-
-    if (session?.user) {
-      // Show dashboard link
-      if (dashboardLink) dashboardLink.classList.remove('hidden');
-      if (mobileDashboardLink) mobileDashboardLink.classList.remove('hidden');
-
-      // Show welcome message
-      if (welcomeMessage) {
-        const firstName = session.user.user_metadata?.first_name || 'User';
-        welcomeMessage.textContent = `Welcome, ${firstName}`;
-        welcomeMessage.classList.remove('hidden');
-      }
-    } else {
-      // Hide dashboard link
-      if (dashboardLink) dashboardLink.classList.add('hidden');
-      if (mobileDashboardLink) mobileDashboardLink.classList.add('hidden');
-
-      // Hide welcome message
-      if (welcomeMessage) welcomeMessage.classList.add('hidden');
-    }
-  });
-
-  // Add dashboard link reload functionality
+  // Optimized dashboard link reload functionality
   const setupDashboardLinkReload = () => {
-    const dashboardLink = document.getElementById('dashboard-link');
-    const mobileDashboardLink = document.getElementById('mobile-dashboard-link');
+    const dashboardLink = getCachedElement('dashboard-link');
+    const mobileDashboardLink = getCachedElement('mobile-dashboard-link');
 
-    // Desktop dashboard link
-    if (dashboardLink) {
-      dashboardLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        // First navigate to dashboard
-        window.location.hash = '#/dashboard';
-        // Then reload after a brief delay to allow navigation to complete
-        setTimeout(() => {
-          window.location.reload();
-        }, 100);
-      });
-    }
+    const handleDashboardClick = (e: Event) => {
+      e.preventDefault();
+      window.location.hash = '#/dashboard';
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
+    };
 
-    // Mobile dashboard link
-    if (mobileDashboardLink) {
-      mobileDashboardLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        // First navigate to dashboard
-        window.location.hash = '#/dashboard';
-        // Then reload after a brief delay to allow navigation to complete
-        setTimeout(() => {
-          window.location.reload();
-        }, 100);
-      });
-    }
+    // Remove existing listeners to prevent duplicates
+    dashboardLink?.removeEventListener('click', handleDashboardClick);
+    mobileDashboardLink?.removeEventListener('click', handleDashboardClick);
+
+    // Add new listeners
+    dashboardLink?.addEventListener('click', handleDashboardClick);
+    mobileDashboardLink?.addEventListener('click', handleDashboardClick);
   };
 
   // Setup dashboard link reload functionality
   setupDashboardLinkReload();
 
-  // Re-setup dashboard link reload when auth state changes
-  supabase.auth.onAuthStateChange(() => {
-    // Small delay to ensure DOM elements are updated
+  // Check initial auth state and update UI
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    updateAuthUI(session);
+  });
+
+  // Listen for auth state changes with optimized handling
+  supabase.auth.onAuthStateChange((_event, session) => {
+    updateAuthUI(session);
+    
+    // Clear user cache when auth state changes
+    clearUserCache();
+    
+    // Re-setup dashboard link reload when auth state changes
     setTimeout(setupDashboardLinkReload, 100);
   });
 }
