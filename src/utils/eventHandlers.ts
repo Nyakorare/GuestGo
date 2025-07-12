@@ -378,6 +378,10 @@ export function setupEventListeners() {
     updateAuthMenu(!!session);
     // Update navigation based on role when auth state changes
     updateNavigationBasedOnRole();
+    // Update schedule button visibility when auth state changes
+    if ((window as any).updateScheduleButtonVisibility) {
+      (window as any).updateScheduleButtonVisibility();
+    }
   });
 }
 

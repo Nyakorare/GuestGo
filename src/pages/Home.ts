@@ -228,6 +228,82 @@ async function loadWeeklyVisitCount(userEmail: string) {
   }
 };
 
+// Global function to update schedule button visibility (can be called when auth state changes)
+(window as any).updateScheduleButtonVisibility = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    const scheduleNowBtn = document.getElementById('scheduleNowBtn');
+    const scheduleEmail = document.getElementById('scheduleEmail') as HTMLInputElement;
+    const emailVerificationSection = document.getElementById('emailVerificationSection');
+    const weeklyVisitCountDiv = document.getElementById('weeklyVisitCount');
+    
+    console.log('updateScheduleButtonVisibility called. User:', !!user, 'Button found:', !!scheduleNowBtn);
+    
+    if (!scheduleNowBtn) return;
+    
+    if (user) {
+      // Check if user has visitor role
+      try {
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
+        
+        console.log('User role:', roleData?.role);
+        // Only show schedule button for visitor roles
+        if (roleData?.role === 'visitor') {
+          console.log('Showing schedule button for visitor');
+          scheduleNowBtn.classList.remove('hidden');
+          // Load and display weekly visit count for visitor users
+          await loadWeeklyVisitCount(user.email || '');
+        } else {
+          console.log('Hiding schedule button for non-visitor role:', roleData?.role);
+          // Hide schedule button for non-visitor roles (admin, personnel, etc.)
+          scheduleNowBtn.classList.add('hidden');
+          // Hide weekly visit count for non-visitor roles
+          if (weeklyVisitCountDiv) {
+            weeklyVisitCountDiv.classList.add('hidden');
+          }
+        }
+      } catch (error) {
+        console.error('Error checking user role:', error);
+        // Hide schedule button if role check fails
+        scheduleNowBtn.classList.add('hidden');
+      }
+      
+      // Update email field for logged-in users
+      if (scheduleEmail && emailVerificationSection) {
+        scheduleEmail.value = user.email || '';
+        scheduleEmail.readOnly = true;
+        emailVerificationSection.classList.add('hidden');
+      }
+    } else {
+      // User is not logged in, show the button for guest scheduling
+      scheduleNowBtn.classList.remove('hidden');
+      
+      // Reset email field for guest users
+      if (scheduleEmail && emailVerificationSection) {
+        scheduleEmail.value = '';
+        scheduleEmail.readOnly = false;
+        emailVerificationSection.classList.remove('hidden');
+      }
+      
+      // Hide weekly visit count for guest users
+      if (weeklyVisitCountDiv) {
+        weeklyVisitCountDiv.classList.add('hidden');
+      }
+    }
+    
+    // Re-setup event listeners to ensure the schedule button click handler is properly attached
+    if (typeof setupEventListeners === 'function') {
+      setupEventListeners();
+    }
+  } catch (error) {
+    console.error('Error updating schedule button visibility:', error);
+  }
+};
+
 // Test function to debug weekly visit count
 (window as any).testWeeklyVisitCount = async () => {
   try {
@@ -307,6 +383,74 @@ async function loadWeeklyVisitCount(userEmail: string) {
 
   } catch (error) {
     console.error('Error in test:', error);
+  }
+};
+
+// Test function to manually trigger schedule modal
+(window as any).testScheduleModal = () => {
+  console.log('=== SCHEDULE MODAL TEST ===');
+  
+  const scheduleNowBtn = document.getElementById('scheduleNowBtn');
+  const scheduleModal = document.getElementById('scheduleModal');
+  
+  console.log('Schedule button found:', !!scheduleNowBtn);
+  console.log('Schedule modal found:', !!scheduleModal);
+  
+  if (scheduleNowBtn) {
+    console.log('Button classes:', scheduleNowBtn.className);
+    console.log('Button hidden:', scheduleNowBtn.classList.contains('hidden'));
+    console.log('Button visible:', scheduleNowBtn.offsetParent !== null);
+  }
+  
+  if (scheduleModal) {
+    console.log('Modal classes:', scheduleModal.className);
+    console.log('Modal hidden:', scheduleModal.classList.contains('hidden'));
+  }
+  
+  // Try to manually open the modal
+  if (scheduleModal) {
+    scheduleModal.classList.remove('hidden');
+    console.log('Modal should now be visible');
+  }
+  
+  console.log('=== END SCHEDULE MODAL TEST ===');
+};
+
+// Global function to open schedule modal (called from inline onclick)
+(window as any).openScheduleModal = async () => {
+  console.log('openScheduleModal called');
+  
+  // Check if user is logged in and has visitor role
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (user) {
+    // Check if user has visitor role
+    try {
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (roleData?.role !== 'visitor') {
+        alert('Only visitors can schedule visits. Please contact an administrator if you need access.');
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking user role:', error);
+      alert('Error checking user permissions. Please try again.');
+      return;
+    }
+  }
+  
+  const modal = document.getElementById('scheduleModal');
+  console.log('Opening modal. Modal found:', !!modal);
+  if (modal) {
+    modal.classList.remove('hidden');
+    // Initialize date validation when modal opens
+    if ((window as any).initializeDateValidation) {
+      (window as any).initializeDateValidation();
+    }
   }
 };
 
@@ -396,60 +540,15 @@ export function HomePage() {
       });
     }
 
-    // Check if user is logged in and update email field
-    const { data: { user } } = await supabase.auth.getUser();
-    const scheduleEmail = document.getElementById('scheduleEmail') as HTMLInputElement;
-    const emailVerificationSection = document.getElementById('emailVerificationSection');
-    
-    if (user && scheduleEmail && emailVerificationSection) {
-      scheduleEmail.value = user.email || '';
-      scheduleEmail.readOnly = true;
-      emailVerificationSection.classList.add('hidden');
-    }
-
-    // Check user role and conditionally show/hide schedule button
-    const scheduleNowBtn = document.getElementById('scheduleNowBtn');
-    if (scheduleNowBtn) {
-      if (user) {
-        // Check if user has visitor role
-        try {
-          const { data: roleData } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', user.id)
-            .single();
-          
-          // Only show schedule button for visitor roles
-          if (roleData?.role === 'visitor') {
-            scheduleNowBtn.classList.remove('hidden');
-            // Load and display weekly visit count for visitor users
-            await loadWeeklyVisitCount(user.email || '');
-          } else {
-            // Hide schedule button for non-visitor roles (admin, personnel, etc.)
-            scheduleNowBtn.classList.add('hidden');
-            // Hide weekly visit count for non-visitor roles
-            const weeklyVisitCountDiv = document.getElementById('weeklyVisitCount');
-            if (weeklyVisitCountDiv) {
-              weeklyVisitCountDiv.classList.add('hidden');
-            }
-          }
-        } catch (error) {
-          console.error('Error checking user role:', error);
-          // Hide schedule button if role check fails
-          scheduleNowBtn.classList.add('hidden');
-        }
-      } else {
-        // User is not logged in, show the button for guest scheduling
-        scheduleNowBtn.classList.remove('hidden');
-      }
-    }
+    // Update schedule button visibility based on auth state and user role
+    await (window as any).updateScheduleButtonVisibility();
 
     // Load available places
     await loadPlaces();
+    
+    // Setup event listeners after button visibility is updated
+    setupEventListeners();
   }, 100);
-
-  // Setup event listeners (this will also load places from database)
-  setupEventListeners();
 
   return `    <div class="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8 md:py-12">
       <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-4 sm:space-y-0 mb-8">
@@ -488,6 +587,7 @@ export function HomePage() {
       <button 
         id="scheduleNowBtn"
         class="w-full sm:w-auto bg-blue-600 text-white px-6 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors duration-200 mb-4"
+        onclick="window.openScheduleModal()"
       >
         Schedule Now
       </button>
@@ -531,6 +631,7 @@ export function HomePage() {
                 </div>
               </div>
               <div id="emailVerificationSection">
+                <div id="liveVisitCountReminder" class="hidden"></div>
                 <label for="scheduleEmail" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
                 <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                   <input 

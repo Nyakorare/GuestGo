@@ -225,8 +225,15 @@ export async function setupEventListeners() {
 
   // Schedule modal open/close
   const scheduleNowBtn = document.getElementById('scheduleNowBtn');
+  console.log('Setting up schedule button event listener. Button found:', !!scheduleNowBtn);
   if (scheduleNowBtn) {
-    scheduleNowBtn.addEventListener('click', async function() {
+    // Remove any existing click listeners to prevent duplicates
+    const newBtn = scheduleNowBtn.cloneNode(true);
+    scheduleNowBtn.parentNode?.replaceChild(newBtn, scheduleNowBtn);
+    
+    // Add the click listener to the new button
+    newBtn.addEventListener('click', async function() {
+      console.log('Schedule button clicked!');
       // Check if user is logged in and has visitor role
       const { data: { user } } = await supabase.auth.getUser();
       
@@ -251,6 +258,7 @@ export async function setupEventListeners() {
       }
       
       const modal = document.getElementById('scheduleModal');
+      console.log('Opening modal. Modal found:', !!modal);
       if (modal) {
         modal.classList.remove('hidden');
         // Initialize date validation when modal opens
@@ -1049,7 +1057,7 @@ export async function setupEventListeners() {
   }
 
   // Function to initialize date validation for the scheduling modal
-  async function initializeDateValidation() {
+  (window as any).initializeDateValidation = async function initializeDateValidation() {
     const visitDateInput = document.getElementById('visitDate') as HTMLInputElement;
     if (!visitDateInput) return;
 
@@ -1527,4 +1535,98 @@ export async function setupEventListeners() {
       console.error('Error refreshing modal weekly visit count:', error);
     }
   }
+
+  // Function to check visits remaining for any email (guest or user)
+  async function showLiveVisitCountReminder(email: string) {
+    const reminderDiv = document.getElementById('liveVisitCountReminder');
+    if (!reminderDiv) return;
+
+    // Hide if email is empty or invalid
+    if (!email || !isValidEmail(email)) {
+      reminderDiv.innerHTML = '';
+      reminderDiv.classList.add('hidden');
+      return;
+    }
+
+    // Get current Philippine date from database
+    let philippineToday: Date;
+    try {
+      const { data: philippineDateData, error } = await supabase.rpc('get_philippine_date');
+      if (error) {
+        philippineToday = getPhilippineDate();
+      } else {
+        philippineToday = new Date(philippineDateData);
+      }
+    } catch {
+      philippineToday = getPhilippineDate();
+    }
+
+    // Calculate week boundaries
+    const weekStart = new Date(philippineToday);
+    weekStart.setDate(philippineToday.getDate() - philippineToday.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+
+    // Query for this week's visits for this email
+    const { data: visits, error } = await supabase
+      .from('scheduled_visits')
+      .select('visit_date, status')
+      .eq('visitor_email', email)
+      .in('status', ['pending', 'completed'])
+      .gte('visit_date', weekStart.toISOString())
+      .lte('visit_date', weekEnd.toISOString());
+
+    if (error) {
+      reminderDiv.innerHTML = '<span class="text-red-600">Error loading visit count</span>';
+      reminderDiv.classList.remove('hidden');
+      return;
+    }
+
+    const visitCount = visits?.length || 0;
+    const pendingCount = visits?.filter(v => v.status === 'pending').length || 0;
+    const completedCount = visits?.filter(v => v.status === 'completed').length || 0;
+    const remainingVisits = Math.max(0, 2 - visitCount);
+
+    let statusHtml = '';
+    if (remainingVisits === 2) {
+      statusHtml = `<span class="font-medium text-green-600 dark:text-green-400">2 visits remaining</span> (no scheduled visits)`;
+    } else if (remainingVisits === 1) {
+      statusHtml = `<span class="font-medium text-yellow-600 dark:text-yellow-400">1 visit remaining</span> (${pendingCount} pending, ${completedCount} completed)`;
+    } else {
+      statusHtml = `<span class="font-medium text-red-600 dark:text-red-400">No visits remaining</span> (${pendingCount} pending, ${completedCount} completed)`;
+    }
+
+    reminderDiv.innerHTML = `<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-2">
+      <div class="flex items-center">
+        <svg class="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-blue-800 dark:text-blue-200">${statusHtml}</h3>
+          <div class="mt-1 text-xs text-blue-600 dark:text-blue-400">Maximum 2 visits per week per user account</div>
+        </div>
+      </div>
+    </div>`;
+    reminderDiv.classList.remove('hidden');
+  }
+
+  // Add live event listener to email input in modal
+  setTimeout(() => {
+    const scheduleEmail = document.getElementById('scheduleEmail') as HTMLInputElement;
+    const reminderDiv = document.getElementById('liveVisitCountReminder');
+    if (scheduleEmail && reminderDiv) {
+      scheduleEmail.addEventListener('input', async () => {
+        // Only show for non-logged-in users
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          showLiveVisitCountReminder(scheduleEmail.value.trim());
+        } else {
+          reminderDiv.innerHTML = '';
+          reminderDiv.classList.add('hidden');
+        }
+      });
+    }
+  }, 500);
 } 

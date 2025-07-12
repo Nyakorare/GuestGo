@@ -177,6 +177,11 @@ async function performNavigation() {
 
     // Update navigation state
     updateNavigationState(path);
+    
+    // Update schedule button visibility when navigating to home page
+    if (path === '/' && (window as any).updateScheduleButtonVisibility) {
+      (window as any).updateScheduleButtonVisibility();
+    }
 
     // End performance monitoring
     performanceMonitor.endNavigation(path);
@@ -258,6 +263,12 @@ let previousHash = window.location.hash;
 // Optimized hash change handler
 window.addEventListener('hashchange', () => {
   const newHash = window.location.hash;
+  
+  // If navigating to home page, refresh the page first
+  if (newHash === '#/' || newHash === '') {
+    window.location.reload();
+    return;
+  }
   
   // If navigating from a gate details page to dashboard, force reload
   if (previousHash.startsWith('#/gate/') && newHash === '#/dashboard') {

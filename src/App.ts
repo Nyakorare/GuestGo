@@ -298,5 +298,10 @@ export default function setupApp() {
     
     // Re-setup dashboard link reload when auth state changes
     setTimeout(setupDashboardLinkReload, 100);
+    
+    // Update schedule button visibility when auth state changes
+    if ((window as any).updateScheduleButtonVisibility) {
+      (window as any).updateScheduleButtonVisibility();
+    }
   });
 }
