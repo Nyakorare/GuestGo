@@ -3471,7 +3471,10 @@ async function applyVisitsFilters() {
         return philippineVisitDate.getTime() > philippineToday.getTime();
       });
       break;
-    // 'all' case - no filtering needed
+    case 'all':
+      // For 'all' schedules, filter out completed places to only show pending places
+      filteredVisits = filteredVisits.filter(visit => visit.place_status !== 'completed');
+      break;
   }
 
   // Apply status filter (but still exclude unsuccessful visits)
