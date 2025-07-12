@@ -3,6 +3,7 @@ Ongoing:
  - GuestGo Visit Card Design and Detail Overhaul
  - Entrance and Exit before and after scheduling
  - Dashboard Loading Pagination
+ - Page Navigation & Loading Pagination
 
 Planned:
 
