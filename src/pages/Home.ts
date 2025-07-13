@@ -33,6 +33,16 @@ async function loadWeeklyVisitCount(userEmail: string) {
     
     if (!weeklyVisitCountDiv || !weeklyVisitText) return;
 
+    // Prevent rapid successive calls
+    const now = Date.now();
+    if (weeklyVisitCountDiv.dataset.lastRefresh) {
+      const lastRefresh = parseInt(weeklyVisitCountDiv.dataset.lastRefresh);
+      if (now - lastRefresh < 500) { // Prevent refreshes more than once every 500ms
+        return;
+      }
+    }
+    weeklyVisitCountDiv.dataset.lastRefresh = now.toString();
+
     // Check if user has visitor role
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -91,6 +101,18 @@ async function loadWeeklyVisitCount(userEmail: string) {
     prevWeekEnd.setDate(prevWeekStart.getDate() + 6);
     prevWeekEnd.setHours(23, 59, 59, 999);
 
+    // Calculate next week boundaries
+    const nextWeekStart = new Date(weekStart);
+    nextWeekStart.setDate(weekStart.getDate() + 7);
+    nextWeekStart.setHours(0, 0, 0, 0);
+    const nextWeekEnd = new Date(nextWeekStart);
+    nextWeekEnd.setDate(nextWeekStart.getDate() + 6);
+    nextWeekEnd.setHours(23, 59, 59, 999);
+
+    // Calculate end of current month
+    const endOfMonth = new Date(philippineToday.getFullYear(), philippineToday.getMonth() + 1, 0);
+    endOfMonth.setHours(23, 59, 59, 999);
+
     // Query the database for all pending and completed visits for the current week
     const { data: visits, error } = await supabase
       .from('scheduled_visits')
@@ -109,6 +131,15 @@ async function loadWeeklyVisitCount(userEmail: string) {
       .gte('visit_date', prevWeekStart.toISOString())
       .lte('visit_date', prevWeekEnd.toISOString());
 
+    // Query for future schedules (next week and beyond within the month)
+    const { data: futureVisits, error: futureError } = await supabase
+      .from('scheduled_visits')
+      .select('visit_date, status')
+      .eq('visitor_user_id', user.id)
+      .in('status', ['pending', 'completed'])
+      .gte('visit_date', nextWeekStart.toISOString())
+      .lte('visit_date', endOfMonth.toISOString());
+
     if (error) {
       console.error('Error loading weekly visit count:', error);
       weeklyVisitText.textContent = 'Error loading visit count';
@@ -116,6 +147,9 @@ async function loadWeeklyVisitCount(userEmail: string) {
     }
     if (prevWeekError) {
       console.error('Error loading previous week visits:', prevWeekError);
+    }
+    if (futureError) {
+      console.error('Error loading future visits:', futureError);
     }
 
     // Count the pending and completed visits for the current week
@@ -128,12 +162,14 @@ async function loadWeeklyVisitCount(userEmail: string) {
     const prevCompletedCount = prevWeekVisits?.filter(v => v.status === 'completed').length || 0;
     const prevTotalCount = prevWeekVisits?.length || 0;
 
-    // Determine if the week should be refreshed
-    // New logic:
-    // - 2 pending = no refresh
-    // - 1 pending, 1 completed/unsuccessful = 1 refresh
-    // - 2 completed/unsuccessful = 2 refresh
+    // Count future visits
+    const futureVisitCount = futureVisits?.length || 0;
+    const futurePendingCount = futureVisits?.filter(v => v.status === 'pending').length || 0;
+
+    // NEW LOGIC: Determine refresh slots based on previous week AND future schedules
     let refreshSlots = 2; // default: allow 2 visits
+    
+    // First, check previous week logic
     if (prevTotalCount > 0) {
       if (prevPendingCount === 2) {
         refreshSlots = 0; // 2 pending = no refresh
@@ -145,6 +181,13 @@ async function loadWeeklyVisitCount(userEmail: string) {
         // For any other combination (e.g., only 1 visit last week)
         refreshSlots = 2 - prevPendingCount; // e.g., 1 completed, 0 pending = 1 refresh
       }
+    }
+
+    // Then, check if user has future schedules that would limit current week
+    if (futureVisitCount > 0) {
+      // If user has future schedules, they should only get 1 refresh slot
+      // This ensures they don't use up all their visits before reaching their scheduled dates
+      refreshSlots = Math.min(refreshSlots, 1);
     }
 
     // Calculate remaining visits for this week
@@ -165,6 +208,8 @@ async function loadWeeklyVisitCount(userEmail: string) {
 
     // Update the display based on the count and week range
     let statusHtml = '';
+    let additionalInfo = '';
+    
     if (refreshSlots === 0) {
       statusHtml = `<span class="font-medium text-gray-600 dark:text-gray-400">No new visits allowed until previous week is cleared</span>`;
     } else if (remainingVisits === 2) {
@@ -175,18 +220,25 @@ async function loadWeeklyVisitCount(userEmail: string) {
       statusHtml = `<span class="font-medium text-red-600 dark:text-red-400">No visits remaining</span> (${pendingCount} pending, ${completedCount} completed)`;
     }
 
-    weeklyVisitText.innerHTML = `<span class="block font-semibold">Week of ${weekRangeStr}</span>${statusHtml}`;
+    // Add information about future schedules if they exist
+    if (futureVisitCount > 0) {
+      const futureDates = futureVisits?.map(v => new Date(v.visit_date).toLocaleDateString()).join(', ');
+      additionalInfo = `<div class="mt-1 text-xs text-blue-600 dark:text-blue-400">
+        Future schedules: ${futureVisitCount} visit(s) on ${futureDates}
+      </div>`;
+    }
 
-    // Add a small note about the limit
-    const noteElement = document.createElement('div');
-    noteElement.className = 'mt-1 text-xs text-blue-600 dark:text-blue-400';
-    noteElement.textContent = 'Maximum 2 visits per week per user account';
-    
-    // Remove existing note if present
-    const existingNote = weeklyVisitCountDiv.querySelector('.text-xs');
+    weeklyVisitText.innerHTML = `<span class="block font-semibold">Week of ${weekRangeStr}</span>${statusHtml}${additionalInfo}`;
+
+    // Add a small note about the limit - be more specific to avoid duplicates
+    const existingNote = weeklyVisitCountDiv.querySelector('.visit-limit-note');
     if (existingNote) {
       existingNote.remove();
     }
+    
+    const noteElement = document.createElement('div');
+    noteElement.className = 'mt-1 text-xs text-blue-600 dark:text-blue-400 visit-limit-note';
+    noteElement.textContent = 'Maximum 2 visits per week per user account';
     
     weeklyVisitCountDiv.querySelector('.ml-3')?.appendChild(noteElement);
 

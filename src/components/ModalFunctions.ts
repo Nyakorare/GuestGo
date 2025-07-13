@@ -990,13 +990,8 @@ export async function setupEventListeners() {
         // Show success message
         alert('Visit scheduled successfully! You will receive a confirmation email shortly.');
         
-        // Refresh weekly visit count for logged-in users
-        if ((window as any).refreshWeeklyVisitCount) {
-          await (window as any).refreshWeeklyVisitCount();
-        }
-        
-        // Refresh modal weekly visit count if modal is still open
-        refreshModalWeeklyVisitCount();
+        // Note: No need to refresh visit counts here since the page will reload
+        // and the visit counts will be updated automatically
         
         // Close modal and reset form
         const modal = document.getElementById('scheduleModal');
@@ -1292,6 +1287,12 @@ export async function setupEventListeners() {
 
   // Function to add weekly visit count display to the modal
   async function addWeeklyVisitCountToModal() {
+    // Prevent multiple simultaneous calls
+    if (addWeeklyVisitCountToModal.isRunning) {
+      return;
+    }
+    addWeeklyVisitCountToModal.isRunning = true;
+    
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || !user.email) return;
@@ -1345,24 +1346,112 @@ export async function setupEventListeners() {
       weekEnd.setDate(weekStart.getDate() + 6);
       weekEnd.setHours(23, 59, 59, 999);
 
-      // Query the database for all pending and completed visits for the current user
-      // For logged-in users, check by visitor_user_id; for guests, check by visitor_email
+      // Calculate previous week boundaries
+      const prevWeekStart = new Date(weekStart);
+      prevWeekStart.setDate(weekStart.getDate() - 7);
+      prevWeekStart.setHours(0, 0, 0, 0);
+      const prevWeekEnd = new Date(prevWeekStart);
+      prevWeekEnd.setDate(prevWeekStart.getDate() + 6);
+      prevWeekEnd.setHours(23, 59, 59, 999);
+
+      // Calculate next week boundaries
+      const nextWeekStart = new Date(weekStart);
+      nextWeekStart.setDate(weekStart.getDate() + 7);
+      nextWeekStart.setHours(0, 0, 0, 0);
+      const nextWeekEnd = new Date(nextWeekStart);
+      nextWeekEnd.setDate(nextWeekStart.getDate() + 6);
+      nextWeekEnd.setHours(23, 59, 59, 999);
+
+      // Calculate end of current month
+      const endOfMonth = new Date(philippineToday.getFullYear(), philippineToday.getMonth() + 1, 0);
+      endOfMonth.setHours(23, 59, 59, 999);
+
+      // Query the database for all pending and completed visits for the current week
       const { data: visits, error } = await supabase
         .from('scheduled_visits')
         .select('visit_date, status')
         .eq('visitor_user_id', user.id)
-        .in('status', ['pending', 'completed']);
+        .in('status', ['pending', 'completed'])
+        .gte('visit_date', weekStart.toISOString())
+        .lte('visit_date', weekEnd.toISOString());
+
+      // Query the database for all pending and completed visits for the previous week
+      const { data: prevWeekVisits, error: prevWeekError } = await supabase
+        .from('scheduled_visits')
+        .select('visit_date, status')
+        .eq('visitor_user_id', user.id)
+        .in('status', ['pending', 'completed'])
+        .gte('visit_date', prevWeekStart.toISOString())
+        .lte('visit_date', prevWeekEnd.toISOString());
+
+      // Query for future schedules (next week and beyond within the month)
+      const { data: futureVisits, error: futureError } = await supabase
+        .from('scheduled_visits')
+        .select('visit_date, status')
+        .eq('visitor_user_id', user.id)
+        .in('status', ['pending', 'completed'])
+        .gte('visit_date', nextWeekStart.toISOString())
+        .lte('visit_date', endOfMonth.toISOString());
 
       if (error) {
         console.error('Error loading weekly visit count for modal:', error);
         return;
       }
+      if (prevWeekError) {
+        console.error('Error loading previous week visits for modal:', prevWeekError);
+      }
+      if (futureError) {
+        console.error('Error loading future visits for modal:', futureError);
+      }
+
+      // Count the pending and completed visits for the current week
+      const visitCount = visits?.length || 0;
+      const pendingCount = visits?.filter(v => v.status === 'pending').length || 0;
+      const completedCount = visits?.filter(v => v.status === 'completed').length || 0;
+
+      // Count the pending and completed visits for the previous week
+      const prevPendingCount = prevWeekVisits?.filter(v => v.status === 'pending').length || 0;
+      const prevCompletedCount = prevWeekVisits?.filter(v => v.status === 'completed').length || 0;
+      const prevTotalCount = prevWeekVisits?.length || 0;
+
+      // Count future visits
+      const futureVisitCount = futureVisits?.length || 0;
+
+      // NEW LOGIC: Determine refresh slots based on previous week AND future schedules
+      let refreshSlots = 2; // default: allow 2 visits
+      
+      // First, check previous week logic
+      if (prevTotalCount > 0) {
+        if (prevPendingCount === 2) {
+          refreshSlots = 0; // 2 pending = no refresh
+        } else if (prevPendingCount === 1 && prevCompletedCount === 1) {
+          refreshSlots = 1; // 1 pending, 1 completed = 1 refresh
+        } else if (prevPendingCount === 0 && prevCompletedCount === 2) {
+          refreshSlots = 2; // 2 completed = 2 refresh
+        } else {
+          // For any other combination (e.g., only 1 visit last week)
+          refreshSlots = 2 - prevPendingCount; // e.g., 1 completed, 0 pending = 1 refresh
+        }
+      }
+
+      // Then, check if user has future schedules that would limit current week
+      if (futureVisitCount > 0) {
+        // If user has future schedules, they should only get 1 refresh slot
+        // This ensures they don't use up all their visits before reaching their scheduled dates
+        refreshSlots = Math.min(refreshSlots, 1);
+      }
+
+      // Calculate remaining visits for this week
+      const remainingVisits = Math.max(0, refreshSlots - visitCount);
 
       // Debug logging
       console.log('Modal Weekly Visit Count Debug:', {
         userId: user.id,
         visitsFound: visits,
-        visitCount: visits?.length || 0,
+        visitCount: visitCount,
+        refreshSlots: refreshSlots,
+        remainingVisits: remainingVisits,
+        futureVisitCount: futureVisitCount,
         query: {
           table: 'scheduled_visits',
           filters: {
@@ -1372,20 +1461,16 @@ export async function setupEventListeners() {
         }
       });
 
-      // Count the pending and completed visits
-      const visitCount = visits?.length || 0;
-
-      // Count pending vs completed for display
-      const pendingCount = visits?.filter(v => v.status === 'pending').length || 0;
-      const completedCount = visits?.filter(v => v.status === 'completed').length || 0;
-
       let statusText = '';
       let statusColor = '';
       
-      if (visitCount === 0) {
+      if (refreshSlots === 0) {
+        statusText = 'No new visits allowed until previous week is cleared';
+        statusColor = 'text-gray-600 dark:text-gray-400';
+      } else if (remainingVisits === 2) {
         statusText = '2 visits remaining';
         statusColor = 'text-green-600 dark:text-green-400';
-      } else if (visitCount === 1) {
+      } else if (remainingVisits === 1) {
         statusText = '1 visit remaining';
         statusColor = 'text-yellow-600 dark:text-yellow-400';
       } else {
@@ -1398,6 +1483,11 @@ export async function setupEventListeners() {
       weeklyVisitDiv.id = 'modalWeeklyVisitCount';
       weeklyVisitDiv.className = 'mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md';
       
+      let weekText = `(${pendingCount} pending, ${completedCount} completed)`;
+      if (futureVisitCount > 0) {
+        weekText += ` • ${futureVisitCount} future schedule(s)`;
+      }
+      
       weeklyVisitDiv.innerHTML = `
         <div class="flex items-center text-sm">
           <svg class="h-4 w-4 text-blue-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1405,7 +1495,7 @@ export async function setupEventListeners() {
           </svg>
           <span class="font-medium ${statusColor}">${statusText}</span>
           <span class="text-gray-600 dark:text-gray-400 ml-1">
-            (${pendingCount} pending, ${completedCount} completed)
+            ${weekText}
           </span>
         </div>
         <div class="mt-1 text-xs text-blue-600 dark:text-blue-400">
@@ -1418,11 +1508,19 @@ export async function setupEventListeners() {
 
     } catch (error) {
       console.error('Error adding weekly visit count to modal:', error);
+    } finally {
+      addWeeklyVisitCountToModal.isRunning = false;
     }
   }
 
   // Function to refresh modal weekly visit count
   async function refreshModalWeeklyVisitCount() {
+    // Prevent multiple simultaneous calls
+    if (refreshModalWeeklyVisitCount.isRunning) {
+      return;
+    }
+    refreshModalWeeklyVisitCount.isRunning = true;
+    
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || !user.email) return;
@@ -1446,6 +1544,16 @@ export async function setupEventListeners() {
 
       const modalWeeklyVisitCount = document.getElementById('modalWeeklyVisitCount');
       if (!modalWeeklyVisitCount) return;
+
+      // Prevent rapid successive calls
+      const now = Date.now();
+      if (modalWeeklyVisitCount.dataset.lastRefresh) {
+        const lastRefresh = parseInt(modalWeeklyVisitCount.dataset.lastRefresh);
+        if (now - lastRefresh < 500) { // Prevent refreshes more than once every 500ms
+          return;
+        }
+      }
+      modalWeeklyVisitCount.dataset.lastRefresh = now.toString();
 
       // Get current Philippine date from database
       let philippineToday: Date;
@@ -1471,24 +1579,112 @@ export async function setupEventListeners() {
       weekEnd.setDate(weekStart.getDate() + 6);
       weekEnd.setHours(23, 59, 59, 999);
 
-      // Query the database for all pending and completed visits for the current user
-      // For logged-in users, check by visitor_user_id; for guests, check by visitor_email
+      // Calculate previous week boundaries
+      const prevWeekStart = new Date(weekStart);
+      prevWeekStart.setDate(weekStart.getDate() - 7);
+      prevWeekStart.setHours(0, 0, 0, 0);
+      const prevWeekEnd = new Date(prevWeekStart);
+      prevWeekEnd.setDate(prevWeekStart.getDate() + 6);
+      prevWeekEnd.setHours(23, 59, 59, 999);
+
+      // Calculate next week boundaries
+      const nextWeekStart = new Date(weekStart);
+      nextWeekStart.setDate(weekStart.getDate() + 7);
+      nextWeekStart.setHours(0, 0, 0, 0);
+      const nextWeekEnd = new Date(nextWeekStart);
+      nextWeekEnd.setDate(nextWeekStart.getDate() + 6);
+      nextWeekEnd.setHours(23, 59, 59, 999);
+
+      // Calculate end of current month
+      const endOfMonth = new Date(philippineToday.getFullYear(), philippineToday.getMonth() + 1, 0);
+      endOfMonth.setHours(23, 59, 59, 999);
+
+      // Query the database for all pending and completed visits for the current week
       const { data: visits, error } = await supabase
         .from('scheduled_visits')
         .select('visit_date, status')
         .eq('visitor_user_id', user.id)
-        .in('status', ['pending', 'completed']);
+        .in('status', ['pending', 'completed'])
+        .gte('visit_date', weekStart.toISOString())
+        .lte('visit_date', weekEnd.toISOString());
+
+      // Query the database for all pending and completed visits for the previous week
+      const { data: prevWeekVisits, error: prevWeekError } = await supabase
+        .from('scheduled_visits')
+        .select('visit_date, status')
+        .eq('visitor_user_id', user.id)
+        .in('status', ['pending', 'completed'])
+        .gte('visit_date', prevWeekStart.toISOString())
+        .lte('visit_date', prevWeekEnd.toISOString());
+
+      // Query for future schedules (next week and beyond within the month)
+      const { data: futureVisits, error: futureError } = await supabase
+        .from('scheduled_visits')
+        .select('visit_date, status')
+        .eq('visitor_user_id', user.id)
+        .in('status', ['pending', 'completed'])
+        .gte('visit_date', nextWeekStart.toISOString())
+        .lte('visit_date', endOfMonth.toISOString());
 
       if (error) {
         console.error('Error refreshing weekly visit count for modal:', error);
         return;
       }
+      if (prevWeekError) {
+        console.error('Error loading previous week visits for modal:', prevWeekError);
+      }
+      if (futureError) {
+        console.error('Error loading future visits for modal:', futureError);
+      }
+
+      // Count the pending and completed visits for the current week
+      const visitCount = visits?.length || 0;
+      const pendingCount = visits?.filter(v => v.status === 'pending').length || 0;
+      const completedCount = visits?.filter(v => v.status === 'completed').length || 0;
+
+      // Count the pending and completed visits for the previous week
+      const prevPendingCount = prevWeekVisits?.filter(v => v.status === 'pending').length || 0;
+      const prevCompletedCount = prevWeekVisits?.filter(v => v.status === 'completed').length || 0;
+      const prevTotalCount = prevWeekVisits?.length || 0;
+
+      // Count future visits
+      const futureVisitCount = futureVisits?.length || 0;
+
+      // NEW LOGIC: Determine refresh slots based on previous week AND future schedules
+      let refreshSlots = 2; // default: allow 2 visits
+      
+      // First, check previous week logic
+      if (prevTotalCount > 0) {
+        if (prevPendingCount === 2) {
+          refreshSlots = 0; // 2 pending = no refresh
+        } else if (prevPendingCount === 1 && prevCompletedCount === 1) {
+          refreshSlots = 1; // 1 pending, 1 completed = 1 refresh
+        } else if (prevPendingCount === 0 && prevCompletedCount === 2) {
+          refreshSlots = 2; // 2 completed = 2 refresh
+        } else {
+          // For any other combination (e.g., only 1 visit last week)
+          refreshSlots = 2 - prevPendingCount; // e.g., 1 completed, 0 pending = 1 refresh
+        }
+      }
+
+      // Then, check if user has future schedules that would limit current week
+      if (futureVisitCount > 0) {
+        // If user has future schedules, they should only get 1 refresh slot
+        // This ensures they don't use up all their visits before reaching their scheduled dates
+        refreshSlots = Math.min(refreshSlots, 1);
+      }
+
+      // Calculate remaining visits for this week
+      const remainingVisits = Math.max(0, refreshSlots - visitCount);
 
       // Debug logging
       console.log('Refresh Modal Weekly Visit Count Debug:', {
         userId: user.id,
         visitsFound: visits,
-        visitCount: visits?.length || 0,
+        visitCount: visitCount,
+        refreshSlots: refreshSlots,
+        remainingVisits: remainingVisits,
+        futureVisitCount: futureVisitCount,
         query: {
           table: 'scheduled_visits',
           filters: {
@@ -1498,20 +1694,16 @@ export async function setupEventListeners() {
         }
       });
 
-      // Count the pending and completed visits
-      const visitCount = visits?.length || 0;
-
-      // Count pending vs completed for display
-      const pendingCount = visits?.filter(v => v.status === 'pending').length || 0;
-      const completedCount = visits?.filter(v => v.status === 'completed').length || 0;
-
       let statusText = '';
       let statusColor = '';
       
-      if (visitCount === 0) {
+      if (refreshSlots === 0) {
+        statusText = 'No new visits allowed until previous week is cleared';
+        statusColor = 'text-gray-600 dark:text-gray-400';
+      } else if (remainingVisits === 2) {
         statusText = '2 visits remaining';
         statusColor = 'text-green-600 dark:text-green-400';
-      } else if (visitCount === 1) {
+      } else if (remainingVisits === 1) {
         statusText = '1 visit remaining';
         statusColor = 'text-yellow-600 dark:text-yellow-400';
       } else {
@@ -1519,20 +1711,31 @@ export async function setupEventListeners() {
         statusColor = 'text-red-600 dark:text-red-400';
       }
 
-      // Update the display
-      const statusSpan = modalWeeklyVisitCount.querySelector('.font-medium');
-      if (statusSpan) {
-        statusSpan.textContent = statusText;
-        statusSpan.className = `font-medium ${statusColor}`;
+      // Completely recreate the modal content to prevent duplicates
+      let weekText = `(${pendingCount} pending, ${completedCount} completed)`;
+      if (futureVisitCount > 0) {
+        weekText += ` • ${futureVisitCount} future schedule(s)`;
       }
-
-      const weekSpan = modalWeeklyVisitCount.querySelector('.text-gray-600');
-      if (weekSpan) {
-        weekSpan.textContent = ` (${pendingCount} pending, ${completedCount} completed)`;
-      }
+      
+      modalWeeklyVisitCount.innerHTML = `
+        <div class="flex items-center text-sm">
+          <svg class="h-4 w-4 text-blue-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <span class="font-medium ${statusColor}">${statusText}</span>
+          <span class="text-gray-600 dark:text-gray-400 ml-1">
+            ${weekText}
+          </span>
+        </div>
+        <div class="mt-1 text-xs text-blue-600 dark:text-blue-400">
+          Maximum 2 visits per week per user account
+        </div>
+      `;
 
     } catch (error) {
       console.error('Error refreshing modal weekly visit count:', error);
+    } finally {
+      refreshModalWeeklyVisitCount.isRunning = false;
     }
   }
 
@@ -1546,6 +1749,15 @@ export async function setupEventListeners() {
       reminderDiv.innerHTML = '';
       reminderDiv.classList.add('hidden');
       return;
+    }
+
+    // Prevent multiple simultaneous calls for the same email
+    if (reminderDiv.dataset.lastEmail === email && reminderDiv.dataset.lastUpdate) {
+      const lastUpdate = parseInt(reminderDiv.dataset.lastUpdate);
+      const now = Date.now();
+      if (now - lastUpdate < 1000) { // Prevent updates more than once per second
+        return;
+      }
     }
 
     // Get current Philippine date from database
@@ -1569,6 +1781,26 @@ export async function setupEventListeners() {
     weekEnd.setDate(weekStart.getDate() + 6);
     weekEnd.setHours(23, 59, 59, 999);
 
+    // Calculate previous week boundaries
+    const prevWeekStart = new Date(weekStart);
+    prevWeekStart.setDate(weekStart.getDate() - 7);
+    prevWeekStart.setHours(0, 0, 0, 0);
+    const prevWeekEnd = new Date(prevWeekStart);
+    prevWeekEnd.setDate(prevWeekStart.getDate() + 6);
+    prevWeekEnd.setHours(23, 59, 59, 999);
+
+    // Calculate next week boundaries
+    const nextWeekStart = new Date(weekStart);
+    nextWeekStart.setDate(weekStart.getDate() + 7);
+    nextWeekStart.setHours(0, 0, 0, 0);
+    const nextWeekEnd = new Date(nextWeekStart);
+    nextWeekEnd.setDate(nextWeekStart.getDate() + 6);
+    nextWeekEnd.setHours(23, 59, 59, 999);
+
+    // Calculate end of current month
+    const endOfMonth = new Date(philippineToday.getFullYear(), philippineToday.getMonth() + 1, 0);
+    endOfMonth.setHours(23, 59, 59, 999);
+
     // Query for this week's visits for this email
     const { data: visits, error } = await supabase
       .from('scheduled_visits')
@@ -1578,19 +1810,82 @@ export async function setupEventListeners() {
       .gte('visit_date', weekStart.toISOString())
       .lte('visit_date', weekEnd.toISOString());
 
+    // Query for previous week's visits for this email
+    const { data: prevWeekVisits, error: prevWeekError } = await supabase
+      .from('scheduled_visits')
+      .select('visit_date, status')
+      .eq('visitor_email', email)
+      .in('status', ['pending', 'completed'])
+      .gte('visit_date', prevWeekStart.toISOString())
+      .lte('visit_date', prevWeekEnd.toISOString());
+
+    // Query for future schedules (next week and beyond within the month)
+    const { data: futureVisits, error: futureError } = await supabase
+      .from('scheduled_visits')
+      .select('visit_date, status')
+      .eq('visitor_email', email)
+      .in('status', ['pending', 'completed'])
+      .gte('visit_date', nextWeekStart.toISOString())
+      .lte('visit_date', endOfMonth.toISOString());
+
     if (error) {
       reminderDiv.innerHTML = '<span class="text-red-600">Error loading visit count</span>';
       reminderDiv.classList.remove('hidden');
       return;
     }
+    if (prevWeekError) {
+      console.error('Error loading previous week visits for guest:', prevWeekError);
+    }
+    if (futureError) {
+      console.error('Error loading future visits for guest:', futureError);
+    }
 
+    // Count the pending and completed visits for the current week
     const visitCount = visits?.length || 0;
     const pendingCount = visits?.filter(v => v.status === 'pending').length || 0;
     const completedCount = visits?.filter(v => v.status === 'completed').length || 0;
-    const remainingVisits = Math.max(0, 2 - visitCount);
+
+    // Count the pending and completed visits for the previous week
+    const prevPendingCount = prevWeekVisits?.filter(v => v.status === 'pending').length || 0;
+    const prevCompletedCount = prevWeekVisits?.filter(v => v.status === 'completed').length || 0;
+    const prevTotalCount = prevWeekVisits?.length || 0;
+
+    // Count future visits
+    const futureVisitCount = futureVisits?.length || 0;
+
+    // NEW LOGIC: Determine refresh slots based on previous week AND future schedules
+    let refreshSlots = 2; // default: allow 2 visits
+    
+    // First, check previous week logic
+    if (prevTotalCount > 0) {
+      if (prevPendingCount === 2) {
+        refreshSlots = 0; // 2 pending = no refresh
+      } else if (prevPendingCount === 1 && prevCompletedCount === 1) {
+        refreshSlots = 1; // 1 pending, 1 completed = 1 refresh
+      } else if (prevPendingCount === 0 && prevCompletedCount === 2) {
+        refreshSlots = 2; // 2 completed = 2 refresh
+      } else {
+        // For any other combination (e.g., only 1 visit last week)
+        refreshSlots = 2 - prevPendingCount; // e.g., 1 completed, 0 pending = 1 refresh
+      }
+    }
+
+    // Then, check if user has future schedules that would limit current week
+    if (futureVisitCount > 0) {
+      // If user has future schedules, they should only get 1 refresh slot
+      // This ensures they don't use up all their visits before reaching their scheduled dates
+      refreshSlots = Math.min(refreshSlots, 1);
+    }
+
+    // Calculate remaining visits for this week
+    const remainingVisits = Math.max(0, refreshSlots - visitCount);
 
     let statusHtml = '';
-    if (remainingVisits === 2) {
+    let additionalInfo = '';
+    
+    if (refreshSlots === 0) {
+      statusHtml = `<span class="font-medium text-gray-600 dark:text-gray-400">No new visits allowed until previous week is cleared</span>`;
+    } else if (remainingVisits === 2) {
       statusHtml = `<span class="font-medium text-green-600 dark:text-green-400">2 visits remaining</span> (no scheduled visits)`;
     } else if (remainingVisits === 1) {
       statusHtml = `<span class="font-medium text-yellow-600 dark:text-yellow-400">1 visit remaining</span> (${pendingCount} pending, ${completedCount} completed)`;
@@ -1598,7 +1893,21 @@ export async function setupEventListeners() {
       statusHtml = `<span class="font-medium text-red-600 dark:text-red-400">No visits remaining</span> (${pendingCount} pending, ${completedCount} completed)`;
     }
 
-    reminderDiv.innerHTML = `<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-2">
+    // Add information about future schedules if they exist
+    if (futureVisitCount > 0) {
+      const futureDates = futureVisits?.map(v => new Date(v.visit_date).toLocaleDateString()).join(', ');
+      additionalInfo = `<div class="mt-1 text-xs text-blue-600 dark:text-blue-400">
+        Future schedules: ${futureVisitCount} visit(s) on ${futureDates}
+      </div>`;
+    }
+
+    // Clear any existing content first to prevent duplicates
+    reminderDiv.innerHTML = '';
+    
+    // Create the reminder content
+    const reminderContent = document.createElement('div');
+    reminderContent.className = 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-2';
+    reminderContent.innerHTML = `
       <div class="flex items-center">
         <svg class="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -1606,10 +1915,17 @@ export async function setupEventListeners() {
         <div class="ml-3">
           <h3 class="text-sm font-medium text-blue-800 dark:text-blue-200">${statusHtml}</h3>
           <div class="mt-1 text-xs text-blue-600 dark:text-blue-400">Maximum 2 visits per week per user account</div>
+          ${additionalInfo}
         </div>
       </div>
-    </div>`;
+    `;
+    
+    reminderDiv.appendChild(reminderContent);
     reminderDiv.classList.remove('hidden');
+    
+    // Store the last update time and email to prevent duplicates
+    reminderDiv.dataset.lastEmail = email;
+    reminderDiv.dataset.lastUpdate = Date.now().toString();
   }
 
   // Add live event listener to email input in modal
@@ -1617,11 +1933,19 @@ export async function setupEventListeners() {
     const scheduleEmail = document.getElementById('scheduleEmail') as HTMLInputElement;
     const reminderDiv = document.getElementById('liveVisitCountReminder');
     if (scheduleEmail && reminderDiv) {
+      let debounceTimer: NodeJS.Timeout;
+      
       scheduleEmail.addEventListener('input', async () => {
+        // Clear any existing timer
+        clearTimeout(debounceTimer);
+        
         // Only show for non-logged-in users
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-          showLiveVisitCountReminder(scheduleEmail.value.trim());
+          // Debounce the call to prevent rapid firing
+          debounceTimer = setTimeout(() => {
+            showLiveVisitCountReminder(scheduleEmail.value.trim());
+          }, 300); // Wait 300ms after user stops typing
         } else {
           reminderDiv.innerHTML = '';
           reminderDiv.classList.add('hidden');
