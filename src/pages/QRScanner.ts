@@ -115,6 +115,12 @@ export function QRScannerPage() {
           <!-- Status -->
           <div id="scannerStatus" class="text-center mt-4">
             <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Click "Start Scanner" to begin</p>
+            <div id="performanceIndicator" class="hidden mt-2">
+              <p class="text-xs text-blue-600 dark:text-blue-400">
+                Scan Rate: <span id="scanRate">0</span> FPS • 
+                Interval: <span id="scanInterval">100</span>ms
+              </p>
+            </div>
           </div>
         </div>
 
@@ -164,6 +170,33 @@ export function QRScannerPage() {
           </div>
         </div>
 
+        <!-- QR Data Preview Section -->
+        <div id="qrPreviewSection" class="hidden bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-6 mb-6">
+          <div class="flex flex-col sm:flex-row justify-between items-center mb-4 space-y-2 sm:space-y-0">
+            <h2 class="text-base sm:text-lg font-medium text-gray-900 dark:text-white">QR Code Detected</h2>
+            <div class="flex space-x-2">
+              <button 
+                id="processQRBtn"
+                class="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200 text-sm font-medium flex items-center space-x-2"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <span>Process</span>
+              </button>
+              <button 
+                id="rescanBtn"
+                class="w-full sm:w-auto px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors duration-200 text-sm font-medium"
+              >
+                Rescan
+              </button>
+            </div>
+          </div>
+          <div id="qrPreviewContent" class="space-y-4">
+            <!-- QR preview content will be populated here -->
+          </div>
+        </div>
+
         <!-- Results Section -->
         <div id="resultsSection" class="hidden bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-6">
           <div class="flex flex-col sm:flex-row justify-between items-center mb-4 space-y-2 sm:space-y-0">
@@ -205,6 +238,16 @@ export function QRScannerPage() {
 let stream: MediaStream | null = null;
 let scanning = false;
 let currentFacingMode = 'environment'; // Start with back camera
+let lastScanTime = 0;
+let scanInterval = 100; // Scan every 100ms for better performance
+let consecutiveFailures = 0;
+let maxConsecutiveFailures = 10; // Reduce scan frequency after many failures
+let canvas: HTMLCanvasElement | null = null;
+let ctx: CanvasRenderingContext2D | null = null;
+let imageData: ImageData | null = null;
+let scanCount = 0;
+let lastPerformanceUpdate = 0;
+let detectedQRData: string | null = null;
 
 export function initializeQRScanner() {
   const startScanBtn = document.getElementById('startScanBtn');
@@ -216,6 +259,8 @@ export function initializeQRScanner() {
   const closeManualBtn = document.getElementById('closeManualBtn');
   const processManualBtn = document.getElementById('processManualBtn');
   const newScanBtn = document.getElementById('newScanBtn');
+  const processQRBtn = document.getElementById('processQRBtn');
+  const rescanBtn = document.getElementById('rescanBtn');
 
   startScanBtn?.addEventListener('click', startScanner);
   stopScanBtn?.addEventListener('click', stopScanner);
@@ -226,6 +271,8 @@ export function initializeQRScanner() {
   closeManualBtn?.addEventListener('click', hideManualInputModal);
   processManualBtn?.addEventListener('click', processManualInput);
   newScanBtn?.addEventListener('click', resetScanner);
+  processQRBtn?.addEventListener('click', processDetectedQR);
+  rescanBtn?.addEventListener('click', rescanQR);
 
   // Auto-start scanner when page loads
   setTimeout(() => {
@@ -236,23 +283,45 @@ export function initializeQRScanner() {
 async function startScanner() {
   try {
     const video = document.getElementById('qrVideo') as HTMLVideoElement;
+    const canvas = document.getElementById('qrCanvas') as HTMLCanvasElement;
     const status = document.getElementById('scannerStatus');
     const startBtn = document.getElementById('startScanBtn');
     const stopBtn = document.getElementById('stopScanBtn');
 
-    if (!video || !status || !startBtn || !stopBtn) return;
+    if (!video || !canvas || !status || !startBtn || !stopBtn) return;
 
-    // Request camera access
+    // Initialize canvas context once
+    ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('Could not get canvas context');
+    }
+
+    // Request camera access with optimized settings for QR scanning
     stream = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: currentFacingMode,
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
+        width: { ideal: 1280, max: 1920 },
+        height: { ideal: 720, max: 1080 },
+        frameRate: { ideal: 30, max: 60 },
+        // Optimize for QR code scanning
+        focusMode: 'continuous',
+        exposureMode: 'continuous',
+        whiteBalanceMode: 'continuous'
       }
     });
 
     video.srcObject = stream;
     scanning = true;
+    consecutiveFailures = 0;
+    scanInterval = 100; // Reset scan interval
+    scanCount = 0;
+    lastPerformanceUpdate = Date.now();
+    
+    // Show performance indicator
+    const performanceIndicator = document.getElementById('performanceIndicator');
+    if (performanceIndicator) {
+      performanceIndicator.classList.remove('hidden');
+    }
 
     // Update UI
     startBtn.classList.add('hidden');
@@ -278,6 +347,18 @@ function stopScanner() {
   }
   
   scanning = false;
+  
+  // Reset scanner state
+  consecutiveFailures = 0;
+  scanInterval = 100;
+  lastScanTime = 0;
+  scanCount = 0;
+  
+  // Hide performance indicator
+  const performanceIndicator = document.getElementById('performanceIndicator');
+  if (performanceIndicator) {
+    performanceIndicator.classList.add('hidden');
+  }
   
   const video = document.getElementById('qrVideo') as HTMLVideoElement;
   const status = document.getElementById('scannerStatus');
@@ -310,61 +391,95 @@ function scanLoop() {
   const video = document.getElementById('qrVideo') as HTMLVideoElement;
   const canvas = document.getElementById('qrCanvas') as HTMLCanvasElement;
 
-  if (!video || !canvas || video.readyState !== video.HAVE_ENOUGH_DATA) {
+  if (!video || !canvas || !ctx || video.readyState !== video.HAVE_ENOUGH_DATA) {
     requestAnimationFrame(scanLoop);
     return;
   }
 
-  // Set canvas dimensions
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
+  const currentTime = Date.now();
+  
+  // Adaptive scanning frequency based on consecutive failures
+  if (currentTime - lastScanTime < scanInterval) {
+    requestAnimationFrame(scanLoop);
+    return;
+  }
+
+  // Set canvas dimensions only if they changed
+  if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+  }
 
   // Draw video frame to canvas
-  const ctx = canvas.getContext('2d');
-  if (ctx) {
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  
+  // Get image data for QR code detection
+  imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  
+  // Use jsQR with optimized settings for faster detection
+  const code = jsQR(imageData.data, imageData.width, imageData.height, {
+    inversionAttempts: "dontInvert",
+  });
+  
+  // Update performance metrics
+  scanCount++;
+  const now = Date.now();
+  if (now - lastPerformanceUpdate >= 1000) { // Update every second
+    const fps = Math.round((scanCount * 1000) / (now - lastPerformanceUpdate));
+    const scanRateElement = document.getElementById('scanRate');
+    const scanIntervalElement = document.getElementById('scanInterval');
     
-    // Get image data for QR code detection
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    if (scanRateElement) scanRateElement.textContent = fps.toString();
+    if (scanIntervalElement) scanIntervalElement.textContent = scanInterval.toString();
     
-    // Use jsQR to detect QR codes
-    const code = jsQR(imageData.data, imageData.width, imageData.height, {
-      inversionAttempts: "dontInvert",
-    });
-    
-    if (code) {
-      // QR code detected!
-      console.log('QR Code detected:', code.data);
-      
-      // Show success feedback
-      updateLiveFeedback('QR code detected!', 'success');
-      
-      // Stop scanning
-      stopScanner();
-      
-      // Process the QR code data
-      processQRCodeData(code.data);
-      
-      // Show success feedback
-      const status = document.getElementById('scannerStatus');
-      if (status) {
-        status.innerHTML = '<p class="text-sm text-green-600 dark:text-green-400">QR Code detected! Processing...</p>';
-      }
-      
-      return;
-    }
-    
-    // Check for potential QR code patterns (dark/light transitions)
-    const hasPotentialQR = checkForPotentialQRPattern(imageData);
-    if (hasPotentialQR) {
-      updateLiveFeedback('QR code pattern detected - hold steady', 'detecting');
-    } else {
-      updateLiveFeedback('Position QR code in frame', 'searching');
-    }
-    
-    // Continue scanning
-    requestAnimationFrame(scanLoop);
+    scanCount = 0;
+    lastPerformanceUpdate = now;
   }
+  
+  if (code) {
+    // QR code detected!
+    console.log('QR Code detected:', code.data);
+    
+    // Store the detected QR data
+    detectedQRData = code.data;
+    
+    // Show success feedback
+    updateLiveFeedback('QR code detected!', 'success');
+    
+    // Stop scanning
+    stopScanner();
+    
+    // Show QR preview instead of immediately processing
+    showQRPreview(code.data);
+    
+    return;
+  }
+  
+  // Increment consecutive failures
+  consecutiveFailures++;
+  
+  // Adaptive scan interval: slow down if many failures, speed up if few
+  if (consecutiveFailures > maxConsecutiveFailures) {
+    scanInterval = Math.min(scanInterval * 1.2, 300); // Max 300ms interval
+  } else if (consecutiveFailures < 3) {
+    scanInterval = Math.max(scanInterval * 0.9, 50); // Min 50ms interval
+  }
+  
+  // Check for potential QR code patterns (dark/light transitions)
+  const hasPotentialQR = checkForPotentialQRPattern(imageData);
+  if (hasPotentialQR) {
+    updateLiveFeedback('QR code pattern detected - hold steady', 'detecting');
+    // Speed up scanning when potential QR is detected
+    scanInterval = Math.max(scanInterval * 0.8, 30);
+    consecutiveFailures = Math.max(0, consecutiveFailures - 2); // Reduce failure count
+  } else {
+    updateLiveFeedback('Position QR code in frame', 'searching');
+  }
+  
+  lastScanTime = currentTime;
+  
+  // Continue scanning
+  requestAnimationFrame(scanLoop);
 }
 
 function showManualInputModal() {
@@ -405,15 +520,167 @@ function resetScanner() {
   const resultsSection = document.getElementById('resultsSection');
   const errorSection = document.getElementById('errorSection');
   const scannerSection = document.getElementById('scannerSection');
+  const qrPreviewSection = document.getElementById('qrPreviewSection');
   
   if (resultsSection) resultsSection.classList.add('hidden');
   if (errorSection) errorSection.classList.add('hidden');
+  if (qrPreviewSection) qrPreviewSection.classList.add('hidden');
   if (scannerSection) scannerSection.classList.remove('hidden');
+  
+  // Reset scanner state
+  consecutiveFailures = 0;
+  scanInterval = 100;
+  lastScanTime = 0;
+  detectedQRData = null;
   
   // Restart scanner
   if (!scanning) {
     startScanner();
   }
+}
+
+function showQRPreview(qrData: string) {
+  const scannerSection = document.getElementById('scannerSection');
+  const qrPreviewSection = document.getElementById('qrPreviewSection');
+  const qrPreviewContent = document.getElementById('qrPreviewContent');
+  
+  if (!scannerSection || !qrPreviewSection || !qrPreviewContent) return;
+  
+  // Hide scanner, show preview
+  scannerSection.classList.add('hidden');
+  qrPreviewSection.classList.remove('hidden');
+  
+  try {
+    // Try to parse the QR data as JSON
+    const parsedData = JSON.parse(qrData);
+    
+    // Determine the type of QR code and show appropriate preview
+    if (parsedData.type === 'visit' && parsedData.id) {
+      // Simple visit QR code
+      qrPreviewContent.innerHTML = `
+        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div class="flex items-center space-x-3">
+            <svg class="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+            </svg>
+            <div>
+              <h3 class="text-lg font-semibold text-blue-900 dark:text-blue-100">Visit QR Code</h3>
+              <p class="text-sm text-blue-700 dark:text-blue-300">Visit ID: ${parsedData.id}</p>
+              <p class="text-xs text-blue-600 dark:text-blue-400">Timestamp: ${new Date(parsedData.timestamp).toLocaleString()}</p>
+            </div>
+          </div>
+          <div class="mt-3 p-3 bg-white dark:bg-gray-800 rounded border">
+            <p class="text-xs font-mono text-gray-600 dark:text-gray-400 break-all">${qrData}</p>
+          </div>
+        </div>
+      `;
+    } else if (parsedData.visitId && parsedData.visitorName) {
+      // Full visit QR code
+      qrPreviewContent.innerHTML = `
+        <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+          <div class="flex items-center space-x-3">
+            <svg class="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+            </svg>
+            <div>
+              <h3 class="text-lg font-semibold text-green-900 dark:text-green-100">Visit Details</h3>
+              <p class="text-sm text-green-700 dark:text-green-300"><strong>Visitor:</strong> ${parsedData.visitorName}</p>
+              <p class="text-sm text-green-700 dark:text-green-300"><strong>Email:</strong> ${parsedData.visitorEmail}</p>
+              <p class="text-sm text-green-700 dark:text-green-300"><strong>Purpose:</strong> ${parsedData.purpose}</p>
+              <p class="text-sm text-green-700 dark:text-green-300"><strong>Status:</strong> ${parsedData.status}</p>
+              <p class="text-sm text-green-700 dark:text-green-300"><strong>Places:</strong> ${parsedData.places?.length || 0} locations</p>
+            </div>
+          </div>
+          <div class="mt-3 p-3 bg-white dark:bg-gray-800 rounded border">
+            <p class="text-xs font-mono text-gray-600 dark:text-gray-400 break-all">${qrData}</p>
+          </div>
+        </div>
+      `;
+    } else if (parsedData.type === 'gate' && parsedData.id) {
+      // Gate QR code
+      qrPreviewContent.innerHTML = `
+        <div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+          <div class="flex items-center space-x-3">
+            <svg class="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path>
+            </svg>
+            <div>
+              <h3 class="text-lg font-semibold text-purple-900 dark:text-purple-100">Gate QR Code</h3>
+              <p class="text-sm text-purple-700 dark:text-purple-300">Gate ID: ${parsedData.id}</p>
+              <p class="text-xs text-purple-600 dark:text-purple-400">Timestamp: ${new Date(parsedData.timestamp).toLocaleString()}</p>
+            </div>
+          </div>
+          <div class="mt-3 p-3 bg-white dark:bg-gray-800 rounded border">
+            <p class="text-xs font-mono text-gray-600 dark:text-gray-400 break-all">${qrData}</p>
+          </div>
+        </div>
+      `;
+    } else {
+      // Unknown QR code format
+      qrPreviewContent.innerHTML = `
+        <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+          <div class="flex items-center space-x-3">
+            <svg class="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+            </svg>
+            <div>
+              <h3 class="text-lg font-semibold text-yellow-900 dark:text-yellow-100">Unknown QR Code Format</h3>
+              <p class="text-sm text-yellow-700 dark:text-yellow-300">This QR code doesn't match expected GuestGo formats</p>
+            </div>
+          </div>
+          <div class="mt-3 p-3 bg-white dark:bg-gray-800 rounded border">
+            <p class="text-xs font-mono text-gray-600 dark:text-gray-400 break-all">${qrData}</p>
+          </div>
+        </div>
+      `;
+    }
+  } catch (error) {
+    // Raw text QR code
+    qrPreviewContent.innerHTML = `
+      <div class="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-800 rounded-lg p-4">
+        <div class="flex items-center space-x-3">
+          <svg class="w-6 h-6 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          </svg>
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Raw Text QR Code</h3>
+            <p class="text-sm text-gray-700 dark:text-gray-300">This appears to be a text-based QR code</p>
+          </div>
+        </div>
+        <div class="mt-3 p-3 bg-white dark:bg-gray-800 rounded border">
+          <p class="text-xs font-mono text-gray-600 dark:text-gray-400 break-all">${qrData}</p>
+        </div>
+      </div>
+    `;
+  }
+}
+
+function processDetectedQR() {
+  if (detectedQRData) {
+    // Hide preview and show results
+    const qrPreviewSection = document.getElementById('qrPreviewSection');
+    if (qrPreviewSection) {
+      qrPreviewSection.classList.add('hidden');
+    }
+    
+    // Process the QR code data
+    processQRCodeData(detectedQRData);
+  }
+}
+
+function rescanQR() {
+  // Hide preview and restart scanner
+  const qrPreviewSection = document.getElementById('qrPreviewSection');
+  const scannerSection = document.getElementById('scannerSection');
+  
+  if (qrPreviewSection) qrPreviewSection.classList.add('hidden');
+  if (scannerSection) scannerSection.classList.remove('hidden');
+  
+  // Reset detected data
+  detectedQRData = null;
+  
+  // Restart scanner
+  startScanner();
 }
 
 async function processQRCodeData(qrData: string) {
@@ -593,14 +860,25 @@ function showPersonnelVisitModal(visitData: VisitQRData & { places: any[] }, cur
           <!-- Header -->
           <div class="flex justify-between items-center mb-4">
             <h3 class="text-lg font-medium text-gray-900 dark:text-white">Visit Details - Personnel View</h3>
-            <button 
-              id="closePersonnelModalBtn"
-              class="text-gray-400 hover:text-gray-500 focus:outline-none"
-            >
-              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            <div class="flex items-center space-x-2">
+              <button 
+                id="refreshPersonnelModalBtn"
+                class="text-blue-400 hover:text-blue-500 focus:outline-none p-1"
+                title="Refresh data"
+              >
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+              </button>
+              <button 
+                id="closePersonnelModalBtn"
+                class="text-gray-400 hover:text-gray-500 focus:outline-none"
+              >
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           ${isCompleted ? `
@@ -725,6 +1003,7 @@ function showPersonnelVisitModal(visitData: VisitQRData & { places: any[] }, cur
   const modal = document.getElementById('personnelVisitModal');
   const closeBtn1 = document.getElementById('closePersonnelModalBtn');
   const closeBtn2 = document.getElementById('closePersonnelModalBtn2');
+  const refreshBtn = document.getElementById('refreshPersonnelModalBtn');
 
   const closeModal = () => {
     if (modal) {
@@ -734,8 +1013,23 @@ function showPersonnelVisitModal(visitData: VisitQRData & { places: any[] }, cur
     window.location.reload();
   };
 
+  const refreshModal = async () => {
+    if (refreshBtn) {
+      // Show loading state
+      refreshBtn.innerHTML = `
+        <svg class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+        </svg>
+      `;
+      refreshBtn.setAttribute('disabled', 'true');
+    }
+    
+    await refreshPersonnelModal(visitData.visitId, currentUserId);
+  };
+
   closeBtn1?.addEventListener('click', closeModal);
   closeBtn2?.addEventListener('click', closeModal);
+  refreshBtn?.addEventListener('click', refreshModal);
 
   // Close on background click
   modal?.addEventListener('click', (e) => {
@@ -910,37 +1204,57 @@ function updateLiveFeedback(message: string, type: 'searching' | 'detecting' | '
 function checkForPotentialQRPattern(imageData: ImageData): boolean {
   const { data, width, height } = imageData;
   
-  // Simple edge detection to find potential QR code patterns
-  // Look for areas with high contrast (dark/light transitions)
-  let highContrastPixels = 0;
-  const threshold = 50; // Minimum difference for contrast
+  // Optimized edge detection for QR code patterns
+  // Focus on center area where QR codes are most likely to be
+  const centerX = Math.floor(width / 2);
+  const centerY = Math.floor(height / 2);
+  const scanArea = Math.min(width, height) * 0.6; // Focus on 60% of the smaller dimension
+  const startX = Math.max(0, centerX - scanArea / 2);
+  const endX = Math.min(width, centerX + scanArea / 2);
+  const startY = Math.max(0, centerY - scanArea / 2);
+  const endY = Math.min(height, centerY + scanArea / 2);
   
-  for (let y = 1; y < height - 1; y += 2) { // Sample every other row for performance
-    for (let x = 1; x < width - 1; x += 2) { // Sample every other column for performance
+  let highContrastPixels = 0;
+  let totalPixels = 0;
+  const threshold = 40; // Lower threshold for better sensitivity
+  
+  // Sample every 4th pixel for better performance
+  for (let y = startY; y < endY; y += 4) {
+    for (let x = startX; x < endX; x += 4) {
+      totalPixels++;
       const idx = (y * width + x) * 4;
-      const current = data[idx]; // Use red channel for grayscale approximation
       
-      // Check horizontal contrast
-      const left = data[idx - 4];
-      const right = data[idx + 4];
-      const horizontalDiff = Math.abs(current - left) + Math.abs(current - right);
+      // Use luminance for better contrast detection
+      const current = data[idx] * 0.299 + data[idx + 1] * 0.587 + data[idx + 2] * 0.114;
       
-      // Check vertical contrast
-      const top = data[(y - 1) * width * 4 + x * 4];
-      const bottom = data[(y + 1) * width * 4 + x * 4];
-      const verticalDiff = Math.abs(current - top) + Math.abs(current - bottom);
+      // Check horizontal contrast (simplified)
+      if (x + 4 < endX) {
+        const right = data[idx + 4] * 0.299 + data[idx + 5] * 0.587 + data[idx + 6] * 0.114;
+        const horizontalDiff = Math.abs(current - right);
+        
+        if (horizontalDiff > threshold) {
+          highContrastPixels++;
+          continue; // Skip vertical check if horizontal already found
+        }
+      }
       
-      if (horizontalDiff > threshold || verticalDiff > threshold) {
-        highContrastPixels++;
+      // Check vertical contrast (simplified)
+      if (y + 4 < endY) {
+        const bottom = data[(y + 4) * width * 4 + x * 4] * 0.299 + 
+                      data[(y + 4) * width * 4 + x * 4 + 1] * 0.587 + 
+                      data[(y + 4) * width * 4 + x * 4 + 2] * 0.114;
+        const verticalDiff = Math.abs(current - bottom);
+        
+        if (verticalDiff > threshold) {
+          highContrastPixels++;
+        }
       }
     }
   }
   
-  // If we have enough high-contrast pixels, it might be a QR code
-  const totalSampledPixels = Math.floor((width * height) / 4);
-  const contrastRatio = highContrastPixels / totalSampledPixels;
-  
-  return contrastRatio > 0.1; // 10% of pixels should have high contrast
+  // More sensitive threshold for smaller scan area
+  const contrastRatio = highContrastPixels / totalPixels;
+  return contrastRatio > 0.08; // 8% of pixels should have high contrast
 }
 
 // Global functions for personnel to complete visits (accessible from onclick)
@@ -967,18 +1281,8 @@ function checkForPotentialQRPattern(imageData: ImageData): boolean {
 
     showPersonnelModalStatus('Place marked as completed successfully!', 'success');
     
-    // Refresh the modal with updated data
-    setTimeout(async () => {
-      const updatedVisitData = await fetchVisitDataFromDatabase(visitId);
-      if (updatedVisitData) {
-        // Remove old modal and show new one
-        const oldModal = document.getElementById('personnelVisitModal');
-        if (oldModal) {
-          oldModal.remove();
-        }
-        showPersonnelVisitModal(updatedVisitData, user.id);
-      }
-    }, 1000);
+    // Refresh the modal with updated data immediately
+    await refreshPersonnelModal(visitId, user.id);
 
   } catch (error) {
     console.error('Error completing visit place:', error);
@@ -1008,24 +1312,53 @@ function checkForPotentialQRPattern(imageData: ImageData): boolean {
 
     showPersonnelModalStatus('Visit completed successfully!', 'success');
     
-    // Refresh the modal with updated data
-    setTimeout(async () => {
-      const updatedVisitData = await fetchVisitDataFromDatabase(visitId);
-      if (updatedVisitData) {
-        // Remove old modal and show new one
-        const oldModal = document.getElementById('personnelVisitModal');
-        if (oldModal) {
-          oldModal.remove();
-        }
-        showPersonnelVisitModal(updatedVisitData, user.id);
-      }
-    }, 1000);
+    // Refresh the modal with updated data immediately
+    await refreshPersonnelModal(visitId, user.id);
 
   } catch (error) {
     console.error('Error completing visit:', error);
     showPersonnelModalStatus('Error completing visit', 'error');
   }
 };
+
+// Helper function to refresh the personnel modal with updated data
+async function refreshPersonnelModal(visitId: string, userId: string) {
+  try {
+    console.log('Refreshing personnel modal for visit:', visitId, 'user:', userId);
+    
+    // Small delay to ensure database transaction is complete
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Fetch fresh data from database
+    const updatedVisitData = await fetchVisitDataFromDatabase(visitId, userId);
+    
+    if (updatedVisitData) {
+      console.log('Updated visit data:', updatedVisitData);
+      console.log('Places with assignments:', updatedVisitData.places.map(p => ({
+        placeName: p.placeName,
+        isAssigned: p.isAssignedToCurrentUser,
+        status: p.status
+      })));
+      
+      // Remove old modal
+      const oldModal = document.getElementById('personnelVisitModal');
+      if (oldModal) {
+        oldModal.remove();
+      }
+      
+      // Show new modal with updated data
+      showPersonnelVisitModal(updatedVisitData, userId);
+      
+      console.log('Modal refreshed successfully');
+    } else {
+      console.error('Failed to fetch updated visit data');
+      showPersonnelModalStatus('Error: Could not refresh visit data', 'error');
+    }
+  } catch (error) {
+    console.error('Error refreshing personnel modal:', error);
+    showPersonnelModalStatus('Error refreshing modal', 'error');
+  }
+}
 
 // Helper function to show status messages in personnel modal
 function showPersonnelModalStatus(message: string, type: 'success' | 'error') {
