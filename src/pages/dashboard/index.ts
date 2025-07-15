@@ -4157,21 +4157,21 @@ function calculateVisitProgress(visit: any): { percentage: number; status: strin
     return { percentage: 100, status: 'Cancelled', color: 'bg-gray-500' };
   }
   
-  // For pending visits, calculate progress based on time
-  const totalDuration = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-  const timeSinceScheduled = now.getTime() - scheduledAt.getTime();
-  
-  // If it's a future visit, show 0% progress
-  if (timeSinceScheduled < 0) {
+  // Check if this is a future visit (visit date is in the future)
+  if (visitDate > now) {
     return { percentage: 0, status: 'Scheduled', color: 'bg-blue-500' };
   }
   
-  // If it's past the visit date, show 100% (should be marked as unsuccessful)
+  // For current/past visits, calculate progress based on time
+  const totalDuration = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+  const timeSinceScheduled = now.getTime() - scheduledAt.getTime();
+  
+  // If it's past the visit date by more than 24 hours, show as overdue
   if (now.getTime() > visitDate.getTime() + totalDuration) {
     return { percentage: 100, status: 'Overdue', color: 'bg-red-500' };
   }
   
-  // Calculate percentage based on time elapsed
+  // Calculate percentage based on time elapsed since scheduled time
   const percentage = Math.min(100, Math.max(0, (timeSinceScheduled / totalDuration) * 100));
   
   let status = 'In Progress';
@@ -5201,4 +5201,3 @@ function ensureHistoryModalExists() {
     }
   }
 };
-

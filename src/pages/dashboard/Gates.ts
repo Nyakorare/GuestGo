@@ -634,5 +634,3 @@ export function setupGatesEventListeners(): void {
   // Load gates initially
   loadGates();
 }
-
- 

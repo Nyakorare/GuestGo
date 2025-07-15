@@ -318,4 +318,4 @@ export function setupGatePage(gateId: string): void {
   
   // Load gate details
   loadGateDetails(gateId);
-} 
+}
