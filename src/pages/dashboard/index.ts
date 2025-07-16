@@ -610,6 +610,13 @@ export function DashboardPage() {
                   <option value="visitor">Visitor</option>
                   <option value="guest">Guest</option>
                 </select>
+                <!-- Place Filter -->
+                <select 
+                  id="finishedPlaceFilter"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
+                >
+                  <option value="all">All Places</option>
+                </select>
               </div>
             </div>
           </div>
@@ -2536,6 +2543,15 @@ function setupDashboardEventListeners() {
     });
   }
 
+  // Finished place filter event listener
+  const finishedPlaceFilter = document.getElementById('finishedPlaceFilter') as HTMLSelectElement;
+  if (finishedPlaceFilter) {
+    finishedPlaceFilter.addEventListener('change', () => {
+      currentFinishedPlaceFilter = finishedPlaceFilter.value;
+      applyFinishedFilters();
+    });
+  }
+
   // Schedule type tabs event listeners
   const allSchedulesTab = document.getElementById('allSchedulesTab');
   const todaySchedulesTab = document.getElementById('todaySchedulesTab');
@@ -3208,6 +3224,7 @@ let currentFinishedSearchTerm = '';
 let currentFinishedRoleFilter = 'all';
 let currentFinishedDateFilter = 'all';
 let currentFinishedSpecificDate = '';
+let currentFinishedPlaceFilter = 'all';
 let visitsRefreshInterval: NodeJS.Timeout | null = null; // For auto-refresh
 let lastVisitsRefresh = 0; // Track last refresh time
 
@@ -3432,6 +3449,9 @@ async function loadFinishedSchedules() {
       ...visit,
       completed_by_info: visit.completed_by ? personnelInfo[visit.completed_by] : null
     }));
+
+    // Populate place filter options
+    populateFinishedPlaceFilterOptions(allFinishedVisits);
 
     applyFinishedFilters();
   } catch (error) {
@@ -4769,30 +4789,51 @@ async function displayVisitorPastVisits(visits: any[]): Promise<void> {
 
 // Function to populate place filter options for past visits
 function populatePastPlaceFilterOptions(pastVisits: any[]): void {
-  const placeFilter = document.getElementById('visitorPastPlaceFilter') as HTMLSelectElement;
-  if (!placeFilter) return;
+  const pastPlaceFilter = document.getElementById('visitorPastPlaceFilter') as HTMLSelectElement;
+  if (!pastPlaceFilter) return;
+
+  // Clear existing options except the first one
+  pastPlaceFilter.innerHTML = '<option value="all">All Places</option>';
 
   // Get unique places from past visits
-  const uniquePlaces = new Set<string>();
+  const uniquePlaces = new Map();
   pastVisits.forEach(visit => {
-    if (Array.isArray(visit.places)) {
-      visit.places.forEach((place: any) => {
-        if (place.place_name) {
-          uniquePlaces.add(place.place_name);
-        }
-      });
+    if (visit.place_id && visit.place_name) {
+      uniquePlaces.set(visit.place_id, visit.place_name);
     }
   });
 
-  // Clear existing options except "All Places"
-  placeFilter.innerHTML = '<option value="all">All Places</option>';
+  // Add place options
+  uniquePlaces.forEach((placeName, placeId) => {
+    const option = document.createElement('option');
+    option.value = placeId;
+    option.textContent = placeName;
+    pastPlaceFilter.appendChild(option);
+  });
+}
+
+// Function to populate finished place filter options
+function populateFinishedPlaceFilterOptions(finishedVisits: any[]): void {
+  const finishedPlaceFilter = document.getElementById('finishedPlaceFilter') as HTMLSelectElement;
+  if (!finishedPlaceFilter) return;
+
+  // Clear existing options except the first one
+  finishedPlaceFilter.innerHTML = '<option value="all">All Places</option>';
+
+  // Get unique places from finished visits
+  const uniquePlaces = new Map();
+  finishedVisits.forEach(visit => {
+    if (visit.place_id && visit.place_name) {
+      uniquePlaces.set(visit.place_id, visit.place_name);
+    }
+  });
 
   // Add place options
-  Array.from(uniquePlaces).sort().forEach(placeName => {
+  uniquePlaces.forEach((placeName, placeId) => {
     const option = document.createElement('option');
-    option.value = placeName;
+    option.value = placeId;
     option.textContent = placeName;
-    placeFilter.appendChild(option);
+    finishedPlaceFilter.appendChild(option);
   });
 }
 
@@ -4912,6 +4953,11 @@ function applyFinishedFilters() {
     });
   }
 
+  // Apply place filter
+  if (currentFinishedPlaceFilter !== 'all') {
+    filteredVisits = filteredVisits.filter(visit => visit.place_id === currentFinishedPlaceFilter);
+  }
+
   // Apply search filter
   if (currentFinishedSearchTerm.trim()) {
     const searchLower = currentFinishedSearchTerm.toLowerCase();
@@ -4943,7 +4989,7 @@ function displayFinishedVisits(visits: any[]): void {
       <div class="text-center py-8">
         <div class="text-gray-500 dark:text-gray-400 text-lg">No finished visits found</div>
         <div class="text-gray-400 dark:text-gray-500 text-sm mt-2">
-          ${currentFinishedSearchTerm || currentFinishedRoleFilter !== 'all' || currentFinishedDateFilter !== 'all' || currentFinishedSpecificDate || currentFinishedScheduleType !== 'today'
+          ${currentFinishedSearchTerm || currentFinishedRoleFilter !== 'all' || currentFinishedPlaceFilter !== 'all' || currentFinishedDateFilter !== 'all' || currentFinishedSpecificDate || currentFinishedScheduleType !== 'today'
             ? 'Try adjusting your search or filters' 
             : 'No visits have been completed or marked as unsuccessful'}
         </div>
