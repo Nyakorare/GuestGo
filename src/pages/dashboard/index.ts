@@ -42,6 +42,54 @@ let currentVisitorDateFilter = 'all';
 let allVisitorVisits: any[] = [];
 let filteredVisitorVisits: any[] = [];
 
+// Logs dashboard filters (global scope)
+let currentLogsTabFilter = 'all';
+
+// Mapping of available actions for each logs tab
+const LOGS_TAB_ACTIONS = {
+  all: [
+    { value: 'all', label: 'All Actions' },
+    { value: 'password_change', label: 'Password Change' },
+    { value: 'place_update', label: 'Place Update' },
+    { value: 'place_availability_toggle', label: 'Place Availability Toggle' },
+    { value: 'place_create', label: 'Place Create' },
+    { value: 'personnel_assignment', label: 'Personnel Assignment' },
+    { value: 'personnel_removal', label: 'Personnel Removal' },
+    { value: 'personnel_availability_change', label: 'Personnel Availability Change' },
+    { value: 'visit_scheduled', label: 'Visit Scheduled' },
+    { value: 'visit_completed', label: 'Visit Completed' },
+    { value: 'visit_unsuccessful', label: 'Visit Unsuccessful' },
+    { value: 'gate_create', label: 'Gate Create' },
+    { value: 'gate_update', label: 'Gate Update' },
+    { value: 'gate_status_change', label: 'Gate Status Change' },
+  ],
+  gate: [
+    { value: 'all', label: 'All Actions' },
+    { value: 'gate_create', label: 'Gate Create' },
+    { value: 'gate_update', label: 'Gate Update' },
+    { value: 'gate_status_change', label: 'Gate Status Change' },
+  ],
+  place: [
+    { value: 'all', label: 'All Actions' },
+    { value: 'place_update', label: 'Place Update' },
+    { value: 'place_availability_toggle', label: 'Place Availability Toggle' },
+    { value: 'place_create', label: 'Place Create' },
+    { value: 'personnel_assignment', label: 'Personnel Assignment' },
+    { value: 'personnel_removal', label: 'Personnel Removal' },
+    { value: 'personnel_availability_change', label: 'Personnel Availability Change' },
+  ],
+  account: [
+    { value: 'all', label: 'All Actions' },
+    { value: 'password_change', label: 'Password Change' },
+  ],
+  schedules: [
+    { value: 'all', label: 'All Actions' },
+    { value: 'visit_scheduled', label: 'Visit Scheduled' },
+    { value: 'visit_completed', label: 'Visit Completed' },
+    { value: 'visit_unsuccessful', label: 'Visit Unsuccessful' },
+  ],
+};
+
 export function DashboardPage() {
   // Initialize the page
   setTimeout(async () => {
@@ -382,6 +430,13 @@ export function DashboardPage() {
       <div id="logsContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
         <div class="flex flex-col gap-4 mb-6">
           <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">System Logs</h2>
+          <div class="flex flex-row flex-wrap gap-2 mb-2">
+            <button id="logsTabAll" class="px-4 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm">All</button>
+            <button id="logsTabGate" class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm">Gate</button>
+            <button id="logsTabPlace" class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm">Place</button>
+            <button id="logsTabAccount" class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm">Account</button>
+            <button id="logsTabSchedules" class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm">Schedules</button>
+          </div>
           <div class="flex flex-col gap-4">
             <!-- Search and Filter Section -->
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
@@ -2607,6 +2662,66 @@ function setupDashboardEventListeners() {
   updateFinishedScheduleTypeTabs();
 
   console.log('Dashboard event listeners setup complete');
+
+  // Logs tab filter event listeners
+  const logsTabAll = document.getElementById('logsTabAll');
+  const logsTabGate = document.getElementById('logsTabGate');
+  const logsTabPlace = document.getElementById('logsTabPlace');
+  const logsTabAccount = document.getElementById('logsTabAccount');
+  const logsTabSchedules = document.getElementById('logsTabSchedules');
+  const logsTabButtons = [logsTabAll, logsTabGate, logsTabPlace, logsTabAccount, logsTabSchedules];
+
+  function setLogsTabActive(tab) {
+    logsTabButtons.forEach(btn => {
+      if (!btn) return;
+      if (btn === tab) {
+        btn.classList.remove('bg-gray-100', 'text-gray-700');
+        btn.classList.add('bg-blue-600', 'text-white');
+      } else {
+        btn.classList.remove('bg-blue-600', 'text-white');
+        btn.classList.add('bg-gray-100', 'text-gray-700');
+      }
+    });
+  }
+
+  if (logsTabAll) logsTabAll.addEventListener('click', () => {
+    currentLogsTabFilter = 'all';
+    setLogsTabActive(logsTabAll);
+    updateLogsActionFilterOptions();
+    applySearchAndFilterForLogs();
+  });
+  if (logsTabGate) logsTabGate.addEventListener('click', () => {
+    currentLogsTabFilter = 'gate';
+    setLogsTabActive(logsTabGate);
+    updateLogsActionFilterOptions();
+    applySearchAndFilterForLogs();
+  });
+  if (logsTabPlace) logsTabPlace.addEventListener('click', () => {
+    currentLogsTabFilter = 'place';
+    setLogsTabActive(logsTabPlace);
+    updateLogsActionFilterOptions();
+    applySearchAndFilterForLogs();
+  });
+  if (logsTabAccount) logsTabAccount.addEventListener('click', () => {
+    currentLogsTabFilter = 'account';
+    setLogsTabActive(logsTabAccount);
+    updateLogsActionFilterOptions();
+    applySearchAndFilterForLogs();
+  });
+  if (logsTabSchedules) logsTabSchedules.addEventListener('click', () => {
+    currentLogsTabFilter = 'schedules';
+    setLogsTabActive(logsTabSchedules);
+    updateLogsActionFilterOptions();
+    applySearchAndFilterForLogs();
+  });
+
+  // When logs tab is shown, update the action filter options
+  const logsTab = document.getElementById('logsTab');
+  if (logsTab) {
+    logsTab.addEventListener('click', () => {
+      updateLogsActionFilterOptions();
+    });
+  }
 }
 
 // Function to update schedule type tab visual states
@@ -2807,6 +2922,22 @@ async function applySearchAndFilterForLogs() {
   // Apply action filter
   if (actionValue !== 'all') {
     filtered = filtered.filter(log => log.action === actionValue);
+  }
+
+  // Apply tab filter
+  if (currentLogsTabFilter !== 'all') {
+    filtered = filtered.filter(log => {
+      if (currentLogsTabFilter === 'gate') {
+        return log.action && log.action.startsWith('gate_');
+      } else if (currentLogsTabFilter === 'place') {
+        return log.action && (log.action.startsWith('place_') || log.action.startsWith('personnel_'));
+      } else if (currentLogsTabFilter === 'account') {
+        return log.action && log.action === 'password_change';
+      } else if (currentLogsTabFilter === 'schedules') {
+        return log.action && (log.action.startsWith('visit_'));
+      }
+      return true;
+    });
   }
 
   filteredLogs = filtered;
@@ -5248,3 +5379,18 @@ function ensureHistoryModalExists() {
     }
   }
 };
+
+// Update the action filter dropdown based on the current tab
+function updateLogsActionFilterOptions() {
+  const actionFilter = document.getElementById('actionFilter') as HTMLSelectElement;
+  if (!actionFilter) return;
+  const actions = LOGS_TAB_ACTIONS[currentLogsTabFilter] || LOGS_TAB_ACTIONS.all;
+  const currentValue = actionFilter.value;
+  actionFilter.innerHTML = actions.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join('');
+  // If the current value is not in the new options, reset to 'all'
+  if (!actions.some(opt => opt.value === currentValue)) {
+    actionFilter.value = 'all';
+  } else {
+    actionFilter.value = currentValue;
+  }
+}
