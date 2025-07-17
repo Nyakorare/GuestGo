@@ -1,6 +1,7 @@
 import supabase from '../../config/supabase';
 import { logAction, getLogs } from '../../utils/logging';
 import { generateVisitQRCode, openPrintableVisitCard, type VisitQRData } from '../../utils/qrCode';
+import { generateSimpleVisitQRCode } from '../../utils/qrCode';
 
 interface Place {
   id: string;
@@ -5221,8 +5222,8 @@ function ensureHistoryModalExists() {
 
     console.log('Final QR visit data:', qrVisitData);
 
-    // Generate QR code
-    const qrCodeDataUrl = await generateVisitQRCode(qrVisitData);
+    // Generate QR code - use simple QR code for better scanning reliability
+    const qrCodeDataUrl = await generateSimpleVisitQRCode(visit.id);
 
     // Open printable card
     openPrintableVisitCard(qrVisitData, qrCodeDataUrl);

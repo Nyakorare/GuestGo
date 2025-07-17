@@ -1,5 +1,6 @@
 import supabase from '../config/supabase';
 import { generateGateQRCode, openPrintableGateCard, type GateQRData } from '../utils/qrCode';
+import { generateSimpleGateQRCode } from '../utils/qrCode';
 
 interface Gate {
   id: string;
@@ -161,18 +162,8 @@ function renderGateDetails(gate: Gate): void {
 
 async function generateQRCodeForGate(gate: Gate): Promise<void> {
   try {
-    const gateData: GateQRData = {
-      gateId: gate.id,
-      gateName: gate.name,
-      gateDescription: gate.description,
-      gateLocation: gate.location,
-      gateType: gate.gate_type,
-      status: gate.status,
-      createdAt: gate.created_at,
-      updatedAt: gate.updated_at
-    };
-
-    const qrCodeDataUrl = await generateGateQRCode(gateData);
+    // Use simple QR code generation for better scanning reliability
+    const qrCodeDataUrl = await generateSimpleGateQRCode(gate.id);
     
     const qrCodeDisplay = document.getElementById('qrCodeDisplay');
     if (qrCodeDisplay) {
@@ -283,7 +274,8 @@ export const gatePageActions = {
         updatedAt: gate.updated_at
       };
 
-      const qrCodeDataUrl = await generateGateQRCode(gateData);
+      // Use simple QR code generation for better scanning reliability
+      const qrCodeDataUrl = await generateSimpleGateQRCode(gate.id);
       openPrintableGateCard(gateData, qrCodeDataUrl);
     } catch (error) {
       console.error('Error printing gate card:', error);

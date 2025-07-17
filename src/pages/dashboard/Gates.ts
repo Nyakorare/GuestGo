@@ -1,5 +1,6 @@
 import supabase from '../../config/supabase';
 import { generateGateQRCode, openPrintableGateCard, type GateQRData } from '../../utils/qrCode';
+import { generateSimpleGateQRCode } from '../../utils/qrCode';
 
 interface Gate {
   id: string;
@@ -247,7 +248,8 @@ export const gateActions = {
     try {
       const gate = allGates.find(g => g.id === gateId);
       if (!gate) {
-        throw new Error('Gate not found');
+        showNotification('Gate not found', 'error');
+        return;
       }
 
       const gateData: GateQRData = {
@@ -261,7 +263,8 @@ export const gateActions = {
         updatedAt: gate.updated_at
       };
 
-      const qrCodeDataUrl = await generateGateQRCode(gateData);
+      // Use simple QR code generation for better scanning reliability
+      const qrCodeDataUrl = await generateSimpleGateQRCode(gate.id);
       openPrintableGateCard(gateData, qrCodeDataUrl);
     } catch (error) {
       console.error('Error generating QR code:', error);

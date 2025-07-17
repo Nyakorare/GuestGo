@@ -248,6 +248,7 @@ let imageData: ImageData | null = null;
 let scanCount = 0;
 let lastPerformanceUpdate = 0;
 let detectedQRData: string | null = null;
+let emptyQRTimeout: NodeJS.Timeout | null = null; // Timeout for empty QR detection
 
 export function initializeQRScanner() {
   const startScanBtn = document.getElementById('startScanBtn');
@@ -348,6 +349,12 @@ function stopScanner() {
   
   scanning = false;
   
+  // Clear timeout
+  if (emptyQRTimeout) {
+    clearTimeout(emptyQRTimeout);
+    emptyQRTimeout = null;
+  }
+  
   // Reset scanner state
   consecutiveFailures = 0;
   scanInterval = 100;
@@ -440,6 +447,33 @@ function scanLoop() {
     // QR code detected!
     console.log('QR Code detected:', code.data);
     
+    // Validate that the QR code contains actual data
+    if (!code.data || code.data.trim() === '') {
+      console.warn('QR code detected but contains no data');
+      updateLiveFeedback('Invalid QR code - no data found', 'error');
+      consecutiveFailures++;
+      
+      // Set a timeout to reset if we keep getting empty QR codes
+      if (emptyQRTimeout) {
+        clearTimeout(emptyQRTimeout);
+      }
+      emptyQRTimeout = setTimeout(() => {
+        console.log('Resetting scanner due to repeated empty QR codes');
+        updateLiveFeedback('Position QR code in frame', 'searching');
+        consecutiveFailures = 0;
+        scanInterval = 100;
+      }, 3000); // Reset after 3 seconds of empty QR codes
+      
+      requestAnimationFrame(scanLoop);
+      return;
+    }
+    
+    // Clear any existing timeout since we have valid data
+    if (emptyQRTimeout) {
+      clearTimeout(emptyQRTimeout);
+      emptyQRTimeout = null;
+    }
+    
     // Store the detected QR data
     detectedQRData = code.data;
     
@@ -527,6 +561,12 @@ function resetScanner() {
   if (qrPreviewSection) qrPreviewSection.classList.add('hidden');
   if (scannerSection) scannerSection.classList.remove('hidden');
   
+  // Clear timeout
+  if (emptyQRTimeout) {
+    clearTimeout(emptyQRTimeout);
+    emptyQRTimeout = null;
+  }
+  
   // Reset scanner state
   consecutiveFailures = 0;
   scanInterval = 100;
@@ -545,6 +585,13 @@ function showQRPreview(qrData: string) {
   const qrPreviewContent = document.getElementById('qrPreviewContent');
   
   if (!scannerSection || !qrPreviewSection || !qrPreviewContent) return;
+  
+  // Validate QR data
+  if (!qrData || qrData.trim() === '') {
+    console.error('Invalid QR data received:', qrData);
+    showError('Invalid QR Code', 'The scanned QR code contains no data or is corrupted.');
+    return;
+  }
   
   // Hide scanner, show preview
   scannerSection.classList.add('hidden');
@@ -569,8 +616,19 @@ function showQRPreview(qrData: string) {
               <p class="text-xs text-blue-600 dark:text-blue-400">Timestamp: ${new Date(parsedData.timestamp).toLocaleString()}</p>
             </div>
           </div>
-          <div class="mt-3 p-3 bg-white dark:bg-gray-800 rounded border">
-            <p class="text-xs font-mono text-gray-600 dark:text-gray-400 break-all">${qrData}</p>
+          <div class="mt-3">
+            <button 
+              onclick="toggleQRData('visit-qr-data')"
+              class="flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors duration-200"
+            >
+              <span>See QR Code Data</span>
+              <svg id="visit-qr-data-icon" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            <div id="visit-qr-data" class="hidden mt-2 p-3 bg-white dark:bg-gray-800 rounded border">
+              <p class="text-xs font-mono text-gray-600 dark:text-gray-400 break-all">${qrData}</p>
+            </div>
           </div>
         </div>
       `;
@@ -591,8 +649,19 @@ function showQRPreview(qrData: string) {
               <p class="text-sm text-green-700 dark:text-green-300"><strong>Places:</strong> ${parsedData.places?.length || 0} locations</p>
             </div>
           </div>
-          <div class="mt-3 p-3 bg-white dark:bg-gray-800 rounded border">
-            <p class="text-xs font-mono text-gray-600 dark:text-gray-400 break-all">${qrData}</p>
+          <div class="mt-3">
+            <button 
+              onclick="toggleQRData('full-visit-qr-data')"
+              class="flex items-center space-x-2 text-sm text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 transition-colors duration-200"
+            >
+              <span>See QR Code Data</span>
+              <svg id="full-visit-qr-data-icon" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            <div id="full-visit-qr-data" class="hidden mt-2 p-3 bg-white dark:bg-gray-800 rounded border">
+              <p class="text-xs font-mono text-gray-600 dark:text-gray-400 break-all">${qrData}</p>
+            </div>
           </div>
         </div>
       `;
@@ -610,8 +679,19 @@ function showQRPreview(qrData: string) {
               <p class="text-xs text-purple-600 dark:text-purple-400">Timestamp: ${new Date(parsedData.timestamp).toLocaleString()}</p>
             </div>
           </div>
-          <div class="mt-3 p-3 bg-white dark:bg-gray-800 rounded border">
-            <p class="text-xs font-mono text-gray-600 dark:text-gray-400 break-all">${qrData}</p>
+          <div class="mt-3">
+            <button 
+              onclick="toggleQRData('gate-qr-data')"
+              class="flex items-center space-x-2 text-sm text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 transition-colors duration-200"
+            >
+              <span>See QR Code Data</span>
+              <svg id="gate-qr-data-icon" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            <div id="gate-qr-data" class="hidden mt-2 p-3 bg-white dark:bg-gray-800 rounded border">
+              <p class="text-xs font-mono text-gray-600 dark:text-gray-400 break-all">${qrData}</p>
+            </div>
           </div>
         </div>
       `;
@@ -628,8 +708,19 @@ function showQRPreview(qrData: string) {
               <p class="text-sm text-yellow-700 dark:text-yellow-300">This QR code doesn't match expected GuestGo formats</p>
             </div>
           </div>
-          <div class="mt-3 p-3 bg-white dark:bg-gray-800 rounded border">
-            <p class="text-xs font-mono text-gray-600 dark:text-gray-400 break-all">${qrData}</p>
+          <div class="mt-3">
+            <button 
+              onclick="toggleQRData('unknown-qr-data')"
+              class="flex items-center space-x-2 text-sm text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-300 transition-colors duration-200"
+            >
+              <span>See QR Code Data</span>
+              <svg id="unknown-qr-data-icon" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            <div id="unknown-qr-data" class="hidden mt-2 p-3 bg-white dark:bg-gray-800 rounded border">
+              <p class="text-xs font-mono text-gray-600 dark:text-gray-400 break-all">${qrData}</p>
+            </div>
           </div>
         </div>
       `;
@@ -647,8 +738,19 @@ function showQRPreview(qrData: string) {
             <p class="text-sm text-gray-700 dark:text-gray-300">This appears to be a text-based QR code</p>
           </div>
         </div>
-        <div class="mt-3 p-3 bg-white dark:bg-gray-800 rounded border">
-          <p class="text-xs font-mono text-gray-600 dark:text-gray-400 break-all">${qrData}</p>
+        <div class="mt-3">
+          <button 
+            onclick="toggleQRData('raw-text-qr-data')"
+            class="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 transition-colors duration-200"
+          >
+            <span>See QR Code Data</span>
+            <svg id="raw-text-qr-data-icon" class="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </button>
+          <div id="raw-text-qr-data" class="hidden mt-2 p-3 bg-white dark:bg-gray-800 rounded border">
+            <p class="text-xs font-mono text-gray-600 dark:text-gray-400 break-all">${qrData}</p>
+          </div>
         </div>
       </div>
     `;
@@ -685,6 +787,15 @@ function rescanQR() {
 
 async function processQRCodeData(qrData: string) {
   try {
+    // Validate QR data
+    if (!qrData || qrData.trim() === '') {
+      console.error('Empty QR data received in processQRCodeData');
+      showError('Invalid QR Code', 'The QR code contains no data or is corrupted.');
+      return;
+    }
+    
+    console.log('Processing QR data:', qrData);
+    
     // Parse QR code data
     const visitData = parseQRCodeData(qrData);
     
@@ -1043,6 +1154,12 @@ function showPersonnelVisitModal(visitData: VisitQRData & { places: any[] }, cur
   if (scannerSection) {
     scannerSection.classList.add('hidden');
   }
+  
+  // Hide QR preview section
+  const qrPreviewSection = document.getElementById('qrPreviewSection');
+  if (qrPreviewSection) {
+    qrPreviewSection.classList.add('hidden');
+  }
 }
 
 function showRegularVisitDetails(visitData: VisitQRData) {
@@ -1113,7 +1230,7 @@ function showRegularVisitDetails(visitData: VisitQRData) {
         </div>
       </div>
     ` : `
-      <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
+      <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center mb-4">
         <p class="text-gray-600 dark:text-gray-400">No places assigned to this visit</p>
       </div>
     `}
@@ -1380,4 +1497,27 @@ function showPersonnelModalStatus(message: string, type: 'success' | 'error') {
       statusDiv.classList.add('hidden');
     }, 3000);
   }
-} 
+}
+
+// Function to toggle QR data dropdown
+function toggleQRData(elementId: string) {
+  const dataElement = document.getElementById(elementId);
+  const iconElement = document.getElementById(elementId + '-icon');
+  
+  if (dataElement && iconElement) {
+    const isHidden = dataElement.classList.contains('hidden');
+    
+    if (isHidden) {
+      // Show the data
+      dataElement.classList.remove('hidden');
+      iconElement.classList.add('rotate-180');
+    } else {
+      // Hide the data
+      dataElement.classList.add('hidden');
+      iconElement.classList.remove('rotate-180');
+    }
+  }
+}
+
+// Make toggleQRData function available globally
+(window as any).toggleQRData = toggleQRData;
