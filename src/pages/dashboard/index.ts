@@ -88,6 +88,12 @@ const LOGS_TAB_ACTIONS = {
     { value: 'visit_completed', label: 'Visit Completed' },
     { value: 'visit_unsuccessful', label: 'Visit Unsuccessful' },
   ],
+  personnel: [
+    { value: 'all', label: 'All Actions' },
+    { value: 'personnel_assignment', label: 'Personnel Assignment' },
+    { value: 'personnel_removal', label: 'Personnel Removal' },
+    { value: 'personnel_availability_change', label: 'Personnel Availability Change' },
+  ],
 };
 
 export function DashboardPage() {
@@ -434,6 +440,7 @@ export function DashboardPage() {
             <button id="logsTabAll" class="px-4 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm">All</button>
             <button id="logsTabGate" class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm">Gate</button>
             <button id="logsTabPlace" class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm">Place</button>
+            <button id="logsTabPersonnel" class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm">Personnel</button>
             <button id="logsTabAccount" class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm">Account</button>
             <button id="logsTabSchedules" class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm">Schedules</button>
           </div>
@@ -2667,9 +2674,10 @@ function setupDashboardEventListeners() {
   const logsTabAll = document.getElementById('logsTabAll');
   const logsTabGate = document.getElementById('logsTabGate');
   const logsTabPlace = document.getElementById('logsTabPlace');
+  const logsTabPersonnel = document.getElementById('logsTabPersonnel');
   const logsTabAccount = document.getElementById('logsTabAccount');
   const logsTabSchedules = document.getElementById('logsTabSchedules');
-  const logsTabButtons = [logsTabAll, logsTabGate, logsTabPlace, logsTabAccount, logsTabSchedules];
+  const logsTabButtons = [logsTabAll, logsTabGate, logsTabPlace, logsTabPersonnel, logsTabAccount, logsTabSchedules];
 
   function setLogsTabActive(tab) {
     logsTabButtons.forEach(btn => {
@@ -2699,6 +2707,12 @@ function setupDashboardEventListeners() {
   if (logsTabPlace) logsTabPlace.addEventListener('click', () => {
     currentLogsTabFilter = 'place';
     setLogsTabActive(logsTabPlace);
+    updateLogsActionFilterOptions();
+    applySearchAndFilterForLogs();
+  });
+  if (logsTabPersonnel) logsTabPersonnel.addEventListener('click', () => {
+    currentLogsTabFilter = 'personnel';
+    setLogsTabActive(logsTabPersonnel);
     updateLogsActionFilterOptions();
     applySearchAndFilterForLogs();
   });
@@ -2930,7 +2944,9 @@ async function applySearchAndFilterForLogs() {
       if (currentLogsTabFilter === 'gate') {
         return log.action && log.action.startsWith('gate_');
       } else if (currentLogsTabFilter === 'place') {
-        return log.action && (log.action.startsWith('place_') || log.action.startsWith('personnel_'));
+        return log.action && log.action.startsWith('place_');
+      } else if (currentLogsTabFilter === 'personnel') {
+        return log.action && log.action.startsWith('personnel_');
       } else if (currentLogsTabFilter === 'account') {
         return log.action && log.action === 'password_change';
       } else if (currentLogsTabFilter === 'schedules') {
