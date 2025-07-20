@@ -7,6 +7,7 @@ interface Gate {
   name: string;
   description?: string;
   location?: string;
+  image_url?: string;
   gate_type: 'entrance' | 'exit' | 'both';
   status: 'open' | 'closed';
   created_by?: string;
@@ -125,28 +126,54 @@ function renderGatesList(): void {
   gatesListElement.innerHTML = filteredGates.map(gate => `
     <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-4 border border-gray-200 dark:border-gray-700">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div class="flex-1">
-          <div class="flex items-center gap-3 mb-2">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">${gate.name}</h3>
-            <span class="status-badge status-${gate.status}">${gate.status}</span>
-            <span class="type-badge type-${gate.gate_type}">${gate.gate_type}</span>
+        <div class="flex items-start gap-4 flex-1">
+          <div class="flex-shrink-0">
+            <div class="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600">
+              ${gate.image_url ? `
+                <img src="${gate.image_url}" alt="${gate.name}" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="w-full h-full flex items-center justify-center text-gray-400" style="display: none;">
+                  <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                  </svg>
+                </div>
+              ` : `
+                <div class="w-full h-full flex items-center justify-center text-gray-400">
+                  <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                  </svg>
+                </div>
+              `}
+            </div>
+            <button 
+              onclick="window.gateActions.changeGateImage('${gate.id}')"
+              class="mt-1 text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+            >
+              Change Image
+            </button>
           </div>
-          
-          ${gate.description ? `
-            <p class="text-gray-600 dark:text-gray-300 text-sm mb-2">${gate.description}</p>
-          ` : ''}
-          
-          ${gate.location ? `
-            <p class="text-gray-500 dark:text-gray-400 text-sm mb-2">📍 ${gate.location}</p>
-          ` : ''}
-          
-          <div class="flex flex-wrap gap-4 text-xs text-gray-500 dark:text-gray-400">
-            <span>Created: ${new Date(gate.created_at).toLocaleDateString()}</span>
-            ${gate.creator_name ? `<span>by ${gate.creator_name}</span>` : ''}
-            ${gate.updated_at !== gate.created_at ? `
-              <span>Updated: ${new Date(gate.updated_at).toLocaleDateString()}</span>
-              ${gate.updater_name ? `<span>by ${gate.updater_name}</span>` : ''}
+          <div class="flex-1">
+            <div class="flex items-center gap-3 mb-2">
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">${gate.name}</h3>
+              <span class="status-badge status-${gate.status}">${gate.status}</span>
+              <span class="type-badge type-${gate.gate_type}">${gate.gate_type}</span>
+            </div>
+            
+            ${gate.description ? `
+              <p class="text-gray-600 dark:text-gray-300 text-sm mb-2">${gate.description}</p>
             ` : ''}
+            
+            ${gate.location ? `
+              <p class="text-gray-500 dark:text-gray-400 text-sm mb-2">📍 ${gate.location}</p>
+            ` : ''}
+            
+            <div class="flex flex-wrap gap-4 text-xs text-gray-500 dark:text-gray-400">
+              <span>Created: ${new Date(gate.created_at).toLocaleDateString()}</span>
+              ${gate.creator_name ? `<span>by ${gate.creator_name}</span>` : ''}
+              ${gate.updated_at !== gate.created_at ? `
+                <span>Updated: ${new Date(gate.updated_at).toLocaleDateString()}</span>
+                ${gate.updater_name ? `<span>by ${gate.updater_name}</span>` : ''}
+              ` : ''}
+            </div>
           </div>
         </div>
         
@@ -313,6 +340,16 @@ export const gateActions = {
 
   viewGateDetails(gateId: string): void {
     window.location.hash = `/gate/${gateId}`;
+  },
+
+  async changeGateImage(gateId: string): Promise<void> {
+    const gate = allGates.find(g => g.id === gateId);
+    if (!gate) {
+      showNotification('Gate not found', 'error');
+      return;
+    }
+
+    showChangeImageModal(gate);
   }
 };
 
@@ -366,6 +403,46 @@ function showAddGateModal(): void {
                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 placeholder="Enter gate location (optional)"
               >
+            </div>
+            
+            <div>
+              <label for="gateImageUrl" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Image URL
+              </label>
+              <input 
+                type="url" 
+                id="gateImageUrl" 
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                placeholder="Enter image URL (optional)"
+              >
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">You can add an image later by editing the gate</p>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Upload Image
+              </label>
+              <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+                <input 
+                  type="file" 
+                  id="addGateImageFile" 
+                  accept="image/*"
+                  class="hidden"
+                >
+                <label for="addGateImageFile" class="cursor-pointer">
+                  <svg class="mx-auto h-8 w-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                  </svg>
+                  <p class="text-sm text-gray-600 dark:text-gray-400">Click to upload or drag and drop</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">PNG, JPG, GIF up to 5MB</p>
+                </label>
+              </div>
+              <div id="addGateUploadPreview" class="mt-2 hidden">
+                <img id="addGatePreviewImage" class="w-32 h-32 object-cover rounded-lg border border-gray-200 dark:border-gray-600" alt="Preview">
+                <button type="button" id="addGateRemoveUpload" class="mt-1 text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300">
+                  Remove
+                </button>
+              </div>
             </div>
             
             <div>
@@ -465,6 +542,20 @@ function showEditGateModal(gate: Gate): void {
             </div>
             
             <div>
+              <label for="editGateImageUrl" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Image URL
+              </label>
+              <input 
+                type="url" 
+                id="editGateImageUrl" 
+                value="${gate.image_url || ''}"
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                placeholder="Enter image URL (optional)"
+              >
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Or use the "Change Image" button for a dedicated image editor</p>
+            </div>
+            
+            <div>
               <label for="editGateType" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Gate Type *
               </label>
@@ -504,9 +595,234 @@ function showEditGateModal(gate: Gate): void {
   setupEditGateForm();
 }
 
+function showChangeImageModal(gate: Gate): void {
+  const modalHtml = `
+    <div id="changeImageModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Change Gate Image</h3>
+            <button onclick="closeModal('changeImageModal')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+          
+          <div class="mb-4">
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Gate: <span class="font-medium text-gray-900 dark:text-white">${gate.name}</span></p>
+            
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Current Image</label>
+              <div class="w-32 h-32 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600">
+                ${gate.image_url ? `
+                  <img src="${gate.image_url}" alt="${gate.name}" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                  <div class="w-full h-full flex items-center justify-center text-gray-400" style="display: none;">
+                    <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                  </div>
+                ` : `
+                  <div class="w-full h-full flex items-center justify-center text-gray-400">
+                    <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                  </div>
+                `}
+              </div>
+            </div>
+          </div>
+          
+          <form id="changeImageForm" class="space-y-4">
+            <input type="hidden" id="changeImageGateId" value="${gate.id}">
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Upload Image
+              </label>
+              <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+                <input 
+                  type="file" 
+                  id="imageFile" 
+                  accept="image/*"
+                  class="hidden"
+                >
+                <label for="imageFile" class="cursor-pointer">
+                  <svg class="mx-auto h-8 w-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                  </svg>
+                  <p class="text-sm text-gray-600 dark:text-gray-400">Click to upload or drag and drop</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">PNG, JPG, GIF up to 5MB</p>
+                </label>
+              </div>
+              <div id="uploadPreview" class="mt-2 hidden">
+                <img id="previewImage" class="w-32 h-32 object-cover rounded-lg border border-gray-200 dark:border-gray-600" alt="Preview">
+                <button type="button" id="removeUpload" class="mt-1 text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300">
+                  Remove
+                </button>
+              </div>
+            </div>
+            
+            <div class="relative">
+              <div class="absolute inset-0 flex items-center">
+                <div class="w-full border-t border-gray-300 dark:border-gray-600"></div>
+              </div>
+              <div class="relative flex justify-center text-sm">
+                <span class="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">or</span>
+              </div>
+            </div>
+            
+            <div>
+              <label for="imageUrl" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Image URL
+              </label>
+              <input 
+                type="url" 
+                id="imageUrl" 
+                value="${gate.image_url || ''}"
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                placeholder="Enter image URL (optional)"
+              >
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Leave empty to remove the current image</p>
+            </div>
+            
+            <div class="flex gap-3 pt-4">
+              <button 
+                type="submit"
+                class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              >
+                Update Image
+              </button>
+              <button 
+                type="button"
+                onclick="closeModal('changeImageModal')"
+                class="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  setupChangeImageForm();
+}
+
 function setupAddGateForm(): void {
   const form = document.getElementById('addGateForm') as HTMLFormElement;
+  const fileInput = document.getElementById('addGateImageFile') as HTMLInputElement;
+  const urlInput = document.getElementById('gateImageUrl') as HTMLInputElement;
+  const previewDiv = document.getElementById('addGateUploadPreview') as HTMLDivElement;
+  const previewImage = document.getElementById('addGatePreviewImage') as HTMLImageElement;
+  const removeButton = document.getElementById('addGateRemoveUpload') as HTMLButtonElement;
+  const uploadArea = document.querySelector('#addGateForm .border-dashed') as HTMLDivElement;
+  
   if (!form) return;
+
+  let uploadedImageUrl: string | null = null;
+
+  // Handle file upload and preview
+  fileInput?.addEventListener('change', (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    handleFileUpload(file);
+  });
+
+  // Drag and drop functionality
+  uploadArea?.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('border-blue-400', 'bg-blue-50', 'dark:bg-blue-900/20');
+  });
+
+  uploadArea?.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('border-blue-400', 'bg-blue-50', 'dark:bg-blue-900/20');
+  });
+
+  uploadArea?.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('border-blue-400', 'bg-blue-50', 'dark:bg-blue-900/20');
+    
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+      handleFileUpload(files[0]);
+    }
+  });
+
+  function handleFileUpload(file: File | undefined) {
+    if (!file) return;
+
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      showNotification('File size must be less than 5MB', 'error');
+      fileInput.value = '';
+      return;
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      showNotification('Please select a valid image file', 'error');
+      fileInput.value = '';
+      return;
+    }
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      uploadedImageUrl = result;
+      previewImage.src = result;
+      previewDiv.classList.remove('hidden');
+      
+      // Clear URL input when file is selected
+      urlInput.value = '';
+      
+      // Disable both upload and URL input
+      disableInputs();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function disableInputs() {
+    // Disable file input
+    fileInput.disabled = true;
+    fileInput.parentElement?.classList.add('opacity-50', 'pointer-events-none');
+    
+    // Disable URL input
+    urlInput.disabled = true;
+    urlInput.classList.add('opacity-50', 'cursor-not-allowed');
+  }
+
+  function enableInputs() {
+    // Enable file input
+    fileInput.disabled = false;
+    fileInput.parentElement?.classList.remove('opacity-50', 'pointer-events-none');
+    
+    // Enable URL input
+    urlInput.disabled = false;
+    urlInput.classList.remove('opacity-50', 'cursor-not-allowed');
+  }
+
+  // Handle remove upload
+  removeButton?.addEventListener('click', () => {
+    fileInput.value = '';
+    uploadedImageUrl = null;
+    previewDiv.classList.add('hidden');
+    enableInputs(); // Re-enable inputs after removing
+  });
+
+  // Handle URL input changes
+  urlInput?.addEventListener('input', () => {
+    if (urlInput.value.trim()) {
+      // Clear file input when URL is entered
+      fileInput.value = '';
+      uploadedImageUrl = null;
+      previewDiv.classList.add('hidden');
+      enableInputs(); // Re-enable inputs after entering URL
+    }
+  });
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -515,7 +831,11 @@ function setupAddGateForm(): void {
     const name = (document.getElementById('gateName') as HTMLInputElement).value.trim();
     const description = (document.getElementById('gateDescription') as HTMLTextAreaElement).value.trim();
     const location = (document.getElementById('gateLocation') as HTMLInputElement).value.trim();
+    const imageUrl = urlInput.value.trim();
     const gateType = (document.getElementById('gateType') as HTMLSelectElement).value as 'entrance' | 'exit' | 'both';
+
+    // Use uploaded image URL if available, otherwise use the URL input
+    const finalImageUrl = uploadedImageUrl || imageUrl || null;
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -529,6 +849,7 @@ function setupAddGateForm(): void {
         p_created_by: user.id,
         p_description: description || null,
         p_location: location || null,
+        p_image_url: finalImageUrl,
         p_gate_type: gateType
       });
 
@@ -557,6 +878,7 @@ function setupEditGateForm(): void {
     const name = (document.getElementById('editGateName') as HTMLInputElement).value.trim();
     const description = (document.getElementById('editGateDescription') as HTMLTextAreaElement).value.trim();
     const location = (document.getElementById('editGateLocation') as HTMLInputElement).value.trim();
+    const imageUrl = (document.getElementById('editGateImageUrl') as HTMLInputElement).value.trim();
     const gateType = (document.getElementById('editGateType') as HTMLSelectElement).value as 'entrance' | 'exit' | 'both';
 
     try {
@@ -572,6 +894,7 @@ function setupEditGateForm(): void {
         p_name: name,
         p_description: description || null,
         p_location: location || null,
+        p_image_url: imageUrl || null,
         p_gate_type: gateType
       });
 
@@ -585,6 +908,155 @@ function setupEditGateForm(): void {
     } catch (error) {
       console.error('Error updating gate:', error);
       showNotification('Failed to update gate. Please try again.', 'error');
+    }
+  });
+}
+
+function setupChangeImageForm(): void {
+  const form = document.getElementById('changeImageForm') as HTMLFormElement;
+  const fileInput = document.getElementById('imageFile') as HTMLInputElement;
+  const urlInput = document.getElementById('imageUrl') as HTMLInputElement;
+  const previewDiv = document.getElementById('uploadPreview') as HTMLDivElement;
+  const previewImage = document.getElementById('previewImage') as HTMLImageElement;
+  const removeButton = document.getElementById('removeUpload') as HTMLButtonElement;
+  const uploadArea = document.querySelector('.border-dashed') as HTMLDivElement;
+  
+  if (!form) return;
+
+  let uploadedImageUrl: string | null = null;
+
+  // Handle file upload and preview
+  fileInput?.addEventListener('change', (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    handleFileUpload(file);
+  });
+
+  // Drag and drop functionality
+  uploadArea?.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('border-blue-400', 'bg-blue-50', 'dark:bg-blue-900/20');
+  });
+
+  uploadArea?.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('border-blue-400', 'bg-blue-50', 'dark:bg-blue-900/20');
+  });
+
+  uploadArea?.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('border-blue-400', 'bg-blue-50', 'dark:bg-blue-900/20');
+    
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+      handleFileUpload(files[0]);
+    }
+  });
+
+  function handleFileUpload(file: File | undefined) {
+    if (!file) return;
+
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      showNotification('File size must be less than 5MB', 'error');
+      fileInput.value = '';
+      return;
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      showNotification('Please select a valid image file', 'error');
+      fileInput.value = '';
+      return;
+    }
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      uploadedImageUrl = result;
+      previewImage.src = result;
+      previewDiv.classList.remove('hidden');
+      
+      // Clear URL input when file is selected
+      urlInput.value = '';
+      
+      // Disable both upload and URL input
+      disableInputs();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function disableInputs() {
+    // Disable file input
+    fileInput.disabled = true;
+    fileInput.parentElement?.classList.add('opacity-50', 'pointer-events-none');
+    
+    // Disable URL input
+    urlInput.disabled = true;
+    urlInput.classList.add('opacity-50', 'cursor-not-allowed');
+  }
+
+  function enableInputs() {
+    // Enable file input
+    fileInput.disabled = false;
+    fileInput.parentElement?.classList.remove('opacity-50', 'pointer-events-none');
+    
+    // Enable URL input
+    urlInput.disabled = false;
+    urlInput.classList.remove('opacity-50', 'cursor-not-allowed');
+  }
+
+  // Handle remove upload
+  removeButton?.addEventListener('click', () => {
+    fileInput.value = '';
+    uploadedImageUrl = null;
+    previewDiv.classList.add('hidden');
+    enableInputs(); // Re-enable inputs after removing
+  });
+
+  // Handle URL input changes
+  urlInput?.addEventListener('input', () => {
+    if (urlInput.value.trim()) {
+      // Clear file input when URL is entered
+      fileInput.value = '';
+      uploadedImageUrl = null;
+      previewDiv.classList.add('hidden');
+      enableInputs(); // Re-enable inputs after entering URL
+    }
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const gateId = (document.getElementById('changeImageGateId') as HTMLInputElement).value;
+    const imageUrl = urlInput.value.trim();
+    
+    // Use uploaded image URL if available, otherwise use the URL input
+    const finalImageUrl = uploadedImageUrl || imageUrl || null;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const { error } = await supabase.rpc('update_gate', {
+        p_gate_id: gateId,
+        p_updated_by: user.id,
+        p_image_url: finalImageUrl
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      showNotification('Gate image updated successfully', 'success');
+      closeModal('changeImageModal');
+      await loadGates();
+    } catch (error) {
+      console.error('Error updating gate image:', error);
+      showNotification('Failed to update gate image. Please try again.', 'error');
     }
   });
 }

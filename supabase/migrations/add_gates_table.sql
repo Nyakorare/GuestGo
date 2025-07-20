@@ -17,6 +17,7 @@ CREATE TABLE gates (
     name VARCHAR(255) NOT NULL,
     description TEXT,
     location VARCHAR(255),
+    image_url TEXT,
     gate_type gate_type NOT NULL DEFAULT 'both',
     status gate_status NOT NULL DEFAULT 'closed',
     created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
@@ -36,6 +37,7 @@ CREATE OR REPLACE FUNCTION public.create_gate(
     p_created_by UUID,
     p_description TEXT DEFAULT NULL,
     p_location VARCHAR(255) DEFAULT NULL,
+    p_image_url TEXT DEFAULT NULL,
     p_gate_type gate_type DEFAULT 'both'
 )
 RETURNS UUID AS $$
@@ -59,8 +61,8 @@ BEGIN
     END IF;
     
     -- Insert the gate
-    INSERT INTO gates (name, description, location, gate_type, created_by)
-    VALUES (p_name, p_description, p_location, p_gate_type, p_created_by)
+    INSERT INTO gates (name, description, location, image_url, gate_type, created_by)
+    VALUES (p_name, p_description, p_location, p_image_url, p_gate_type, p_created_by)
     RETURNING id INTO gate_id;
     
     -- Log the gate creation
@@ -72,6 +74,7 @@ BEGIN
             'gate_name', p_name,
             'gate_description', p_description,
             'gate_location', p_location,
+            'gate_image_url', p_image_url,
             'gate_type', p_gate_type,
             'status', 'closed',
             'created_at', public.get_philippine_timestamp()
@@ -150,6 +153,7 @@ CREATE OR REPLACE FUNCTION public.update_gate(
     p_name VARCHAR(255) DEFAULT NULL,
     p_description TEXT DEFAULT NULL,
     p_location VARCHAR(255) DEFAULT NULL,
+    p_image_url TEXT DEFAULT NULL,
     p_gate_type gate_type DEFAULT NULL
 )
 RETURNS BOOLEAN AS $$
@@ -182,6 +186,7 @@ BEGIN
         name = COALESCE(p_name, name),
         description = COALESCE(p_description, description),
         location = COALESCE(p_location, location),
+        image_url = COALESCE(p_image_url, image_url),
         gate_type = COALESCE(p_gate_type, gate_type),
         updated_at = public.get_philippine_timestamp(),
         updated_by = p_updated_by
@@ -199,6 +204,8 @@ BEGIN
             'new_description', COALESCE(p_description, old_gate.description),
             'old_location', old_gate.location,
             'new_location', COALESCE(p_location, old_gate.location),
+            'old_image_url', old_gate.image_url,
+            'new_image_url', COALESCE(p_image_url, old_gate.image_url),
             'old_gate_type', old_gate.gate_type,
             'new_gate_type', COALESCE(p_gate_type, old_gate.gate_type),
             'updated_at', public.get_philippine_timestamp()
@@ -216,6 +223,7 @@ RETURNS TABLE (
     name VARCHAR(255),
     description TEXT,
     location VARCHAR(255),
+    image_url TEXT,
     gate_type gate_type,
     status gate_status,
     created_by UUID,
@@ -243,6 +251,7 @@ BEGIN
         g.name,
         g.description,
         g.location,
+        g.image_url,
         g.gate_type,
         g.status,
         g.created_by,
@@ -265,6 +274,7 @@ RETURNS TABLE (
     name VARCHAR(255),
     description TEXT,
     location VARCHAR(255),
+    image_url TEXT,
     gate_type gate_type,
     status gate_status,
     created_by UUID,
@@ -292,6 +302,7 @@ BEGIN
         g.name,
         g.description,
         g.location,
+        g.image_url,
         g.gate_type,
         g.status,
         g.created_by,
