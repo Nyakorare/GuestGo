@@ -325,30 +325,42 @@ export function DashboardPage() {
 
         <!-- Header Row 2: Admin Tabs (when visible) -->
         <div id="adminTabs" class="hidden w-full">
-          <div class="flex flex-col sm:flex-row gap-2 w-full">
+          <div class="flex flex-col sm:flex-row gap-2 w-full sm:justify-between sm:items-center">
+            <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <button 
+                id="placesTab"
+                class="w-full sm:w-auto px-4 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              >
+                Places
+              </button>
+              <button 
+                id="accountsTab"
+                class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+              >
+                Accounts
+              </button>
+              <button 
+                id="logsTab"
+                class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+              >
+                Logs
+              </button>
+              <button 
+                id="gatesTab"
+                class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+              >
+                Gates
+              </button>
+            </div>
             <button 
-              id="placesTab"
-              class="w-full sm:w-auto px-4 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              id="adminRefreshBtn"
+              class="w-full sm:w-auto px-4 py-2 rounded-md bg-green-600 text-white font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+              title="Refresh all admin data"
             >
-              Places
-            </button>
-            <button 
-              id="accountsTab"
-              class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-            >
-              Accounts
-            </button>
-            <button 
-              id="logsTab"
-              class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-            >
-              Logs
-            </button>
-            <button 
-              id="gatesTab"
-              class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-            >
-              Gates
+              <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+              Refresh All
             </button>
           </div>
         </div>
@@ -2735,6 +2747,12 @@ function setupDashboardEventListeners() {
     logsTab.addEventListener('click', () => {
       updateLogsActionFilterOptions();
     });
+  }
+
+  // Admin refresh button event listener
+  const adminRefreshBtn = document.getElementById('adminRefreshBtn');
+  if (adminRefreshBtn) {
+    adminRefreshBtn.addEventListener('click', refreshAllAdminData);
   }
 }
 
@@ -5408,5 +5426,46 @@ function updateLogsActionFilterOptions() {
     actionFilter.value = 'all';
   } else {
     actionFilter.value = currentValue;
+  }
+}
+
+// Function to refresh all admin data
+async function refreshAllAdminData() {
+  try {
+    // Show loading state
+    const refreshBtn = document.getElementById('adminRefreshBtn') as HTMLButtonElement;
+    if (refreshBtn) {
+      refreshBtn.disabled = true;
+      refreshBtn.innerHTML = `
+        <svg class="w-4 h-4 inline mr-1 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+        </svg>
+        Refreshing...
+      `;
+    }
+
+    // Load all admin data
+    await Promise.all([
+      loadPlaces(),
+      loadAccounts(),
+      loadLogs()
+    ]);
+
+    showNotification('All admin data refreshed successfully!', 'success');
+  } catch (error) {
+    console.error('Error refreshing admin data:', error);
+    showNotification('Error refreshing admin data. Please try again.', 'error');
+  } finally {
+    // Reset button state
+    const refreshBtn = document.getElementById('adminRefreshBtn') as HTMLButtonElement;
+    if (refreshBtn) {
+      refreshBtn.disabled = false;
+      refreshBtn.innerHTML = `
+        <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+        </svg>
+        Refresh All
+      `;
+    }
   }
 }
