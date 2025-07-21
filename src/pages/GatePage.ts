@@ -15,11 +15,12 @@ interface Gate {
   updated_by?: string;
   creator_name?: string;
   updater_name?: string;
+  image_url?: string; // Added image_url to the interface
 }
 
 export function GatePage(gateId: string) {
   return `
-    <div class="max-w-4xl mx-auto px-4 py-8">
+    <div class="max-w-7xl mx-auto px-4 py-8">
       <div class="mb-6">
         <a href="/dashboard" class="inline-flex items-center text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 mb-4">
           <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -76,7 +77,34 @@ function renderGateDetails(gate: Gate): void {
   if (!gateContent) return;
 
   gateContent.innerHTML = `
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- Gate Image Section -->
+      <div class="flex flex-col items-center justify-center">
+        <div class="text-center">
+          <div class="mb-4">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Gate Image</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400">Visual representation of the gate</p>
+          </div>
+          
+          <div class="w-48 h-48 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 flex items-center justify-center">
+            ${gate.image_url ? `
+              <img src="${gate.image_url}" alt="${gate.name}" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+              <div class="w-full h-full flex items-center justify-center text-gray-400" style="display: none;">
+                <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+              </div>
+            ` : `
+              <div class="w-full h-full flex items-center justify-center text-gray-400">
+                <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+              </div>
+            `}
+          </div>
+        </div>
+      </div>
+      
       <!-- Gate Information -->
       <div>
         <div class="flex items-center gap-3 mb-4">
