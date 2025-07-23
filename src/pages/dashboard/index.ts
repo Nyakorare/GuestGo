@@ -1031,7 +1031,7 @@ let filteredAccounts: Account[] = [];
 let allLogs: any[] = [];
 let filteredLogs: any[] = [];
 
-async function loadPlaces() {
+export async function loadPlaces() {
   // First, get all places
   const { data: places, error: placesError } = await supabase
     .from('places_to_visit')

@@ -1,5 +1,6 @@
 import { setupEventListeners } from '../components/ModalFunctions';
 import supabase from '../config/supabase';
+import { loadPlaces } from './dashboard/index';
 
 // Helper function to get current Philippine time
 function getPhilippineTime(): Date {
