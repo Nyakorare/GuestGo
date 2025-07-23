@@ -2,8 +2,6 @@ Ongoing:
  - Home/Landing Page Design Overhaul
  - GuestGo Visit Card Design and Detail Overhaul
  - Entrance and Exit before and after scheduling
- - Dashboard Loading Pagination
- - Page Navigation & Loading Pagination
 
 Planned:
 
@@ -65,3 +63,5 @@ Completed:
  - User-friendly Mobile Navigation
  - Responsive Table/Card Views for Different Screen Sizes
  - QR Code Feature
+ - Dashboard Loading Pagination
+ - Page Navigation & Loading Pagination
