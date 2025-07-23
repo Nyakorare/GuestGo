@@ -1151,6 +1151,13 @@ function renderPlaces(): void {
             }">
               ${place.is_available ? 'Available' : 'Unavailable'}
             </span>
+            <button 
+              onclick="window.togglePlaceAvailability('${place.id}', ${place.is_available})"
+              class="ml-4 px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700 focus:outline-none"
+              title="Toggle availability"
+            >
+              ${place.is_available ? 'Mark Unavailable' : 'Mark Available'}
+            </button>
           </div>
           ${place.assigned_personnel && place.assigned_personnel.length > 0 ? `
             <div class="mt-2">
@@ -4474,85 +4481,88 @@ async function togglePersonnelAvailability(placeId: string, currentAvailability:
     const errorDiv = document.getElementById('availabilityError');
     const successDiv = document.getElementById('availabilitySuccess');
     const reasonTextarea = document.getElementById('unavailabilityReason') as HTMLTextAreaElement;
-    const submitBtn = document.getElementById('availabilitySubmitBtn') as HTMLButtonElement;
-    
-    if (modal && errorDiv && successDiv && reasonTextarea && submitBtn) {
-      // Clear previous messages
+    const availableRadio = document.getElementById('availableRadio') as HTMLInputElement;
+    const unavailableRadio = document.getElementById('unavailableRadio') as HTMLInputElement;
+    const reasonField = document.getElementById('reasonField');
+    const submitBtn = document.getElementById('updateAvailabilityBtn') as HTMLButtonElement;
+    const form = document.getElementById('availabilityForm') as HTMLFormElement;
+
+    if (modal && errorDiv && successDiv && reasonTextarea && submitBtn && availableRadio && unavailableRadio && reasonField && form) {
+      // Clear previous messages and reset form
       errorDiv.classList.add('hidden');
       errorDiv.textContent = '';
       successDiv.classList.add('hidden');
       successDiv.textContent = '';
       reasonTextarea.value = '';
-      
+      availableRadio.checked = currentAvailability;
+      unavailableRadio.checked = !currentAvailability;
+      reasonField.classList.toggle('hidden', currentAvailability);
+
+      // Show/hide reason field based on radio selection
+      const handleRadioChange = () => {
+        if (unavailableRadio.checked) {
+          reasonField.classList.remove('hidden');
+          reasonTextarea.required = true;
+        } else {
+          reasonField.classList.add('hidden');
+          reasonTextarea.required = false;
+          reasonTextarea.value = '';
+        }
+      };
+      availableRadio.removeEventListener('change', handleRadioChange);
+      unavailableRadio.removeEventListener('change', handleRadioChange);
+      availableRadio.addEventListener('change', handleRadioChange);
+      unavailableRadio.addEventListener('change', handleRadioChange);
+
       // Set up the form submission
       const handleSubmit = async (e: Event) => {
         e.preventDefault();
-        
-        // Prevent multiple submissions
-        if (submitBtn.disabled) {
-          return;
-        }
-        
-        // Show loading state
+        if (submitBtn.disabled) return;
         submitBtn.disabled = true;
         submitBtn.textContent = 'Updating...';
-        
         try {
-          const newAvailability = !currentAvailability;
+          const newAvailability = availableRadio.checked;
           const unavailabilityReason = reasonTextarea.value.trim();
-          
-          // Validate reason if marking as unavailable
           if (!newAvailability && !unavailabilityReason) {
             errorDiv.textContent = 'Please provide a reason for unavailability.';
             errorDiv.classList.remove('hidden');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Update Availability';
             return;
           }
-          
-          // Call the database function to update availability
           const { data, error } = await supabase.rpc('update_personnel_availability', {
             p_personnel_id: user.id,
             p_place_id: placeId,
             p_is_available: newAvailability,
-            p_unavailability_reason: unavailabilityReason || null,
+            p_unavailability_reason: newAvailability ? null : unavailabilityReason,
             p_updated_by: user.id
           });
-          
           if (error) {
             console.error('Error updating availability:', error);
             errorDiv.textContent = 'Error updating availability: ' + error.message;
             errorDiv.classList.remove('hidden');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Update Availability';
             return;
           }
-          
-          // Show success message
           successDiv.textContent = `Successfully marked as ${newAvailability ? 'available' : 'unavailable'}.`;
           successDiv.classList.remove('hidden');
-          
-          // Close modal after a short delay
           setTimeout(() => {
             modal.classList.add('hidden');
-            // Reload personnel dashboard to reflect changes
             loadPersonnelDashboard();
           }, 1500);
-          
         } catch (error) {
           console.error('Error in availability update:', error);
           errorDiv.textContent = 'Error updating availability. Please try again.';
           errorDiv.classList.remove('hidden');
         } finally {
-          // Reset button state
           submitBtn.disabled = false;
           submitBtn.textContent = 'Update Availability';
         }
       };
-      
-      // Remove any existing event listeners and add new one
-      const form = modal.querySelector('form');
-      if (form) {
-        form.removeEventListener('submit', handleSubmit);
-        form.addEventListener('submit', handleSubmit);
-      }
-      
+      form.onsubmit = null;
+      form.removeEventListener('submit', handleSubmit);
+      form.addEventListener('submit', handleSubmit);
       // Show the modal
       modal.classList.remove('hidden');
     } else {
@@ -5469,3 +5479,37 @@ async function refreshAllAdminData() {
     }
   }
 }
+
+// Add this function near other global window.* assignments (after editPlace, etc.)
+async function togglePlaceAvailability(placeId, currentAvailability) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      showNotification('You must be logged in to update place availability', 'error');
+      return;
+    }
+    // Confirm action
+    const newAvailability = !currentAvailability;
+    const confirmed = confirm(`Are you sure you want to mark this place as ${newAvailability ? 'available' : 'unavailable'}?`);
+    if (!confirmed) return;
+    // Update the place's availability
+    const { error } = await supabase
+      .from('places_to_visit')
+      .update({ is_available: newAvailability })
+      .eq('id', placeId);
+    if (error) {
+      showNotification('Error updating place availability: ' + error.message, 'error');
+      return;
+    }
+    await logAction('place_availability_toggle', {
+      place_id: placeId,
+      is_available: newAvailability
+    });
+    showNotification(`Place marked as ${newAvailability ? 'available' : 'unavailable'} successfully!`, 'success');
+    await loadPlaces(); // Refresh dashboard
+  } catch (err) {
+    console.error('Error toggling place availability:', err);
+    showNotification('Error toggling place availability', 'error');
+  }
+}
+(window as any).togglePlaceAvailability = togglePlaceAvailability;
