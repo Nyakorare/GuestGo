@@ -354,6 +354,27 @@ BEGIN
         END IF;
     END IF;
     
+    -- Check for existing visit on the same day for this user/email
+    IF p_visitor_user_id IS NOT NULL THEN
+        IF EXISTS (
+            SELECT 1 FROM scheduled_visits
+            WHERE visitor_user_id = p_visitor_user_id
+              AND visit_date = p_visit_date
+              AND status IN ('pending', 'completed')
+        ) THEN
+            RAISE EXCEPTION 'You already have a scheduled visit on this date.';
+        END IF;
+    ELSE
+        IF EXISTS (
+            SELECT 1 FROM scheduled_visits
+            WHERE visitor_email = p_visitor_email
+              AND visit_date = p_visit_date
+              AND status IN ('pending', 'completed')
+        ) THEN
+            RAISE EXCEPTION 'You already have a scheduled visit on this date.';
+        END IF;
+    END IF;
+    
     -- Check weekly visit limit (now counts visits, not individual place bookings)
     week_start := p_visit_date - (EXTRACT(DOW FROM p_visit_date)::INTEGER * INTERVAL '1 day');
     week_end := week_start + INTERVAL '6 days';

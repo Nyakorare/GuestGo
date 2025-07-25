@@ -951,10 +951,44 @@ export async function setupEventListeners() {
             throw new Error('Cannot schedule visits more than 1 month in advance. Please select a date within the next month.');
           } else if (scheduleError.message.includes('Only users with visitor role can schedule visits')) {
             throw new Error('Only visitors can schedule visits. Please contact an administrator if you need access.');
+          } else if (scheduleError.message.includes('You already have a scheduled visit on this date.')) {
+            throw new Error('You already have a scheduled visit on this date. Please select a different date.');
           } else {
             throw new Error(`Scheduling failed: ${scheduleError.message}`);
           }
         }
+        // Show success message only if no error
+        alert('Visit scheduled successfully! You will receive a confirmation email shortly.');
+        // Close modal and reset form
+        const modal = document.getElementById('scheduleModal');
+        if (modal) {
+          modal.classList.add('hidden');
+        }
+        scheduleForm.reset();
+        resetDateValidation();
+        isEmailVerified = false;
+        verificationCodeSent = false;
+        verificationCodeContainer?.classList.add('hidden');
+        verificationCode.value = '';
+        if (verificationStatus) verificationStatus.textContent = '';
+        if (emailValidationStatus) {
+          emailValidationStatus.textContent = '';
+          emailValidationStatus.className = 'mt-1 text-sm';
+        }
+        clearTimers();
+        if (sendVerificationCode) sendVerificationCode.textContent = 'Send Code';
+        if (scheduleEmail) {
+          scheduleEmail.disabled = false;
+          scheduleEmail.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+        if (sendVerificationCode) {
+          sendVerificationCode.disabled = false;
+          sendVerificationCode.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+        currentCode = null;
+        enableVerificationInputs();
+        setTimeout(() => { window.location.reload(); }, 1000);
+        return;
         } else {
           // Schedule visit for single place
           const { data: visitData, error: scheduleError } = await supabase.rpc('schedule_visit', {
@@ -986,41 +1020,26 @@ export async function setupEventListeners() {
             }
           }
         }
-
-        // Show success message
+        // Show success message only if no error
         alert('Visit scheduled successfully! You will receive a confirmation email shortly.');
-        
-        // Note: No need to refresh visit counts here since the page will reload
-        // and the visit counts will be updated automatically
-        
         // Close modal and reset form
         const modal = document.getElementById('scheduleModal');
         if (modal) {
           modal.classList.add('hidden');
         }
         scheduleForm.reset();
-        
-        // Reset date validation
         resetDateValidation();
-        
-        // Reset verification state
         isEmailVerified = false;
         verificationCodeSent = false;
         verificationCodeContainer?.classList.add('hidden');
         verificationCode.value = '';
-        if (verificationStatus) {
-          verificationStatus.textContent = '';
-        }
+        if (verificationStatus) verificationStatus.textContent = '';
         if (emailValidationStatus) {
           emailValidationStatus.textContent = '';
           emailValidationStatus.className = 'mt-1 text-sm';
         }
         clearTimers();
-        if (sendVerificationCode) {
-          sendVerificationCode.textContent = 'Send Code';
-        }
-        
-        // Re-enable email input field and send code button
+        if (sendVerificationCode) sendVerificationCode.textContent = 'Send Code';
         if (scheduleEmail) {
           scheduleEmail.disabled = false;
           scheduleEmail.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -1029,18 +1048,41 @@ export async function setupEventListeners() {
           sendVerificationCode.disabled = false;
           sendVerificationCode.classList.remove('opacity-50', 'cursor-not-allowed');
         }
-        
         currentCode = null;
         enableVerificationInputs();
-
-        // Refresh the page after a short delay to update all content
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000); // 1 second delay to show the success message
-
+        setTimeout(() => { window.location.reload(); }, 1000);
+        return;
       } catch (error: any) {
         console.error('Error scheduling visit:', error);
         alert('Error scheduling visit: ' + (error.message || 'Please try again'));
+        // Close modal and reset form after error to prevent error loop
+        const modal = document.getElementById('scheduleModal');
+        if (modal) {
+          modal.classList.add('hidden');
+        }
+        scheduleForm.reset();
+        resetDateValidation();
+        isEmailVerified = false;
+        verificationCodeSent = false;
+        verificationCodeContainer?.classList.add('hidden');
+        verificationCode.value = '';
+        if (verificationStatus) verificationStatus.textContent = '';
+        if (emailValidationStatus) {
+          emailValidationStatus.textContent = '';
+          emailValidationStatus.className = 'mt-1 text-sm';
+        }
+        clearTimers();
+        if (sendVerificationCode) sendVerificationCode.textContent = 'Send Code';
+        if (scheduleEmail) {
+          scheduleEmail.disabled = false;
+          scheduleEmail.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+        if (sendVerificationCode) {
+          sendVerificationCode.disabled = false;
+          sendVerificationCode.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+        currentCode = null;
+        enableVerificationInputs();
       } finally {
         // Reset button state
         if (scheduleSubmitBtn) {
