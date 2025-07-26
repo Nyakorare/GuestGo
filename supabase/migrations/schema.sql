@@ -385,7 +385,7 @@ BEGIN
         SELECT COUNT(*) INTO visits_this_week
         FROM scheduled_visits
         WHERE visitor_user_id = p_visitor_user_id
-          AND visit_date BETWEEN week_start AND week_end
+          AND visit_date BETWEEN GREATEST(week_start, philippine_date) AND week_end
           AND status IN ('pending', 'completed');
         IF visits_this_week >= 2 THEN
             RAISE EXCEPTION 'Maximum of 2 visits per week allowed per user account. You have already scheduled % visits for the week of %.', visits_this_week, week_start;
@@ -395,7 +395,7 @@ BEGIN
         SELECT COUNT(*) INTO visits_this_week
         FROM scheduled_visits
         WHERE visitor_email = p_visitor_email
-          AND visit_date BETWEEN week_start AND week_end
+          AND visit_date BETWEEN GREATEST(week_start, philippine_date) AND week_end
           AND status IN ('pending', 'completed');
         IF visits_this_week >= 2 THEN
             RAISE EXCEPTION 'Maximum of 2 visits per week allowed per email address. You have already scheduled % visits for the week of %.', visits_this_week, week_start;

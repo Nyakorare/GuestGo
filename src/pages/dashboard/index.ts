@@ -1151,13 +1151,6 @@ function renderPlaces(): void {
             }">
               ${place.is_available ? 'Available' : 'Unavailable'}
             </span>
-            <button 
-              onclick="window.togglePlaceAvailability('${place.id}', ${place.is_available})"
-              class="ml-4 px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700 focus:outline-none"
-              title="Toggle availability"
-            >
-              ${place.is_available ? 'Mark Unavailable' : 'Mark Available'}
-            </button>
           </div>
           ${place.assigned_personnel && place.assigned_personnel.length > 0 ? `
             <div class="mt-2">
@@ -5513,3 +5506,5 @@ async function togglePlaceAvailability(placeId, currentAvailability) {
   }
 }
 (window as any).togglePlaceAvailability = togglePlaceAvailability;
+
+export { showNotification };

@@ -1,5 +1,6 @@
 import { sendVerificationEmail } from '../config/emailjs';
 import supabase from '../config/supabase';
+import { showNotification } from '../pages/dashboard/index';
 
 // Helper function to get current Philippine time
 function getPhilippineTime(): Date {
@@ -247,12 +248,12 @@ export async function setupEventListeners() {
             .single();
           
           if (roleData?.role !== 'visitor') {
-            alert('Only visitors can schedule visits. Please contact an administrator if you need access.');
+            showNotification('Only visitors can schedule visits. Please contact an administrator if you need access.', 'error');
             return;
           }
         } catch (error) {
           console.error('Error checking user role:', error);
-          alert('Error checking user permissions. Please try again.');
+          showNotification('Error checking user permissions. Please try again.', 'error');
           return;
         }
       }
@@ -814,15 +815,16 @@ export async function setupEventListeners() {
 
   // Handle form submission
   if (scheduleForm) {
+    let isScheduling = false;
     scheduleForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      
+      if (isScheduling) return;
+      isScheduling = true;
       // Show loading state
       if (scheduleSubmitBtn) {
         scheduleSubmitBtn.disabled = true;
         scheduleSubmitBtn.textContent = 'Scheduling...';
       }
-
       try {
         // Get form data
         const firstName = (document.getElementById('scheduleFirstName') as HTMLInputElement).value;
@@ -920,75 +922,112 @@ export async function setupEventListeners() {
           }
           
           const selectedPlaces = Array.from(document.querySelectorAll('input[name="places"]:checked'))
-            .map((checkbox: HTMLInputElement) => checkbox.value);
+            .map((checkbox) => (checkbox as HTMLInputElement).value);
           
           if (selectedPlaces.length === 0) {
             throw new Error('Please select at least one place to visit');
           }
 
-                  // Schedule visit for all selected places in a single call
-        const { data: visitData, error: scheduleError } = await supabase.rpc('schedule_visit', {
-          p_visitor_first_name: firstName,
-          p_visitor_last_name: lastName,
-          p_visitor_email: email,
-          p_visitor_phone: phone,
-          p_place_ids: selectedPlaces,
-          p_visit_date: visitDate,
-          p_purpose: purpose === 'other' ? otherPurpose : purpose,
-          p_other_purpose: purpose === 'other' ? otherPurpose : null,
-          p_visitor_user_id: visitorUserId
-        });
-
-        if (scheduleError) {
-          // Handle specific database validation errors
-          if (scheduleError.message.includes('Maximum of 2 visits per week allowed per user account')) {
-            throw new Error('Weekly visit limit exceeded. You can only schedule 2 visits per week per user account.');
-          } else if (scheduleError.message.includes('Maximum of 2 visits per week allowed per email address')) {
-            throw new Error('Weekly visit limit exceeded. You can only schedule 2 visits per week per email address.');
-          } else if (scheduleError.message.includes('Cannot schedule visits for past dates')) {
-            throw new Error('Cannot schedule visits for past dates. Please select today or a future date.');
-          } else if (scheduleError.message.includes('Cannot schedule visits more than 1 month in advance')) {
-            throw new Error('Cannot schedule visits more than 1 month in advance. Please select a date within the next month.');
-          } else if (scheduleError.message.includes('Only users with visitor role can schedule visits')) {
-            throw new Error('Only visitors can schedule visits. Please contact an administrator if you need access.');
-          } else if (scheduleError.message.includes('You already have a scheduled visit on this date.')) {
-            throw new Error('You already have a scheduled visit on this date. Please select a different date.');
+          let scheduleError = null;
+          let visitData = null;
+          if (placeToVisit === 'multiple') {
+            // Check if multiple places option is available
+            if (availablePlacesCount < 2) {
+              throw new Error('Multiple places option is not available. Please select a single place.');
+            }
+            const selectedPlaces = Array.from(document.querySelectorAll('input[name="places"]:checked'))
+              .map((checkbox) => (checkbox as HTMLInputElement).value);
+            if (selectedPlaces.length === 0) {
+              throw new Error('Please select at least one place to visit');
+            }
+            const result = await supabase.rpc('schedule_visit', {
+              p_visitor_first_name: firstName,
+              p_visitor_last_name: lastName,
+              p_visitor_email: email,
+              p_visitor_phone: phone,
+              p_place_ids: selectedPlaces,
+              p_visit_date: visitDate,
+              p_purpose: purpose === 'other' ? otherPurpose : purpose,
+              p_other_purpose: purpose === 'other' ? otherPurpose : null,
+              p_visitor_user_id: visitorUserId
+            });
+            visitData = result.data;
+            scheduleError = result.error;
           } else {
-            throw new Error(`Scheduling failed: ${scheduleError.message}`);
+            const result = await supabase.rpc('schedule_visit', {
+              p_visitor_first_name: firstName,
+              p_visitor_last_name: lastName,
+              p_visitor_email: email,
+              p_visitor_phone: phone,
+              p_place_ids: [placeToVisit],
+              p_visit_date: visitDate,
+              p_purpose: purpose === 'other' ? otherPurpose : purpose,
+              p_other_purpose: purpose === 'other' ? otherPurpose : null,
+              p_visitor_user_id: visitorUserId
+            });
+            visitData = result.data;
+            scheduleError = result.error;
           }
-        }
-        // Show success message only if no error
-        alert('Visit scheduled successfully! You will receive a confirmation email shortly.');
-        // Close modal and reset form
-        const modal = document.getElementById('scheduleModal');
-        if (modal) {
-          modal.classList.add('hidden');
-        }
-        scheduleForm.reset();
-        resetDateValidation();
-        isEmailVerified = false;
-        verificationCodeSent = false;
-        verificationCodeContainer?.classList.add('hidden');
-        verificationCode.value = '';
-        if (verificationStatus) verificationStatus.textContent = '';
-        if (emailValidationStatus) {
-          emailValidationStatus.textContent = '';
-          emailValidationStatus.className = 'mt-1 text-sm';
-        }
-        clearTimers();
-        if (sendVerificationCode) sendVerificationCode.textContent = 'Send Code';
-        if (scheduleEmail) {
-          scheduleEmail.disabled = false;
-          scheduleEmail.classList.remove('opacity-50', 'cursor-not-allowed');
-        }
-        if (sendVerificationCode) {
-          sendVerificationCode.disabled = false;
-          sendVerificationCode.classList.remove('opacity-50', 'cursor-not-allowed');
-        }
-        currentCode = null;
-        enableVerificationInputs();
-        setTimeout(() => { window.location.reload(); }, 1000);
-        return;
+          if (scheduleError) {
+            if (scheduleError.message.includes('Maximum of 2 visits per week allowed per user account')) {
+              throw new Error('Weekly visit limit exceeded. You can only schedule 2 visits per week per user account.');
+            } else if (scheduleError.message.includes('Maximum of 2 visits per week allowed per email address')) {
+              throw new Error('Weekly visit limit exceeded. You can only schedule 2 visits per week per email address.');
+            } else if (scheduleError.message.includes('Cannot schedule visits for past dates')) {
+              throw new Error('Cannot schedule visits for past dates. Please select today or a future date.');
+            } else if (scheduleError.message.includes('Cannot schedule visits more than 1 month in advance')) {
+              throw new Error('Cannot schedule visits more than 1 month in advance. Please select a date within the next month.');
+            } else if (scheduleError.message.includes('Only users with visitor role can schedule visits')) {
+              throw new Error('Only visitors can schedule visits. Please contact an administrator if you need access.');
+            } else if (scheduleError.message.includes('You already have a scheduled visit on this date.')) {
+              // Only show inline error, no notification
+              isScheduling = false;
+              if (scheduleSubmitBtn) {
+                scheduleSubmitBtn.disabled = false;
+                scheduleSubmitBtn.textContent = 'Schedule Visit';
+              }
+              return;
+            } else {
+              throw new Error(`Scheduling failed: ${scheduleError.message}`);
+            }
+          }
+          // Only show success if there was NO error
+          showNotification('Visit scheduled successfully! You will receive a confirmation email shortly.', 'success');
+          const modal = document.getElementById('scheduleModal');
+          if (modal) {
+            modal.classList.add('hidden');
+          }
+          scheduleForm.reset();
+          resetDateValidation();
+          isEmailVerified = false;
+          verificationCodeSent = false;
+          verificationCodeContainer?.classList.add('hidden');
+          verificationCode.value = '';
+          if (verificationStatus) verificationStatus.textContent = '';
+          if (emailValidationStatus) {
+            emailValidationStatus.textContent = '';
+            emailValidationStatus.className = 'mt-1 text-sm';
+          }
+          clearTimers();
+          if (sendVerificationCode) sendVerificationCode.textContent = 'Send Code';
+          if (scheduleEmail) {
+            scheduleEmail.disabled = false;
+            scheduleEmail.classList.remove('opacity-50', 'cursor-not-allowed');
+          }
+          if (sendVerificationCode) {
+            sendVerificationCode.disabled = false;
+            sendVerificationCode.classList.remove('opacity-50', 'cursor-not-allowed');
+          }
+          currentCode = null;
+          enableVerificationInputs();
+          isScheduling = false;
+          // Hide error modal if it exists (fix for stale error modal)
+          const errorModal = document.getElementById('scheduleErrorConfirmationModal');
+          if (errorModal) {
+            errorModal.classList.add('hidden');
+          }
+          setTimeout(() => { window.location.reload(); }, 1000);
+          return; // <--- Ensure we return here so catch is not triggered after success
         } else {
           // Schedule visit for single place
           const { data: visitData, error: scheduleError } = await supabase.rpc('schedule_visit', {
@@ -1021,7 +1060,7 @@ export async function setupEventListeners() {
           }
         }
         // Show success message only if no error
-        alert('Visit scheduled successfully! You will receive a confirmation email shortly.');
+        showNotification('Visit scheduled successfully! You will receive a confirmation email shortly.', 'success');
         // Close modal and reset form
         const modal = document.getElementById('scheduleModal');
         if (modal) {
@@ -1050,11 +1089,18 @@ export async function setupEventListeners() {
         }
         currentCode = null;
         enableVerificationInputs();
+        isScheduling = false;
+        // Hide error modal if it exists (fix for stale error modal)
+        const errorModal = document.getElementById('scheduleErrorConfirmationModal');
+        if (errorModal) {
+          errorModal.classList.add('hidden');
+        }
         setTimeout(() => { window.location.reload(); }, 1000);
-        return;
+        return; // <--- Ensure we return here so catch is not triggered after success
       } catch (error: any) {
+        if (error && (error.message === '__SILENT_SUCCESS__' || error === '__SILENT_SUCCESS__')) return;
         console.error('Error scheduling visit:', error);
-        alert('Error scheduling visit: ' + (error.message || 'Please try again'));
+        // Only show inline error, no notification
         // Close modal and reset form after error to prevent error loop
         const modal = document.getElementById('scheduleModal');
         if (modal) {
@@ -1062,6 +1108,15 @@ export async function setupEventListeners() {
         }
         scheduleForm.reset();
         resetDateValidation();
+        // Set visitDate input to current Philippine date after reset (on error)
+        const visitDateInput = document.getElementById('visitDate') as HTMLInputElement;
+        if (visitDateInput) {
+          const philippineToday = getPhilippineDate();
+          visitDateInput.value = philippineToday.toISOString().split('T')[0];
+          if (typeof (window as any).initializeDateValidation === 'function') {
+            (window as any).initializeDateValidation();
+          }
+        }
         isEmailVerified = false;
         verificationCodeSent = false;
         verificationCodeContainer?.classList.add('hidden');
@@ -1083,11 +1138,14 @@ export async function setupEventListeners() {
         }
         currentCode = null;
         enableVerificationInputs();
+        // (REMOVED: do not reload page after error)
+        return;
       } finally {
-        // Reset button state
-        if (scheduleSubmitBtn) {
+        // Only reset button state if still scheduling (not after a successful schedule)
+        if (isScheduling && scheduleSubmitBtn) {
           scheduleSubmitBtn.disabled = false;
           scheduleSubmitBtn.textContent = 'Schedule Visit';
+          isScheduling = false;
         }
       }
     });
@@ -1156,7 +1214,7 @@ export async function setupEventListeners() {
           currentPhilippineDate = new Date(currentDateData);
         }
       } catch (error) {
-        console.error('Exception getting current Philippine date from DB:', error);
+        console.error('Exception getting Philippine date from DB:', error);
         currentPhilippineDate = getPhilippineDate();
       }
 
@@ -1177,29 +1235,76 @@ export async function setupEventListeners() {
 
       // Clear previous validation
       visitDateInput.classList.remove('border-red-500', 'border-green-500', 'border-yellow-500', 'focus:border-red-500', 'focus:border-green-500', 'focus:border-yellow-500');
-      dateValidationStatus.className = 'mt-1 text-sm';
+      if (dateValidationStatus) dateValidationStatus.className = 'mt-1 text-sm';
 
       // Check if date is in the past
       if (philippineSelectedDate.getTime() < currentPhilippineDate.getTime()) {
         visitDateInput.classList.add('border-red-500', 'focus:border-red-500');
-        dateValidationStatus.textContent = `❌ Cannot schedule for past dates. Current Philippine date is ${currentPhilippineDate.toLocaleDateString()}.`;
-        dateValidationStatus.className = 'mt-1 text-sm text-red-600 font-medium';
+        if (dateValidationStatus) {
+          dateValidationStatus.textContent = `❌ Cannot schedule for past dates. Current Philippine date is ${currentPhilippineDate.toLocaleDateString()}.`;
+          dateValidationStatus.className = 'mt-1 text-sm text-red-600 font-medium';
+        }
         return false;
       }
 
       // Check if date is more than 1 month in the future
       if (philippineSelectedDate.getTime() > philippineMaxDate.getTime()) {
         visitDateInput.classList.add('border-red-500', 'focus:border-red-500');
-        dateValidationStatus.textContent = `❌ Cannot schedule more than 1 month in advance. Maximum allowed date is ${philippineMaxDate.toLocaleDateString()}.`;
-        dateValidationStatus.className = 'mt-1 text-sm text-red-600 font-medium';
+        if (dateValidationStatus) {
+          dateValidationStatus.textContent = `❌ Cannot schedule more than 1 month in advance. Maximum allowed date is ${philippineMaxDate.toLocaleDateString()}.`;
+          dateValidationStatus.className = 'mt-1 text-sm text-red-600 font-medium';
+        }
         return false;
+      }
+
+      // LIVE CHECK: Query for existing scheduled visit for this user/email and date
+      let userEmail = '';
+      let userId = null;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          userId = user.id;
+          userEmail = user.email || '';
+        } else {
+          const emailInput = document.getElementById('scheduleEmail') as HTMLInputElement;
+          userEmail = emailInput?.value || '';
+        }
+      } catch (e) {
+        // fallback to email input
+        const emailInput = document.getElementById('scheduleEmail') as HTMLInputElement;
+        userEmail = emailInput?.value || '';
+      }
+      if (userEmail && visitDateInput.value) {
+        // Query for existing visit for this user/email and date
+        let { data: existingVisits, error: checkError } = await supabase
+          .from('scheduled_visits')
+          .select('id')
+          .or(`visitor_email.eq.${userEmail},visitor_user_id.eq.${userId}`)
+          .eq('visit_date', visitDateInput.value)
+          .in('status', ['pending', 'completed']);
+        if (checkError) {
+          console.error('Error checking for existing scheduled visit:', checkError);
+        } else if (existingVisits && existingVisits.length > 0) {
+          visitDateInput.classList.add('border-red-500', 'focus:border-red-500');
+          if (dateValidationStatus) {
+            dateValidationStatus.textContent = `❌ You already have a scheduled visit on this date.`;
+            dateValidationStatus.className = 'mt-1 text-sm text-red-600 font-medium';
+          }
+          if (scheduleSubmitBtn) scheduleSubmitBtn.disabled = true;
+          return false;
+        } else {
+          // If no error, re-enable the button (unless another validation disables it)
+          if (scheduleSubmitBtn) scheduleSubmitBtn.disabled = false;
+        }
       }
 
       // Check if date is today
       if (philippineSelectedDate.getTime() === currentPhilippineDate.getTime()) {
         visitDateInput.classList.add('border-yellow-500', 'focus:border-yellow-500');
-        dateValidationStatus.textContent = `⚠️ Scheduling for today (${currentPhilippineDate.toLocaleDateString()}). Please ensure you can visit today.`;
-        dateValidationStatus.className = 'mt-1 text-sm text-yellow-600 font-medium';
+        if (dateValidationStatus) {
+          dateValidationStatus.textContent = `⚠️ Scheduling for today (${currentPhilippineDate.toLocaleDateString()}). Please ensure you can visit today.`;
+          dateValidationStatus.className = 'mt-1 text-sm text-yellow-600 font-medium';
+        }
         return true;
       }
 
@@ -1208,15 +1313,19 @@ export async function setupEventListeners() {
       philippineTomorrow.setDate(philippineTomorrow.getDate() + 1);
       if (philippineSelectedDate.getTime() === philippineTomorrow.getTime()) {
         visitDateInput.classList.add('border-green-500', 'focus:border-green-500');
-        dateValidationStatus.textContent = `✅ Scheduling for tomorrow (${philippineTomorrow.toLocaleDateString()}).`;
-        dateValidationStatus.className = 'mt-1 text-sm text-green-600 font-medium';
+        if (dateValidationStatus) {
+          dateValidationStatus.textContent = `✅ Scheduling for tomorrow (${philippineTomorrow.toLocaleDateString()}).`;
+          dateValidationStatus.className = 'mt-1 text-sm text-green-600 font-medium';
+        }
         return true;
       }
 
       // Valid future date
       visitDateInput.classList.add('border-green-500', 'focus:border-green-500');
-      dateValidationStatus.textContent = `✅ Valid date selected: ${philippineSelectedDate.toLocaleDateString()}.`;
-      dateValidationStatus.className = 'mt-1 text-sm text-green-600 font-medium';
+      if (dateValidationStatus) {
+        dateValidationStatus.textContent = `✅ Valid date selected: ${philippineSelectedDate.toLocaleDateString()}.`;
+        dateValidationStatus.className = 'mt-1 text-sm text-green-600 font-medium';
+      }
       return true;
     }
 
@@ -1459,9 +1568,8 @@ export async function setupEventListeners() {
       // Count future visits
       const futureVisitCount = futureVisits?.length || 0;
 
-      // NEW LOGIC: Determine refresh slots based on previous week AND future schedules
+      // NEW LOGIC: Determine refresh slots based on previous week
       let refreshSlots = 2; // default: allow 2 visits
-      
       // First, check previous week logic
       if (prevTotalCount > 0) {
         if (prevPendingCount === 2) {
@@ -1475,13 +1583,7 @@ export async function setupEventListeners() {
           refreshSlots = 2 - prevPendingCount; // e.g., 1 completed, 0 pending = 1 refresh
         }
       }
-
-      // Then, check if user has future schedules that would limit current week
-      if (futureVisitCount > 0) {
-        // If user has future schedules, they should only get 1 refresh slot
-        // This ensures they don't use up all their visits before reaching their scheduled dates
-        refreshSlots = Math.min(refreshSlots, 1);
-      }
+      // Remove the futureVisitCount limiting logic
 
       // Calculate remaining visits for this week
       const remainingVisits = Math.max(0, refreshSlots - visitCount);
@@ -1692,7 +1794,7 @@ export async function setupEventListeners() {
       // Count future visits
       const futureVisitCount = futureVisits?.length || 0;
 
-      // NEW LOGIC: Determine refresh slots based on previous week AND future schedules
+      // NEW LOGIC: Determine refresh slots based on previous week
       let refreshSlots = 2; // default: allow 2 visits
       
       // First, check previous week logic
@@ -1710,11 +1812,7 @@ export async function setupEventListeners() {
       }
 
       // Then, check if user has future schedules that would limit current week
-      if (futureVisitCount > 0) {
-        // If user has future schedules, they should only get 1 refresh slot
-        // This ensures they don't use up all their visits before reaching their scheduled dates
-        refreshSlots = Math.min(refreshSlots, 1);
-      }
+      // (REMOVED: do not limit refreshSlots based on futureVisitCount)
 
       // Calculate remaining visits for this week
       const remainingVisits = Math.max(0, refreshSlots - visitCount);
@@ -1755,8 +1853,10 @@ export async function setupEventListeners() {
 
       // Completely recreate the modal content to prevent duplicates
       let weekText = `(${pendingCount} pending, ${completedCount} completed)`;
+      // Optionally, show future schedules in a separate line, not in the main status
+      let futureText = '';
       if (futureVisitCount > 0) {
-        weekText += ` • ${futureVisitCount} future schedule(s)`;
+        futureText = `<div class="text-xs text-blue-600 dark:text-blue-400">Future schedules: ${futureVisitCount} visit(s)</div>`;
       }
       
       modalWeeklyVisitCount.innerHTML = `
@@ -1769,6 +1869,7 @@ export async function setupEventListeners() {
             ${weekText}
           </span>
         </div>
+        ${futureText}
         <div class="mt-1 text-xs text-blue-600 dark:text-blue-400">
           Maximum 2 visits per week per user account
         </div>
@@ -1895,7 +1996,7 @@ export async function setupEventListeners() {
     // Count future visits
     const futureVisitCount = futureVisits?.length || 0;
 
-    // NEW LOGIC: Determine refresh slots based on previous week AND future schedules
+    // NEW LOGIC: Determine refresh slots based on previous week
     let refreshSlots = 2; // default: allow 2 visits
     
     // First, check previous week logic
@@ -1968,6 +2069,25 @@ export async function setupEventListeners() {
     // Store the last update time and email to prevent duplicates
     reminderDiv.dataset.lastEmail = email;
     reminderDiv.dataset.lastUpdate = Date.now().toString();
+
+    // Disable schedule button and modal if no visits remaining or if 2 pending visits
+    const scheduleBtn = document.getElementById('openScheduleModalBtn');
+    if (scheduleBtn) {
+      if (remainingVisits === 0 || pendingCount >= 2) {
+        scheduleBtn.setAttribute('disabled', 'true');
+        scheduleBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        scheduleBtn.title = 'You have reached your weekly visit limit or have 2 pending visits.';
+      } else {
+        scheduleBtn.removeAttribute('disabled');
+        scheduleBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        scheduleBtn.title = '';
+      }
+    }
+    // Optionally, hide or block the modal open event if no visits remaining or 2 pending
+    let modalElem = document.getElementById('scheduleModal');
+    if (modalElem && (remainingVisits === 0 || pendingCount >= 2)) {
+      modalElem.classList.add('hidden');
+    }
   }
 
   // Add live event listener to email input in modal

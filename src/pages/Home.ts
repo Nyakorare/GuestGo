@@ -185,11 +185,7 @@ async function loadWeeklyVisitCount(userEmail: string) {
     }
 
     // Then, check if user has future schedules that would limit current week
-    if (futureVisitCount > 0) {
-      // If user has future schedules, they should only get 1 refresh slot
-      // This ensures they don't use up all their visits before reaching their scheduled dates
-      refreshSlots = Math.min(refreshSlots, 1);
-    }
+    // (REMOVED: do not limit refreshSlots based on futureVisitCount)
 
     // Calculate remaining visits for this week
     const remainingVisits = Math.max(0, refreshSlots - visitCount);
@@ -210,15 +206,36 @@ async function loadWeeklyVisitCount(userEmail: string) {
     // Update the display based on the count and week range
     let statusHtml = '';
     let additionalInfo = '';
+    const scheduleNowBtn = document.getElementById('scheduleNowBtn');
     
     if (refreshSlots === 0) {
       statusHtml = `<span class="font-medium text-gray-600 dark:text-gray-400">No new visits allowed until previous week is cleared</span>`;
+      if (scheduleNowBtn) {
+        scheduleNowBtn.setAttribute('disabled', 'true');
+        scheduleNowBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        scheduleNowBtn.title = 'You have reached your weekly visit limit.';
+      }
     } else if (remainingVisits === 2) {
       statusHtml = `<span class="font-medium text-green-600 dark:text-green-400">2 visits remaining</span> (no scheduled visits)`;
+      if (scheduleNowBtn) {
+        scheduleNowBtn.removeAttribute('disabled');
+        scheduleNowBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        scheduleNowBtn.title = '';
+      }
     } else if (remainingVisits === 1) {
       statusHtml = `<span class="font-medium text-yellow-600 dark:text-yellow-400">1 visit remaining</span> (${pendingCount} pending, ${completedCount} completed)`;
+      if (scheduleNowBtn) {
+        scheduleNowBtn.removeAttribute('disabled');
+        scheduleNowBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        scheduleNowBtn.title = '';
+      }
     } else {
       statusHtml = `<span class="font-medium text-red-600 dark:text-red-400">No visits remaining</span> (${pendingCount} pending, ${completedCount} completed)`;
+      if (scheduleNowBtn) {
+        scheduleNowBtn.setAttribute('disabled', 'true');
+        scheduleNowBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        scheduleNowBtn.title = 'You have reached your weekly visit limit.';
+      }
     }
 
     // Add information about future schedules if they exist
@@ -471,6 +488,11 @@ async function loadWeeklyVisitCount(userEmail: string) {
 
 // Global function to open schedule modal (called from inline onclick)
 (window as any).openScheduleModal = async () => {
+  const btn = document.getElementById('scheduleNowBtn');
+  if (btn && btn.hasAttribute('disabled')) {
+    // Optionally show a message here
+    return;
+  }
   console.log('openScheduleModal called');
   
   // Check if user is logged in and has visitor role
@@ -601,6 +623,7 @@ export function HomePage() {
     
     // Setup event listeners after button visibility is updated
     setupEventListeners();
+
   }, 100);
 
   return `    <div class="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8 md:py-12">
