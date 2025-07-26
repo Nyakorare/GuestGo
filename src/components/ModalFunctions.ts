@@ -1568,7 +1568,7 @@ export async function setupEventListeners() {
       // Count future visits
       const futureVisitCount = futureVisits?.length || 0;
 
-      // NEW LOGIC: Determine refresh slots based on previous week
+      // NEW LOGIC: Determine refresh slots based on previous week AND future schedules
       let refreshSlots = 2; // default: allow 2 visits
       // First, check previous week logic
       if (prevTotalCount > 0) {
@@ -1583,7 +1583,13 @@ export async function setupEventListeners() {
           refreshSlots = 2 - prevPendingCount; // e.g., 1 completed, 0 pending = 1 refresh
         }
       }
-      // Remove the futureVisitCount limiting logic
+
+      // Then, check if user has future schedules that would limit current week
+      if (futureVisitCount > 0) {
+        // If user has future schedules, they should only get 1 refresh slot
+        // This ensures they don't use up all their visits before reaching their scheduled dates
+        refreshSlots = Math.min(refreshSlots, 1);
+      }
 
       // Calculate remaining visits for this week
       const remainingVisits = Math.max(0, refreshSlots - visitCount);
@@ -1794,7 +1800,7 @@ export async function setupEventListeners() {
       // Count future visits
       const futureVisitCount = futureVisits?.length || 0;
 
-      // NEW LOGIC: Determine refresh slots based on previous week
+      // NEW LOGIC: Determine refresh slots based on previous week AND future schedules
       let refreshSlots = 2; // default: allow 2 visits
       
       // First, check previous week logic
@@ -1812,7 +1818,11 @@ export async function setupEventListeners() {
       }
 
       // Then, check if user has future schedules that would limit current week
-      // (REMOVED: do not limit refreshSlots based on futureVisitCount)
+      if (futureVisitCount > 0) {
+        // If user has future schedules, they should only get 1 refresh slot
+        // This ensures they don't use up all their visits before reaching their scheduled dates
+        refreshSlots = Math.min(refreshSlots, 1);
+      }
 
       // Calculate remaining visits for this week
       const remainingVisits = Math.max(0, refreshSlots - visitCount);

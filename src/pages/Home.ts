@@ -133,11 +133,12 @@ async function loadWeeklyVisitCount(userEmail: string) {
       .lte('visit_date', prevWeekEnd.toISOString());
 
     // Query for future schedules (next week and beyond within the month)
+    // Future visits should only be pending, not completed
     const { data: futureVisits, error: futureError } = await supabase
       .from('scheduled_visits')
       .select('visit_date, status')
       .eq('visitor_user_id', user.id)
-      .in('status', ['pending', 'completed'])
+      .eq('status', 'pending')
       .gte('visit_date', nextWeekStart.toISOString())
       .lte('visit_date', endOfMonth.toISOString());
 
@@ -163,9 +164,30 @@ async function loadWeeklyVisitCount(userEmail: string) {
     const prevCompletedCount = prevWeekVisits?.filter(v => v.status === 'completed').length || 0;
     const prevTotalCount = prevWeekVisits?.length || 0;
 
-    // Count future visits
+    // Count future visits (all future visits are pending since they haven't happened yet)
     const futureVisitCount = futureVisits?.length || 0;
-    const futurePendingCount = futureVisits?.filter(v => v.status === 'pending').length || 0;
+    
+    // Calculate total pending schedules (current week pending + future pending)
+    const totalPendingSchedules = pendingCount + futureVisitCount;
+    
+    // Calculate total completed visits (only current week completed, future visits can't be completed yet)
+    const totalCompletedSchedules = completedCount;
+    
+    // Debug logging to understand the counts
+    console.log('Weekly Visit Count Debug:', {
+      currentWeek: {
+        visitCount,
+        pendingCount,
+        completedCount
+      },
+      future: {
+        futureVisitCount
+      },
+      totals: {
+        totalPendingSchedules,
+        totalCompletedSchedules
+      }
+    });
 
     // NEW LOGIC: Determine refresh slots based on previous week AND future schedules
     let refreshSlots = 2; // default: allow 2 visits
@@ -185,7 +207,11 @@ async function loadWeeklyVisitCount(userEmail: string) {
     }
 
     // Then, check if user has future schedules that would limit current week
-    // (REMOVED: do not limit refreshSlots based on futureVisitCount)
+    if (futureVisitCount > 0) {
+      // If user has future schedules, they should only get 1 refresh slot
+      // This ensures they don't use up all their visits before reaching their scheduled dates
+      refreshSlots = Math.min(refreshSlots, 1);
+    }
 
     // Calculate remaining visits for this week
     const remainingVisits = Math.max(0, refreshSlots - visitCount);
@@ -216,21 +242,21 @@ async function loadWeeklyVisitCount(userEmail: string) {
         scheduleNowBtn.title = 'You have reached your weekly visit limit.';
       }
     } else if (remainingVisits === 2) {
-      statusHtml = `<span class="font-medium text-green-600 dark:text-green-400">2 visits remaining</span> (no scheduled visits)`;
+      statusHtml = `<span class="font-medium text-green-600 dark:text-green-400">2 visits remaining</span> (${totalPendingSchedules} pending, ${totalCompletedSchedules} completed)`;
       if (scheduleNowBtn) {
         scheduleNowBtn.removeAttribute('disabled');
         scheduleNowBtn.classList.remove('opacity-50', 'cursor-not-allowed');
         scheduleNowBtn.title = '';
       }
     } else if (remainingVisits === 1) {
-      statusHtml = `<span class="font-medium text-yellow-600 dark:text-yellow-400">1 visit remaining</span> (${pendingCount} pending, ${completedCount} completed)`;
+      statusHtml = `<span class="font-medium text-yellow-600 dark:text-yellow-400">1 visit remaining</span> (${totalPendingSchedules} pending, ${totalCompletedSchedules} completed)`;
       if (scheduleNowBtn) {
         scheduleNowBtn.removeAttribute('disabled');
         scheduleNowBtn.classList.remove('opacity-50', 'cursor-not-allowed');
         scheduleNowBtn.title = '';
       }
     } else {
-      statusHtml = `<span class="font-medium text-red-600 dark:text-red-400">No visits remaining</span> (${pendingCount} pending, ${completedCount} completed)`;
+      statusHtml = `<span class="font-medium text-red-600 dark:text-red-400">No visits remaining</span> (${totalPendingSchedules} pending, ${totalCompletedSchedules} completed)`;
       if (scheduleNowBtn) {
         scheduleNowBtn.setAttribute('disabled', 'true');
         scheduleNowBtn.classList.add('opacity-50', 'cursor-not-allowed');
@@ -238,15 +264,7 @@ async function loadWeeklyVisitCount(userEmail: string) {
       }
     }
 
-    // Add information about future schedules if they exist
-    if (futureVisitCount > 0) {
-      const futureDates = futureVisits?.map(v => new Date(v.visit_date).toLocaleDateString()).join(', ');
-      additionalInfo = `<div class="mt-1 text-xs text-blue-600 dark:text-blue-400">
-        Future schedules: ${futureVisitCount} visit(s) on ${futureDates}
-      </div>`;
-    }
-
-    weeklyVisitText.innerHTML = `<span class="block font-semibold">Week of ${weekRangeStr}</span>${statusHtml}${additionalInfo}`;
+    weeklyVisitText.innerHTML = `<span class="block font-semibold">Week of ${weekRangeStr}</span>${statusHtml}`;
 
     // Add a small note about the limit - be more specific to avoid duplicates
     const existingNote = weeklyVisitCountDiv.querySelector('.visit-limit-note');
