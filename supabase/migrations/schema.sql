@@ -852,7 +852,10 @@ RETURNS TABLE (
     place_completed_at TIMESTAMP WITH TIME ZONE,
     place_completed_by UUID,
     total_places BIGINT,
-    completed_places BIGINT
+    completed_places BIGINT,
+    gate_entrance_scanned BOOLEAN,
+    gate_entrance_scanned_at TIMESTAMP WITH TIME ZONE,
+    gate_entrance_scanned_by UUID
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -879,7 +882,10 @@ BEGIN
         svp.completed_at as place_completed_at,
         svp.completed_by as place_completed_by,
         (SELECT COUNT(*) FROM scheduled_visit_places svp2 WHERE svp2.visit_id = sv.id) as total_places,
-        (SELECT COUNT(*) FROM scheduled_visit_places svp3 WHERE svp3.visit_id = sv.id AND svp3.status = 'completed') as completed_places
+        (SELECT COUNT(*) FROM scheduled_visit_places svp3 WHERE svp3.visit_id = sv.id AND svp3.status = 'completed') as completed_places,
+        sv.gate_entrance_scanned,
+        sv.gate_entrance_scanned_at,
+        sv.gate_entrance_scanned_by
     FROM scheduled_visits sv
     JOIN scheduled_visit_places svp ON sv.id = svp.visit_id
     LEFT JOIN places_to_visit ptv ON svp.place_id = ptv.id
@@ -1331,7 +1337,10 @@ RETURNS TABLE (
     scheduled_at TIMESTAMP WITH TIME ZONE,
     completed_at TIMESTAMP WITH TIME ZONE,
     completed_by UUID,
-    places JSONB -- Changed to JSONB to include all places for this visit
+    places JSONB, -- Changed to JSONB to include all places for this visit
+    gate_entrance_scanned BOOLEAN,
+    gate_entrance_scanned_at TIMESTAMP WITH TIME ZONE,
+    gate_entrance_scanned_by UUID
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -1366,7 +1375,10 @@ BEGIN
             LEFT JOIN places_to_visit ptv ON svp.place_id = ptv.id
             WHERE svp.visit_id = sv.id),
             '[]'::jsonb
-        ) as places
+        ) as places,
+        sv.gate_entrance_scanned,
+        sv.gate_entrance_scanned_at,
+        sv.gate_entrance_scanned_by
     FROM scheduled_visits sv
     WHERE sv.visitor_user_id = p_visitor_user_id
     ORDER BY sv.visit_date DESC, sv.scheduled_at DESC;

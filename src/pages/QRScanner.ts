@@ -249,8 +249,20 @@ let scanCount = 0;
 let lastPerformanceUpdate = 0;
 let detectedQRData: string | null = null;
 let emptyQRTimeout: NodeJS.Timeout | null = null; // Timeout for empty QR detection
+let isGateScanning = false; // Flag to indicate if we're scanning for gate entrance
+let visitIdForGateScan: string | null = null; // Visit ID when scanning for gate entrance
 
 export function initializeQRScanner() {
+  // Check if we're scanning for gate entrance
+  const urlParams = new URLSearchParams(window.location.search);
+  const visitId = urlParams.get('visitId');
+  
+  if (visitId) {
+    isGateScanning = true;
+    visitIdForGateScan = visitId;
+    updateScannerForGateMode();
+  }
+  
   const startScanBtn = document.getElementById('startScanBtn');
   const stopScanBtn = document.getElementById('stopScanBtn');
   const switchCameraBtn = document.getElementById('switchCameraBtn');
@@ -279,6 +291,26 @@ export function initializeQRScanner() {
   setTimeout(() => {
     startScanner();
   }, 1000);
+}
+
+// Function to update scanner UI for gate scanning mode
+function updateScannerForGateMode() {
+  const scannerTitle = document.querySelector('#scannerSection h2');
+  const scannerDescription = document.querySelector('#scannerSection p');
+  
+  if (scannerTitle) {
+    scannerTitle.textContent = 'Scan Gate QR Code';
+  }
+  
+  if (scannerDescription) {
+    scannerDescription.textContent = 'Point your camera at a gate QR code to log your entrance';
+  }
+  
+  // Update the header title
+  const headerTitle = document.querySelector('h1');
+  if (headerTitle) {
+    headerTitle.textContent = 'Gate QR Code Scanner';
+  }
 }
 
 async function startScanner() {
@@ -796,6 +828,12 @@ async function processQRCodeData(qrData: string) {
     
     console.log('Processing QR data:', qrData);
     
+    // Check if we're in gate scanning mode
+    if (isGateScanning && visitIdForGateScan) {
+      await processGateQRCode(qrData);
+      return;
+    }
+    
     // Parse QR code data
     const visitData = parseQRCodeData(qrData);
     
@@ -819,6 +857,106 @@ async function processQRCodeData(qrData: string) {
   } catch (error) {
     console.error('Error processing QR code data:', error);
     showError('Invalid QR Code', 'The QR code data could not be processed.');
+  }
+}
+
+// Function to process gate QR code for entrance scanning
+async function processGateQRCode(qrData: string) {
+  try {
+    const parsed = JSON.parse(qrData);
+    
+    // Check if it's a gate QR code
+    if (parsed.type === 'gate' && parsed.id) {
+      // Process the gate scan
+      await processGateScan(parsed.id);
+    } else {
+      showError('Invalid Gate QR Code', 'This QR code is not a valid gate code. Please scan a gate QR code.');
+    }
+  } catch (error) {
+    console.error('Error processing gate QR code:', error);
+    showError('Invalid Gate QR Code', 'The gate QR code data could not be processed.');
+  }
+}
+
+// Function to process gate scan
+async function processGateScan(gateId: string) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      showError('Authentication Required', 'You must be logged in to scan gates.');
+      return;
+    }
+
+    if (!visitIdForGateScan) {
+      showError('Visit ID Missing', 'Visit ID is missing. Please try again.');
+      return;
+    }
+
+    // Call the gate scanning function
+    const { error } = await supabase.rpc('scan_gate_entrance', {
+      p_visit_id: visitIdForGateScan,
+      p_gate_id: gateId,
+      p_scanned_by: user.id
+    });
+
+    if (error) {
+      console.error('Error scanning gate:', error);
+      showError('Gate Scan Error', `Error scanning gate: ${error.message}`);
+      return;
+    }
+
+    // Show success message
+    showGateScanSuccess();
+  } catch (error) {
+    console.error('Error in processGateScan:', error);
+    showError('Gate Scan Error', 'Error processing gate scan.');
+  }
+}
+
+// Function to show gate scan success
+function showGateScanSuccess() {
+  const resultsSection = document.getElementById('resultsSection');
+  const scannerSection = document.getElementById('scannerSection');
+  const qrPreviewSection = document.getElementById('qrPreviewSection');
+  
+  if (resultsSection && scannerSection && qrPreviewSection) {
+    scannerSection.classList.add('hidden');
+    qrPreviewSection.classList.add('hidden');
+    resultsSection.classList.remove('hidden');
+    
+    resultsSection.innerHTML = `
+      <div class="flex flex-col sm:flex-row justify-between items-center mb-4 space-y-2 sm:space-y-0">
+        <h2 class="text-base sm:text-lg font-medium text-gray-900 dark:text-white">Gate Entrance Scanned Successfully!</h2>
+        <button 
+          id="backToDashboardBtn"
+          class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 text-sm font-medium"
+        >
+          Back to Dashboard
+        </button>
+      </div>
+      <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-green-800 dark:text-green-200">Gate entrance logged successfully!</h3>
+            <div class="mt-2 text-sm text-green-700 dark:text-green-300">
+              <p>Your gate entrance has been recorded for visit ID: ${visitIdForGateScan?.substring(0, 8)}...</p>
+              <p class="mt-1">You can now complete your visit in the dashboard.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Add event listener for back to dashboard button
+    const backBtn = document.getElementById('backToDashboardBtn');
+    backBtn?.addEventListener('click', () => {
+      window.location.hash = '/dashboard';
+    });
   }
 }
 
