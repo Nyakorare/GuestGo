@@ -855,7 +855,13 @@ RETURNS TABLE (
     completed_places BIGINT,
     gate_entrance_scanned BOOLEAN,
     gate_entrance_scanned_at TIMESTAMP WITH TIME ZONE,
-    gate_entrance_scanned_by UUID
+    gate_entrance_scanned_by UUID,
+    gate_exit_scanned BOOLEAN,
+    gate_exit_scanned_at TIMESTAMP WITH TIME ZONE,
+    gate_exit_scanned_by UUID,
+    flagged_for_no_exit BOOLEAN,
+    flagged_at TIMESTAMP WITH TIME ZONE,
+    flagged_by UUID
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -885,7 +891,13 @@ BEGIN
         (SELECT COUNT(*) FROM scheduled_visit_places svp3 WHERE svp3.visit_id = sv.id AND svp3.status = 'completed') as completed_places,
         sv.gate_entrance_scanned,
         sv.gate_entrance_scanned_at,
-        sv.gate_entrance_scanned_by
+        sv.gate_entrance_scanned_by,
+        sv.gate_exit_scanned,
+        sv.gate_exit_scanned_at,
+        sv.gate_exit_scanned_by,
+        sv.flagged_for_no_exit,
+        sv.flagged_at,
+        sv.flagged_by
     FROM scheduled_visits sv
     JOIN scheduled_visit_places svp ON sv.id = svp.visit_id
     LEFT JOIN places_to_visit ptv ON svp.place_id = ptv.id
@@ -1340,7 +1352,13 @@ RETURNS TABLE (
     places JSONB, -- Changed to JSONB to include all places for this visit
     gate_entrance_scanned BOOLEAN,
     gate_entrance_scanned_at TIMESTAMP WITH TIME ZONE,
-    gate_entrance_scanned_by UUID
+    gate_entrance_scanned_by UUID,
+    gate_exit_scanned BOOLEAN,
+    gate_exit_scanned_at TIMESTAMP WITH TIME ZONE,
+    gate_exit_scanned_by UUID,
+    flagged_for_no_exit BOOLEAN,
+    flagged_at TIMESTAMP WITH TIME ZONE,
+    flagged_by UUID
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -1378,7 +1396,13 @@ BEGIN
         ) as places,
         sv.gate_entrance_scanned,
         sv.gate_entrance_scanned_at,
-        sv.gate_entrance_scanned_by
+        sv.gate_entrance_scanned_by,
+        sv.gate_exit_scanned,
+        sv.gate_exit_scanned_at,
+        sv.gate_exit_scanned_by,
+        sv.flagged_for_no_exit,
+        sv.flagged_at,
+        sv.flagged_by
     FROM scheduled_visits sv
     WHERE sv.visitor_user_id = p_visitor_user_id
     ORDER BY sv.visit_date DESC, sv.scheduled_at DESC;
