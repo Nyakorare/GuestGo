@@ -5655,7 +5655,7 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
                   <span>Scan Gate</span>
                 </button>
               ` : ''}
-              ${isToday && visit.status === 'pending' && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' ? `
+              ${isToday && visit.status === 'pending' && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && completedPlaces === totalPlaces && totalPlaces > 0 ? `
                 <button 
                   onclick="scanGateExit('${visit.id}')"
                   class="px-3 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded-full text-xs font-medium hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors duration-200 flex items-center space-x-1"
@@ -5666,6 +5666,23 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
                   </svg>
                   <span>Scan Exit</span>
                 </button>
+              ` : ''}
+              ${isToday && visit.status === 'pending' && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && (completedPlaces < totalPlaces || totalPlaces === 0) ? `
+                <div class="flex flex-col items-end space-y-1">
+                  <button 
+                    disabled
+                    class="px-3 py-1 bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500 rounded-full text-xs font-medium cursor-not-allowed flex items-center space-x-1"
+                    title="All places must be completed by personnel before scanning exit gate"
+                  >
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                    </svg>
+                    <span>Scan Exit</span>
+                  </button>
+                  <span class="text-xs text-gray-500 dark:text-gray-400 text-right">
+                    Waiting for personnel to complete all places
+                  </span>
+                </div>
               ` : ''}
             </div>
           </div>
