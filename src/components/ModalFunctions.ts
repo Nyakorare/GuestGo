@@ -1281,7 +1281,7 @@ export async function setupEventListeners() {
           .select('id')
           .or(`visitor_email.eq.${userEmail},visitor_user_id.eq.${userId}`)
           .eq('visit_date', visitDateInput.value)
-          .in('status', ['pending', 'completed']);
+          .in('status', ['pending', 'completed', 'completed_flagged']);
         if (checkError) {
           console.error('Error checking for existing scheduled visit:', checkError);
         } else if (existingVisits && existingVisits.length > 0) {
@@ -1517,21 +1517,21 @@ export async function setupEventListeners() {
       const endOfMonth = new Date(philippineToday.getFullYear(), philippineToday.getMonth() + 1, 0);
       endOfMonth.setHours(23, 59, 59, 999);
 
-      // Query the database for all pending and completed visits for the current week
+      // Query the database for all pending, completed, and completed_flagged visits for the current week
       const { data: visits, error } = await supabase
         .from('scheduled_visits')
         .select('visit_date, status')
         .eq('visitor_user_id', user.id)
-        .in('status', ['pending', 'completed'])
+        .in('status', ['pending', 'completed', 'completed_flagged'])
         .gte('visit_date', weekStart.toISOString())
         .lte('visit_date', weekEnd.toISOString());
 
-      // Query the database for all pending and completed visits for the previous week
+      // Query the database for all pending, completed, and completed_flagged visits for the previous week
       const { data: prevWeekVisits, error: prevWeekError } = await supabase
         .from('scheduled_visits')
         .select('visit_date, status')
         .eq('visitor_user_id', user.id)
-        .in('status', ['pending', 'completed'])
+        .in('status', ['pending', 'completed', 'completed_flagged'])
         .gte('visit_date', prevWeekStart.toISOString())
         .lte('visit_date', prevWeekEnd.toISOString());
 
@@ -1540,7 +1540,7 @@ export async function setupEventListeners() {
         .from('scheduled_visits')
         .select('visit_date, status')
         .eq('visitor_user_id', user.id)
-        .in('status', ['pending', 'completed'])
+        .in('status', ['pending', 'completed', 'completed_flagged'])
         .gte('visit_date', nextWeekStart.toISOString())
         .lte('visit_date', endOfMonth.toISOString());
 
@@ -1555,14 +1555,16 @@ export async function setupEventListeners() {
         console.error('Error loading future visits for modal:', futureError);
       }
 
-      // Count the pending and completed visits for the current week
+      // Count the pending, completed, and completed_flagged visits for the current week
       const visitCount = visits?.length || 0;
       const pendingCount = visits?.filter(v => v.status === 'pending').length || 0;
       const completedCount = visits?.filter(v => v.status === 'completed').length || 0;
+      const completedFlaggedCount = visits?.filter(v => v.status === 'completed_flagged').length || 0;
 
-      // Count the pending and completed visits for the previous week
+      // Count the pending, completed, and completed_flagged visits for the previous week
       const prevPendingCount = prevWeekVisits?.filter(v => v.status === 'pending').length || 0;
       const prevCompletedCount = prevWeekVisits?.filter(v => v.status === 'completed').length || 0;
+      const prevCompletedFlaggedCount = prevWeekVisits?.filter(v => v.status === 'completed_flagged').length || 0;
       const prevTotalCount = prevWeekVisits?.length || 0;
 
       // Count future visits
@@ -1572,12 +1574,13 @@ export async function setupEventListeners() {
       let refreshSlots = 2; // default: allow 2 visits
       // First, check previous week logic
       if (prevTotalCount > 0) {
+        const prevCompletedTotal = prevCompletedCount + prevCompletedFlaggedCount;
         if (prevPendingCount === 2) {
           refreshSlots = 0; // 2 pending = no refresh
-        } else if (prevPendingCount === 1 && prevCompletedCount === 1) {
-          refreshSlots = 1; // 1 pending, 1 completed = 1 refresh
-        } else if (prevPendingCount === 0 && prevCompletedCount === 2) {
-          refreshSlots = 2; // 2 completed = 2 refresh
+        } else if (prevPendingCount === 1 && prevCompletedTotal === 1) {
+          refreshSlots = 1; // 1 pending, 1 completed (including flagged) = 1 refresh
+        } else if (prevPendingCount === 0 && prevCompletedTotal === 2) {
+          refreshSlots = 2; // 2 completed (including flagged) = 2 refresh
         } else {
           // For any other combination (e.g., only 1 visit last week)
           refreshSlots = 2 - prevPendingCount; // e.g., 1 completed, 0 pending = 1 refresh
@@ -1633,7 +1636,8 @@ export async function setupEventListeners() {
       weeklyVisitDiv.id = 'modalWeeklyVisitCount';
       weeklyVisitDiv.className = 'mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md';
       
-      let weekText = `(${pendingCount} pending, ${completedCount} completed)`;
+      const completedText = completedFlaggedCount > 0 ? `${completedCount + completedFlaggedCount} completed (${completedFlaggedCount} flagged)` : `${completedCount} completed`;
+      let weekText = `(${pendingCount} pending, ${completedText})`;
       if (futureVisitCount > 0) {
         weekText += ` • ${futureVisitCount} future schedule(s)`;
       }
@@ -1749,21 +1753,21 @@ export async function setupEventListeners() {
       const endOfMonth = new Date(philippineToday.getFullYear(), philippineToday.getMonth() + 1, 0);
       endOfMonth.setHours(23, 59, 59, 999);
 
-      // Query the database for all pending and completed visits for the current week
+      // Query the database for all pending, completed, and completed_flagged visits for the current week
       const { data: visits, error } = await supabase
         .from('scheduled_visits')
         .select('visit_date, status')
         .eq('visitor_user_id', user.id)
-        .in('status', ['pending', 'completed'])
+        .in('status', ['pending', 'completed', 'completed_flagged'])
         .gte('visit_date', weekStart.toISOString())
         .lte('visit_date', weekEnd.toISOString());
 
-      // Query the database for all pending and completed visits for the previous week
+      // Query the database for all pending, completed, and completed_flagged visits for the previous week
       const { data: prevWeekVisits, error: prevWeekError } = await supabase
         .from('scheduled_visits')
         .select('visit_date, status')
         .eq('visitor_user_id', user.id)
-        .in('status', ['pending', 'completed'])
+        .in('status', ['pending', 'completed', 'completed_flagged'])
         .gte('visit_date', prevWeekStart.toISOString())
         .lte('visit_date', prevWeekEnd.toISOString());
 
@@ -1772,7 +1776,7 @@ export async function setupEventListeners() {
         .from('scheduled_visits')
         .select('visit_date, status')
         .eq('visitor_user_id', user.id)
-        .in('status', ['pending', 'completed'])
+        .in('status', ['pending', 'completed', 'completed_flagged'])
         .gte('visit_date', nextWeekStart.toISOString())
         .lte('visit_date', endOfMonth.toISOString());
 
@@ -1787,14 +1791,16 @@ export async function setupEventListeners() {
         console.error('Error loading future visits for modal:', futureError);
       }
 
-      // Count the pending and completed visits for the current week
+      // Count the pending, completed, and completed_flagged visits for the current week
       const visitCount = visits?.length || 0;
       const pendingCount = visits?.filter(v => v.status === 'pending').length || 0;
       const completedCount = visits?.filter(v => v.status === 'completed').length || 0;
+      const completedFlaggedCount = visits?.filter(v => v.status === 'completed_flagged').length || 0;
 
-      // Count the pending and completed visits for the previous week
+      // Count the pending, completed, and completed_flagged visits for the previous week
       const prevPendingCount = prevWeekVisits?.filter(v => v.status === 'pending').length || 0;
       const prevCompletedCount = prevWeekVisits?.filter(v => v.status === 'completed').length || 0;
+      const prevCompletedFlaggedCount = prevWeekVisits?.filter(v => v.status === 'completed_flagged').length || 0;
       const prevTotalCount = prevWeekVisits?.length || 0;
 
       // Count future visits
@@ -1805,12 +1811,13 @@ export async function setupEventListeners() {
       
       // First, check previous week logic
       if (prevTotalCount > 0) {
+        const prevCompletedTotal = prevCompletedCount + prevCompletedFlaggedCount;
         if (prevPendingCount === 2) {
           refreshSlots = 0; // 2 pending = no refresh
-        } else if (prevPendingCount === 1 && prevCompletedCount === 1) {
-          refreshSlots = 1; // 1 pending, 1 completed = 1 refresh
-        } else if (prevPendingCount === 0 && prevCompletedCount === 2) {
-          refreshSlots = 2; // 2 completed = 2 refresh
+        } else if (prevPendingCount === 1 && prevCompletedTotal === 1) {
+          refreshSlots = 1; // 1 pending, 1 completed (including flagged) = 1 refresh
+        } else if (prevPendingCount === 0 && prevCompletedTotal === 2) {
+          refreshSlots = 2; // 2 completed (including flagged) = 2 refresh
         } else {
           // For any other combination (e.g., only 1 visit last week)
           refreshSlots = 2 - prevPendingCount; // e.g., 1 completed, 0 pending = 1 refresh
@@ -1862,7 +1869,8 @@ export async function setupEventListeners() {
       }
 
       // Completely recreate the modal content to prevent duplicates
-      let weekText = `(${pendingCount} pending, ${completedCount} completed)`;
+      const completedText = completedFlaggedCount > 0 ? `${completedCount + completedFlaggedCount} completed (${completedFlaggedCount} flagged)` : `${completedCount} completed`;
+      let weekText = `(${pendingCount} pending, ${completedText})`;
       // Optionally, show future schedules in a separate line, not in the main status
       let futureText = '';
       if (futureVisitCount > 0) {
@@ -1959,7 +1967,7 @@ export async function setupEventListeners() {
       .from('scheduled_visits')
       .select('visit_date, status')
       .eq('visitor_email', email)
-      .in('status', ['pending', 'completed'])
+      .in('status', ['pending', 'completed', 'completed_flagged'])
       .gte('visit_date', weekStart.toISOString())
       .lte('visit_date', weekEnd.toISOString());
 
@@ -1968,7 +1976,7 @@ export async function setupEventListeners() {
       .from('scheduled_visits')
       .select('visit_date, status')
       .eq('visitor_email', email)
-      .in('status', ['pending', 'completed'])
+      .in('status', ['pending', 'completed', 'completed_flagged'])
       .gte('visit_date', prevWeekStart.toISOString())
       .lte('visit_date', prevWeekEnd.toISOString());
 
@@ -1977,7 +1985,7 @@ export async function setupEventListeners() {
       .from('scheduled_visits')
       .select('visit_date, status')
       .eq('visitor_email', email)
-      .in('status', ['pending', 'completed'])
+      .in('status', ['pending', 'completed', 'completed_flagged'])
       .gte('visit_date', nextWeekStart.toISOString())
       .lte('visit_date', endOfMonth.toISOString());
 
@@ -1993,14 +2001,16 @@ export async function setupEventListeners() {
       console.error('Error loading future visits for guest:', futureError);
     }
 
-    // Count the pending and completed visits for the current week
+    // Count the pending, completed, and completed_flagged visits for the current week
     const visitCount = visits?.length || 0;
     const pendingCount = visits?.filter(v => v.status === 'pending').length || 0;
     const completedCount = visits?.filter(v => v.status === 'completed').length || 0;
+    const completedFlaggedCount = visits?.filter(v => v.status === 'completed_flagged').length || 0;
 
-    // Count the pending and completed visits for the previous week
+    // Count the pending, completed, and completed_flagged visits for the previous week
     const prevPendingCount = prevWeekVisits?.filter(v => v.status === 'pending').length || 0;
     const prevCompletedCount = prevWeekVisits?.filter(v => v.status === 'completed').length || 0;
+    const prevCompletedFlaggedCount = prevWeekVisits?.filter(v => v.status === 'completed_flagged').length || 0;
     const prevTotalCount = prevWeekVisits?.length || 0;
 
     // Count future visits
@@ -2011,12 +2021,13 @@ export async function setupEventListeners() {
     
     // First, check previous week logic
     if (prevTotalCount > 0) {
+      const prevCompletedTotal = prevCompletedCount + prevCompletedFlaggedCount;
       if (prevPendingCount === 2) {
         refreshSlots = 0; // 2 pending = no refresh
-      } else if (prevPendingCount === 1 && prevCompletedCount === 1) {
-        refreshSlots = 1; // 1 pending, 1 completed = 1 refresh
-      } else if (prevPendingCount === 0 && prevCompletedCount === 2) {
-        refreshSlots = 2; // 2 completed = 2 refresh
+      } else if (prevPendingCount === 1 && prevCompletedTotal === 1) {
+        refreshSlots = 1; // 1 pending, 1 completed (including flagged) = 1 refresh
+      } else if (prevPendingCount === 0 && prevCompletedTotal === 2) {
+        refreshSlots = 2; // 2 completed (including flagged) = 2 refresh
       } else {
         // For any other combination (e.g., only 1 visit last week)
         refreshSlots = 2 - prevPendingCount; // e.g., 1 completed, 0 pending = 1 refresh
@@ -2041,9 +2052,11 @@ export async function setupEventListeners() {
     } else if (remainingVisits === 2) {
       statusHtml = `<span class="font-medium text-green-600 dark:text-green-400">2 visits remaining</span> (no scheduled visits)`;
     } else if (remainingVisits === 1) {
-      statusHtml = `<span class="font-medium text-yellow-600 dark:text-yellow-400">1 visit remaining</span> (${pendingCount} pending, ${completedCount} completed)`;
+      const completedText = completedFlaggedCount > 0 ? `${completedCount + completedFlaggedCount} completed (${completedFlaggedCount} flagged)` : `${completedCount} completed`;
+      statusHtml = `<span class="font-medium text-yellow-600 dark:text-yellow-400">1 visit remaining</span> (${pendingCount} pending, ${completedText})`;
     } else {
-      statusHtml = `<span class="font-medium text-red-600 dark:text-red-400">No visits remaining</span> (${pendingCount} pending, ${completedCount} completed)`;
+      const completedText = completedFlaggedCount > 0 ? `${completedCount + completedFlaggedCount} completed (${completedFlaggedCount} flagged)` : `${completedCount} completed`;
+      statusHtml = `<span class="font-medium text-red-600 dark:text-red-400">No visits remaining</span> (${pendingCount} pending, ${completedText})`;
     }
 
     // Add information about future schedules if they exist

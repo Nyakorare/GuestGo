@@ -114,21 +114,21 @@ async function loadWeeklyVisitCount(userEmail: string) {
     const endOfMonth = new Date(philippineToday.getFullYear(), philippineToday.getMonth() + 1, 0);
     endOfMonth.setHours(23, 59, 59, 999);
 
-    // Query the database for all pending and completed visits for the current week
+    // Query the database for all pending, completed, and completed_flagged visits for the current week
     const { data: visits, error } = await supabase
       .from('scheduled_visits')
       .select('visit_date, status')
       .eq('visitor_user_id', user.id)
-      .in('status', ['pending', 'completed'])
+      .in('status', ['pending', 'completed', 'completed_flagged'])
       .gte('visit_date', weekStart.toISOString())
       .lte('visit_date', weekEnd.toISOString());
 
-    // Query the database for all pending and completed visits for the previous week
+    // Query the database for all pending, completed, and completed_flagged visits for the previous week
     const { data: prevWeekVisits, error: prevWeekError } = await supabase
       .from('scheduled_visits')
       .select('visit_date, status')
       .eq('visitor_user_id', user.id)
-      .in('status', ['pending', 'completed'])
+      .in('status', ['pending', 'completed', 'completed_flagged'])
       .gte('visit_date', prevWeekStart.toISOString())
       .lte('visit_date', prevWeekEnd.toISOString());
 
@@ -154,14 +154,16 @@ async function loadWeeklyVisitCount(userEmail: string) {
       console.error('Error loading future visits:', futureError);
     }
 
-    // Count the pending and completed visits for the current week
+    // Count the pending, completed, and completed_flagged visits for the current week
     const visitCount = visits?.length || 0;
     const pendingCount = visits?.filter(v => v.status === 'pending').length || 0;
     const completedCount = visits?.filter(v => v.status === 'completed').length || 0;
+    const completedFlaggedCount = visits?.filter(v => v.status === 'completed_flagged').length || 0;
 
-    // Count the pending and completed visits for the previous week
+    // Count the pending, completed, and completed_flagged visits for the previous week
     const prevPendingCount = prevWeekVisits?.filter(v => v.status === 'pending').length || 0;
     const prevCompletedCount = prevWeekVisits?.filter(v => v.status === 'completed').length || 0;
+    const prevCompletedFlaggedCount = prevWeekVisits?.filter(v => v.status === 'completed_flagged').length || 0;
     const prevTotalCount = prevWeekVisits?.length || 0;
 
     // Count future visits (all future visits are pending since they haven't happened yet)
@@ -170,15 +172,16 @@ async function loadWeeklyVisitCount(userEmail: string) {
     // Calculate total pending schedules (current week pending + future pending)
     const totalPendingSchedules = pendingCount + futureVisitCount;
     
-    // Calculate total completed visits (only current week completed, future visits can't be completed yet)
-    const totalCompletedSchedules = completedCount;
+    // Calculate total completed visits (current week completed + completed_flagged, future visits can't be completed yet)
+    const totalCompletedSchedules = completedCount + completedFlaggedCount;
     
     // Debug logging to understand the counts
     console.log('Weekly Visit Count Debug:', {
       currentWeek: {
         visitCount,
         pendingCount,
-        completedCount
+        completedCount,
+        completedFlaggedCount
       },
       future: {
         futureVisitCount
@@ -194,12 +197,13 @@ async function loadWeeklyVisitCount(userEmail: string) {
     
     // First, check previous week logic
     if (prevTotalCount > 0) {
+      const prevCompletedTotal = prevCompletedCount + prevCompletedFlaggedCount;
       if (prevPendingCount === 2) {
         refreshSlots = 0; // 2 pending = no refresh
-      } else if (prevPendingCount === 1 && prevCompletedCount === 1) {
-        refreshSlots = 1; // 1 pending, 1 completed = 1 refresh
-      } else if (prevPendingCount === 0 && prevCompletedCount === 2) {
-        refreshSlots = 2; // 2 completed = 2 refresh
+      } else if (prevPendingCount === 1 && prevCompletedTotal === 1) {
+        refreshSlots = 1; // 1 pending, 1 completed (including flagged) = 1 refresh
+      } else if (prevPendingCount === 0 && prevCompletedTotal === 2) {
+        refreshSlots = 2; // 2 completed (including flagged) = 2 refresh
       } else {
         // For any other combination (e.g., only 1 visit last week)
         refreshSlots = 2 - prevPendingCount; // e.g., 1 completed, 0 pending = 1 refresh
@@ -242,21 +246,24 @@ async function loadWeeklyVisitCount(userEmail: string) {
         scheduleNowBtn.title = 'You have reached your weekly visit limit.';
       }
     } else if (remainingVisits === 2) {
-      statusHtml = `<span class="font-medium text-green-600 dark:text-green-400">2 visits remaining</span> (${totalPendingSchedules} pending, ${totalCompletedSchedules} completed)`;
+      const completedText = completedFlaggedCount > 0 ? `${totalCompletedSchedules} completed (${completedFlaggedCount} flagged)` : `${totalCompletedSchedules} completed`;
+      statusHtml = `<span class="font-medium text-green-600 dark:text-green-400">2 visits remaining</span> (${totalPendingSchedules} pending, ${completedText})`;
       if (scheduleNowBtn) {
         scheduleNowBtn.removeAttribute('disabled');
         scheduleNowBtn.classList.remove('opacity-50', 'cursor-not-allowed');
         scheduleNowBtn.title = '';
       }
     } else if (remainingVisits === 1) {
-      statusHtml = `<span class="font-medium text-yellow-600 dark:text-yellow-400">1 visit remaining</span> (${totalPendingSchedules} pending, ${totalCompletedSchedules} completed)`;
+      const completedText = completedFlaggedCount > 0 ? `${totalCompletedSchedules} completed (${completedFlaggedCount} flagged)` : `${totalCompletedSchedules} completed`;
+      statusHtml = `<span class="font-medium text-yellow-600 dark:text-yellow-400">1 visit remaining</span> (${totalPendingSchedules} pending, ${completedText})`;
       if (scheduleNowBtn) {
         scheduleNowBtn.removeAttribute('disabled');
         scheduleNowBtn.classList.remove('opacity-50', 'cursor-not-allowed');
         scheduleNowBtn.title = '';
       }
     } else {
-      statusHtml = `<span class="font-medium text-red-600 dark:text-red-400">No visits remaining</span> (${totalPendingSchedules} pending, ${totalCompletedSchedules} completed)`;
+      const completedText = completedFlaggedCount > 0 ? `${totalCompletedSchedules} completed (${completedFlaggedCount} flagged)` : `${totalCompletedSchedules} completed`;
+      statusHtml = `<span class="font-medium text-red-600 dark:text-red-400">No visits remaining</span> (${totalPendingSchedules} pending, ${completedText})`;
       if (scheduleNowBtn) {
         scheduleNowBtn.setAttribute('disabled', 'true');
         scheduleNowBtn.classList.add('opacity-50', 'cursor-not-allowed');
@@ -419,7 +426,7 @@ async function loadWeeklyVisitCount(userEmail: string) {
       .from('scheduled_visits')
       .select('*')
       .eq('visitor_user_id', user.id)
-      .in('status', ['pending', 'completed']);
+      .in('status', ['pending', 'completed', 'completed_flagged']);
 
     console.log('Active visits (pending + completed):', activeVisits);
     console.log('Active visits count:', activeVisits?.length || 0);
