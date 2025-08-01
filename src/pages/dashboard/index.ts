@@ -1511,6 +1511,7 @@ async function renderLogs(): Promise<void> {
                     log.displayAction === 'personnel_availability_change' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' :
                     log.displayAction === 'visit_scheduled' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' :
                     log.displayAction === 'visit_completed' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
+                    log.displayAction === 'visit_completed_flagged' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
                     log.displayAction === 'visit_unsuccessful' ? 'bg-gray-200 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
                     log.displayAction === 'gate_create' ? 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200' :
                     log.displayAction === 'gate_update' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
@@ -1567,6 +1568,7 @@ async function renderLogs(): Promise<void> {
                     log.displayAction === 'personnel_availability_change' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' :
                     log.displayAction === 'visit_scheduled' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' :
                     log.displayAction === 'visit_completed' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
+                    log.displayAction === 'visit_completed_flagged' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
                     log.displayAction === 'visit_unsuccessful' ? 'bg-gray-200 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
                     log.displayAction === 'gate_create' ? 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200' :
                     log.displayAction === 'gate_update' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
@@ -1915,6 +1917,7 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
         const flaggedTime = parsedDetails.flagged_at ? new Date(parsedDetails.flagged_at).toLocaleString() : 'Unknown time';
         const flaggedReason = parsedDetails.reason || 'No exit scan recorded';
         return `<div><span class="font-medium">Visitor:</span> ${flaggedVisitorName}</div><div><span class="font-medium">Flagged at:</span> ${flaggedTime}</div><div><span class="font-medium">Reason:</span> <span class="text-red-600 dark:text-red-400">${flaggedReason}</span></div>`;
+
 
       case 'visit_completed':
         const completedVisitPlaceName = await getPlaceName(parsedDetails.place_id);
@@ -5728,7 +5731,7 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
                   <span>Scan Gate</span>
                 </button>
               ` : ''}
-              ${isToday && visit.status === 'pending' && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && completedPlaces === totalPlaces && totalPlaces > 0 ? `
+              ${isToday && (visit.status === 'pending' || visit.status === 'completed_flagged') && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && completedPlaces === totalPlaces && totalPlaces > 0 ? `
                 <button 
                   onclick="scanGateExit('${visit.id}')"
                   class="px-3 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded-full text-xs font-medium hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors duration-200 flex items-center space-x-1"
@@ -5740,7 +5743,7 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
                   <span>Scan Exit</span>
                 </button>
               ` : ''}
-              ${isToday && visit.status === 'pending' && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && (completedPlaces < totalPlaces || totalPlaces === 0) ? `
+              ${isToday && (visit.status === 'pending' || visit.status === 'completed_flagged') && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && (completedPlaces < totalPlaces || totalPlaces === 0) ? `
                 <div class="flex flex-col items-end space-y-1">
                   <button 
                     disabled

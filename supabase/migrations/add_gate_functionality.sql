@@ -547,9 +547,9 @@ BEGIN
         RAISE EXCEPTION 'This gate does not allow exit scanning';
     END IF;
     
-    -- Check if visit is pending (visitor should scan exit to complete the visit)
-    IF visit_record.status != 'pending' THEN
-        RAISE EXCEPTION 'Visit must be pending before scanning gate exit';
+    -- Check if visit is pending or completed_flagged (visitor should scan exit to complete the visit)
+    IF visit_record.status NOT IN ('pending', 'completed_flagged') THEN
+        RAISE EXCEPTION 'Visit must be pending or completed (flagged) before scanning gate exit';
     END IF;
     
     -- Insert gate scan record
@@ -924,12 +924,8 @@ DECLARE
     visit_record RECORD;
     place_record RECORD;
     personnel_role user_role;
-    log_id UUID;
     visitor_name TEXT;
     place_name VARCHAR(255);
-    total_places INTEGER;
-    completed_places INTEGER;
-    new_completed_places INTEGER;
 BEGIN
     -- Check if the user completing is personnel
     SELECT role INTO personnel_role 
@@ -968,29 +964,6 @@ BEGIN
     -- Get place name and visitor name for logging
     SELECT name INTO place_name FROM places_to_visit WHERE id = p_place_id;
     visitor_name := visit_record.visitor_first_name || ' ' || visit_record.visitor_last_name;
-    
-    -- Get completion statistics
-    SELECT COUNT(*) INTO total_places FROM scheduled_visit_places WHERE visit_id = p_visit_id;
-    SELECT COUNT(*) INTO completed_places FROM scheduled_visit_places WHERE visit_id = p_visit_id AND status = 'completed';
-    new_completed_places := completed_places + 1;
-    
-    -- Log the place completion
-    log_id := public.log_action(
-        p_completed_by,
-        'visit_place_completed',
-        jsonb_build_object(
-            'visit_id', p_visit_id,
-            'place_id', p_place_id,
-            'place_name', place_name,
-            'visitor_name', visitor_name,
-            'visitor_email', visit_record.visitor_email,
-            'completed_at', public.get_philippine_timestamp(),
-            'completed_by', p_completed_by,
-            'total_places', total_places,
-            'completed_places', new_completed_places,
-            'remaining_places', total_places - new_completed_places
-        )
-    );
     
     RETURN TRUE;
 END;
