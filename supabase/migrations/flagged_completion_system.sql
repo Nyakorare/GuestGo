@@ -1,23 +1,34 @@
--- Add support for "completed (flagged)" status for visits without exit scans
+-- Complete flagged completion system for visits without exit scans
+-- This combines the initial system creation and the updated end-of-day logic
 
 -- Add new status to visit_status enum
 ALTER TYPE visit_status ADD VALUE IF NOT EXISTS 'completed_flagged';
 
 -- Create function to update visit status to completed_flagged when all places are completed but no exit scan
+-- Updated to only run at end of day (23:59:59 Philippine time)
 CREATE OR REPLACE FUNCTION public.update_completed_flagged_visits()
 RETURNS INTEGER AS $$
 DECLARE
     updated_count INTEGER := 0;
     visit_record RECORD;
     philippine_date DATE;
+    philippine_timestamp TIMESTAMP WITH TIME ZONE;
+    end_of_day_time TIME := '23:59:59';
     log_row RECORD;
     new_history JSONB;
     place_details JSONB;
 BEGIN
-    -- Get current Philippine date
+    -- Get current Philippine date and timestamp
     philippine_date := public.get_philippine_date();
+    philippine_timestamp := public.get_philippine_timestamp();
+    
+    -- Only proceed if it's past end of day (23:59:59 Philippine time)
+    IF philippine_timestamp::TIME <= end_of_day_time THEN
+        RETURN 0; -- Not end of day yet, don't update anything
+    END IF;
     
     -- Find visits that are pending, have all places completed, but no exit scan
+    -- AND it's the end of the day
     FOR visit_record IN 
         SELECT sv.*, 
                COUNT(svp.id) as total_places,
@@ -35,7 +46,7 @@ BEGIN
         UPDATE scheduled_visits 
         SET 
             status = 'completed_flagged',
-            completed_at = public.get_philippine_timestamp(),
+            completed_at = philippine_timestamp,
             completed_by = visit_record.completed_by
         WHERE id = visit_record.id;
         
@@ -63,14 +74,15 @@ BEGIN
             new_history := (log_row.details->'history') || jsonb_build_array(
                 jsonb_build_object(
                     'event', 'completed_flagged',
-                    'timestamp', public.get_philippine_timestamp(),
+                    'timestamp', philippine_timestamp,
                     'details', jsonb_build_object(
                         'by', 'system',
-                        'reason', 'All places completed by personnel but visitor did not scan exit gate',
+                        'reason', 'All places completed by personnel but visitor did not scan exit gate by end of day',
                         'total_places', visit_record.total_places,
                         'completed_places', visit_record.completed_places,
                         'places', place_details,
-                        'note', 'Visit completed (flagged) - personnel finished their part but visitor did not scan exit'
+                        'note', 'Visit completed (flagged) at end of day - personnel finished their part but visitor did not scan exit',
+                        'end_of_day_marked', true
                     )
                 )
             );
@@ -93,13 +105,14 @@ BEGIN
                     'visit_date', visit_record.visit_date,
                     'purpose', visit_record.purpose,
                     'is_guest', visit_record.visitor_role = 'guest',
-                    'completed_at', public.get_philippine_timestamp(),
+                    'completed_at', philippine_timestamp,
                     'completed_by', visit_record.completed_by,
                     'status', 'completed_flagged',
                     'places', place_details,
                     'total_places', visit_record.total_places,
                     'completed_places', visit_record.completed_places,
-                    'note', 'Visit completed (flagged) - personnel finished their part but visitor did not scan exit'
+                    'note', 'Visit completed (flagged) at end of day - personnel finished their part but visitor did not scan exit',
+                    'end_of_day_marked', true
                 )
             );
         END IF;
@@ -203,7 +216,130 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Update the mark_past_visits_unsuccessful function to handle completed_flagged visits
+-- Update the complete_visit function to ensure visits with exit scans are marked as completed
+CREATE OR REPLACE FUNCTION public.complete_visit(
+    p_visit_id UUID,
+    p_completed_by UUID
+)
+RETURNS BOOLEAN AS $$
+DECLARE
+    visit_record RECORD;
+    personnel_role user_role;
+    visitor_name TEXT;
+    place_details JSONB;
+    total_places INTEGER;
+    completed_places INTEGER;
+    log_id UUID;
+BEGIN
+    -- Check if the user completing is personnel
+    SELECT role INTO personnel_role 
+    FROM user_roles 
+    WHERE user_id = p_completed_by;
+    
+    IF personnel_role NOT IN ('personnel', 'admin') THEN
+        RAISE EXCEPTION 'Only personnel can complete visits';
+    END IF;
+    
+    -- Get visit details
+    SELECT * INTO visit_record FROM scheduled_visits WHERE id = p_visit_id;
+    IF visit_record.id IS NULL THEN
+        RAISE EXCEPTION 'Visit not found';
+    END IF;
+    
+    -- Check if visit is already completed
+    IF visit_record.status IN ('completed', 'completed_flagged', 'unsuccessful') THEN
+        RAISE EXCEPTION 'Visit is already completed or marked as unsuccessful';
+    END IF;
+    
+    -- Get place completion statistics
+    SELECT 
+        COUNT(*) INTO total_places
+    FROM scheduled_visit_places 
+    WHERE visit_id = p_visit_id;
+    
+    SELECT 
+        COUNT(*) INTO completed_places
+    FROM scheduled_visit_places 
+    WHERE visit_id = p_visit_id AND status = 'completed';
+    
+    -- Check if all places are completed
+    IF completed_places < total_places THEN
+        RAISE EXCEPTION 'Cannot complete visit - not all places are completed';
+    END IF;
+    
+    -- Get place details for logging
+    SELECT 
+        jsonb_agg(
+            jsonb_build_object(
+                'place_id', svp.place_id,
+                'place_name', ptv.name,
+                'place_location', ptv.location,
+                'status', svp.status,
+                'completed_at', svp.completed_at,
+                'completed_by', svp.completed_by
+            )
+        ) INTO place_details
+    FROM scheduled_visit_places svp
+    LEFT JOIN places_to_visit ptv ON svp.place_id = ptv.id
+    WHERE svp.visit_id = p_visit_id;
+    
+    -- Determine visit status based on gate exit scan
+    IF visit_record.gate_exit_scanned THEN
+        -- Visitor scanned exit, mark as completed
+        UPDATE scheduled_visits 
+        SET 
+            status = 'completed',
+            completed_at = public.get_philippine_timestamp(),
+            completed_by = p_completed_by
+        WHERE id = p_visit_id;
+    ELSE
+        -- No exit scan, but it's not end of day yet, so keep as pending
+        -- The visit will be marked as completed_flagged at end of day by update_completed_flagged_visits()
+        UPDATE scheduled_visits 
+        SET 
+            status = 'pending', -- Keep as pending until end of day
+            completed_at = NULL,
+            completed_by = NULL
+        WHERE id = p_visit_id;
+        
+        -- Return early since we're not actually completing the visit yet
+        RETURN TRUE;
+    END IF;
+    
+    -- Get visitor name for logging
+    visitor_name := visit_record.visitor_first_name || ' ' || visit_record.visitor_last_name;
+    
+    -- Log the visit completion
+    log_id := public.log_action(
+        p_completed_by,
+        'visit_completed',
+        jsonb_build_object(
+            'visit_id', p_visit_id,
+            'visitor_name', visitor_name,
+            'visitor_email', visit_record.visitor_email,
+            'visitor_role', visit_record.visitor_role,
+            'visit_date', visit_record.visit_date,
+            'purpose', visit_record.purpose,
+            'is_guest', visit_record.visitor_role = 'guest',
+            'completed_at', public.get_philippine_timestamp(),
+            'completed_by', p_completed_by,
+            'status', CASE WHEN visit_record.gate_exit_scanned THEN 'completed' ELSE 'pending' END,
+            'places', place_details,
+            'total_places', total_places,
+            'completed_places', completed_places,
+            'gate_exit_scanned', visit_record.gate_exit_scanned,
+            'note', CASE 
+                WHEN visit_record.gate_exit_scanned THEN 'Visit completed normally with exit scan'
+                ELSE 'Visit places completed but no exit scan - will be flagged at end of day if no exit scan'
+            END
+        )
+    );
+    
+    RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Update the mark_past_visits_unsuccessful function to handle the new logic
 CREATE OR REPLACE FUNCTION public.mark_past_visits_unsuccessful()
 RETURNS INTEGER AS $$
 DECLARE
@@ -225,7 +361,7 @@ BEGIN
     philippine_date := public.get_philippine_date();
     philippine_timestamp := public.get_philippine_timestamp();
     
-    -- First, update completed_flagged visits for today
+    -- First, update completed_flagged visits for today (only at end of day)
     PERFORM public.update_completed_flagged_visits();
     
     -- Mark pending visits from past dates as unsuccessful
@@ -385,5 +521,5 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Create indexes for better performance (without using the new enum value in the same transaction)
+-- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_scheduled_visits_status_visit_date ON scheduled_visits(status, visit_date); 

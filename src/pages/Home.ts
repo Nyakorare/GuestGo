@@ -47,6 +47,8 @@ async function loadWeeklyVisitCount(userEmail: string) {
     // Check if user has visitor role
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+    
+    console.log('Current user:', { id: user.id, email: user.email });
 
     try {
       const { data: roleData } = await supabase
@@ -55,8 +57,11 @@ async function loadWeeklyVisitCount(userEmail: string) {
         .eq('user_id', user.id)
         .single();
       
+      console.log('User role data:', roleData);
+      
       // Only show weekly visit count for visitor roles
       if (roleData?.role !== 'visitor') {
+        console.log('User is not a visitor, hiding weekly visit count');
         weeklyVisitCountDiv.classList.add('hidden');
         return;
       }
@@ -93,6 +98,13 @@ async function loadWeeklyVisitCount(userEmail: string) {
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
     weekEnd.setHours(23, 59, 59, 999);
+    
+    console.log('Date ranges:', {
+      philippineToday: philippineToday.toISOString().split('T')[0],
+      weekStart: weekStart.toISOString().split('T')[0],
+      weekEnd: weekEnd.toISOString().split('T')[0],
+      queryEndDate: philippineToday.toISOString().split('T')[0]
+    });
 
     // Calculate previous week boundaries
     const prevWeekStart = new Date(weekStart);
@@ -115,19 +127,38 @@ async function loadWeeklyVisitCount(userEmail: string) {
     endOfMonth.setHours(23, 59, 59, 999);
 
     // Query the database for all pending, completed, and completed_flagged visits for the current week
+    // Only include visits that are today or in the past (not future visits within the current week)
+    // Check both by user ID and email to handle cases where user_id might be null
     const { data: visits, error } = await supabase
       .from('scheduled_visits')
       .select('visit_date, status')
-      .eq('visitor_user_id', user.id)
+      .or(`visitor_user_id.eq.${user.id},visitor_email.eq.${user.email}`)
       .in('status', ['pending', 'completed', 'completed_flagged'])
       .gte('visit_date', weekStart.toISOString())
-      .lte('visit_date', weekEnd.toISOString());
+      .lte('visit_date', philippineToday.toISOString().split('T')[0]); // Only up to today
+
+    // Query for ALL pending visits (including future weeks) for this user
+    const { data: allPendingVisits, error: allPendingError } = await supabase
+      .from('scheduled_visits')
+      .select('visit_date, status')
+      .or(`visitor_user_id.eq.${user.id},visitor_email.eq.${user.email}`)
+      .eq('status', 'pending');
+
+    // Debug: Also get all visits for this user to see what's in the database
+    const { data: allVisits, error: allVisitsError } = await supabase
+      .from('scheduled_visits')
+      .select('visit_date, status, visitor_first_name, visitor_last_name, visitor_email, visitor_user_id')
+      .or(`visitor_user_id.eq.${user.id},visitor_email.eq.${user.email}`)
+      .order('visit_date', { ascending: true });
+    
+    console.log('All visits for user (ID or email):', allVisits);
+    console.log('Current week visits (filtered):', visits);
 
     // Query the database for all pending, completed, and completed_flagged visits for the previous week
     const { data: prevWeekVisits, error: prevWeekError } = await supabase
       .from('scheduled_visits')
       .select('visit_date, status')
-      .eq('visitor_user_id', user.id)
+      .or(`visitor_user_id.eq.${user.id},visitor_email.eq.${user.email}`)
       .in('status', ['pending', 'completed', 'completed_flagged'])
       .gte('visit_date', prevWeekStart.toISOString())
       .lte('visit_date', prevWeekEnd.toISOString());
@@ -137,7 +168,7 @@ async function loadWeeklyVisitCount(userEmail: string) {
     const { data: futureVisits, error: futureError } = await supabase
       .from('scheduled_visits')
       .select('visit_date, status')
-      .eq('visitor_user_id', user.id)
+      .or(`visitor_user_id.eq.${user.id},visitor_email.eq.${user.email}`)
       .eq('status', 'pending')
       .gte('visit_date', nextWeekStart.toISOString())
       .lte('visit_date', endOfMonth.toISOString());
@@ -146,6 +177,9 @@ async function loadWeeklyVisitCount(userEmail: string) {
       console.error('Error loading weekly visit count:', error);
       weeklyVisitText.textContent = 'Error loading visit count';
       return;
+    }
+    if (allPendingError) {
+      console.error('Error loading all pending visits:', allPendingError);
     }
     if (prevWeekError) {
       console.error('Error loading previous week visits:', prevWeekError);
@@ -160,6 +194,9 @@ async function loadWeeklyVisitCount(userEmail: string) {
     const completedCount = visits?.filter(v => v.status === 'completed').length || 0;
     const completedFlaggedCount = visits?.filter(v => v.status === 'completed_flagged').length || 0;
 
+    // Count ALL pending visits (including future weeks)
+    const totalPendingCount = allPendingVisits?.length || 0;
+
     // Count the pending, completed, and completed_flagged visits for the previous week
     const prevPendingCount = prevWeekVisits?.filter(v => v.status === 'pending').length || 0;
     const prevCompletedCount = prevWeekVisits?.filter(v => v.status === 'completed').length || 0;
@@ -169,11 +206,14 @@ async function loadWeeklyVisitCount(userEmail: string) {
     // Count future visits (all future visits are pending since they haven't happened yet)
     const futureVisitCount = futureVisits?.length || 0;
     
-    // Calculate total pending schedules (current week pending + future pending)
-    const totalPendingSchedules = pendingCount + futureVisitCount;
+    // Calculate total pending schedules (ALL pending visits, including future weeks)
+    const totalPendingSchedules = totalPendingCount;
     
     // Calculate total completed visits (current week completed + completed_flagged, future visits can't be completed yet)
     const totalCompletedSchedules = completedCount + completedFlaggedCount;
+    
+    // Calculate total visits for this week (up to today only)
+    const totalWeekVisits = totalPendingSchedules + totalCompletedSchedules;
     
     // Debug logging to understand the counts
     console.log('Weekly Visit Count Debug:', {
@@ -183,19 +223,25 @@ async function loadWeeklyVisitCount(userEmail: string) {
         completedCount,
         completedFlaggedCount
       },
+      allPending: {
+        totalPendingCount
+      },
       future: {
         futureVisitCount
       },
       totals: {
         totalPendingSchedules,
         totalCompletedSchedules
-      }
+      },
+      philippineToday: philippineToday.toISOString().split('T')[0],
+      weekStart: weekStart.toISOString().split('T')[0],
+      weekEnd: weekEnd.toISOString().split('T')[0]
     });
 
-    // NEW LOGIC: Determine refresh slots based on previous week AND future schedules
+    // SIMPLIFIED LOGIC: Determine refresh slots based on previous week
     let refreshSlots = 2; // default: allow 2 visits
     
-    // First, check previous week logic
+    // Check previous week logic
     if (prevTotalCount > 0) {
       const prevCompletedTotal = prevCompletedCount + prevCompletedFlaggedCount;
       if (prevPendingCount === 2) {
@@ -210,15 +256,8 @@ async function loadWeeklyVisitCount(userEmail: string) {
       }
     }
 
-    // Then, check if user has future schedules that would limit current week
-    if (futureVisitCount > 0) {
-      // If user has future schedules, they should only get 1 refresh slot
-      // This ensures they don't use up all their visits before reaching their scheduled dates
-      refreshSlots = Math.min(refreshSlots, 1);
-    }
-
-    // Calculate remaining visits for this week
-    const remainingVisits = Math.max(0, refreshSlots - visitCount);
+    // Calculate remaining visits for this week (only count visits up to today)
+    const remainingVisits = Math.max(0, 2 - totalWeekVisits);
 
     // Format the week range for display (e.g., July 6-12, 2025)
     const weekStartMonth = weekStart.toLocaleString('en-US', { month: 'short' });
@@ -237,6 +276,10 @@ async function loadWeeklyVisitCount(userEmail: string) {
     let statusHtml = '';
     let additionalInfo = '';
     const scheduleNowBtn = document.getElementById('scheduleNowBtn');
+    
+    // Add debug info to help understand the counts
+    const debugInfo = `[Debug: ${totalWeekVisits} total this week, ${pendingCount} pending, ${completedCount} completed, ${completedFlaggedCount} flagged, ${remainingVisits} remaining]`;
+    console.log(debugInfo);
     
     if (refreshSlots === 0) {
       statusHtml = `<span class="font-medium text-gray-600 dark:text-gray-400">No new visits allowed until previous week is cleared</span>`;

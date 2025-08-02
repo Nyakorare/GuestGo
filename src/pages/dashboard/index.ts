@@ -4016,7 +4016,7 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
         ` : visit.status === 'completed_flagged' && visitDateStr < todayStr ? `
           <div class="flex justify-end space-x-2">
             <div class="px-4 py-2 bg-orange-100 text-orange-700 rounded-md text-sm font-medium">
-              ⚠️ Visit completed (flagged) - No exit scan
+              ⚠️ Visit completed (flagged) - No exit scan by end of day
             </div>
             <button 
               onclick="showFlaggedVisitDetails('${visit.visit_id}')"
@@ -4024,6 +4024,12 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
             >
               Details
             </button>
+          </div>
+        ` : visit.status === 'pending' && visitDateStr === todayStr && visit.total_places > 0 && visit.completed_places === visit.total_places && !visit.gate_exit_scanned ? `
+          <div class="flex justify-end">
+            <div class="px-4 py-2 bg-yellow-100 text-yellow-700 rounded-md text-sm font-medium">
+              ⏳ All places completed - waiting for exit scan or end of day
+            </div>
           </div>
         ` : ''}
       </div>
@@ -5731,7 +5737,7 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
                   <span>Scan Gate</span>
                 </button>
               ` : ''}
-              ${isToday && (visit.status === 'pending' || visit.status === 'completed_flagged') && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && completedPlaces === totalPlaces && totalPlaces > 0 ? `
+              ${isToday && visit.status === 'pending' && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && completedPlaces === totalPlaces && totalPlaces > 0 ? `
                 <button 
                   onclick="scanGateExit('${visit.id}')"
                   class="px-3 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded-full text-xs font-medium hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors duration-200 flex items-center space-x-1"
@@ -5743,7 +5749,7 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
                   <span>Scan Exit</span>
                 </button>
               ` : ''}
-              ${isToday && (visit.status === 'pending' || visit.status === 'completed_flagged') && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && (completedPlaces < totalPlaces || totalPlaces === 0) ? `
+              ${isToday && visit.status === 'pending' && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && (completedPlaces < totalPlaces || totalPlaces === 0) ? `
                 <div class="flex flex-col items-end space-y-1">
                   <button 
                     disabled
@@ -5938,7 +5944,8 @@ async function displayVisitorPastVisits(visits: any[]): Promise<void> {
                 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
               }">
                 ${visit.status === 'failed' ? 'Failed' : 
-                  visit.status === 'completed_flagged' ? 'Visit completed (flagged)' : 
+                  visit.status === 'completed_flagged' ? 'Visit completed (flagged) - No exit scan by end of day' : 
+                  visit.status === 'pending' && isToday && completedPlaces === totalPlaces && totalPlaces > 0 && !visit.gate_exit_scanned ? 'Pending - All places completed, waiting for exit scan' :
                   visit.status.charAt(0).toUpperCase() + visit.status.slice(1)}
               </span>
             </div>
@@ -6266,7 +6273,7 @@ function displayFinishedVisits(visits: any[]): void {
           </div>
           <div class="flex space-x-2">
             <span class="px-2 py-1 rounded-full text-xs font-medium ${(statusColors as any)[visit.status] || statusColors.completed}">
-              ${visit.status === 'completed_flagged' ? 'Visit completed (flagged)' : visit.status}
+              ${visit.status === 'completed_flagged' ? 'Visit completed (flagged) - No exit scan by end of day' : visit.status}
             </span>
             <span class="px-2 py-1 rounded-full text-xs font-medium ${(roleColors as any)[visitorRole] || roleColors.guest}">
               ${visitorRole}
@@ -6299,6 +6306,145 @@ function displayFinishedVisits(visits: any[]): void {
 
 // Make toggleHistory function available globally
 (window as any).toggleHistory = toggleHistory;
+
+// Make showFlaggedVisitDetails function available globally
+(window as any).showFlaggedVisitDetails = showFlaggedVisitDetails;
+
+// Function to show flagged visit details
+async function showFlaggedVisitDetails(visitId: string) {
+  try {
+    const { data: visitDetails, error } = await supabase
+      .rpc('get_flagged_completed_visit_details', { p_visit_id: visitId });
+    
+    if (error) {
+      console.error('Error fetching flagged visit details:', error);
+      showNotification('Error fetching visit details', 'error');
+      return;
+    }
+    
+    if (!visitDetails || visitDetails.length === 0) {
+      showNotification('Visit details not found', 'error');
+      return;
+    }
+    
+    const visit = visitDetails[0];
+    const visitorName = `${visit.visitor_first_name} ${visit.visitor_last_name}`;
+    const completedByInfo = visit.completed_by_info ? 
+      `${visit.completed_by_info.first_name} ${visit.completed_by_info.last_name}` : 
+      'System (End of day)';
+    
+    const modalHtml = `
+      <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" id="flaggedVisitModal">
+        <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white dark:bg-gray-800">
+          <div class="mt-3">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white">Flagged Visit Details</h3>
+              <button onclick="closeFlaggedVisitModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+            
+            <div class="space-y-4">
+              <div>
+                <h4 class="text-md font-semibold text-gray-900 dark:text-white">${visitorName}</h4>
+                <p class="text-sm text-gray-600 dark:text-gray-400">${visit.visitor_email}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">${visit.visitor_role}</p>
+              </div>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p class="text-sm text-gray-600 dark:text-gray-400"><strong>Visit Date:</strong> ${new Date(visit.visit_date).toLocaleDateString()}</p>
+                  <p class="text-sm text-gray-600 dark:text-gray-400"><strong>Purpose:</strong> ${visit.purpose}</p>
+                  ${visit.other_purpose ? `<p class="text-sm text-gray-600 dark:text-gray-400"><strong>Additional Details:</strong> ${visit.other_purpose}</p>` : ''}
+                </div>
+                <div>
+                  <p class="text-sm text-gray-600 dark:text-gray-400"><strong>Completed:</strong> ${visit.completed_at ? new Date(visit.completed_at).toLocaleDateString() + ' at ' + new Date(visit.completed_at).toLocaleTimeString() : 'N/A'}</p>
+                  <p class="text-sm text-gray-600 dark:text-gray-400"><strong>Completed By:</strong> ${completedByInfo}</p>
+                  <p class="text-sm text-gray-600 dark:text-gray-400"><strong>Gate Exit Scanned:</strong> ${visit.gate_exit_scanned ? 'Yes' : 'No'}</p>
+                </div>
+              </div>
+              
+              <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <h5 class="text-sm font-medium text-gray-900 dark:text-white mb-2">Places Visited:</h5>
+                ${visit.places && visit.places.length > 0 ? `
+                  <div class="space-y-2">
+                    ${visit.places.map((place: any) => `
+                      <div class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                        <div>
+                          <p class="text-sm font-medium text-gray-900 dark:text-white">${place.place_name}</p>
+                          ${place.place_location ? `<p class="text-xs text-gray-600 dark:text-gray-400">${place.place_location}</p>` : ''}
+                        </div>
+                        <span class="px-2 py-1 rounded text-xs font-medium ${
+                          place.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                          'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                        }">
+                          ${place.status}
+                        </span>
+                      </div>
+                    `).join('')}
+                  </div>
+                ` : '<p class="text-sm text-gray-500 dark:text-gray-400">No places assigned</p>'}
+              </div>
+              
+              <div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
+                <div class="flex items-start">
+                  <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-orange-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                    </svg>
+                  </div>
+                  <div class="ml-3">
+                    <h3 class="text-sm font-medium text-orange-800 dark:text-orange-200">Visit Flagged</h3>
+                    <div class="mt-2 text-sm text-orange-700 dark:text-orange-300">
+                      <p>This visit was marked as completed (flagged) because:</p>
+                      <ul class="list-disc list-inside mt-1 space-y-1">
+                        <li>All places were completed by personnel</li>
+                        <li>Visitor did not scan the exit gate by the end of the day</li>
+                        <li>Visit was automatically flagged at 23:59:59 Philippine time</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-6 flex justify-end">
+              <button onclick="closeFlaggedVisitModal()" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('flaggedVisitModal');
+    if (existingModal) {
+      existingModal.remove();
+    }
+    
+    // Add modal to body
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Make close function available globally
+    (window as any).closeFlaggedVisitModal = closeFlaggedVisitModal;
+    
+  } catch (error) {
+    console.error('Error showing flagged visit details:', error);
+    showNotification('Error showing visit details', 'error');
+  }
+}
+
+// Function to close flagged visit modal
+function closeFlaggedVisitModal() {
+  const modal = document.getElementById('flaggedVisitModal');
+  if (modal) {
+    modal.remove();
+  }
+}
 
 // Function to set up history button event listeners (more reliable on mobile)
 function setupHistoryButtonListeners() {
