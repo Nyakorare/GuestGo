@@ -1166,11 +1166,12 @@ function showPersonnelVisitModal(visitData: VisitQRData & { places: any[] }, cur
                 <p class="text-gray-600 dark:text-gray-400"><strong>Status:</strong> 
                   <span class="px-2 py-1 rounded-full text-xs font-medium ${
                     visitData.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                    visitData.status === 'completed_flagged' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
                     visitData.status === 'unsuccessful' || visitData.status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
                     visitData.status === 'cancelled' ? 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
                     'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
                   }">
-                    ${visitData.status.charAt(0).toUpperCase() + visitData.status.slice(1)}
+                    ${visitData.status === 'completed_flagged' ? 'Completed (Flagged)' : visitData.status.charAt(0).toUpperCase() + visitData.status.slice(1)}
                   </span>
                 </p>
                 <p class="text-gray-600 dark:text-gray-400"><strong>Scheduled:</strong> ${new Date(visitData.scheduledAt).toLocaleDateString()} at ${new Date(visitData.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
@@ -1196,11 +1197,12 @@ function showPersonnelVisitModal(visitData: VisitQRData & { places: any[] }, cur
                       <div class="flex items-center space-x-2">
                         <span class="px-2 py-1 rounded-full text-xs font-medium ${
                           place.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                          place.status === 'completed_flagged' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
                           place.status === 'unsuccessful' || place.status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
                           place.status === 'cancelled' ? 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
                           'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
                         }">
-                          ${place.status.charAt(0).toUpperCase() + place.status.slice(1)}
+                          ${place.status === 'completed_flagged' ? 'Completed (Flagged)' : place.status.charAt(0).toUpperCase() + place.status.slice(1)}
                         </span>
                         ${!isFuture && place.status === 'pending' && place.isAssignedToCurrentUser ? `
                           <button 
@@ -1329,11 +1331,12 @@ function showRegularVisitDetails(visitData: VisitQRData) {
           <p class="text-gray-600 dark:text-gray-400"><strong>Status:</strong> 
             <span class="px-2 py-1 rounded-full text-xs font-medium ${
               visitData.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+              visitData.status === 'completed_flagged' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
               visitData.status === 'unsuccessful' || visitData.status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
               visitData.status === 'cancelled' ? 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
               'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
             }">
-              ${visitData.status.charAt(0).toUpperCase() + visitData.status.slice(1)}
+              ${visitData.status === 'completed_flagged' ? 'Completed (Flagged)' : visitData.status.charAt(0).toUpperCase() + visitData.status.slice(1)}
             </span>
           </p>
           <p class="text-gray-600 dark:text-gray-400"><strong>Scheduled:</strong> ${scheduledDate.toLocaleDateString()} at ${scheduledDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
@@ -1356,11 +1359,12 @@ function showRegularVisitDetails(visitData: VisitQRData) {
               <div class="flex items-center space-x-2">
                 <span class="px-2 py-1 rounded-full text-xs font-medium ${
                   place.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                  place.status === 'completed_flagged' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
                   place.status === 'unsuccessful' || place.status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
                   place.status === 'cancelled' ? 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
                   'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
                 }">
-                  ${place.status.charAt(0).toUpperCase() + place.status.slice(1)}
+                  ${place.status === 'completed_flagged' ? 'Completed (Flagged)' : place.status.charAt(0).toUpperCase() + place.status.slice(1)}
                 </span>
               </div>
             </div>

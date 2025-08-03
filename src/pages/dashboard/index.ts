@@ -3934,6 +3934,8 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
       statusLabel = 'Failed';
     } else if (visit.status === 'cancelled') {
       statusLabel = 'Cancelled';
+    } else if (visit.status === 'completed_flagged') {
+      statusLabel = 'Completed (Flagged)';
     } else {
       statusLabel = visit.status.charAt(0).toUpperCase() + visit.status.slice(1);
     }
@@ -4015,9 +4017,9 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
           </div>
         ` : visit.status === 'completed_flagged' && visitDateStr < todayStr ? `
           <div class="flex justify-end space-x-2">
-            <div class="px-4 py-2 bg-orange-100 text-orange-700 rounded-md text-sm font-medium">
-              ⚠️ Visit completed (flagged) - No exit scan by end of day
-            </div>
+                          <div class="px-4 py-2 bg-orange-100 text-orange-700 rounded-md text-sm font-medium">
+                ⚠️ Completed (Flagged) - Process started but not fully completed
+              </div>
             <button 
               onclick="showFlaggedVisitDetails('${visit.visit_id}')"
               class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm font-medium"
@@ -5666,6 +5668,8 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
       statusLabel = 'Failed';
     } else if (visit.status === 'cancelled') {
       statusLabel = 'Cancelled';
+    } else if (visit.status === 'completed_flagged') {
+      statusLabel = 'Completed (Flagged)';
     } else {
       statusLabel = visit.status.charAt(0).toUpperCase() + visit.status.slice(1);
     }
@@ -5944,7 +5948,7 @@ async function displayVisitorPastVisits(visits: any[]): Promise<void> {
                 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
               }">
                 ${visit.status === 'failed' ? 'Failed' : 
-                  visit.status === 'completed_flagged' ? 'Visit completed (flagged) - No exit scan by end of day' : 
+                  visit.status === 'completed_flagged' ? 'Completed (Flagged) - Process started but not fully completed' : 
                   visit.status === 'pending' && isToday && completedPlaces === totalPlaces && totalPlaces > 0 && !visit.gate_exit_scanned ? 'Pending - All places completed, waiting for exit scan' :
                   visit.status.charAt(0).toUpperCase() + visit.status.slice(1)}
               </span>
@@ -6273,7 +6277,7 @@ function displayFinishedVisits(visits: any[]): void {
           </div>
           <div class="flex space-x-2">
             <span class="px-2 py-1 rounded-full text-xs font-medium ${(statusColors as any)[visit.status] || statusColors.completed}">
-              ${visit.status === 'completed_flagged' ? 'Visit completed (flagged) - No exit scan by end of day' : visit.status}
+              ${visit.status === 'completed_flagged' ? 'Completed (Flagged) - Process started but not fully completed' : visit.status}
             </span>
             <span class="px-2 py-1 rounded-full text-xs font-medium ${(roleColors as any)[visitorRole] || roleColors.guest}">
               ${visitorRole}

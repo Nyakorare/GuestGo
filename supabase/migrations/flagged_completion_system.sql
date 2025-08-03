@@ -27,7 +27,7 @@ BEGIN
         RETURN 0; -- Not end of day yet, don't update anything
     END IF;
     
-    -- Find visits that are pending, have all places completed, but no exit scan
+    -- Find visits that have started the process (entrance scanned), have all places completed, but no exit scan
     -- AND it's the end of the day
     FOR visit_record IN 
         SELECT sv.*, 
@@ -37,7 +37,8 @@ BEGIN
         LEFT JOIN scheduled_visit_places svp ON sv.id = svp.visit_id
         WHERE sv.visit_date = philippine_date 
           AND sv.status = 'pending' 
-          AND sv.gate_exit_scanned = FALSE
+          AND sv.gate_entrance_scanned = TRUE  -- Process must have started
+          AND sv.gate_exit_scanned = FALSE     -- Process not fully completed
           AND sv.flagged_for_no_exit = FALSE
         GROUP BY sv.id
         HAVING COUNT(svp.id) > 0 AND COUNT(svp.id) = COUNT(CASE WHEN svp.status = 'completed' THEN 1 END)
@@ -77,11 +78,11 @@ BEGIN
                     'timestamp', philippine_timestamp,
                     'details', jsonb_build_object(
                         'by', 'system',
-                        'reason', 'All places completed by personnel but visitor did not scan exit gate by end of day',
+                        'reason', 'Visit process started (entrance scanned) and all places completed by personnel, but visitor did not complete the full process (no exit scan)',
                         'total_places', visit_record.total_places,
                         'completed_places', visit_record.completed_places,
                         'places', place_details,
-                        'note', 'Visit completed (flagged) at end of day - personnel finished their part but visitor did not scan exit',
+                        'note', 'Visit completed (flagged) at end of day - process started and personnel finished their part, but visitor did not complete the full process',
                         'end_of_day_marked', true
                     )
                 )
@@ -111,7 +112,7 @@ BEGIN
                     'places', place_details,
                     'total_places', visit_record.total_places,
                     'completed_places', visit_record.completed_places,
-                    'note', 'Visit completed (flagged) at end of day - personnel finished their part but visitor did not scan exit',
+                    'note', 'Visit completed (flagged) at end of day - process started and personnel finished their part, but visitor did not complete the full process',
                     'end_of_day_marked', true
                 )
             );
@@ -391,6 +392,7 @@ BEGIN
     
     -- Mark visits as unsuccessful if they are from today but not all places are completed
     -- AND it's past end of day (23:59:59 Philippine time)
+    -- OR if they did not scan an entrance gate
     UPDATE scheduled_visits 
     SET 
         status = 'unsuccessful',
@@ -399,18 +401,23 @@ BEGIN
     WHERE status = 'pending' 
       AND visit_date = philippine_date
       AND (philippine_timestamp::TIME > end_of_day_time)
-      AND id IN (
-          -- Find visits where not all places are completed
-          SELECT sv.id
-          FROM scheduled_visits sv
-          WHERE sv.status = 'pending'
-            AND sv.visit_date = philippine_date
-            AND EXISTS (
-                SELECT 1 
-                FROM scheduled_visit_places svp 
-                WHERE svp.visit_id = sv.id 
-                  AND svp.status != 'completed'
-            )
+      AND (
+          -- Case 1: Not all places are completed
+          id IN (
+              SELECT sv.id
+              FROM scheduled_visits sv
+              WHERE sv.status = 'pending'
+                AND sv.visit_date = philippine_date
+                AND EXISTS (
+                    SELECT 1 
+                    FROM scheduled_visit_places svp 
+                    WHERE svp.visit_id = sv.id 
+                      AND svp.status != 'completed'
+                )
+          )
+          OR
+          -- Case 2: Did not scan an entrance gate
+          gate_entrance_scanned = FALSE
       );
     
     GET DIAGNOSTICS end_of_day_affected_rows = ROW_COUNT;
@@ -492,6 +499,7 @@ BEGIN
                             'by', 'system',
                             'reason', CASE 
                                 WHEN visit_record.visit_date < philippine_date THEN 'Visit was not completed on or before the scheduled date'
+                                WHEN visit_record.gate_entrance_scanned = FALSE THEN 'Visit did not scan entrance gate by end of day'
                                 ELSE 'Not all places were completed by the end of the scheduled day (23:59:59)'
                             END,
                             'auto_marked', true,
@@ -511,6 +519,85 @@ BEGIN
                     jsonb_set(log_row.details, '{history}', new_history),
                     '{current_status}',
                     '"unsuccessful"'
+                ) 
+                WHERE id = log_row.id;
+            END IF;
+        END IF;
+    END LOOP;
+    
+    -- Log completed_flagged visits
+    FOR visit_record IN 
+        SELECT id, visitor_user_id, visitor_role, visit_date, gate_entrance_scanned, gate_exit_scanned
+        FROM scheduled_visits 
+        WHERE status = 'completed_flagged' 
+          AND visit_date = philippine_date
+          AND completed_at >= (philippine_timestamp - INTERVAL '1 minute')
+    LOOP
+        -- Find the original visit_scheduled log entry for this visit
+        SELECT * INTO log_row 
+        FROM logs 
+        WHERE details->>'visit_id' = visit_record.id::text 
+          AND action = 'visit_scheduled' 
+        ORDER BY created_at LIMIT 1;
+        
+        -- If we found the original log entry, check if it already has a completed_flagged event
+        IF log_row.id IS NOT NULL THEN
+            -- Count existing 'completed_flagged' events in the history
+            SELECT COUNT(*) INTO existing_unsuccessful_events
+            FROM jsonb_array_elements(log_row.details->'history') AS history_item
+            WHERE history_item->>'event' = 'completed_flagged';
+            
+            -- Only add the completed_flagged event if it doesn't already exist
+            IF existing_unsuccessful_events = 0 THEN
+                -- Get place completion statistics and place names for logging
+                SELECT 
+                    COUNT(*) INTO total_places
+                FROM scheduled_visit_places 
+                WHERE visit_id = visit_record.id;
+                
+                SELECT 
+                    COUNT(*) INTO completed_places
+                FROM scheduled_visit_places 
+                WHERE visit_id = visit_record.id AND status = 'completed';
+                
+                -- Get place names for this visit
+                SELECT 
+                    jsonb_agg(
+                        jsonb_build_object(
+                            'place_id', svp.place_id,
+                            'place_name', ptv.name,
+                            'place_location', ptv.location,
+                            'status', svp.status
+                        )
+                    ) INTO place_details
+                FROM scheduled_visit_places svp
+                LEFT JOIN places_to_visit ptv ON svp.place_id = ptv.id
+                WHERE svp.visit_id = visit_record.id;
+                
+                new_history := (log_row.details->'history') || jsonb_build_array(
+                    jsonb_build_object(
+                        'event', 'completed_flagged',
+                        'timestamp', philippine_timestamp,
+                        'details', jsonb_build_object(
+                            'by', 'system',
+                            'reason', 'Visit process started (entrance scanned) and all places completed by personnel, but visitor did not complete the full process (no exit scan)',
+                            'auto_marked', true,
+                            'total_places', total_places,
+                            'completed_places', completed_places,
+                            'places', place_details,
+                            'philippine_date', philippine_date,
+                            'philippine_time', philippine_timestamp::TIME,
+                            'note', 'Visit completed (flagged) - process started and personnel finished their part, but visitor did not complete the full process'
+                        )
+                    )
+                );
+                
+                -- Update the log entry to reflect the completed_flagged status
+                UPDATE logs 
+                SET details = jsonb_set(
+                    jsonb_set(log_row.details, '{history}', new_history),
+                    '{current_status}',
+                    '"completed_flagged"'
                 ) 
                 WHERE id = log_row.id;
             END IF;
