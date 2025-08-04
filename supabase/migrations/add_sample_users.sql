@@ -247,3 +247,43 @@ BEGIN
     
     RAISE NOTICE 'Sample places created/updated successfully';
 END $$; 
+
+-- Add sample opened gate
+-- This will create a sample gate that is open for testing purposes
+
+DO $$
+DECLARE
+    admin_user_id UUID;
+    sample_gate_id UUID;
+BEGIN
+    -- Get admin user ID for assignment
+    SELECT id INTO admin_user_id 
+    FROM auth.users 
+    WHERE email = 'g1galba042804@gmail.com';
+    
+    -- Insert sample gate if not exists
+    IF NOT EXISTS (SELECT 1 FROM gates WHERE name = 'Main Entrance Gate') THEN
+        INSERT INTO gates (
+            name, 
+            description, 
+            location, 
+            gate_type, 
+            status, 
+            created_by
+        ) VALUES (
+            'Main Entrance Gate',
+            'Primary entrance gate for visitors and staff. Features automatic sliding doors and security checkpoint.',
+            'Main Building, Ground Floor, 123 Business District, Metro Manila',
+            'both',
+            'open',
+            admin_user_id
+        ) RETURNING id INTO sample_gate_id;
+        
+        RAISE NOTICE 'Created sample gate: Main Entrance Gate with ID: %', sample_gate_id;
+    ELSE
+        SELECT id INTO sample_gate_id FROM gates WHERE name = 'Main Entrance Gate';
+        RAISE NOTICE 'Sample gate already exists: Main Entrance Gate with ID: %', sample_gate_id;
+    END IF;
+    
+    RAISE NOTICE 'Sample opened gate created/updated successfully';
+END $$; 
