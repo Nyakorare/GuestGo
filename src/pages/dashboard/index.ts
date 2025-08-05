@@ -3,6 +3,7 @@ import { logAction, getLogs } from '../../utils/logging';
 import { generateVisitQRCode, openPrintableVisitCard, type VisitQRData } from '../../utils/qrCode';
 import { generateSimpleVisitQRCode } from '../../utils/qrCode';
 import jsQR from 'jsqr';
+import { addNotificationToActionBadge, addNotificationToLogContainer } from '../../utils/notification.js';
 
 interface Place {
   id: string;
@@ -1485,7 +1486,7 @@ async function renderLogs(): Promise<void> {
             </tr>
           </thead>
           <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-            ${(formattedDetails as any[]).map((log: any) => `
+            ${(formattedDetails as any[]).map((log: any) => addNotificationToLogContainer(`
               <tr>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                   ${new Date(log.created_at).toLocaleString()}
@@ -1530,14 +1531,14 @@ async function renderLogs(): Promise<void> {
                   </div>
                 </td>
               </tr>
-            `).join('')}
+            `, log.displayAction)).join('')}
           </tbody>
         </table>
       </div>
 
       <!-- Mobile Card View (visible on mobile and tablet) -->
       <div class="lg:hidden space-y-4">
-        ${(formattedDetails as any[]).map((log: any) => `
+        ${(formattedDetails as any[]).map((log: any) => addNotificationToLogContainer(`
           <div class="bg-white dark:bg-gray-700 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 p-4">
             <div class="flex flex-col space-y-3">
               <!-- Header with timestamp and action -->
@@ -1591,7 +1592,7 @@ async function renderLogs(): Promise<void> {
               </div>
             </div>
           </div>
-        `).join('')}
+        `, log.displayAction)).join('')}
       </div>
     `;
   }
