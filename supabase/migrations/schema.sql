@@ -596,7 +596,15 @@ DECLARE
     completed_places INTEGER;
     place_details JSONB;
     end_of_day_time TIME := '23:59:59';
+    gate_fields_exist BOOLEAN;
 BEGIN
+    -- Check if gate fields exist in the scheduled_visits table
+    SELECT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'scheduled_visits' 
+        AND column_name = 'gate_entrance_scanned'
+    ) INTO gate_fields_exist;
+    
     -- Get current Philippine date and timestamp (UTC+8) using the new function
     philippine_date := public.get_philippine_date();
     philippine_timestamp := public.get_philippine_timestamp();
@@ -626,81 +634,84 @@ BEGIN
     )
     AND status = 'pending';
     
-    -- Mark visits as completed_flagged if they have started the process (entrance scanned) 
-    -- and all places are completed but no exit scan
-    -- AND it's past end of day (23:59:59 Philippine time)
-    UPDATE scheduled_visits 
-    SET 
-        status = 'completed_flagged',
-        completed_at = philippine_timestamp,
-        completed_by = NULL -- System action, no specific user
-    WHERE status = 'pending' 
-      AND visit_date = philippine_date
-      AND (philippine_timestamp::TIME > end_of_day_time)
-      AND gate_entrance_scanned = TRUE  -- Must have scanned entrance (process started)
-      AND gate_exit_scanned = FALSE     -- Must not have scanned exit (process not fully completed)
-      AND id IN (
-          -- Find visits where all places are completed
-          SELECT sv.id
-          FROM scheduled_visits sv
-          WHERE sv.status = 'pending'
-            AND sv.visit_date = philippine_date
-            AND sv.gate_entrance_scanned = TRUE
-            AND sv.gate_exit_scanned = FALSE
-            AND NOT EXISTS (
-                SELECT 1 
-                FROM scheduled_visit_places svp 
-                WHERE svp.visit_id = sv.id 
-                  AND svp.status != 'completed'
-            )
-      );
-    
-    -- Mark visits as unsuccessful if they are from today but not all places are completed
-    -- AND it's past end of day (23:59:59 Philippine time)
-    -- OR if they did not scan an entrance gate
-    UPDATE scheduled_visits 
-    SET 
-        status = 'unsuccessful',
-        completed_at = philippine_timestamp,
-        completed_by = NULL -- System action, no specific user
-    WHERE status = 'pending' 
-      AND visit_date = philippine_date
-      AND (philippine_timestamp::TIME > end_of_day_time)
-      AND (
-          -- Case 1: Not all places are completed
-          id IN (
+    -- Only process gate-related logic if gate fields exist
+    IF gate_fields_exist THEN
+        -- Mark visits as completed_flagged if they have started the process (entrance scanned) 
+        -- and all places are completed but no exit scan
+        -- AND it's past end of day (23:59:59 Philippine time)
+        UPDATE scheduled_visits 
+        SET 
+            status = 'completed_flagged',
+            completed_at = philippine_timestamp,
+            completed_by = NULL -- System action, no specific user
+        WHERE status = 'pending' 
+          AND visit_date = philippine_date
+          AND (philippine_timestamp::TIME > end_of_day_time)
+          AND gate_entrance_scanned = TRUE  -- Must have scanned entrance (process started)
+          AND gate_exit_scanned = FALSE     -- Must not have scanned exit (process not fully completed)
+          AND id IN (
+              -- Find visits where all places are completed
               SELECT sv.id
               FROM scheduled_visits sv
               WHERE sv.status = 'pending'
                 AND sv.visit_date = philippine_date
-                AND EXISTS (
+                AND sv.gate_entrance_scanned = TRUE
+                AND sv.gate_exit_scanned = FALSE
+                AND NOT EXISTS (
                     SELECT 1 
                     FROM scheduled_visit_places svp 
                     WHERE svp.visit_id = sv.id 
                       AND svp.status != 'completed'
                 )
-          )
-          OR
-          -- Case 2: Did not scan an entrance gate
-          gate_entrance_scanned = FALSE
-      );
-    
-    GET DIAGNOSTICS end_of_day_affected_rows = ROW_COUNT;
-    affected_rows := affected_rows + end_of_day_affected_rows;
-    
-    -- Mark places as failed for end-of-day visits that were just marked as unsuccessful
-    UPDATE scheduled_visit_places 
-    SET 
-        status = 'failed',
-        completed_at = philippine_timestamp,
-        completed_by = NULL
-    WHERE visit_id IN (
-        SELECT id FROM scheduled_visits 
-        WHERE status = 'unsuccessful' 
+          );
+        
+        -- Mark visits as unsuccessful if they are from today but not all places are completed
+        -- AND it's past end of day (23:59:59 Philippine time)
+        -- OR if they did not scan an entrance gate
+        UPDATE scheduled_visits 
+        SET 
+            status = 'unsuccessful',
+            completed_at = philippine_timestamp,
+            completed_by = NULL -- System action, no specific user
+        WHERE status = 'pending' 
           AND visit_date = philippine_date
-          AND completed_at >= (philippine_timestamp - INTERVAL '1 minute')
-    )
-    AND status = 'pending';
+          AND (philippine_timestamp::TIME > end_of_day_time)
+          AND (
+              -- Case 1: Not all places are completed
+              id IN (
+                  SELECT sv.id
+                  FROM scheduled_visits sv
+                  WHERE sv.status = 'pending'
+                    AND sv.visit_date = philippine_date
+                    AND EXISTS (
+                        SELECT 1 
+                        FROM scheduled_visit_places svp 
+                        WHERE svp.visit_id = sv.id 
+                          AND svp.status != 'completed'
+                    )
+              )
+              OR
+              -- Case 2: Did not scan an entrance gate
+              gate_entrance_scanned = FALSE
+          );
+        
+        GET DIAGNOSTICS end_of_day_affected_rows = ROW_COUNT;
+        affected_rows := affected_rows + end_of_day_affected_rows;
+        
+        -- Mark places as failed for end-of-day visits that were just marked as unsuccessful
+        UPDATE scheduled_visit_places 
+        SET 
+            status = 'failed',
+            completed_at = philippine_timestamp,
+            completed_by = NULL
+        WHERE visit_id IN (
+            SELECT id FROM scheduled_visits 
+            WHERE status = 'unsuccessful' 
+              AND visit_date = philippine_date
+              AND completed_at >= (philippine_timestamp - INTERVAL '1 minute')
+        )
+        AND status = 'pending';
+    END IF;
     
     -- Update the original visit_scheduled log entries to reflect the status change
     FOR visit_record IN 
@@ -764,7 +775,7 @@ BEGIN
                             'by', 'system',
                             'reason', CASE 
                                 WHEN visit_record.visit_date < philippine_date THEN 'Visit was not completed on or before the scheduled date'
-                                WHEN visit_record.gate_entrance_scanned = FALSE THEN 'Visit did not scan entrance gate by end of day'
+                                WHEN gate_fields_exist AND visit_record.gate_entrance_scanned = FALSE THEN 'Visit did not scan entrance gate by end of day'
                                 ELSE 'Not all places were completed by the end of the scheduled day (23:59:59)'
                             END,
                             'auto_marked', true,
@@ -790,84 +801,86 @@ BEGIN
         END IF;
     END LOOP;
     
-    -- Log completed_flagged visits
-    FOR visit_record IN 
-        SELECT id, visitor_user_id, visitor_role, visit_date, gate_entrance_scanned, gate_exit_scanned
-        FROM scheduled_visits 
-        WHERE status = 'completed_flagged' 
-          AND visit_date = philippine_date
-          AND completed_at >= (philippine_timestamp - INTERVAL '1 minute')
-    LOOP
-        -- Find the original visit_scheduled log entry for this visit
-        SELECT * INTO log_row 
-        FROM logs 
-        WHERE details->>'visit_id' = visit_record.id::text 
-          AND action = 'visit_scheduled' 
-        ORDER BY created_at LIMIT 1;
-        
-        -- If we found the original log entry, check if it already has a completed_flagged event
-        IF log_row.id IS NOT NULL THEN
-            -- Count existing 'completed_flagged' events in the history
-            SELECT COUNT(*) INTO existing_unsuccessful_events
-            FROM jsonb_array_elements(log_row.details->'history') AS history_item
-            WHERE history_item->>'event' = 'completed_flagged';
+    -- Log completed_flagged visits (only if gate fields exist)
+    IF gate_fields_exist THEN
+        FOR visit_record IN 
+            SELECT id, visitor_user_id, visitor_role, visit_date, gate_entrance_scanned, gate_exit_scanned
+            FROM scheduled_visits 
+            WHERE status = 'completed_flagged' 
+              AND visit_date = philippine_date
+              AND completed_at >= (philippine_timestamp - INTERVAL '1 minute')
+        LOOP
+            -- Find the original visit_scheduled log entry for this visit
+            SELECT * INTO log_row 
+            FROM logs 
+            WHERE details->>'visit_id' = visit_record.id::text 
+              AND action = 'visit_scheduled' 
+            ORDER BY created_at LIMIT 1;
             
-            -- Only add the completed_flagged event if it doesn't already exist
-            IF existing_unsuccessful_events = 0 THEN
-                -- Get place completion statistics and place names for logging
-                SELECT 
-                    COUNT(*) INTO total_places
-                FROM scheduled_visit_places 
-                WHERE visit_id = visit_record.id;
+            -- If we found the original log entry, check if it already has a completed_flagged event
+            IF log_row.id IS NOT NULL THEN
+                -- Count existing 'completed_flagged' events in the history
+                SELECT COUNT(*) INTO existing_unsuccessful_events
+                FROM jsonb_array_elements(log_row.details->'history') AS history_item
+                WHERE history_item->>'event' = 'completed_flagged';
                 
-                SELECT 
-                    COUNT(*) INTO completed_places
-                FROM scheduled_visit_places 
-                WHERE visit_id = visit_record.id AND status = 'completed';
-                
-                -- Get place names for this visit
-                SELECT 
-                    jsonb_agg(
+                -- Only add the completed_flagged event if it doesn't already exist
+                IF existing_unsuccessful_events = 0 THEN
+                    -- Get place completion statistics and place names for logging
+                    SELECT 
+                        COUNT(*) INTO total_places
+                    FROM scheduled_visit_places 
+                    WHERE visit_id = visit_record.id;
+                    
+                    SELECT 
+                        COUNT(*) INTO completed_places
+                    FROM scheduled_visit_places 
+                    WHERE visit_id = visit_record.id AND status = 'completed';
+                    
+                    -- Get place names for this visit
+                    SELECT 
+                        jsonb_agg(
+                            jsonb_build_object(
+                                'place_id', svp.place_id,
+                                'place_name', ptv.name,
+                                'place_location', ptv.location,
+                                'status', svp.status
+                            )
+                        ) INTO place_details
+                    FROM scheduled_visit_places svp
+                    LEFT JOIN places_to_visit ptv ON svp.place_id = ptv.id
+                    WHERE svp.visit_id = visit_record.id;
+                    
+                    new_history := (log_row.details->'history') || jsonb_build_array(
                         jsonb_build_object(
-                            'place_id', svp.place_id,
-                            'place_name', ptv.name,
-                            'place_location', ptv.location,
-                            'status', svp.status
+                            'event', 'completed_flagged',
+                            'timestamp', philippine_timestamp,
+                            'details', jsonb_build_object(
+                                'by', 'system',
+                                'reason', 'Visit process started (entrance scanned) and all places completed by personnel, but visitor did not complete the full process (no exit scan)',
+                                'auto_marked', true,
+                                'total_places', total_places,
+                                'completed_places', completed_places,
+                                'places', place_details,
+                                'philippine_date', philippine_date,
+                                'philippine_time', philippine_timestamp::TIME,
+                                'note', 'Visit completed (flagged) - process started and personnel finished their part, but visitor did not complete the full process'
+                            )
                         )
-                    ) INTO place_details
-                FROM scheduled_visit_places svp
-                LEFT JOIN places_to_visit ptv ON svp.place_id = ptv.id
-                WHERE svp.visit_id = visit_record.id;
-                
-                new_history := (log_row.details->'history') || jsonb_build_array(
-                    jsonb_build_object(
-                        'event', 'completed_flagged',
-                        'timestamp', philippine_timestamp,
-                        'details', jsonb_build_object(
-                            'by', 'system',
-                            'reason', 'Visit process started (entrance scanned) and all places completed by personnel, but visitor did not complete the full process (no exit scan)',
-                            'auto_marked', true,
-                            'total_places', total_places,
-                            'completed_places', completed_places,
-                            'places', place_details,
-                            'philippine_date', philippine_date,
-                            'philippine_time', philippine_timestamp::TIME,
-                            'note', 'Visit completed (flagged) - process started and personnel finished their part, but visitor did not complete the full process'
-                        )
-                    )
-                );
-                
-                -- Update the log entry to reflect the completed_flagged status
-                UPDATE logs 
-                SET details = jsonb_set(
-                    jsonb_set(log_row.details, '{history}', new_history),
-                    '{current_status}',
-                    '"completed_flagged"'
-                ) 
-                WHERE id = log_row.id;
+                    );
+                    
+                    -- Update the log entry to reflect the completed_flagged status
+                    UPDATE logs 
+                    SET details = jsonb_set(
+                        jsonb_set(log_row.details, '{history}', new_history),
+                        '{current_status}',
+                        '"completed_flagged"'
+                    ) 
+                    WHERE id = log_row.id;
+                END IF;
             END IF;
-        END IF;
-    END LOOP;
+        END LOOP;
+    END IF;
     
     -- Note: We don't create a separate visit_unsuccessful log entry here
     -- because we already update the existing visit_scheduled log entries
@@ -978,49 +991,105 @@ RETURNS TABLE (
     flagged_at TIMESTAMP WITH TIME ZONE,
     flagged_by UUID
 ) AS $$
+DECLARE
+    gate_fields_exist BOOLEAN;
 BEGIN
-    RETURN QUERY
-    SELECT 
-        sv.id as visit_id,
-        sv.visitor_first_name,
-        sv.visitor_last_name,
-        sv.visitor_email,
-        sv.visitor_phone,
-        sv.visitor_user_id,
-        sv.visitor_role,
-        sv.visit_date,
-        sv.purpose,
-        sv.other_purpose,
-        sv.status,
-        sv.scheduled_at,
-        sv.completed_at,
-        sv.completed_by,
-        svp.place_id,
-        ptv.name as place_name,
-        ptv.description as place_description,
-        ptv.location as place_location,
-        svp.status as place_status,
-        svp.completed_at as place_completed_at,
-        svp.completed_by as place_completed_by,
-        (SELECT COUNT(*) FROM scheduled_visit_places svp2 WHERE svp2.visit_id = sv.id) as total_places,
-        (SELECT COUNT(*) FROM scheduled_visit_places svp3 WHERE svp3.visit_id = sv.id AND svp3.status = 'completed') as completed_places,
-        sv.gate_entrance_scanned,
-        sv.gate_entrance_scanned_at,
-        sv.gate_entrance_scanned_by,
-        sv.gate_exit_scanned,
-        sv.gate_exit_scanned_at,
-        sv.gate_exit_scanned_by,
-        sv.flagged_for_no_exit,
-        sv.flagged_at,
-        sv.flagged_by
-    FROM scheduled_visits sv
-    JOIN scheduled_visit_places svp ON sv.id = svp.visit_id
-    LEFT JOIN places_to_visit ptv ON svp.place_id = ptv.id
-    WHERE svp.place_id IN (
-        SELECT pp.place_id FROM place_personnel pp WHERE pp.personnel_id = p_personnel_id
-    )
-    AND sv.status IN ('pending', 'completed')
-    ORDER BY sv.visit_date ASC, sv.scheduled_at DESC;
+    -- Check if gate fields exist in the scheduled_visits table
+    SELECT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'scheduled_visits' 
+        AND column_name = 'gate_entrance_scanned'
+    ) INTO gate_fields_exist;
+    
+    -- Return query with conditional gate field selection
+    IF gate_fields_exist THEN
+        RETURN QUERY
+        SELECT 
+            sv.id as visit_id,
+            sv.visitor_first_name,
+            sv.visitor_last_name,
+            sv.visitor_email,
+            sv.visitor_phone,
+            sv.visitor_user_id,
+            sv.visitor_role,
+            sv.visit_date,
+            sv.purpose,
+            sv.other_purpose,
+            sv.status,
+            sv.scheduled_at,
+            sv.completed_at,
+            sv.completed_by,
+            svp.place_id,
+            ptv.name as place_name,
+            ptv.description as place_description,
+            ptv.location as place_location,
+            svp.status as place_status,
+            svp.completed_at as place_completed_at,
+            svp.completed_by as place_completed_by,
+            (SELECT COUNT(*) FROM scheduled_visit_places svp2 WHERE svp2.visit_id = sv.id) as total_places,
+            (SELECT COUNT(*) FROM scheduled_visit_places svp3 WHERE svp3.visit_id = sv.id AND svp3.status = 'completed') as completed_places,
+            sv.gate_entrance_scanned,
+            sv.gate_entrance_scanned_at,
+            sv.gate_entrance_scanned_by,
+            sv.gate_exit_scanned,
+            sv.gate_exit_scanned_at,
+            sv.gate_exit_scanned_by,
+            sv.flagged_for_no_exit,
+            sv.flagged_at,
+            sv.flagged_by
+        FROM scheduled_visits sv
+        JOIN scheduled_visit_places svp ON sv.id = svp.visit_id
+        LEFT JOIN places_to_visit ptv ON svp.place_id = ptv.id
+        WHERE svp.place_id IN (
+            SELECT pp.place_id FROM place_personnel pp WHERE pp.personnel_id = p_personnel_id
+        )
+        AND sv.status IN ('pending', 'completed')
+        ORDER BY sv.visit_date ASC, sv.scheduled_at DESC;
+    ELSE
+        -- Return query without gate fields
+        RETURN QUERY
+        SELECT 
+            sv.id as visit_id,
+            sv.visitor_first_name,
+            sv.visitor_last_name,
+            sv.visitor_email,
+            sv.visitor_phone,
+            sv.visitor_user_id,
+            sv.visitor_role,
+            sv.visit_date,
+            sv.purpose,
+            sv.other_purpose,
+            sv.status,
+            sv.scheduled_at,
+            sv.completed_at,
+            sv.completed_by,
+            svp.place_id,
+            ptv.name as place_name,
+            ptv.description as place_description,
+            ptv.location as place_location,
+            svp.status as place_status,
+            svp.completed_at as place_completed_at,
+            svp.completed_by as place_completed_by,
+            (SELECT COUNT(*) FROM scheduled_visit_places svp2 WHERE svp2.visit_id = sv.id) as total_places,
+            (SELECT COUNT(*) FROM scheduled_visit_places svp3 WHERE svp3.visit_id = sv.id AND svp3.status = 'completed') as completed_places,
+            FALSE as gate_entrance_scanned,
+            NULL::TIMESTAMP WITH TIME ZONE as gate_entrance_scanned_at,
+            NULL::UUID as gate_entrance_scanned_by,
+            FALSE as gate_exit_scanned,
+            NULL::TIMESTAMP WITH TIME ZONE as gate_exit_scanned_at,
+            NULL::UUID as gate_exit_scanned_by,
+            FALSE as flagged_for_no_exit,
+            NULL::TIMESTAMP WITH TIME ZONE as flagged_at,
+            NULL::UUID as flagged_by
+        FROM scheduled_visits sv
+        JOIN scheduled_visit_places svp ON sv.id = svp.visit_id
+        LEFT JOIN places_to_visit ptv ON svp.place_id = ptv.id
+        WHERE svp.place_id IN (
+            SELECT pp.place_id FROM place_personnel pp WHERE pp.personnel_id = p_personnel_id
+        )
+        AND sv.status IN ('pending', 'completed')
+        ORDER BY sv.visit_date ASC, sv.scheduled_at DESC;
+    END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -1475,52 +1544,111 @@ RETURNS TABLE (
     flagged_at TIMESTAMP WITH TIME ZONE,
     flagged_by UUID
 ) AS $$
+DECLARE
+    gate_fields_exist BOOLEAN;
 BEGIN
-    RETURN QUERY
-    SELECT 
-        sv.id,
-        sv.visitor_first_name,
-        sv.visitor_last_name,
-        sv.visitor_email,
-        sv.visitor_phone,
-        sv.visitor_user_id,
-        sv.visitor_role,
-        sv.visit_date,
-        sv.purpose,
-        sv.other_purpose,
-        sv.status,
-        sv.scheduled_at,
-        sv.completed_at,
-        sv.completed_by,
-        COALESCE(
-            (SELECT jsonb_agg(
-                jsonb_build_object(
-                    'place_id', svp.place_id,
-                    'place_name', ptv.name,
-                    'place_description', ptv.description,
-                    'place_location', ptv.location,
-                    'status', svp.status,
-                    'completed_at', svp.completed_at,
-                    'completed_by', svp.completed_by
+    -- Check if gate fields exist in the scheduled_visits table
+    SELECT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'scheduled_visits' 
+        AND column_name = 'gate_entrance_scanned'
+    ) INTO gate_fields_exist;
+    
+    -- Return query with conditional gate field selection
+    IF gate_fields_exist THEN
+        RETURN QUERY
+        SELECT 
+            sv.id,
+            sv.visitor_first_name,
+            sv.visitor_last_name,
+            sv.visitor_email,
+            sv.visitor_phone,
+            sv.visitor_user_id,
+            sv.visitor_role,
+            sv.visit_date,
+            sv.purpose,
+            sv.other_purpose,
+            sv.status,
+            sv.scheduled_at,
+            sv.completed_at,
+            sv.completed_by,
+            COALESCE(
+                (SELECT jsonb_agg(
+                    jsonb_build_object(
+                        'place_id', svp.place_id,
+                        'place_name', ptv.name,
+                        'place_description', ptv.description,
+                        'place_location', ptv.location,
+                        'status', svp.status,
+                        'completed_at', svp.completed_at,
+                        'completed_by', svp.completed_by
+                    )
                 )
-            )
-            FROM scheduled_visit_places svp
-            LEFT JOIN places_to_visit ptv ON svp.place_id = ptv.id
-            WHERE svp.visit_id = sv.id),
-            '[]'::jsonb
-        ) as places,
-        sv.gate_entrance_scanned,
-        sv.gate_entrance_scanned_at,
-        sv.gate_entrance_scanned_by,
-        sv.gate_exit_scanned,
-        sv.gate_exit_scanned_at,
-        sv.gate_exit_scanned_by,
-        sv.flagged_for_no_exit,
-        sv.flagged_at,
-        sv.flagged_by
-    FROM scheduled_visits sv
-    WHERE sv.visitor_user_id = p_visitor_user_id
-    ORDER BY sv.visit_date DESC, sv.scheduled_at DESC;
+                FROM scheduled_visit_places svp
+                LEFT JOIN places_to_visit ptv ON svp.place_id = ptv.id
+                WHERE svp.visit_id = sv.id),
+                '[]'::jsonb
+            ) as places,
+            sv.gate_entrance_scanned,
+            sv.gate_entrance_scanned_at,
+            sv.gate_entrance_scanned_by,
+            sv.gate_exit_scanned,
+            sv.gate_exit_scanned_at,
+            sv.gate_exit_scanned_by,
+            sv.flagged_for_no_exit,
+            sv.flagged_at,
+            sv.flagged_by
+        FROM scheduled_visits sv
+        WHERE sv.visitor_user_id = p_visitor_user_id
+        ORDER BY sv.visit_date DESC, sv.scheduled_at DESC;
+    ELSE
+        -- Return query without gate fields
+        RETURN QUERY
+        SELECT 
+            sv.id,
+            sv.visitor_first_name,
+            sv.visitor_last_name,
+            sv.visitor_email,
+            sv.visitor_phone,
+            sv.visitor_user_id,
+            sv.visitor_role,
+            sv.visit_date,
+            sv.purpose,
+            sv.other_purpose,
+            sv.status,
+            sv.scheduled_at,
+            sv.completed_at,
+            sv.completed_by,
+            COALESCE(
+                (SELECT jsonb_agg(
+                    jsonb_build_object(
+                        'place_id', svp.place_id,
+                        'place_name', ptv.name,
+                        'place_description', ptv.description,
+                        'place_location', ptv.location,
+                        'status', svp.status,
+                        'completed_at', svp.completed_at,
+                        'completed_by', svp.completed_by
+                    )
+                )
+                FROM scheduled_visit_places svp
+                LEFT JOIN places_to_visit ptv ON svp.place_id = ptv.id
+                WHERE svp.visit_id = sv.id),
+                '[]'::jsonb
+            ) as places,
+            FALSE as gate_entrance_scanned,
+            NULL::TIMESTAMP WITH TIME ZONE as gate_entrance_scanned_at,
+            NULL::UUID as gate_entrance_scanned_by,
+            FALSE as gate_exit_scanned,
+            NULL::TIMESTAMP WITH TIME ZONE as gate_exit_scanned_at,
+            NULL::UUID as gate_exit_scanned_by,
+            FALSE as flagged_for_no_exit,
+            NULL::TIMESTAMP WITH TIME ZONE as flagged_at,
+            NULL::UUID as flagged_by
+        FROM scheduled_visits sv
+        WHERE sv.visitor_user_id = p_visitor_user_id
+        ORDER BY sv.visit_date DESC, sv.scheduled_at DESC;
+    END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
