@@ -5,6 +5,9 @@
 -- First, ensure the completed_flagged status exists
 ALTER TYPE visit_status ADD VALUE IF NOT EXISTS 'completed_flagged';
 
+-- Add new log action for completed_flagged visits
+ALTER TYPE log_action ADD VALUE IF NOT EXISTS 'visit_completed_flagged';
+
 -- Update the mark_past_visits_unsuccessful function to properly handle completed_flagged logic
 CREATE OR REPLACE FUNCTION public.mark_past_visits_unsuccessful()
 RETURNS INTEGER AS $$
@@ -339,11 +342,13 @@ BEGIN
                     
                     -- Update the log entry to reflect the completed_flagged status
                     UPDATE logs 
-                    SET details = jsonb_set(
-                        jsonb_set(log_row.details, '{history}', new_history),
-                        '{current_status}',
-                        '"completed_flagged"'
-                    ) 
+                    SET 
+                        action = 'visit_completed_flagged',
+                        details = jsonb_set(
+                            jsonb_set(log_row.details, '{history}', new_history),
+                            '{current_status}',
+                            '"completed_flagged"'
+                        ) 
                     WHERE id = log_row.id;
                 END IF;
             END IF;
@@ -437,16 +442,19 @@ BEGIN
                 )
             );
             
-            UPDATE logs SET details = jsonb_set(
-                jsonb_set(log_row.details, '{history}', new_history),
-                '{current_status}',
-                '"completed_flagged"'
-            ) WHERE id = log_row.id;
+            UPDATE logs SET 
+                action = 'visit_completed_flagged',
+                details = jsonb_set(
+                    jsonb_set(log_row.details, '{history}', new_history),
+                    '{current_status}',
+                    '"completed_flagged"'
+                ) 
+            WHERE id = log_row.id;
         ELSE
             -- Create new log entry for visits without existing logs
             PERFORM public.log_action(
                 visit_record.completed_by,
-                'visit_completed',
+                'visit_completed_flagged',
                 jsonb_build_object(
                     'visit_id', visit_record.id,
                     'visitor_name', visit_record.visitor_first_name || ' ' || visit_record.visitor_last_name,

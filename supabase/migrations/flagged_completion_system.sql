@@ -4,6 +4,9 @@
 -- Add new status to visit_status enum
 ALTER TYPE visit_status ADD VALUE IF NOT EXISTS 'completed_flagged';
 
+-- Add new log action for completed_flagged visits
+ALTER TYPE log_action ADD VALUE IF NOT EXISTS 'visit_completed_flagged';
+
 -- Create function to update visit status to completed_flagged when all places are completed but no exit scan
 -- Updated to only run at end of day (23:59:59 Philippine time)
 CREATE OR REPLACE FUNCTION public.update_completed_flagged_visits()
@@ -103,16 +106,19 @@ BEGIN
                 )
             );
             
-            UPDATE logs SET details = jsonb_set(
-                jsonb_set(log_row.details, '{history}', new_history),
-                '{current_status}',
-                '"completed_flagged"'
-            ) WHERE id = log_row.id;
+            UPDATE logs SET 
+                action = 'visit_completed_flagged',
+                details = jsonb_set(
+                    jsonb_set(log_row.details, '{history}', new_history),
+                    '{current_status}',
+                    '"completed_flagged"'
+                ) 
+            WHERE id = log_row.id;
         ELSE
             -- Create new log entry for visits without existing logs
             PERFORM public.log_action(
                 visit_record.completed_by,
-                'visit_completed',
+                'visit_completed_flagged',
                 jsonb_build_object(
                     'visit_id', visit_record.id,
                     'visitor_name', visit_record.visitor_first_name || ' ' || visit_record.visitor_last_name,
@@ -690,11 +696,13 @@ BEGIN
                     
                     -- Update the log entry to reflect the completed_flagged status
                     UPDATE logs 
-                    SET details = jsonb_set(
-                        jsonb_set(log_row.details, '{history}', new_history),
-                        '{current_status}',
-                        '"completed_flagged"'
-                    ) 
+                    SET 
+                        action = 'visit_completed_flagged',
+                        details = jsonb_set(
+                            jsonb_set(log_row.details, '{history}', new_history),
+                            '{current_status}',
+                            '"completed_flagged"'
+                        ) 
                     WHERE id = log_row.id;
                 END IF;
             END IF;
