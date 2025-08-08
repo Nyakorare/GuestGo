@@ -341,6 +341,7 @@ BEGIN
                     );
                     
                     -- Update the log entry to reflect the completed_flagged status
+                    -- Change the action to 'visit_completed_flagged' to reflect the actual status
                     UPDATE logs 
                     SET 
                         action = 'visit_completed_flagged',
@@ -442,6 +443,7 @@ BEGIN
                 )
             );
             
+            -- Change the action to 'visit_completed_flagged' to reflect the actual status
             UPDATE logs SET 
                 action = 'visit_completed_flagged',
                 details = jsonb_set(

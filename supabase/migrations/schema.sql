@@ -870,12 +870,15 @@ BEGIN
                     );
                     
                     -- Update the log entry to reflect the completed_flagged status
+                    -- Change the action to 'visit_completed_flagged' to reflect the actual status
                     UPDATE logs 
-                    SET details = jsonb_set(
-                        jsonb_set(log_row.details, '{history}', new_history),
-                        '{current_status}',
-                        '"completed_flagged"'
-                    ) 
+                    SET 
+                        action = 'visit_completed_flagged',
+                        details = jsonb_set(
+                            jsonb_set(log_row.details, '{history}', new_history),
+                            '{current_status}',
+                            '"completed_flagged"'
+                        ) 
                     WHERE id = log_row.id;
                 END IF;
             END IF;
