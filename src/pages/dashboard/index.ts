@@ -1524,7 +1524,7 @@ async function renderLogs(): Promise<void> {
                     log.displayAction === 'visit_flagged_no_exit' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
                     'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
                   }">
-                    ${log.displayAction.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                    ${log.displayAction === 'visit_completed_flagged' ? 'Completed (Flagged)' : log.displayAction.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                   </span>
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
@@ -1581,7 +1581,7 @@ async function renderLogs(): Promise<void> {
                     log.displayAction === 'visit_flagged_no_exit' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
                     'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
                   }">
-                    ${log.displayAction.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                    ${log.displayAction === 'visit_completed_flagged' ? 'Completed (Flagged)' : log.displayAction.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                   </span>
                 </div>
               </div>
