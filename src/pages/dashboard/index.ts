@@ -1430,12 +1430,16 @@ async function renderLogs(): Promise<void> {
     // Format all log details asynchronously
     const formattedDetails = await Promise.all(
       (filteredLogs as any[]).map(async (log: any) => {
-        const details = await formatLogDetails(log.details, log.action, log);
         // Determine action override for visit_scheduled logs
         let displayAction = log.action;
-        if (log.action === 'visit_scheduled' && log.details) {
-          let parsedDetails = typeof log.details === 'string' ? JSON.parse(log.details) : log.details;
-          
+        let parsedDetails: any = null;
+        let overrideDetails: any = null;
+
+        if (log.details) {
+          parsedDetails = typeof log.details === 'string' ? JSON.parse(log.details) : log.details;
+        }
+
+        if (log.action === 'visit_scheduled' && parsedDetails) {
           // Check current_status first
           if (parsedDetails.current_status === 'completed') {
             displayAction = 'visit_completed';
@@ -1446,17 +1450,15 @@ async function renderLogs(): Promise<void> {
             if (Array.isArray(parsedDetails.history) && parsedDetails.history.length > 0) {
               const lastEvent = parsedDetails.history[parsedDetails.history.length - 1];
               if (lastEvent.event === 'completed' || lastEvent.event === 'place_completed') {
-                // Check if all places are completed by looking at the details
                 if (lastEvent.details && lastEvent.details.all_places_completed) {
-                  displayAction = 'visit_completed'; // Show as completed since personnel finished their part
+                  displayAction = 'visit_completed';
                 }
               }
             }
           } else if (parsedDetails.current_status === 'unsuccessful') {
             displayAction = 'visit_unsuccessful';
-          }
-          // If no current_status, check history events
-          else if (Array.isArray(parsedDetails.history) && parsedDetails.history.length > 0) {
+          } else if (Array.isArray(parsedDetails.history) && parsedDetails.history.length > 0) {
+            // If no current_status, check history events
             const lastEvent = parsedDetails.history[parsedDetails.history.length - 1];
             if (lastEvent.event === 'completed') {
               displayAction = 'visit_completed';
@@ -1466,7 +1468,44 @@ async function renderLogs(): Promise<void> {
               displayAction = 'visit_unsuccessful';
             }
           }
+
+          // Fallback: If still visit_scheduled but the visit itself is now completed_flagged, override
+          if (displayAction === 'visit_scheduled' && parsedDetails.visit_id) {
+            try {
+              const { data: visitRow } = await supabase
+                .from('scheduled_visits')
+                .select('status, completed_at, completed_by')
+                .eq('id', parsedDetails.visit_id)
+                .single();
+              if (visitRow && visitRow.status === 'completed_flagged') {
+                displayAction = 'visit_completed_flagged';
+                const syntheticEvent = {
+                  event: 'completed_flagged',
+                  timestamp: visitRow.completed_at || new Date().toISOString(),
+                  details: {
+                    by: 'system',
+                    auto_marked: true,
+                    note: 'Visit completed (flagged) - auto-marked by system'
+                  }
+                };
+                overrideDetails = {
+                  ...parsedDetails,
+                  current_status: 'completed_flagged',
+                  completed_at: visitRow.completed_at,
+                  completed_by: visitRow.completed_by,
+                  history: Array.isArray(parsedDetails.history)
+                    ? [...parsedDetails.history, syntheticEvent]
+                    : [syntheticEvent]
+                };
+              }
+            } catch (e) {
+              // ignore
+            }
+          }
         }
+
+        const details = await formatLogDetails(overrideDetails ?? log.details, log.action, log);
+
         return {
           ...log,
           formattedDetails: details,
@@ -1925,10 +1964,62 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
       case 'visit_completed':
         const completedVisitPlaceName = await getPlaceName(parsedDetails.place_id);
         return `<div><span class="font-medium">Visit ID:</span> ${parsedDetails.visit_id ? parsedDetails.visit_id.substring(0, 8) + '...' : 'Unknown'}</div><div><span class="font-medium">Place:</span> ${completedVisitPlaceName}</div><div><span class="font-medium">Completed:</span> ${new Date(parsedDetails.completed_at).toLocaleString()}</div>`;
-      case 'visit_completed_flagged':
-        const completedBy = parsedDetails.completed_by ? await getUserName(parsedDetails.completed_by) : 'Unknown';
+      case 'visit_completed_flagged': {
+        const completedBy = parsedDetails.completed_by ? await getUserName(parsedDetails.completed_by) : 'System';
         const completedDate = parsedDetails.completed_at ? new Date(parsedDetails.completed_at).toLocaleString() : 'Unknown';
-        return `<div><span class="font-medium">Visit ID:</span> ${parsedDetails.visit_id ? parsedDetails.visit_id.substring(0, 8) + '...' : 'Unknown'}</div><div><span class="font-medium">Completed by:</span> ${completedBy}</div><div><span class="font-medium">Completed at:</span> ${completedDate}</div><div><span class="font-medium text-orange-600 dark:text-orange-400">Status:</span> <span class="text-orange-600 dark:text-orange-400 font-semibold">Visit completed (flagged) - No exit scan</span></div>`;
+
+        // If history exists in details, render it similarly to visit_scheduled
+        let historyHtml = '';
+        if (Array.isArray(parsedDetails.history) && parsedDetails.history.length > 0) {
+          const historyId = `history-${log?.id || Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+          const historyItems = parsedDetails.history.map((event: any) => {
+            try {
+              const eventType = event.event ? event.event.charAt(0).toUpperCase() + event.event.slice(1) : 'Event';
+              const eventTime = event.timestamp ? new Date(event.timestamp).toLocaleString() : '';
+              let details = '';
+              if (event.details) {
+                if (event.details.by) {
+                  details += `<span class='text-xs text-gray-500'>(By: ${event.details.by})</span> `;
+                }
+                if (event.details.note) {
+                  details += `<span class='text-xs text-gray-500'>Note: ${event.details.note}</span> `;
+                }
+                if (event.details.reason) {
+                  details += `<span class='text-xs text-red-500'>Reason: ${event.details.reason}</span> `;
+                }
+                if (event.details.auto_marked) {
+                  details += `<span class='text-xs text-orange-500'>(Auto-marked by system)</span> `;
+                }
+              }
+              return `<li class="py-1 border-b border-gray-100 dark:border-gray-700 last:border-b-0"><span class='font-semibold'>${eventType}</span> <span class='text-xs text-gray-400'>${eventTime}</span> ${details}</li>`;
+            } catch (error) {
+              console.error('Error processing history event:', error, event);
+              return `<li class="py-1 border-b border-gray-100 dark:border-gray-700 last:border-b-0"><span class='font-semibold text-red-600'>Error processing event</span></li>`;
+            }
+          }).filter(item => item).join('');
+
+          historyHtml = `
+            <div class="mt-2">
+              <button 
+                class="text-blue-600 hover:text-blue-800 dark:text-blue-500 dark:hover:text-blue-400 text-sm font-medium flex items-center gap-1 w-full justify-between p-2 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors duration-200"
+                id="btn-${historyId}"
+              >
+                <span>See History (${parsedDetails.history.length} events)</span>
+                <svg class="w-4 h-4 transition-transform duration-200" id="icon-${historyId}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </button>
+              <div class="hidden mt-2 bg-gray-50 dark:bg-gray-800 rounded-md p-3" id="${historyId}">
+                <ul class="space-y-1 text-sm">
+                  ${historyItems}
+                </ul>
+              </div>
+            </div>`;
+        }
+
+        return `<div><span class="font-medium">Visit ID:</span> ${parsedDetails.visit_id ? parsedDetails.visit_id.substring(0, 8) + '...' : 'Unknown'}</div><div><span class="font-medium">Completed by:</span> ${completedBy}</div><div><span class="font-medium">Completed at:</span> ${completedDate}</div><div><span class="font-medium text-orange-600 dark:text-orange-400">Status:</span> <span class="text-orange-600 dark:text-orange-400 font-semibold">Visit completed (flagged) - No exit scan</span></div>${historyHtml}`;
+      }
       case 'visit_unsuccessful': {
         // Show details for unsuccessful visits (system auto-mark or manual mark)
         let when = parsedDetails.marked_at || parsedDetails.executed_at || parsedDetails.completed_at;
