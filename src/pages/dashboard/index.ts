@@ -3,7 +3,7 @@ import { logAction, getLogs } from '../../utils/logging';
 import { generateVisitQRCode, openPrintableVisitCard, type VisitQRData } from '../../utils/qrCode';
 import { generateSimpleVisitQRCode } from '../../utils/qrCode';
 import jsQR from 'jsqr';
-import { addNotificationToActionBadge, addNotificationToLogContainer } from '../../utils/notification.js';
+import { addNotificationToActionBadge, addNotificationToLogContainer, shouldShowNotification, getNotificationConfig } from '../../utils/notification.js';
 
 interface Place {
   id: string;
@@ -1520,6 +1520,7 @@ async function renderLogs(): Promise<void> {
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead class="bg-gray-50 dark:bg-gray-800">
             <tr>
+              <th class="w-6"></th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Timestamp</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">User</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Action</th>
@@ -1527,8 +1528,13 @@ async function renderLogs(): Promise<void> {
             </tr>
           </thead>
           <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-            ${(formattedDetails as any[]).map((log: any) => addNotificationToLogContainer(`
-              <tr>
+            ${(formattedDetails as any[]).map((log: any) => `
+              <tr class="relative">
+                <td class="px-2 py-4 align-middle">
+                  ${shouldShowNotification(log.displayAction) ? `
+                    <div class="w-3 h-3 ${(getNotificationConfig(log.displayAction)?.className) || 'bg-red-500'} rounded-full animate-pulse" title="Important notification"></div>
+                  ` : ''}
+                </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                   ${new Date(log.created_at).toLocaleString()}
                 </td>
@@ -1572,15 +1578,18 @@ async function renderLogs(): Promise<void> {
                   </div>
                 </td>
               </tr>
-            `, log.displayAction)).join('')}
+            `).join('')}
           </tbody>
         </table>
       </div>
 
       <!-- Mobile Card View (visible on mobile and tablet) -->
       <div class="lg:hidden space-y-4">
-        ${(formattedDetails as any[]).map((log: any) => addNotificationToLogContainer(`
-          <div class="bg-white dark:bg-gray-700 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 p-4">
+        ${(formattedDetails as any[]).map((log: any) => `
+          <div class="relative bg-white dark:bg-gray-700 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 p-4 pl-8">
+            ${shouldShowNotification(log.displayAction) ? `
+              <div class="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 ${(getNotificationConfig(log.displayAction)?.className) || 'bg-red-500'} rounded-full animate-pulse" title="Important notification"></div>
+            ` : ''}
             <div class="flex flex-col space-y-3">
               <!-- Header with timestamp and action -->
               <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
@@ -1633,7 +1642,7 @@ async function renderLogs(): Promise<void> {
               </div>
             </div>
           </div>
-        `, log.displayAction)).join('')}
+        `).join('')}
       </div>
     `;
   }

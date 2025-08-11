@@ -46,10 +46,8 @@ export function generateNotificationIndicator(logAction: string): string {
   if (!config) return '';
   
   return `
-    <div class="relative inline-block">
-      <div class="absolute -top-1 -right-1 w-3 h-3 ${config.className} rounded-full animate-pulse" 
-           title="${config.title || 'Important notification'}">
-      </div>
+    <div class="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 ${config.className} rounded-full animate-pulse"
+         title="${config.title || 'Important notification'}">
     </div>
   `;
 }
@@ -79,7 +77,7 @@ export function addNotificationToLogContainer(containerHtml: string, logAction: 
   
   // Wrap the container in a relative container and add the notification indicator
   return `
-    <div class="relative">
+    <div class="relative pl-6">
       ${containerHtml}
       ${notificationIndicator}
     </div>
