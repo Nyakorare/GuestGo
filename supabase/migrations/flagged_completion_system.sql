@@ -601,7 +601,7 @@ BEGIN
                             'by', 'system',
                             'reason', CASE 
                                 WHEN visit_record.visit_date < philippine_date THEN 'Visit was not completed on or before the scheduled date'
-                                WHEN gate_fields_exist AND visit_record.gate_entrance_scanned = FALSE THEN 'Visit did not scan entrance gate by end of day'
+                                WHEN gate_fields_exist THEN 'Visit did not scan entrance gate by end of day'
                                 ELSE 'Not all places were completed by the end of the scheduled day (23:59:59)'
                             END,
                             'auto_marked', true,
@@ -630,7 +630,7 @@ BEGIN
     -- Log completed_flagged visits (only if gate fields exist)
     IF gate_fields_exist THEN
         FOR visit_record IN 
-            SELECT id, visitor_user_id, visitor_role, visit_date, gate_entrance_scanned, gate_exit_scanned
+            SELECT id, visitor_user_id, visitor_role, visit_date
             FROM scheduled_visits 
             WHERE status = 'completed_flagged' 
               AND visit_date = philippine_date
