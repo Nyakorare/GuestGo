@@ -40,11 +40,6 @@ BEGIN
     philippine_date := public.get_philippine_date();
     philippine_timestamp := public.get_philippine_timestamp();
     
-    -- Only proceed if it's past end of day (23:59:59 Philippine time) or if it's a past date
-    IF philippine_timestamp::TIME <= end_of_day_time AND philippine_date = CURRENT_DATE THEN
-        RETURN 0; -- Not end of day yet for today's visits
-    END IF;
-    
     -- Handle completed_flagged visits (only if gate fields exist)
     -- These are visits that have:
     -- 1. Started the process (entrance scanned)
@@ -341,6 +336,120 @@ BEGIN
         'philippine_date', philippine_date,
         'philippine_timestamp', philippine_timestamp,
         'executed_at', philippine_timestamp
+    )::TEXT;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create a function to force update all pending visits (for testing and immediate updates)
+CREATE OR REPLACE FUNCTION public.force_update_all_visit_statuses()
+RETURNS TEXT AS $$
+DECLARE
+    affected_visits INTEGER;
+    additional_affected_rows INTEGER;
+    philippine_date DATE;
+    philippine_timestamp TIMESTAMP WITH TIME ZONE;
+    gate_fields_exist BOOLEAN;
+BEGIN
+    -- Check if gate fields exist
+    SELECT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'scheduled_visits' 
+        AND column_name = 'gate_entrance_scanned'
+    ) INTO gate_fields_exist;
+    
+    -- Get current Philippine date and timestamp
+    philippine_date := public.get_philippine_date();
+    philippine_timestamp := public.get_philippine_timestamp();
+    
+    -- Force update all pending visits regardless of time
+    -- This is useful for testing and immediate updates
+    
+    -- First, handle completed_flagged visits
+    IF gate_fields_exist THEN
+        UPDATE scheduled_visits 
+        SET 
+            status = 'completed_flagged',
+            completed_at = philippine_timestamp,
+            completed_by = NULL
+        WHERE status = 'pending' 
+          AND gate_entrance_scanned = TRUE
+          AND gate_exit_scanned = FALSE
+          AND id IN (
+              SELECT sv.id
+              FROM scheduled_visits sv
+              WHERE sv.status = 'pending'
+                AND sv.gate_entrance_scanned = TRUE
+                AND sv.gate_exit_scanned = FALSE
+                AND NOT EXISTS (
+                    SELECT 1 
+                    FROM scheduled_visit_places svp 
+                    WHERE svp.visit_id = sv.id 
+                      AND svp.status != 'completed'
+                )
+          );
+        
+        GET DIAGNOSTICS affected_visits = ROW_COUNT;
+    ELSE
+        affected_visits := 0;
+    END IF;
+    
+    -- Then, mark remaining pending visits as unsuccessful
+    UPDATE scheduled_visits 
+    SET 
+        status = 'unsuccessful',
+        completed_at = philippine_timestamp,
+        completed_by = NULL
+    WHERE status = 'pending' 
+      AND (
+          -- Past dates
+          visit_date < philippine_date
+          OR
+          -- Today but either no entrance scan or incomplete places
+          (
+              visit_date = philippine_date
+              AND (
+                  (gate_fields_exist AND gate_entrance_scanned = FALSE)
+                  OR
+                  id IN (
+                      SELECT sv.id
+                      FROM scheduled_visits sv
+                      WHERE sv.status = 'pending'
+                        AND sv.visit_date = philippine_date
+                        AND EXISTS (
+                            SELECT 1 
+                            FROM scheduled_visit_places svp 
+                            WHERE svp.visit_id = sv.id 
+                              AND svp.status != 'completed'
+                        )
+                  )
+              )
+          )
+      );
+    
+            GET DIAGNOSTICS additional_affected_rows = ROW_COUNT;
+        affected_visits := affected_visits + additional_affected_rows;
+    
+    -- Mark places as failed for visits that were just marked as unsuccessful
+    UPDATE scheduled_visit_places 
+    SET 
+        status = 'failed',
+        completed_at = philippine_timestamp,
+        completed_by = NULL
+    WHERE visit_id IN (
+        SELECT id FROM scheduled_visits 
+        WHERE status = 'unsuccessful' 
+          AND completed_at >= (philippine_timestamp - INTERVAL '1 minute')
+    )
+    AND status = 'pending';
+    
+    -- Return a detailed message
+    RETURN json_build_object(
+        'message', 'Force update completed successfully',
+        'affected_visits', affected_visits,
+        'philippine_date', philippine_date,
+        'philippine_timestamp', philippine_timestamp,
+        'executed_at', philippine_timestamp,
+        'force_update', true
     )::TEXT;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

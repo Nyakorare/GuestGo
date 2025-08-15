@@ -556,6 +556,36 @@ export function DashboardPage() {
             >
               Refresh
             </button>
+            <button 
+              id="updateStatusesBtn"
+              class="bg-orange-600 text-white px-4 py-2 rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 w-full sm:w-auto"
+              title="Update visit statuses (auto-mark completed_flagged and unsuccessful)"
+            >
+              <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              Update Statuses
+            </button>
+            <button 
+              id="forceUpdateStatusesBtn"
+              class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 w-full sm:w-auto"
+              title="Force update all visit statuses immediately (for testing)"
+            >
+              <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+              </svg>
+              Force Update
+            </button>
+            <button 
+              id="checkStatusesBtn"
+              class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 w-full sm:w-auto"
+              title="Check current visit statuses for debugging"
+            >
+              <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+              </svg>
+              Check Status
+            </button>
           </div>
         </div>
         <!-- Assignment Content -->
@@ -601,6 +631,8 @@ export function DashboardPage() {
                 >
                   <option value="all">All Status</option>
                   <option value="pending">Pending</option>
+                  <option value="completed">Completed</option>
+                  <option value="completed_flagged">Completed (Flagged)</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
                 <!-- Visitor Role Filter -->
@@ -671,6 +703,16 @@ export function DashboardPage() {
                   <option value="last_week">Last Week</option>
                   <option value="this_month">This Month</option>
                   <option value="last_month">Last Month</option>
+                </select>
+                <!-- Status Filter -->
+                <select 
+                  id="finishedStatusFilter"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
+                >
+                  <option value="all">All Status</option>
+                  <option value="completed">Completed</option>
+                  <option value="completed_flagged">Completed (Flagged)</option>
+                  <option value="unsuccessful">Unsuccessful</option>
                 </select>
                 <!-- Specific Date Filter -->
                 <div class="relative">
@@ -2474,6 +2516,103 @@ function setupDashboardEventListeners() {
     });
   }
 
+  // Update visit statuses button
+  const updateStatusesBtn = document.getElementById('updateStatusesBtn');
+  if (updateStatusesBtn) {
+    updateStatusesBtn.addEventListener('click', async () => {
+      try {
+        // Show loading state
+        (updateStatusesBtn as HTMLButtonElement).disabled = true;
+        updateStatusesBtn.innerHTML = `
+          <svg class="w-4 h-4 inline mr-1 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          Updating...`;
+        
+        // Update visit statuses
+        await updateVisitStatuses();
+        
+        // Show success notification
+        showNotification('Visit statuses updated successfully!', 'success');
+      } catch (error) {
+        console.error('Error updating visit statuses:', error);
+        showNotification('Error updating visit statuses. Please try again.', 'error');
+      } finally {
+        // Reset button state
+        (updateStatusesBtn as HTMLButtonElement).disabled = false;
+        updateStatusesBtn.innerHTML = `
+          <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          Update Statuses`;
+      }
+    });
+  }
+
+  // Force update visit statuses button
+  const forceUpdateStatusesBtn = document.getElementById('forceUpdateStatusesBtn');
+  if (forceUpdateStatusesBtn) {
+    forceUpdateStatusesBtn.addEventListener('click', async () => {
+      try {
+        // Show loading state
+        (forceUpdateStatusesBtn as HTMLButtonElement).disabled = true;
+        forceUpdateStatusesBtn.innerHTML = `
+          <svg class="w-4 h-4 inline mr-1 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          Force Updating...`;
+        
+        // Force update visit statuses
+        await forceUpdateVisitStatuses();
+        
+        // Show success notification
+        showNotification('Visit statuses force updated successfully!', 'success');
+      } catch (error) {
+        console.error('Error force updating visit statuses:', error);
+        showNotification('Error force updating visit statuses. Please try again.', 'error');
+      } finally {
+        // Reset button state
+        (forceUpdateStatusesBtn as HTMLButtonElement).disabled = false;
+        forceUpdateStatusesBtn.innerHTML = `
+          <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+          </svg>
+          Force Update`;
+      }
+    });
+  }
+
+  // Check visit statuses button
+  const checkStatusesBtn = document.getElementById('checkStatusesBtn');
+  if (checkStatusesBtn) {
+    checkStatusesBtn.addEventListener('click', async () => {
+      try {
+        // Show loading state
+        (checkStatusesBtn as HTMLButtonElement).disabled = true;
+        checkStatusesBtn.innerHTML = `
+          <svg class="w-4 h-4 inline mr-1 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          Checking...`;
+        
+        // Check visit statuses
+        await checkVisitStatuses();
+        
+      } catch (error) {
+        console.error('Error checking visit statuses:', error);
+        showNotification('Error checking visit statuses. Please try again.', 'error');
+      } finally {
+        // Reset button state
+        (checkStatusesBtn as HTMLButtonElement).disabled = false;
+        checkStatusesBtn.innerHTML = `
+          <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+          </svg>
+          Check Status`;
+      }
+    });
+  }
+
   // Refresh visits button
   const refreshVisitsBtn = document.getElementById('refreshVisitsBtn');
   if (refreshVisitsBtn) {
@@ -3532,6 +3671,9 @@ async function loadPersonnelDashboard() {
       }
     }
     // Note: Scheduled visits will be loaded when the visits tab is clicked
+    
+    // Start automatic status updates for personnel
+    startAutomaticStatusUpdates();
   } catch (error) {
     console.error('Error in loadPersonnelDashboard:', error);
   }
@@ -3742,6 +3884,184 @@ function stopVisitsAutoRefresh() {
   }
 }
 
+// Function to start automatic status updates
+function startAutomaticStatusUpdates() {
+  console.log('Starting automatic status updates...');
+  
+  // Update statuses every 2 minutes (120000 ms) for more responsive updates
+  setInterval(async () => {
+    try {
+      console.log('Running automatic status update...');
+      const result = await updateVisitStatuses();
+      console.log('Automatic status update completed:', result);
+    } catch (error) {
+      console.error('Error in automatic status update:', error);
+    }
+  }, 120000); // 2 minutes
+  
+  // Also run an immediate update when starting
+  setTimeout(async () => {
+    try {
+      console.log('Running initial status update...');
+      await updateVisitStatuses();
+    } catch (error) {
+      console.error('Error in initial status update:', error);
+    }
+  }, 5000); // 5 seconds after starting
+}
+
+// Function to automatically update visit statuses (runs the consolidated status system)
+async function updateVisitStatuses() {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error('No user found');
+      return;
+    }
+
+    // Check if the user has admin or personnel role
+    const { data: roleData, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single();
+
+    if (roleError) {
+      console.error('Error checking user role:', roleError);
+      return;
+    }
+
+    if (roleData?.role !== 'admin' && roleData?.role !== 'personnel') {
+      console.log('User does not have admin or personnel role:', roleData?.role);
+      return;
+    }
+
+    // Call the consolidated status update function directly
+    const { data, error } = await supabase.rpc('update_visit_statuses');
+    
+    if (error) {
+      console.error('Error updating visit statuses:', error);
+      return;
+    }
+
+    console.log('Visit statuses updated successfully:', data);
+    
+    // Reload the visits to reflect the changes
+    await loadScheduledVisits();
+    await loadFinishedSchedules();
+    
+  } catch (error) {
+    console.error('Error in updateVisitStatuses:', error);
+  }
+}
+
+// Function to force update all visit statuses immediately (for testing and immediate updates)
+async function forceUpdateVisitStatuses() {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error('No user found');
+      return;
+    }
+
+    // Check if the user has admin or personnel role
+    const { data: roleData, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single();
+
+    if (roleError) {
+      console.error('Error checking user role:', roleError);
+      return;
+    }
+
+    if (roleData?.role !== 'admin' && roleData?.role !== 'personnel') {
+      console.log('User does not have admin or personnel role:', roleData?.role);
+      return;
+    }
+
+    // Call the force update function
+    const { data, error } = await supabase.rpc('force_update_all_visit_statuses');
+    
+    if (error) {
+      console.error('Error force updating visit statuses:', error);
+      return;
+    }
+
+    console.log('Visit statuses force updated successfully:', data);
+    
+    // Reload the visits to reflect the changes
+    await loadScheduledVisits();
+    await loadFinishedSchedules();
+    
+  } catch (error) {
+    console.error('Error in forceUpdateVisitStatuses:', error);
+  }
+}
+
+// Function to check current visit statuses for debugging
+async function checkVisitStatuses() {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error('No user found');
+      return;
+    }
+
+    // Check if the user has admin or personnel role
+    const { data: roleData, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single();
+
+    if (roleError) {
+      console.error('Error checking user role:', roleError);
+      return;
+    }
+
+    if (roleData?.role !== 'admin' && roleData?.role !== 'personnel') {
+      console.log('User does not have admin or personnel role:', roleData?.role);
+      return;
+    }
+
+    // Get current visit statuses
+    const { data: visits, error } = await supabase
+      .from('scheduled_visits')
+      .select(`
+        id,
+        status,
+        visit_date,
+        gate_entrance_scanned,
+        gate_exit_scanned,
+        completed_at,
+        completed_by
+      `)
+      .in('status', ['pending', 'completed', 'completed_flagged', 'unsuccessful'])
+      .order('visit_date', { ascending: false })
+      .limit(20);
+
+    if (error) {
+      console.error('Error fetching visit statuses:', error);
+      return;
+    }
+
+    console.log('Current visit statuses:', visits);
+    
+    // Show notification with summary
+    const pendingCount = visits.filter(v => v.status === 'pending').length;
+    const completedCount = visits.filter(v => v.status === 'completed').length;
+    const flaggedCount = visits.filter(v => v.status === 'completed_flagged').length;
+    const unsuccessfulCount = visits.filter(v => v.status === 'unsuccessful').length;
+    
+    showNotification(`Status Check: ${pendingCount} pending, ${completedCount} completed, ${flaggedCount} flagged, ${unsuccessfulCount} unsuccessful`, 'info');
+    
+  } catch (error) {
+    console.error('Error in checkVisitStatuses:', error);
+  }
+}
+
 // Function to load finished schedules for personnel
 async function loadFinishedSchedules() {
   try {
@@ -3793,8 +4113,12 @@ async function loadFinishedSchedules() {
 
     if (visitsError) throw visitsError;
 
-    // Filter for completed and unsuccessful visits
-    const finishedVisits = (visits || []).filter(visit => visit.status === 'completed' || visit.status === 'unsuccessful');
+    // Filter for completed, completed_flagged, and unsuccessful visits
+    const finishedVisits = (visits || []).filter(visit => 
+      visit.status === 'completed' || 
+      visit.status === 'completed_flagged' || 
+      visit.status === 'unsuccessful'
+    );
 
     // Get unique personnel IDs who completed or marked visits as unsuccessful
     const personnelIds = [...new Set(finishedVisits.map(visit => visit.completed_by).filter(id => id))];
@@ -3974,7 +4298,7 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
       completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
       completed_flagged: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
       cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-      unsuccessful: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
+      unsuccessful: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
       failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
     };
 
@@ -4025,7 +4349,7 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
     let statusLabel = '';
     if (visit.status === 'completed_flagged') {
       if (visitDateStr < todayStr) {
-        statusLabel = 'Visit completed (flagged)';
+        statusLabel = 'Completed (Flagged)';
       } else {
         statusLabel = 'In Progress';
       }
@@ -4034,11 +4358,9 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
     } else if (visit.status === 'pending') {
       statusLabel = 'Pending';
     } else if (visit.status === 'unsuccessful' || visit.status === 'failed') {
-      statusLabel = 'Failed';
+      statusLabel = 'Unsuccessful';
     } else if (visit.status === 'cancelled') {
       statusLabel = 'Cancelled';
-    } else if (visit.status === 'completed_flagged') {
-      statusLabel = 'Completed (Flagged)';
     } else {
       statusLabel = visit.status.charAt(0).toUpperCase() + visit.status.slice(1);
     }
@@ -5757,7 +6079,7 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
     let statusLabel = '';
     if (visit.status === 'completed_flagged') {
       if (!isToday && isPast) {
-        statusLabel = 'Visit completed (flagged)';
+        statusLabel = 'Completed (Flagged)';
       } else {
         statusLabel = (completedPlaces === totalPlaces && totalPlaces > 0) ? 'In Progress' : 'Pending';
       }
@@ -5768,11 +6090,9 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
     } else if (visit.status === 'pending') {
       statusLabel = 'Pending';
     } else if (visit.status === 'unsuccessful' || visit.status === 'failed') {
-      statusLabel = 'Failed';
+      statusLabel = 'Unsuccessful';
     } else if (visit.status === 'cancelled') {
       statusLabel = 'Cancelled';
-    } else if (visit.status === 'completed_flagged') {
-      statusLabel = 'Completed (Flagged)';
     } else {
       statusLabel = visit.status.charAt(0).toUpperCase() + visit.status.slice(1);
     }
@@ -6380,7 +6700,7 @@ function displayFinishedVisits(visits: any[]): void {
           </div>
           <div class="flex space-x-2">
             <span class="px-2 py-1 rounded-full text-xs font-medium ${(statusColors as any)[visit.status] || statusColors.completed}">
-              ${visit.status === 'completed_flagged' ? 'Completed (Flagged) - Process started but not fully completed' : visit.status}
+              ${visit.status === 'completed_flagged' ? 'Completed (Flagged)' : visit.status === 'unsuccessful' ? 'Unsuccessful' : visit.status}
             </span>
             <span class="px-2 py-1 rounded-full text-xs font-medium ${(roleColors as any)[visitorRole] || roleColors.guest}">
               ${visitorRole}
