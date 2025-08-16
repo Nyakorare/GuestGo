@@ -556,36 +556,60 @@ export function DashboardPage() {
             >
               Refresh
             </button>
-            <button 
-              id="updateStatusesBtn"
-              class="bg-orange-600 text-white px-4 py-2 rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 w-full sm:w-auto"
-              title="Update visit statuses (auto-mark completed_flagged and unsuccessful)"
-            >
-              <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-              Update Statuses
-            </button>
-            <button 
-              id="forceUpdateStatusesBtn"
-              class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 w-full sm:w-auto"
-              title="Force update all visit statuses immediately (for testing)"
-            >
-              <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-              </svg>
-              Force Update
-            </button>
-            <button 
-              id="checkStatusesBtn"
-              class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 w-full sm:w-auto"
-              title="Check current visit statuses for debugging"
-            >
-              <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-              </svg>
-              Check Status
-            </button>
+            <!-- Status Actions Dropdown -->
+            <div class="relative inline-block text-left">
+              <button 
+                id="statusActionsDropdownBtn"
+                class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 w-full sm:w-auto flex items-center"
+                aria-expanded="false"
+                aria-haspopup="true"
+              >
+                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+                Status Actions
+              </button>
+              <div 
+                id="statusActionsDropdown"
+                class="hidden absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-50"
+              >
+                <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="statusActionsDropdownBtn">
+                  <button 
+                    id="updateStatusesBtn"
+                    class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
+                    role="menuitem"
+                    title="Update visit statuses (auto-mark completed_flagged and unsuccessful)"
+                  >
+                    <svg class="w-4 h-4 inline mr-2 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Update Statuses
+                  </button>
+                  <button 
+                    id="forceUpdateStatusesBtn"
+                    class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
+                    role="menuitem"
+                    title="Force update all visit statuses immediately (for testing)"
+                  >
+                    <svg class="w-4 h-4 inline mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                    Force Update
+                  </button>
+                  <button 
+                    id="checkStatusesBtn"
+                    class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
+                    role="menuitem"
+                    title="Check current visit statuses for debugging"
+                  >
+                    <svg class="w-4 h-4 inline mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                    </svg>
+                    Check Status
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <!-- Assignment Content -->
@@ -2524,7 +2548,7 @@ function setupDashboardEventListeners() {
         // Show loading state
         (updateStatusesBtn as HTMLButtonElement).disabled = true;
         updateStatusesBtn.innerHTML = `
-          <svg class="w-4 h-4 inline mr-1 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-4 h-4 inline mr-2 text-orange-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
           </svg>
           Updating...`;
@@ -2541,8 +2565,8 @@ function setupDashboardEventListeners() {
         // Reset button state
         (updateStatusesBtn as HTMLButtonElement).disabled = false;
         updateStatusesBtn.innerHTML = `
-          <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          <svg class="w-4 h-4 inline mr-2 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
           </svg>
           Update Statuses`;
       }
@@ -2557,7 +2581,7 @@ function setupDashboardEventListeners() {
         // Show loading state
         (forceUpdateStatusesBtn as HTMLButtonElement).disabled = true;
         forceUpdateStatusesBtn.innerHTML = `
-          <svg class="w-4 h-4 inline mr-1 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-4 h-4 inline mr-2 text-red-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
           </svg>
           Force Updating...`;
@@ -2574,7 +2598,7 @@ function setupDashboardEventListeners() {
         // Reset button state
         (forceUpdateStatusesBtn as HTMLButtonElement).disabled = false;
         forceUpdateStatusesBtn.innerHTML = `
-          <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-4 h-4 inline mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
           </svg>
           Force Update`;
@@ -2590,7 +2614,7 @@ function setupDashboardEventListeners() {
         // Show loading state
         (checkStatusesBtn as HTMLButtonElement).disabled = true;
         checkStatusesBtn.innerHTML = `
-          <svg class="w-4 h-4 inline mr-1 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-4 h-4 inline mr-2 text-gray-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
           </svg>
           Checking...`;
@@ -2605,10 +2629,62 @@ function setupDashboardEventListeners() {
         // Reset button state
         (checkStatusesBtn as HTMLButtonElement).disabled = false;
         checkStatusesBtn.innerHTML = `
-          <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-4 h-4 inline mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
           </svg>
           Check Status`;
+      }
+    });
+  }
+
+  // Status Actions Dropdown functionality
+  const statusActionsDropdownBtn = document.getElementById('statusActionsDropdownBtn');
+  const statusActionsDropdown = document.getElementById('statusActionsDropdown');
+  
+  if (statusActionsDropdownBtn && statusActionsDropdown) {
+    // Toggle dropdown on button click
+    statusActionsDropdownBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isExpanded = statusActionsDropdownBtn.getAttribute('aria-expanded') === 'true';
+      statusActionsDropdownBtn.setAttribute('aria-expanded', (!isExpanded).toString());
+      statusActionsDropdown.classList.toggle('hidden');
+      
+      // Update dropdown arrow
+      const arrow = statusActionsDropdownBtn.querySelector('svg');
+      if (arrow) {
+        if (isExpanded) {
+          arrow.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>';
+        } else {
+          arrow.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>';
+        }
+      }
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!statusActionsDropdownBtn.contains(e.target as Node) && !statusActionsDropdown.contains(e.target as Node)) {
+        statusActionsDropdownBtn.setAttribute('aria-expanded', 'false');
+        statusActionsDropdown.classList.add('hidden');
+        
+        // Reset dropdown arrow
+        const arrow = statusActionsDropdownBtn.querySelector('svg');
+        if (arrow) {
+          arrow.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>';
+        }
+      }
+    });
+    
+    // Close dropdown when pressing Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        statusActionsDropdownBtn.setAttribute('aria-expanded', 'false');
+        statusActionsDropdown.classList.add('hidden');
+        
+        // Reset dropdown arrow
+        const arrow = statusActionsDropdownBtn.querySelector('svg');
+        if (arrow) {
+          arrow.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>';
+        }
       }
     });
   }
