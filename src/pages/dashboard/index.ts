@@ -4983,7 +4983,7 @@ function toggleHistory(historyId: string) {
 (window as any).toggleHistory = toggleHistory;
 
 // Function to calculate visit progress
-function calculateVisitProgress(visit: any): { percentage: number; status: string; color: string } {
+function calculateVisitProgress(visit: any): { percentage: number; status: string; color: string; gateProgress?: { entrance: boolean; exit: boolean } } {
   const now = new Date();
   const visitDate = new Date(visit.visit_date);
   const scheduledAt = new Date(visit.scheduled_at);
@@ -4999,6 +4999,79 @@ function calculateVisitProgress(visit: any): { percentage: number; status: strin
   
   if (visit.status === 'cancelled') {
     return { percentage: 100, status: 'Cancelled', color: 'bg-gray-500' };
+  }
+  
+  // For completed_flagged visits, show gate progress if available
+  if (visit.status === 'completed_flagged') {
+    const entranceScanned = visit.gate_entrance_scanned || false;
+    const exitScanned = visit.gate_exit_scanned || false;
+    
+    return { 
+      percentage: 100, 
+      status: 'Completed (Flagged)', 
+      color: 'bg-orange-500',
+      gateProgress: { entrance: entranceScanned, exit: exitScanned }
+    };
+  }
+  
+  // For pending visits, calculate progress based on places completed and gate scans
+  if (visit.status === 'pending') {
+    const places = Array.isArray(visit.places) ? visit.places : [];
+    const completedPlaces = places.filter((place: any) => place.status === 'completed').length;
+    const totalPlaces = places.length;
+    
+    // Check gate scan status
+    const entranceScanned = visit.gate_entrance_scanned || false;
+    const exitScanned = visit.gate_exit_scanned || false;
+    
+    if (totalPlaces === 0) {
+      return { 
+        percentage: 0, 
+        status: 'No Places Assigned', 
+        color: 'bg-gray-500',
+        gateProgress: { entrance: entranceScanned, exit: exitScanned }
+      };
+    }
+    
+    // Calculate places progress (70% weight)
+    const placesPercentage = Math.round((completedPlaces / totalPlaces) * 70);
+    
+    // Calculate gate progress (30% weight)
+    let gatePercentage = 0;
+    if (entranceScanned) gatePercentage += 15; // 15% for entrance
+    if (exitScanned) gatePercentage += 15; // 15% for exit
+    
+    const totalPercentage = placesPercentage + gatePercentage;
+    
+    let status = 'Pending';
+    let color = 'bg-blue-500';
+    
+    if (totalPercentage === 0) {
+      status = 'Not Started';
+      color = 'bg-gray-500';
+    } else if (totalPercentage < 25) {
+      status = 'Just Started';
+      color = 'bg-blue-500';
+    } else if (totalPercentage < 50) {
+      status = 'In Progress';
+      color = 'bg-yellow-500';
+    } else if (totalPercentage < 75) {
+      status = 'Almost Done';
+      color = 'bg-orange-500';
+    } else if (totalPercentage < 100) {
+      status = 'Nearly Complete';
+      color = 'bg-green-500';
+    } else {
+      status = 'All Places Completed';
+      color = 'bg-green-500';
+    }
+    
+    return { 
+      percentage: totalPercentage, 
+      status, 
+      color,
+      gateProgress: { entrance: entranceScanned, exit: exitScanned }
+    };
   }
   
   // Check if this is a future visit (visit date is in the future)
@@ -6282,6 +6355,27 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
               <div class="h-2 rounded-full ${progress.color}" style="width: ${progress.percentage}%"></div>
             </div>
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${progress.status}</p>
+            
+            <!-- Gate Progress Indicators -->
+            ${progress.gateProgress ? `
+              <div class="mt-3 flex items-center justify-between text-xs">
+                <div class="flex items-center space-x-4">
+                  <div class="flex items-center space-x-2">
+                    <span class="text-gray-600 dark:text-gray-400">Entrance:</span>
+                    <span class="w-3 h-3 rounded-full ${progress.gateProgress.entrance ? 'bg-green-500' : 'bg-gray-400'}"></span>
+                    <span class="text-gray-500 dark:text-gray-400">${progress.gateProgress.entrance ? 'Scanned' : 'Pending'}</span>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <span class="text-gray-600 dark:text-gray-400">Exit:</span>
+                    <span class="w-3 h-3 rounded-full ${progress.gateProgress.exit ? 'bg-green-500' : 'bg-gray-400'}"></span>
+                    <span class="text-gray-500 dark:text-gray-400">${progress.gateProgress.exit ? 'Scanned' : 'Pending'}</span>
+                  </div>
+                </div>
+                <div class="text-gray-500 dark:text-gray-400">
+                  ${progress.gateProgress.entrance ? '15%' : '0%'} + ${progress.gateProgress.exit ? '15%' : '0%'} gate progress
+                </div>
+              </div>
+            ` : ''}
           </div>
 
           <!-- Places List -->
@@ -6464,6 +6558,27 @@ async function displayVisitorPastVisits(visits: any[]): Promise<void> {
               <div class="h-2 rounded-full ${progress.color}" style="width: ${progress.percentage}%"></div>
             </div>
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${progress.status}</p>
+            
+            <!-- Gate Progress Indicators -->
+            ${progress.gateProgress ? `
+              <div class="mt-3 flex items-center justify-between text-xs">
+                <div class="flex items-center space-x-4">
+                  <div class="flex items-center space-x-2">
+                    <span class="text-gray-600 dark:text-gray-400">Entrance:</span>
+                    <span class="w-3 h-3 rounded-full ${progress.gateProgress.entrance ? 'bg-green-500' : 'bg-gray-400'}"></span>
+                    <span class="text-gray-500 dark:text-gray-400">${progress.gateProgress.entrance ? 'Scanned' : 'Pending'}</span>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <span class="text-gray-600 dark:text-gray-400">Exit:</span>
+                    <span class="w-3 h-3 rounded-full ${progress.gateProgress.exit ? 'bg-green-500' : 'bg-gray-400'}"></span>
+                    <span class="text-gray-500 dark:text-gray-400">${progress.gateProgress.exit ? 'Scanned' : 'Pending'}</span>
+                  </div>
+                </div>
+                <div class="text-gray-500 dark:text-gray-400">
+                  ${progress.gateProgress.entrance ? '15%' : '0%'} + ${progress.gateProgress.exit ? '15%' : '0%'} gate progress
+                </div>
+              </div>
+            ` : ''}
           </div>
 
           <!-- Places List -->
