@@ -27,6 +27,8 @@ function toPhilippineTime(date: Date): Date {
 }
 
 // Function to load and display weekly visit count for logged-in users
+// FIXED: Previous week completed visits no longer affect current week scheduling limits
+// Each week is now treated independently with its own 2-visit limit
 async function loadWeeklyVisitCount(userEmail: string) {
   try {
     const weeklyVisitCountDiv = document.getElementById('weeklyVisitCount');
@@ -91,13 +93,24 @@ async function loadWeeklyVisitCount(userEmail: string) {
     }
     
     // Calculate the week boundaries (Sunday to Saturday)
+    // Use a more robust method to ensure correct week calculation
     const weekStart = new Date(philippineToday);
-    weekStart.setDate(philippineToday.getDate() - philippineToday.getDay());
+    const dayOfWeek = weekStart.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const daysToSubtract = dayOfWeek; // Days to go back to Sunday
+    weekStart.setDate(philippineToday.getDate() - daysToSubtract);
     weekStart.setHours(0, 0, 0, 0);
     
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
     weekEnd.setHours(23, 59, 59, 999);
+    
+    console.log('Week calculation debug:', {
+      philippineToday: philippineToday.toISOString(),
+      dayOfWeek,
+      daysToSubtract,
+      weekStart: weekStart.toISOString(),
+      weekEnd: weekEnd.toISOString()
+    });
     
     console.log('Date ranges:', {
       philippineToday: philippineToday.toISOString().split('T')[0],
@@ -127,15 +140,52 @@ async function loadWeeklyVisitCount(userEmail: string) {
     endOfMonth.setHours(23, 59, 59, 999);
 
     // Query the database for all pending, completed, and completed_flagged visits for the current week
-    // Only include visits that are today or in the past (not future visits within the current week)
+    // Only include visits that are within the current week boundaries (Sunday to Saturday)
+    // This ensures that completed visits from previous weeks are not counted in the current week
     // Check both by user ID and email to handle cases where user_id might be null
-    const { data: visits, error } = await supabase
+    
+    // Convert week boundaries to date strings for database query (YYYY-MM-DD format)
+    const weekStartStr = weekStart.toISOString().split('T')[0];
+    const weekEndStr = weekEnd.toISOString().split('T')[0];
+    
+    console.log('Database query boundaries:', {
+      weekStartStr,
+      weekEndStr,
+      weekStartISO: weekStart.toISOString(),
+      weekEndISO: weekEnd.toISOString()
+    });
+    
+    // DEBUGGING APPROACH: Get all visits first, then filter in JavaScript
+    // This helps us see exactly what dates are being returned and why the filtering might be failing
+    // The issue might be timezone differences between database storage and query comparison
+    const { data: allUserVisits, error: allUserError } = await supabase
       .from('scheduled_visits')
       .select('visit_date, status')
       .or(`visitor_user_id.eq.${user.id},visitor_email.eq.${user.email}`)
-      .in('status', ['pending', 'completed', 'completed_flagged'])
-      .gte('visit_date', weekStart.toISOString())
-      .lte('visit_date', philippineToday.toISOString().split('T')[0]); // Only up to today
+      .in('status', ['pending', 'completed', 'completed_flagged']);
+
+    if (allUserError) {
+      console.error('Error loading all user visits:', allUserError);
+      return;
+    }
+
+    // Filter visits in JavaScript to ensure proper date comparison
+    // This bypasses any potential database timezone issues and gives us full control over date logic
+    const visits = allUserVisits?.filter(visit => {
+      const visitDate = new Date(visit.visit_date);
+      const isInCurrentWeek = visitDate >= weekStart && visitDate <= weekEnd;
+      
+      console.log('Visit date filtering:', {
+        visitDate: visit.visit_date,
+        visitDateParsed: visitDate.toISOString(),
+        weekStart: weekStart.toISOString(),
+        weekEnd: weekEnd.toISOString(),
+        isInCurrentWeek,
+        visitStatus: visit.status
+      });
+      
+      return isInCurrentWeek;
+    }) || [];
 
     // Query for ALL pending visits (including future weeks) for this user
     const { data: allPendingVisits, error: allPendingError } = await supabase
@@ -153,6 +203,11 @@ async function loadWeeklyVisitCount(userEmail: string) {
     
     console.log('All visits for user (ID or email):', allVisits);
     console.log('Current week visits (filtered):', visits);
+    console.log('Week boundaries:', {
+      weekStart: weekStart.toISOString().split('T')[0],
+      weekEnd: weekEnd.toISOString().split('T')[0],
+      philippineToday: philippineToday.toISOString().split('T')[0]
+    });
 
     // Query the database for all pending, completed, and completed_flagged visits for the previous week
     const { data: prevWeekVisits, error: prevWeekError } = await supabase
@@ -173,8 +228,8 @@ async function loadWeeklyVisitCount(userEmail: string) {
       .gte('visit_date', nextWeekStart.toISOString())
       .lte('visit_date', endOfMonth.toISOString());
 
-    if (error) {
-      console.error('Error loading weekly visit count:', error);
+    if (allUserError) {
+      console.error('Error loading weekly visit count:', allUserError);
       weeklyVisitText.textContent = 'Error loading visit count';
       return;
     }
@@ -193,6 +248,15 @@ async function loadWeeklyVisitCount(userEmail: string) {
     const pendingCount = visits?.filter(v => v.status === 'pending').length || 0;
     const completedCount = visits?.filter(v => v.status === 'completed').length || 0;
     const completedFlaggedCount = visits?.filter(v => v.status === 'completed_flagged').length || 0;
+    
+    // Debug: Log individual visit details for current week
+    if (visits && visits.length > 0) {
+      console.log('Current week visit details:', visits.map(v => ({
+        date: v.visit_date,
+        status: v.status,
+        isCurrentWeek: new Date(v.visit_date) >= weekStart && new Date(v.visit_date) <= weekEnd
+      })));
+    }
 
     // Count ALL pending visits (including future weeks)
     const totalPendingCount = allPendingVisits?.length || 0;
@@ -209,11 +273,13 @@ async function loadWeeklyVisitCount(userEmail: string) {
     // Calculate total pending schedules (ALL pending visits, including future weeks)
     const totalPendingSchedules = totalPendingCount;
     
-    // Calculate total completed visits (current week completed + completed_flagged, future visits can't be completed yet)
+    // Calculate total completed visits for current week only
     const totalCompletedSchedules = completedCount + completedFlaggedCount;
     
-    // Calculate total visits for this week (up to today only)
-    const totalWeekVisits = totalPendingSchedules + totalCompletedSchedules;
+    // Calculate total visits for current week only (within week boundaries)
+    // This ensures that completed visits from previous weeks are not counted
+    // as part of the current week's visit limit
+    const totalWeekVisits = visitCount;
     
     // Debug logging to understand the counts
     console.log('Weekly Visit Count Debug:', {
@@ -231,33 +297,26 @@ async function loadWeeklyVisitCount(userEmail: string) {
       },
       totals: {
         totalPendingSchedules,
-        totalCompletedSchedules
+        totalCompletedSchedules,
+        totalWeekVisits
       },
-      philippineToday: philippineToday.toISOString().split('T')[0],
-      weekStart: weekStart.toISOString().split('T')[0],
-      weekEnd: weekEnd.toISOString().split('T')[0]
+      weekBoundaries: {
+        philippineToday: philippineToday.toISOString().split('T')[0],
+        weekStart: weekStart.toISOString().split('T')[0],
+        weekEnd: weekEnd.toISOString().split('T')[0]
+      }
     });
 
-    // SIMPLIFIED LOGIC: Determine refresh slots based on previous week
-    let refreshSlots = 2; // default: allow 2 visits
-    
-    // Check previous week logic
-    if (prevTotalCount > 0) {
-      const prevCompletedTotal = prevCompletedCount + prevCompletedFlaggedCount;
-      if (prevPendingCount === 2) {
-        refreshSlots = 0; // 2 pending = no refresh
-      } else if (prevPendingCount === 1 && prevCompletedTotal === 1) {
-        refreshSlots = 1; // 1 pending, 1 completed (including flagged) = 1 refresh
-      } else if (prevPendingCount === 0 && prevCompletedTotal === 2) {
-        refreshSlots = 2; // 2 completed (including flagged) = 2 refresh
-      } else {
-        // For any other combination (e.g., only 1 visit last week)
-        refreshSlots = 2 - prevPendingCount; // e.g., 1 completed, 0 pending = 1 refresh
-      }
-    }
-
-    // Calculate remaining visits for this week (only count visits up to today)
+    // NEW LOGIC: Current week visits determine the limit, previous week visits don't affect current week
+    // Calculate remaining visits for this week (based on current week visits only)
+    // This ensures that completed visits from previous weeks don't limit current week scheduling
     const remainingVisits = Math.max(0, 2 - totalWeekVisits);
+    
+    // Previous week visits are tracked for reference but don't affect current week scheduling
+    // The key change: previous week completed visits no longer reduce current week available slots
+    // 
+    // Example: If you have a completed visit on August 16 (previous week) and today is August 20,
+    // the current week (Aug 17-23) should show 2 visits remaining, not 1
 
     // Format the week range for display (e.g., July 6-12, 2025)
     const weekStartMonth = weekStart.toLocaleString('en-US', { month: 'short' });
@@ -278,19 +337,12 @@ async function loadWeeklyVisitCount(userEmail: string) {
     const scheduleNowBtn = document.getElementById('scheduleNowBtn');
     
     // Add debug info to help understand the counts
-    const debugInfo = `[Debug: ${totalWeekVisits} total this week, ${pendingCount} pending, ${completedCount} completed, ${completedFlaggedCount} flagged, ${remainingVisits} remaining]`;
+    const debugInfo = `[Debug: ${totalWeekVisits} total this week, ${pendingCount} pending this week, ${completedCount} completed this week, ${completedFlaggedCount} flagged this week, ${remainingVisits} remaining]`;
     console.log(debugInfo);
     
-    if (refreshSlots === 0) {
-      statusHtml = `<span class="font-medium text-gray-600 dark:text-gray-400">No new visits allowed until previous week is cleared</span>`;
-      if (scheduleNowBtn) {
-        scheduleNowBtn.setAttribute('disabled', 'true');
-        scheduleNowBtn.classList.add('opacity-50', 'cursor-not-allowed');
-        scheduleNowBtn.title = 'You have reached your weekly visit limit.';
-      }
-    } else if (remainingVisits === 2) {
+    if (remainingVisits === 2) {
       const completedText = completedFlaggedCount > 0 ? `${totalCompletedSchedules} completed (${completedFlaggedCount} flagged)` : `${totalCompletedSchedules} completed`;
-      statusHtml = `<span class="font-medium text-green-600 dark:text-green-400">2 visits remaining</span> (${totalPendingSchedules} pending, ${completedText})`;
+      statusHtml = `<span class="font-medium text-green-600 dark:text-green-400">2 visits remaining</span> (${pendingCount} pending this week, ${completedText})`;
       if (scheduleNowBtn) {
         scheduleNowBtn.removeAttribute('disabled');
         scheduleNowBtn.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -298,7 +350,7 @@ async function loadWeeklyVisitCount(userEmail: string) {
       }
     } else if (remainingVisits === 1) {
       const completedText = completedFlaggedCount > 0 ? `${totalCompletedSchedules} completed (${completedFlaggedCount} flagged)` : `${totalCompletedSchedules} completed`;
-      statusHtml = `<span class="font-medium text-yellow-600 dark:text-yellow-400">1 visit remaining</span> (${totalPendingSchedules} pending, ${completedText})`;
+      statusHtml = `<span class="font-medium text-yellow-600 dark:text-yellow-400">1 visit remaining</span> (${pendingCount} pending this week, ${completedText})`;
       if (scheduleNowBtn) {
         scheduleNowBtn.removeAttribute('disabled');
         scheduleNowBtn.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -306,7 +358,7 @@ async function loadWeeklyVisitCount(userEmail: string) {
       }
     } else {
       const completedText = completedFlaggedCount > 0 ? `${totalCompletedSchedules} completed (${completedFlaggedCount} flagged)` : `${totalCompletedSchedules} completed`;
-      statusHtml = `<span class="font-medium text-red-600 dark:text-red-400">No visits remaining</span> (${totalPendingSchedules} pending, ${completedText})`;
+      statusHtml = `<span class="font-medium text-red-600 dark:text-red-400">No visits remaining</span> (${pendingCount} pending this week, ${completedText})`;
       if (scheduleNowBtn) {
         scheduleNowBtn.setAttribute('disabled', 'true');
         scheduleNowBtn.classList.add('opacity-50', 'cursor-not-allowed');
@@ -552,6 +604,88 @@ async function loadWeeklyVisitCount(userEmail: string) {
   }
   
   console.log('=== END SCHEDULE MODAL TEST ===');
+};
+
+// Test function to debug week boundary calculation
+(window as any).testWeekBoundaries = () => {
+  console.log('=== WEEK BOUNDARY TEST ===');
+  
+  // Test with a known date (e.g., August 20, 2025 - a Wednesday)
+  const testDate = new Date('2025-08-20');
+  console.log('Test date:', testDate.toISOString());
+  console.log('Day of week:', testDate.getDay()); // Should be 3 (Wednesday)
+  
+  // Calculate week boundaries
+  const dayOfWeek = testDate.getDay();
+  const daysToSubtract = dayOfWeek;
+  const weekStart = new Date(testDate);
+  weekStart.setDate(testDate.getDate() - daysToSubtract);
+  weekStart.setHours(0, 0, 0, 0);
+  
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  weekEnd.setHours(23, 59, 59, 999);
+  
+  console.log('Calculated week boundaries:', {
+    weekStart: weekStart.toISOString().split('T')[0], // Should be 2025-08-17 (Sunday)
+    weekEnd: weekEnd.toISOString().split('T')[0],   // Should be 2025-08-23 (Saturday)
+    weekStartFull: weekStart.toISOString(),
+    weekEndFull: weekEnd.toISOString()
+  });
+  
+  // Test if August 16 (previous week) falls outside current week
+  const aug16 = new Date('2025-08-16');
+  const isInCurrentWeek = aug16 >= weekStart && aug16 <= weekEnd;
+  console.log('August 16 in current week?', isInCurrentWeek); // Should be false
+  
+  console.log('=== END WEEK BOUNDARY TEST ===');
+};
+
+// Test function to debug the specific issue with August 16 visit
+(window as any).testAugust16Issue = () => {
+  console.log('=== AUGUST 16 ISSUE TEST ===');
+  
+  // Simulate the exact scenario: today is August 20, 2025
+  const today = new Date('2025-08-20');
+  console.log('Today (simulated):', today.toISOString());
+  
+  // Calculate week boundaries for August 17-23
+  const dayOfWeek = today.getDay(); // 3 (Wednesday)
+  const daysToSubtract = dayOfWeek; // 3
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - daysToSubtract);
+  weekStart.setHours(0, 0, 0, 0);
+  
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  weekEnd.setHours(23, 59, 59, 999);
+  
+  console.log('Current week boundaries:', {
+    weekStart: weekStart.toISOString().split('T')[0], // Should be 2025-08-17
+    weekEnd: weekEnd.toISOString().split('T')[0],   // Should be 2025-08-23
+  });
+  
+  // Test the problematic date: August 16
+  const aug16 = new Date('2025-08-16');
+  const aug16Str = aug16.toISOString().split('T')[0];
+  
+  console.log('August 16 test:', {
+    august16: aug16Str,
+    august16ISO: aug16.toISOString(),
+    weekStartStr: weekStart.toISOString().split('T')[0],
+    weekEndStr: weekEnd.toISOString().split('T')[0],
+    isAfterWeekStart: aug16 >= weekStart,
+    isBeforeWeekEnd: aug16 <= weekEnd,
+    isInCurrentWeek: aug16 >= weekStart && aug16 <= weekEnd
+  });
+  
+  // Test database query format
+  console.log('Database query would use:', {
+    gte: weekStart.toISOString().split('T')[0],
+    lte: weekEnd.toISOString().split('T')[0]
+  });
+  
+  console.log('=== END AUGUST 16 ISSUE TEST ===');
 };
 
 // Global function to open schedule modal (called from inline onclick)
