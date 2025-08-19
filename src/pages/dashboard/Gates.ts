@@ -124,13 +124,13 @@ function renderGatesList(): void {
   }
 
   gatesListElement.innerHTML = filteredGates.map(gate => `
-    <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+    <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-4 border border-gray-200 dark:border-gray-700 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 hover:border-gray-300 dark:hover:border-gray-600 group">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div class="flex items-start gap-4 flex-1">
           <div class="flex-shrink-0">
             <div class="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600">
               ${gate.image_url ? `
-                <img src="${gate.image_url}" alt="${gate.name}" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <img src="${gate.image_url}" alt="${gate.name}" class="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                 <div class="w-full h-full flex items-center justify-center text-gray-400" style="display: none;">
                   <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
