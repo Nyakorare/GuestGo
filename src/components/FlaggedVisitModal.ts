@@ -5,6 +5,7 @@ interface FlaggedVisitDetails {
   visit_id: string;
   visitor_name: string;
   visitor_email: string;
+  visitor_phone?: string;
   visitor_role: string;
   visit_date: string;
   purpose: string;
@@ -167,6 +168,10 @@ export async function populateFlaggedVisitModal(visitDetails: FlaggedVisitDetail
             <div>
               <span class="font-medium text-gray-700 dark:text-gray-300">Email:</span>
               <span class="ml-2 text-gray-900 dark:text-white">${visitDetails.visitor_email}</span>
+            </div>
+            <div>
+              <span class="font-medium text-gray-700 dark:text-gray-300">Phone:</span>
+              <span class="ml-2 text-gray-900 dark:text-white">${visitDetails.visitor_phone || 'No phone provided'}</span>
             </div>
             <div>
               <span class="font-medium text-gray-700 dark:text-gray-300">Role:</span>
@@ -392,13 +397,29 @@ export async function displayFlaggedVisitDetails(visitId: string): Promise<void>
 
     if (error) throw error;
     
-    if (logs && logs.length > 0) {
-      const log = logs[0];
-      const details = log.details as FlaggedVisitDetails;
-      
-      // Populate the modal with the details
-      await populateFlaggedVisitModal(details);
-    } else {
+         if (logs && logs.length > 0) {
+       const log = logs[0];
+       const details = log.details as FlaggedVisitDetails;
+       
+       // Get the scheduled visit data to extract phone number
+       try {
+         const { data: scheduleData, error: scheduleError } = await supabase
+           .from('scheduled_visits')
+           .select('visitor_phone')
+           .eq('id', visitId)
+           .single();
+         
+         if (!scheduleError && scheduleData) {
+           // Enrich the details with phone number from the scheduled visit
+           details.visitor_phone = scheduleData.visitor_phone;
+         }
+       } catch (error) {
+         console.error('Error fetching phone number from scheduled visit:', error);
+       }
+       
+       // Populate the modal with the details
+       await populateFlaggedVisitModal(details);
+     } else {
       // Try to find in scheduled_visits table as fallback
       const { data: visits, error: visitError } = await supabase
         .from('scheduled_visits')
@@ -414,6 +435,7 @@ export async function displayFlaggedVisitDetails(visitId: string): Promise<void>
            visit_id: visits.id || 'Unknown',
            visitor_name: `${visits.visitor_first_name || ''} ${visits.visitor_last_name || ''}`.trim() || 'Unknown Visitor',
            visitor_email: visits.visitor_email || 'No email provided',
+           visitor_phone: visits.visitor_phone || undefined,
            visitor_role: visits.visitor_role || 'guest',
            visit_date: visits.visit_date || new Date().toISOString(),
            purpose: visits.purpose || 'No purpose specified',
