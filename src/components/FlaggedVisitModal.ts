@@ -169,9 +169,22 @@ export async function populateFlaggedVisitModal(visitDetails: FlaggedVisitDetail
               <span class="font-medium text-gray-700 dark:text-gray-300">Email:</span>
               <span class="ml-2 text-gray-900 dark:text-white">${visitDetails.visitor_email}</span>
             </div>
-            <div>
+            <div class="flex items-center">
               <span class="font-medium text-gray-700 dark:text-gray-300">Phone:</span>
-              <span class="ml-2 text-gray-900 dark:text-white">${visitDetails.visitor_phone || 'No phone provided'}</span>
+              <span id="flaggedVisitorPhone" class="ml-2 text-gray-900 dark:text-white">${visitDetails.visitor_phone || 'No phone provided'}</span>
+              ${visitDetails.visitor_phone ? `
+                <button 
+                  id="copyFlaggedPhoneBtn"
+                  class="ml-2 p-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-200"
+                  title="Copy phone number"
+                  aria-label="Copy phone number"
+                >
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2M8 16h8a2 2 0 002-2v-4M8 16l-2 2m2-2l2 2" />
+                  </svg>
+                </button>
+                <span id="copyFlaggedPhoneStatus" class="ml-2 text-xs text-green-600 dark:text-green-400 hidden">Copied!</span>
+              ` : ''}
             </div>
             <div>
               <span class="font-medium text-gray-700 dark:text-gray-300">Role:</span>
@@ -373,6 +386,29 @@ export function setupFlaggedVisitModalListeners(): void {
       }
     }
   });
+
+  // Copy phone number to clipboard (delegated for dynamic content)
+  const modalContent = document.getElementById('flaggedVisitModalContent');
+  if (modalContent) {
+    modalContent.addEventListener('click', async (e) => {
+      const target = e.target as HTMLElement;
+      const copyBtn = target.closest('#copyFlaggedPhoneBtn');
+      if (!copyBtn) return;
+      const phoneEl = document.getElementById('flaggedVisitorPhone');
+      const statusEl = document.getElementById('copyFlaggedPhoneStatus');
+      const phone = phoneEl?.textContent?.trim();
+      if (!phone || phone === 'No phone provided') return;
+      try {
+        await navigator.clipboard.writeText(phone);
+        if (statusEl) {
+          statusEl.classList.remove('hidden');
+          setTimeout(() => statusEl.classList.add('hidden'), 1500);
+        }
+      } catch (err) {
+        console.error('Failed to copy phone number:', err);
+      }
+    });
+  }
 }
 
 // Main function to display flagged visit details
