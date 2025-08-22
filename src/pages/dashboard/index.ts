@@ -1539,7 +1539,7 @@ async function renderLogs(): Promise<void> {
             }
           }
 
-          // Fallback: If still visit_scheduled but the visit itself is now completed_flagged, override
+          // Fallback: If still visit_scheduled but the visit itself is now completed or completed_flagged, override
           if (displayAction === 'visit_scheduled' && parsedDetails.visit_id) {
             try {
               const { data: visitRow } = await supabase
@@ -1547,7 +1547,27 @@ async function renderLogs(): Promise<void> {
                 .select('status, completed_at, completed_by')
                 .eq('id', parsedDetails.visit_id)
                 .single();
-              if (visitRow && visitRow.status === 'completed_flagged') {
+              if (visitRow && visitRow.status === 'completed') {
+                displayAction = 'visit_completed';
+                const syntheticEvent = {
+                  event: 'completed',
+                  timestamp: visitRow.completed_at || new Date().toISOString(),
+                  details: {
+                    by: 'system',
+                    auto_marked: true,
+                    note: 'Visit completed - auto-marked by system'
+                  }
+                };
+                overrideDetails = {
+                  ...parsedDetails,
+                  current_status: 'completed',
+                  completed_at: visitRow.completed_at,
+                  completed_by: visitRow.completed_by,
+                  history: Array.isArray(parsedDetails.history)
+                    ? [...parsedDetails.history, syntheticEvent]
+                    : [syntheticEvent]
+                };
+              } else if (visitRow && visitRow.status === 'completed_flagged') {
                 displayAction = 'visit_completed_flagged';
                 const syntheticEvent = {
                   event: 'completed_flagged',
