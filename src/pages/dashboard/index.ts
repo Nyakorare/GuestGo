@@ -622,29 +622,32 @@ export function DashboardPage() {
         </div>
         <!-- Scheduled Visits Content -->
         <div id="visitsContent" class="hidden space-y-4">
-          <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+          <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4 mb-6">
             <h3 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Scheduled Visits</h3>
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-4">
-              <!-- Manual Refresh Button -->
-              <button 
-                id="refreshVisitsBtn"
-                class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm w-full sm:w-auto"
-                title="Refresh visits data"
-              >
-                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                </svg>
-                Refresh
-              </button>
-              <!-- Search and Filter Section -->
-              <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-3">
+            <!-- Search and Filter Section -->
+            <div class="flex flex-col gap-3 w-full lg:w-auto">
+              <!-- Manual Refresh Button Row -->
+              <div class="flex flex-col sm:flex-row gap-2">
+                <button 
+                  id="refreshVisitsBtn"
+                  class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm w-full sm:w-auto"
+                  title="Refresh visits data"
+                >
+                  <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                  </svg>
+                  Refresh
+                </button>
+              </div>
+              <!-- Search and Filter Row -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 <!-- Search Input -->
                 <div class="relative">
                   <input 
                     type="text" 
                     id="visitsSearchInput"
                     placeholder="Search visits..."
-                    class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
+                    class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
                   >
                   <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -655,7 +658,7 @@ export function DashboardPage() {
                 <!-- Status Filter -->
                 <select 
                   id="visitStatusFilter"
-                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
                 >
                   <option value="all">All Status</option>
                   <option value="pending">Pending</option>
@@ -666,7 +669,7 @@ export function DashboardPage() {
                 <!-- Visitor Role Filter -->
                 <select 
                   id="visitorRoleFilter"
-                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
                 >
                   <option value="all">All Roles</option>
                   <option value="visitor">Visitor</option>
@@ -700,18 +703,18 @@ export function DashboardPage() {
         </div>
         <!-- Finished Schedules Content -->
         <div id="finishedContent" class="hidden space-y-4">
-          <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+          <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4 mb-6">
             <h3 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Finished Schedules</h3>
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-4">
-              <!-- Search and Filter Section -->
-              <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-3">
-                <!-- Search Input -->
-                <div class="relative">
+            <!-- Search and Filter Section -->
+            <div class="flex flex-col gap-3 w-full lg:w-auto">
+              <!-- Search Input Row -->
+              <div class="flex flex-col sm:flex-row gap-2">
+                <div class="relative flex-1 sm:flex-none sm:w-64">
                   <input 
                     type="text" 
                     id="finishedSearchInput"
                     placeholder="Search finished visits..."
-                    class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
+                    class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
                   >
                   <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -719,10 +722,13 @@ export function DashboardPage() {
                     </svg>
                   </div>
                 </div>
+              </div>
+              <!-- Filter Row 1 -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2">
                 <!-- Date Filter -->
                 <select 
                   id="finishedDateFilter"
-                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
                 >
                   <option value="all">All Dates</option>
                   <option value="today">Today</option>
@@ -735,19 +741,35 @@ export function DashboardPage() {
                 <!-- Status Filter -->
                 <select 
                   id="finishedStatusFilter"
-                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
                 >
                   <option value="all">All Status</option>
                   <option value="completed">Completed</option>
                   <option value="completed_flagged">Completed (Flagged)</option>
                   <option value="unsuccessful">Unsuccessful</option>
                 </select>
+                <!-- Visitor Role Filter -->
+                <select 
+                  id="finishedRoleFilter"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
+                >
+                  <option value="all">All Roles</option>
+                  <option value="visitor">Visitor</option>
+                  <option value="guest">Guest</option>
+                </select>
+                <!-- Place Filter -->
+                <select 
+                  id="finishedPlaceFilter"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
+                >
+                  <option value="all">All Places</option>
+                </select>
                 <!-- Specific Date Filter -->
                 <div class="relative">
                   <input 
                     type="date" 
                     id="finishedSpecificDateFilter"
-                    class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
+                    class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
                     placeholder="Select specific date"
                   >
                   <button 
@@ -758,22 +780,6 @@ export function DashboardPage() {
                     ×
                   </button>
                 </div>
-                <!-- Visitor Role Filter -->
-                <select 
-                  id="finishedRoleFilter"
-                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
-                >
-                  <option value="all">All Roles</option>
-                  <option value="visitor">Visitor</option>
-                  <option value="guest">Guest</option>
-                </select>
-                <!-- Place Filter -->
-                <select 
-                  id="finishedPlaceFilter"
-                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
-                >
-                  <option value="all">All Places</option>
-                </select>
               </div>
             </div>
           </div>
@@ -829,18 +835,19 @@ export function DashboardPage() {
 
         <!-- Current Visits Content -->
         <div id="visitorCurrentContent" class="space-y-4">
-          <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+          <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4 mb-6">
             <h3 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Current Visits</h3>
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-4">
-              <!-- Search and Filter Section -->
-              <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-3">
+            <!-- Search and Filter Section -->
+            <div class="flex flex-col gap-3 w-full lg:w-auto">
+              <!-- Search and Filter Row -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 <!-- Search Input -->
                 <div class="relative">
                   <input 
                     type="text" 
                     id="visitorCurrentSearchInput"
                     placeholder="Search current visits..."
-                    class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
+                    class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
                   >
                   <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -851,7 +858,7 @@ export function DashboardPage() {
                 <!-- Status Filter -->
                 <select 
                   id="visitorCurrentStatusFilter"
-                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
                 >
                   <option value="all">All Status</option>
                   <option value="pending">Pending</option>
@@ -862,7 +869,7 @@ export function DashboardPage() {
                 <!-- Date Filter -->
                 <select 
                   id="visitorCurrentDateFilter"
-                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
                 >
                   <option value="all">All Dates</option>
                   <option value="today">Today</option>
@@ -877,18 +884,19 @@ export function DashboardPage() {
 
         <!-- Past Schedules Content -->
         <div id="visitorPastContent" class="hidden space-y-4">
-          <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+          <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4 mb-6">
             <h3 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Past Schedules</h3>
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-4">
-              <!-- Search and Filter Section -->
-              <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-3">
+            <!-- Search and Filter Section -->
+            <div class="flex flex-col gap-3 w-full lg:w-auto">
+              <!-- Search and Filter Row -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                 <!-- Search Input -->
                 <div class="relative">
                   <input 
                     type="text" 
                     id="visitorPastSearchInput"
                     placeholder="Search past schedules..."
-                    class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
+                    class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
                   >
                   <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -899,7 +907,7 @@ export function DashboardPage() {
                 <!-- Status Filter -->
                 <select 
                   id="visitorPastStatusFilter"
-                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
                 >
                   <option value="all">All Status</option>
                   <option value="completed">Completed</option>
@@ -909,7 +917,7 @@ export function DashboardPage() {
                 <!-- Date Range Filter -->
                 <select 
                   id="visitorPastDateFilter"
-                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
                 >
                   <option value="all">All Time</option>
                   <option value="last7days">Last 7 Days</option>
@@ -921,7 +929,7 @@ export function DashboardPage() {
                 <!-- Place Filter -->
                 <select 
                   id="visitorPastPlaceFilter"
-                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
                 >
                   <option value="all">All Places</option>
                 </select>
