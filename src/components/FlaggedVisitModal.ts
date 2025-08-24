@@ -13,7 +13,15 @@ interface FlaggedVisitDetails {
   completed_at: string;
   completed_by: string;
   status: string;
-  places: any[];
+  places: Array<{
+    place_id: string;
+    place_name?: string;
+    place_description?: string;
+    place_location?: string;
+    status: string;
+    completed_at?: string;
+    completed_by?: string;
+  }>;
   total_places: number;
   completed_places: number;
   gate_exit_scanned: boolean;
@@ -45,23 +53,6 @@ async function getUserName(userId: string | undefined | null): Promise<string> {
   } catch (error) {
     console.error('Error fetching user name:', error);
     return 'Unknown User';
-  }
-}
-
-// Function to get place name by ID
-async function getPlaceName(placeId: string): Promise<string> {
-  try {
-    const { data: place, error } = await supabase
-      .from('places_to_visit')
-      .select('name')
-      .eq('id', placeId)
-      .single();
-
-    if (error) throw error;
-    return place?.name || 'Unknown Place';
-  } catch (error) {
-    console.error('Error fetching place name:', error);
-    return 'Unknown Place';
   }
 }
 
@@ -130,19 +121,41 @@ export async function populateFlaggedVisitModal(visitDetails: FlaggedVisitDetail
     // Get user names for completed_by
     const completedBy = await getUserName(visitDetails.completed_by || undefined);
     
-    // Get place names
-    const placeNames = await Promise.all(
-      (visitDetails.places || []).map(async (place: any) => {
-        if (place && place.place_id) {
-          const placeName = await getPlaceName(place.place_id);
-          return {
-            ...place,
-            place_name: placeName
-          };
-        }
-        return place;
-      })
-    );
+    // Fetch actual place statuses from scheduled_visit_places table
+    const { data: placeStatuses, error: placeError } = await supabase
+      .from('scheduled_visit_places')
+      .select(`
+        place_id,
+        status,
+        completed_at,
+        completed_by,
+        places_to_visit (
+          name,
+          description,
+          location
+        )
+      `)
+      .eq('visit_id', visitDetails.visit_id);
+
+    if (placeError) {
+      console.error('Error fetching place statuses:', placeError);
+      throw placeError;
+    }
+
+    // Process place data with actual statuses
+    const processedPlaces = (placeStatuses || []).map((place: any) => ({
+      place_id: place.place_id,
+      place_name: place.places_to_visit?.name || 'Unknown Place',
+      place_description: place.places_to_visit?.description,
+      place_location: place.places_to_visit?.location,
+      status: place.status,
+      completed_at: place.completed_at,
+      completed_by: place.completed_by
+    }));
+
+    // Calculate actual totals from the database
+    const totalPlaces = processedPlaces.length;
+    const completedPlaces = processedPlaces.filter((place: any) => place.status === 'completed').length;
 
     // Format the content
     const content = `
@@ -241,28 +254,43 @@ export async function populateFlaggedVisitModal(visitDetails: FlaggedVisitDetail
             <div class="flex justify-between text-sm mb-2">
               <span class="text-gray-700 dark:text-gray-300">Progress:</span>
               <span class="text-gray-900 dark:text-white font-medium">
-                ${visitDetails.completed_places || 0} of ${visitDetails.total_places || 1} places completed
+                ${completedPlaces} of ${totalPlaces} places completed
               </span>
             </div>
             <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
               <div 
                 class="bg-yellow-500 h-2 rounded-full transition-all duration-300"
-                style="width: ${visitDetails.total_places && visitDetails.total_places > 0 ? ((visitDetails.completed_places || 0) / visitDetails.total_places) * 100 : 0}%"
+                style="width: ${totalPlaces > 0 ? (completedPlaces / totalPlaces) * 100 : 0}%"
               ></div>
             </div>
           </div>
           
           <div class="space-y-2">
-            ${placeNames && placeNames.length > 0 ? placeNames.map((place: any) => `
+            ${processedPlaces && processedPlaces.length > 0 ? processedPlaces.map((place: any) => `
               <div class="flex items-center justify-between p-2 bg-white dark:bg-gray-600 rounded border">
-                <span class="text-sm text-gray-900 dark:text-white">${place?.place_name || 'Unknown Place'}</span>
-                <span class="px-2 py-1 text-xs font-semibold rounded-full ${
-                  place?.status === 'completed' 
-                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                    : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                }">
-                  ${place?.status === 'completed' ? 'Completed' : 'Not Completed'}
-                </span>
+                <div class="flex-1">
+                  <div class="text-sm font-medium text-gray-900 dark:text-white">${place.place_name}</div>
+                  ${place.place_location ? `<div class="text-xs text-gray-500 dark:text-gray-400">${place.place_location}</div>` : ''}
+                </div>
+                <div class="flex items-center space-x-2">
+                  <span class="px-2 py-1 text-xs font-semibold rounded-full ${
+                    place.status === 'completed' 
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                      : place.status === 'failed'
+                      ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                      : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                  }">
+                    ${place.status === 'completed' ? 'Completed' : 
+                      place.status === 'failed' ? 'Failed' : 
+                      place.status === 'pending' ? 'Pending' : 
+                      place.status.charAt(0).toUpperCase() + place.status.slice(1)}
+                  </span>
+                  ${place.completed_at ? `
+                    <span class="text-xs text-gray-500 dark:text-gray-400">
+                      ${formatDateTime(place.completed_at)}
+                    </span>
+                  ` : ''}
+                </div>
               </div>
             `).join('') : `
               <div class="text-center py-4 text-gray-500 dark:text-gray-400">
@@ -433,29 +461,29 @@ export async function displayFlaggedVisitDetails(visitId: string): Promise<void>
 
     if (error) throw error;
     
-         if (logs && logs.length > 0) {
-       const log = logs[0];
-       const details = log.details as FlaggedVisitDetails;
-       
-       // Get the scheduled visit data to extract phone number
-       try {
-         const { data: scheduleData, error: scheduleError } = await supabase
-           .from('scheduled_visits')
-           .select('visitor_phone')
-           .eq('id', visitId)
-           .single();
-         
-         if (!scheduleError && scheduleData) {
-           // Enrich the details with phone number from the scheduled visit
-           details.visitor_phone = scheduleData.visitor_phone;
-         }
-       } catch (error) {
-         console.error('Error fetching phone number from scheduled visit:', error);
-       }
-       
-       // Populate the modal with the details
-       await populateFlaggedVisitModal(details);
-     } else {
+    if (logs && logs.length > 0) {
+      const log = logs[0];
+      const details = log.details as FlaggedVisitDetails;
+      
+      // Get the scheduled visit data to extract phone number
+      try {
+        const { data: scheduleData, error: scheduleError } = await supabase
+          .from('scheduled_visits')
+          .select('visitor_phone')
+          .eq('id', visitId)
+          .single();
+        
+        if (!scheduleError && scheduleData) {
+          // Enrich the details with phone number from the scheduled visit
+          details.visitor_phone = scheduleData.visitor_phone;
+        }
+      } catch (error) {
+        console.error('Error fetching phone number from scheduled visit:', error);
+      }
+      
+      // Populate the modal with the details
+      await populateFlaggedVisitModal(details);
+    } else {
       // Try to find in scheduled_visits table as fallback
       const { data: visits, error: visitError } = await supabase
         .from('scheduled_visits')
@@ -466,26 +494,46 @@ export async function displayFlaggedVisitDetails(visitId: string): Promise<void>
       if (visitError) throw visitError;
       
       if (visits) {
-                 // Convert scheduled visit data to flagged visit format
-         const flaggedVisitData: FlaggedVisitDetails = {
-           visit_id: visits.id || 'Unknown',
-           visitor_name: `${visits.visitor_first_name || ''} ${visits.visitor_last_name || ''}`.trim() || 'Unknown Visitor',
-           visitor_email: visits.visitor_email || 'No email provided',
-           visitor_phone: visits.visitor_phone || undefined,
-           visitor_role: visits.visitor_role || 'guest',
-           visit_date: visits.visit_date || new Date().toISOString(),
-           purpose: visits.purpose || 'No purpose specified',
-           is_guest: visits.visitor_role === 'guest',
-           completed_at: visits.completed_at || new Date().toISOString(),
-           completed_by: visits.completed_by || undefined,
-           status: visits.status || 'completed_flagged',
-           places: visits.places || [],
-           total_places: visits.total_places || 1,
-           completed_places: visits.completed_places || 0,
-           gate_exit_scanned: visits.gate_exit_scanned || false,
-           note: 'Visit completed (flagged) - process started and personnel finished their part, but visitor did not complete the full process',
-           history: []
-         };
+        // Fetch place information from scheduled_visit_places table
+        const { data: placeData, error: placeError } = await supabase
+          .from('scheduled_visit_places')
+          .select(`
+            place_id,
+            status,
+            completed_at,
+            completed_by,
+            places_to_visit (
+              name,
+              description,
+              location
+            )
+          `)
+          .eq('visit_id', visitId);
+
+        if (placeError) {
+          console.error('Error fetching place data:', placeError);
+        }
+
+        // Convert scheduled visit data to flagged visit format
+        const flaggedVisitData: FlaggedVisitDetails = {
+          visit_id: visits.id || 'Unknown',
+          visitor_name: `${visits.visitor_first_name || ''} ${visits.visitor_last_name || ''}`.trim() || 'Unknown Visitor',
+          visitor_email: visits.visitor_email || 'No email provided',
+          visitor_phone: visits.visitor_phone || undefined,
+          visitor_role: visits.visitor_role || 'guest',
+          visit_date: visits.visit_date || new Date().toISOString(),
+          purpose: visits.purpose || 'No purpose specified',
+          is_guest: visits.visitor_role === 'guest',
+          completed_at: visits.completed_at || new Date().toISOString(),
+          completed_by: visits.completed_by || undefined,
+          status: visits.status || 'completed_flagged',
+          places: placeData || [], // Use actual place data from scheduled_visit_places
+          total_places: placeData ? placeData.length : 0,
+          completed_places: placeData ? placeData.filter((place: any) => place.status === 'completed').length : 0,
+          gate_exit_scanned: visits.gate_exit_scanned || false,
+          note: 'Visit completed (flagged) - process started and personnel finished their part, but visitor did not complete the full process',
+          history: []
+        };
         
         await populateFlaggedVisitModal(flaggedVisitData);
       } else {
