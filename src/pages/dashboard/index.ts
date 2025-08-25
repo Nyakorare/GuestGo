@@ -1227,7 +1227,7 @@ function renderPlaces(): void {
     }
 
     placesList.innerHTML = filteredPlaces.map((place: any) => `
-      <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+      <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg transition-all duration-300 ease-in-out hover:bg-gray-100 dark:hover:bg-gray-600 hover:shadow-lg hover:scale-[1.02] cursor-pointer border border-transparent hover:border-gray-200 dark:hover:border-gray-500">
         <div class="flex-1">
           <h3 class="text-lg font-medium text-gray-900 dark:text-white">${place.name}</h3>
           <p class="text-sm text-gray-500 dark:text-gray-400">${place.description || 'No description'}</p>
@@ -1246,7 +1246,7 @@ function renderPlaces(): void {
               <p class="text-sm text-gray-600 dark:text-gray-300 font-medium">Assigned Personnel:</p>
               <div class="mt-1 space-y-1">
                 ${(place.assigned_personnel as any[]).map((personnel: any) => `
-                  <div class="flex items-center justify-between bg-white dark:bg-gray-600 rounded px-2 py-1">
+                  <div class="flex items-center justify-between bg-white dark:bg-gray-600 rounded px-2 py-1 transition-all duration-200 ease-in-out hover:bg-gray-50 dark:hover:bg-gray-500 hover:shadow-sm">
                     <span class="text-sm text-gray-700 dark:text-gray-300">
                       ${personnel.first_name || personnel.last_name ? 
                         `${personnel.first_name || ''} ${personnel.last_name || ''}` : 
@@ -1256,7 +1256,7 @@ function renderPlaces(): void {
                     </span>
                     <button 
                       onclick="window.removePersonnelFromPlace('${place.id}', '${personnel.user_id}')"
-                      class="text-red-600 hover:text-red-800 dark:text-red-500 dark:hover:text-red-400 text-sm"
+                      class="text-red-600 hover:text-red-800 dark:text-red-500 dark:hover:text-red-400 text-sm transition-colors duration-200 ease-in-out hover:scale-110 transform"
                       title="Remove personnel"
                     >
                       <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1276,7 +1276,7 @@ function renderPlaces(): void {
         <div class="flex items-center space-x-4">
           <button 
             onclick="window.assignPersonnelToPlace('${place.id}')"
-            class="text-blue-600 hover:text-blue-800 dark:text-blue-500 dark:hover:text-blue-400"
+            class="text-blue-600 hover:text-blue-800 dark:text-blue-500 dark:hover:text-blue-400 transition-colors duration-200 ease-in-out hover:scale-110 transform"
             title="Assign personnel"
           >
             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1285,7 +1285,7 @@ function renderPlaces(): void {
           </button>
           <button 
             onclick="window.editPlace('${place.id}')"
-            class="text-blue-600 hover:text-blue-800 dark:text-blue-500 dark:hover:text-blue-400"
+            class="text-blue-600 hover:text-blue-800 dark:text-blue-500 dark:hover:text-blue-400 transition-colors duration-200 ease-in-out hover:scale-110 transform"
           >
             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
