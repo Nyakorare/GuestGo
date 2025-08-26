@@ -1384,22 +1384,22 @@ function renderAccounts(): void {
           </thead>
           <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
             ${(filteredAccounts as any[]).map((account: any) => `
-              <tr>
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 ease-in-out transform hover:scale-[1.01] hover:shadow-sm cursor-pointer">
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="flex flex-col">
-                    <div class="text-sm font-medium text-gray-900 dark:text-white">
+                    <div class="text-sm font-medium text-gray-900 dark:text-white transition-colors duration-200">
                       ${account.first_name || account.last_name ? 
                         `${account.first_name || ''} ${account.last_name || ''}` : 
                         'Unknown User'
                       }
                     </div>
-                    <div class="text-xs text-gray-400 dark:text-gray-500 font-mono">
+                    <div class="text-xs text-gray-400 dark:text-gray-500 font-mono transition-colors duration-200">
                       ${account.user_id.substring(0, 8)}...
                     </div>
                   </div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                  <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full transition-all duration-200 hover:scale-105 hover:shadow-md ${
                     account.role === 'log' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
                     account.role === 'personnel' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
                     account.role === 'visitor' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
@@ -1408,13 +1408,13 @@ function renderAccounts(): void {
                     ${account.role.charAt(0).toUpperCase() + account.role.slice(1)}
                   </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 transition-colors duration-200">
                   ${new Date(account.created_at).toLocaleDateString()}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <select 
                     onchange="window.changeUserRole('${account.user_id}', this.value)"
-                    class="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                    class="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm transition-all duration-200 hover:border-blue-400 hover:shadow-md"
                     style="min-width: 120px;"
                   >
                     <option value="log" ${account.role === 'log' ? 'selected' : ''}>Log</option>
