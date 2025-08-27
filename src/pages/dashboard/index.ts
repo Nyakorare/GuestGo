@@ -1627,28 +1627,28 @@ async function renderLogs(): Promise<void> {
           </thead>
           <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
             ${(formattedDetails as any[]).map((log: any) => `
-              <tr class="relative">
+              <tr class="relative hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 ease-in-out transform hover:scale-[1.01] hover:shadow-sm cursor-pointer group">
                 <td class="px-2 py-4 align-middle">
                   ${shouldShowNotification(log.displayAction) ? `
-                    <div class="w-3 h-3 ${(getNotificationConfig(log.displayAction)?.className) || 'bg-red-500'} rounded-full animate-pulse" title="Important notification"></div>
+                    <div class="w-3 h-3 ${(getNotificationConfig(log.displayAction)?.className) || 'bg-red-500'} rounded-full animate-pulse group-hover:scale-110 transition-transform duration-200" title="Important notification"></div>
                   ` : ''}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors duration-200">
                   ${new Date(log.created_at).toLocaleString()}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors duration-200">
                   ${log.user_roles ? 
                     `${log.user_roles.first_name || ''} ${log.user_roles.last_name || ''}`.trim() || 
                     log.user_roles.email || 
                     'Unknown User' 
                     : 'Guest User'}
                   ${log.user_roles ? 
-                    `<br><span class="text-xs text-gray-500 font-mono">${log.user_id.substring(0, 8)}...</span>` 
+                    `<br><span class="text-xs text-gray-500 font-mono group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors duration-200">${log.user_id.substring(0, 8)}...</span>` 
                     : ''}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="flex items-center space-x-2">
-                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full transition-all duration-200 group-hover:scale-105 ${
                       log.displayAction === 'password_change' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
                       log.displayAction === 'place_update' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
                       log.displayAction === 'place_availability_toggle' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
@@ -1673,7 +1673,7 @@ async function renderLogs(): Promise<void> {
                     ${log.displayAction === 'visit_completed_flagged' ? `
                       <button 
                         onclick="displayFlaggedVisitDetails('${log.details?.visit_id || log.details?.id || 'unknown'}')"
-                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 group-hover:scale-110"
                         title="View full visit details"
                       >
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1683,7 +1683,7 @@ async function renderLogs(): Promise<void> {
                     ` : ''}
                   </div>
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                <td class="px-6 py-4 text-sm text-gray-900 dark:text-white group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors duration-200">
                   <div class="max-w-md">
                     ${log.formattedDetails}
                   </div>
@@ -1697,18 +1697,18 @@ async function renderLogs(): Promise<void> {
       <!-- Mobile Card View (visible on mobile and tablet) -->
       <div class="lg:hidden space-y-4">
         ${(formattedDetails as any[]).map((log: any) => `
-          <div class="relative bg-white dark:bg-gray-700 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 p-4 pl-8">
+          <div class="relative bg-white dark:bg-gray-700 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 p-4 pl-8 hover:shadow-md hover:border-gray-300 dark:hover:border-gray-500 transition-all duration-200 ease-in-out transform hover:scale-[1.02] hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer group">
             ${shouldShowNotification(log.displayAction) ? `
-              <div class="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 ${(getNotificationConfig(log.displayAction)?.className) || 'bg-red-500'} rounded-full animate-pulse" title="Important notification"></div>
+              <div class="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 ${(getNotificationConfig(log.displayAction)?.className) || 'bg-red-500'} rounded-full animate-pulse group-hover:scale-110 transition-transform duration-200" title="Important notification"></div>
             ` : ''}
             <div class="flex flex-col space-y-3">
               <!-- Header with timestamp and action -->
               <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                 <div class="flex-1">
-                  <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">
+                  <div class="text-sm text-gray-500 dark:text-gray-400 mb-1 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors duration-200">
                     ${new Date(log.created_at).toLocaleString()}
                   </div>
-                  <div class="text-sm text-gray-900 dark:text-white font-medium">
+                  <div class="text-sm text-gray-900 dark:text-white font-medium group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors duration-200">
                     ${log.user_roles ? 
                       `${log.user_roles.first_name || ''} ${log.user_roles.last_name || ''}`.trim() || 
                       log.user_roles.email || 
@@ -1716,12 +1716,12 @@ async function renderLogs(): Promise<void> {
                       : 'Guest User'}
                   </div>
                   ${log.user_roles ? 
-                    `<div class="text-xs text-gray-500 font-mono">${log.user_id.substring(0, 8)}...</div>` 
+                    `<div class="text-xs text-gray-500 font-mono group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors duration-200">${log.user_id.substring(0, 8)}...</div>` 
                     : ''}
                 </div>
                 <div class="flex-shrink-0">
                   <div class="flex items-center space-x-2">
-                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full transition-all duration-200 group-hover:scale-105 ${
                       log.displayAction === 'password_change' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
                       log.displayAction === 'place_update' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
                       log.displayAction === 'place_availability_toggle' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
@@ -1746,7 +1746,7 @@ async function renderLogs(): Promise<void> {
                     ${log.displayAction === 'visit_completed_flagged' ? `
                       <button 
                         onclick="displayFlaggedVisitDetails('${log.details?.visit_id || log.details?.id || 'unknown'}')"
-                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-all duration-200 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 group-hover:scale-110"
                         title="View full visit details"
                       >
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1759,8 +1759,8 @@ async function renderLogs(): Promise<void> {
               </div>
               
               <!-- Details section -->
-              <div class="border-t border-gray-200 dark:border-gray-600 pt-3">
-                <div class="text-sm text-gray-900 dark:text-white">
+              <div class="border-t border-gray-200 dark:border-gray-600 pt-3 group-hover:border-gray-300 dark:group-hover:border-gray-500 transition-colors duration-200">
+                <div class="text-sm text-gray-900 dark:text-white group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors duration-200">
                   ${log.formattedDetails}
                 </div>
               </div>
