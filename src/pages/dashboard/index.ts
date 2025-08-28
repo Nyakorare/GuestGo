@@ -3751,7 +3751,7 @@ async function loadPersonnelDashboard() {
       if (isAssigned) {
         // Show all assignments
         personnelAssignmentInfo.innerHTML = availabilityData.map((assignment: any) => `
-          <div class="bg-white dark:bg-gray-700 rounded-lg shadow p-6 mb-4">
+          <div class="bg-white dark:bg-gray-700 rounded-lg shadow p-6 mb-4 transition-all duration-300 ease-in-out hover:shadow-xl hover:scale-[1.02] hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer border border-transparent hover:border-gray-200 dark:hover:border-gray-500">
             <div class="flex items-center justify-between mb-4">
               <h3 class="text-xl font-semibold text-gray-900 dark:text-white">${assignment.place_name}</h3>
               <span class="inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
@@ -3785,7 +3785,7 @@ async function loadPersonnelDashboard() {
             <div class="mt-6">
               <button 
                 onclick="window.togglePersonnelAvailability('${assignment.place_id}', ${assignment.is_available})"
-                class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 ease-in-out hover:scale-105 hover:shadow-lg"
               >
                 ${assignment.is_available ? 'Mark as Unavailable' : 'Mark as Available'}
               </button>
@@ -3794,7 +3794,7 @@ async function loadPersonnelDashboard() {
         `).join('');
       } else {
         personnelAssignmentInfo.innerHTML = `
-          <div class="bg-white dark:bg-gray-700 rounded-lg shadow p-6">
+          <div class="bg-white dark:bg-gray-700 rounded-lg shadow p-6 transition-all duration-300 ease-in-out hover:shadow-xl hover:scale-[1.02] hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer border border-transparent hover:border-gray-200 dark:hover:border-gray-500">
             <div class="text-center">
               <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
