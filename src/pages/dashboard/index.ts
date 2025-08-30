@@ -623,22 +623,22 @@ export function DashboardPage() {
         <!-- Scheduled Visits Content -->
         <div id="visitsContent" class="hidden space-y-4">
           <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4 mb-6">
-            <h3 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Scheduled Visits</h3>
+            <div class="flex items-center gap-4">
+              <h3 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Scheduled Visits</h3>
+              <!-- Refresh Button positioned next to title -->
+              <button 
+                id="refreshVisitsBtn"
+                class="bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm transition-all duration-200 hover:scale-105"
+                title="Refresh visits data"
+              >
+                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                Refresh
+              </button>
+            </div>
             <!-- Search and Filter Section -->
             <div class="flex flex-col gap-3 w-full lg:w-auto">
-              <!-- Manual Refresh Button Row -->
-              <div class="flex flex-col sm:flex-row gap-2">
-                <button 
-                  id="refreshVisitsBtn"
-                  class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm w-full sm:w-auto"
-                  title="Refresh visits data"
-                >
-                  <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                  </svg>
-                  Refresh
-                </button>
-              </div>
               <!-- Search and Filter Row -->
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 <!-- Search Input -->
@@ -4471,7 +4471,7 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
 
     // Show multi-place visit indicator
     const multiPlaceIndicator = visit.total_places > 1 ? `
-      <div class="mb-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-400">
+      <div class="mb-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-400 transition-all duration-200 hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:shadow-sm">
         <div class="flex items-center justify-between">
           <span class="text-sm font-medium text-blue-800 dark:text-blue-200">Multi-Place Visit</span>
           <span class="text-sm text-blue-600 dark:text-blue-400">${visit.completed_places}/${visit.total_places} places completed</span>
@@ -4503,7 +4503,7 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
     }
 
     return `
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 transition-all duration-300 ease-in-out hover:shadow-lg hover:shadow-blue-100 dark:hover:shadow-blue-900/20 hover:scale-[1.02] hover:border-blue-200 dark:hover:border-blue-600 cursor-pointer transform">
         <div class="flex justify-between items-start mb-4">
           <div>
             <h4 class="text-lg font-semibold text-gray-900 dark:text-white">${visitorName}</h4>
@@ -4537,7 +4537,7 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
         
         <div class="mb-4">
           <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Your Assignment</p>
-          <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border-l-4 ${visit.place_status === 'completed' ? 'border-green-400' : visit.place_status === 'unsuccessful' || visit.place_status === 'failed' ? 'border-red-400' : 'border-yellow-400'}">
+          <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border-l-4 ${visit.place_status === 'completed' ? 'border-green-400' : visit.place_status === 'unsuccessful' || visit.place_status === 'failed' ? 'border-red-400' : 'border-yellow-400'} transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-600 hover:shadow-sm">
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-sm font-medium text-gray-900 dark:text-white">${visit.place_name || 'Unknown Place'}</p>
@@ -4560,7 +4560,7 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
           <div class="flex justify-end">
             <button 
               onclick="completeVisitPlace('${visit.visit_id}', '${visit.place_id}')"
-              class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-sm font-medium"
+              class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-sm font-medium transition-all duration-200 hover:scale-105 hover:shadow-md"
             >
               Mark Place Complete
             </button>
@@ -4584,7 +4584,7 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
               </div>
             <button 
               onclick="showFlaggedVisitDetails('${visit.visit_id}')"
-              class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm font-medium"
+              class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm font-medium transition-all duration-200 hover:scale-105 hover:shadow-md"
             >
               Details
             </button>
