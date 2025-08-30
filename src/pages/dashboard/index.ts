@@ -6941,20 +6941,20 @@ function displayFinishedVisits(visits: any[]): void {
       'Unknown';
 
     return `
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 transition-all duration-300 ease-in-out hover:shadow-lg hover:shadow-blue-500/20 hover:scale-[1.02] hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-gray-700 cursor-pointer group">
         <div class="flex justify-between items-start mb-4">
           <div>
-            <h4 class="text-lg font-semibold text-gray-900 dark:text-white">${visitorName}</h4>
-            <p class="text-gray-600 dark:text-gray-400">${visitorEmail}</p>
+            <h4 class="text-lg font-semibold text-gray-900 dark:text-white transition-colors duration-200 group-hover:text-blue-600 dark:group-hover:text-blue-400">${visitorName}</h4>
+            <p class="text-gray-600 dark:text-gray-400 transition-colors duration-200 group-hover:text-gray-700 dark:group-hover:text-gray-300">${visitorEmail}</p>
             <p class="text-xs text-gray-500 dark:text-gray-400">
               ${isLoggedIn ? 'Logged-in User' : 'Guest User'} • ID: ${visitorId}
             </p>
           </div>
           <div class="flex space-x-2">
-            <span class="px-2 py-1 rounded-full text-xs font-medium ${(statusColors as any)[visit.status] || statusColors.completed}">
+            <span class="px-2 py-1 rounded-full text-xs font-medium ${(statusColors as any)[visit.status] || statusColors.completed} transition-all duration-200 group-hover:scale-105">
               ${visit.status === 'completed_flagged' ? 'Completed (Flagged)' : visit.status === 'unsuccessful' ? 'Unsuccessful' : visit.status}
             </span>
-            <span class="px-2 py-1 rounded-full text-xs font-medium ${(roleColors as any)[visitorRole] || roleColors.guest}">
+            <span class="px-2 py-1 rounded-full text-xs font-medium ${(roleColors as any)[visitorRole] || roleColors.guest} transition-all duration-200 group-hover:scale-105">
               ${visitorRole}
             </span>
           </div>
@@ -6973,8 +6973,8 @@ function displayFinishedVisits(visits: any[]): void {
           </div>
         </div>
         
-        <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
-          <p class="text-xs text-gray-500 dark:text-gray-400">
+        <div class="border-t border-gray-200 dark:border-gray-700 pt-4 transition-colors duration-200 group-hover:border-blue-300 dark:group-hover:border-blue-600">
+          <p class="text-xs text-gray-500 dark:text-gray-400 transition-colors duration-200 group-hover:text-gray-600 dark:group-hover:text-gray-300">
             Scheduled: ${new Date(visit.scheduled_at).toLocaleDateString()} at ${new Date(visit.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </p>
         </div>
