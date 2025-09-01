@@ -6576,7 +6576,7 @@ async function displayVisitorPastVisits(visits: any[]): Promise<void> {
     const totalPlaces = places.length;
     
     visitsHtml += `
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300 ease-in-out hover:shadow-lg hover:shadow-blue-500/20 hover:scale-[1.02] hover:border-blue-300 dark:hover:border-blue-600 cursor-pointer transform">
         <div class="p-4 sm:p-6">
           <!-- Visit Header -->
           <div class="flex items-start justify-between mb-4">
