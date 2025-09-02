@@ -1753,11 +1753,18 @@ export async function setupEventListeners() {
       const endOfMonth = new Date(philippineToday.getFullYear(), philippineToday.getMonth() + 1, 0);
       endOfMonth.setHours(23, 59, 59, 999);
 
+      // Query for ALL pending visits (including future weeks) for this user
+      const { data: allPendingVisits, error: allPendingError } = await supabase
+        .from('scheduled_visits')
+        .select('visit_date, status')
+        .or(`visitor_user_id.eq.${user.id},visitor_email.eq.${user.email}`)
+        .eq('status', 'pending');
+
       // Query the database for all pending, completed, and completed_flagged visits for the current week
       const { data: visits, error } = await supabase
         .from('scheduled_visits')
         .select('visit_date, status')
-        .eq('visitor_user_id', user.id)
+        .or(`visitor_user_id.eq.${user.id},visitor_email.eq.${user.email}`)
         .in('status', ['pending', 'completed', 'completed_flagged'])
         .gte('visit_date', weekStart.toISOString())
         .lte('visit_date', weekEnd.toISOString());
@@ -1766,7 +1773,7 @@ export async function setupEventListeners() {
       const { data: prevWeekVisits, error: prevWeekError } = await supabase
         .from('scheduled_visits')
         .select('visit_date, status')
-        .eq('visitor_user_id', user.id)
+        .or(`visitor_user_id.eq.${user.id},visitor_email.eq.${user.email}`)
         .in('status', ['pending', 'completed', 'completed_flagged'])
         .gte('visit_date', prevWeekStart.toISOString())
         .lte('visit_date', prevWeekEnd.toISOString());
@@ -1775,14 +1782,17 @@ export async function setupEventListeners() {
       const { data: futureVisits, error: futureError } = await supabase
         .from('scheduled_visits')
         .select('visit_date, status')
-        .eq('visitor_user_id', user.id)
-        .in('status', ['pending', 'completed', 'completed_flagged'])
+        .or(`visitor_user_id.eq.${user.id},visitor_email.eq.${user.email}`)
+        .eq('status', 'pending')
         .gte('visit_date', nextWeekStart.toISOString())
         .lte('visit_date', endOfMonth.toISOString());
 
       if (error) {
         console.error('Error refreshing weekly visit count for modal:', error);
         return;
+      }
+      if (allPendingError) {
+        console.error('Error loading all pending visits for modal:', allPendingError);
       }
       if (prevWeekError) {
         console.error('Error loading previous week visits for modal:', prevWeekError);
@@ -1805,43 +1815,90 @@ export async function setupEventListeners() {
 
       // Count future visits
       const futureVisitCount = futureVisits?.length || 0;
-
-      // NEW LOGIC: Determine refresh slots based on previous week AND future schedules
-      let refreshSlots = 2; // default: allow 2 visits
       
-      // First, check previous week logic
-      if (prevTotalCount > 0) {
-        const prevCompletedTotal = prevCompletedCount + prevCompletedFlaggedCount;
-        if (prevPendingCount === 2) {
-          refreshSlots = 0; // 2 pending = no refresh
-        } else if (prevPendingCount === 1 && prevCompletedTotal === 1) {
-          refreshSlots = 1; // 1 pending, 1 completed (including flagged) = 1 refresh
-        } else if (prevPendingCount === 0 && prevCompletedTotal === 2) {
-          refreshSlots = 2; // 2 completed (including flagged) = 2 refresh
-        } else {
-          // For any other combination (e.g., only 1 visit last week)
-          refreshSlots = 2 - prevPendingCount; // e.g., 1 completed, 0 pending = 1 refresh
+      // Count ALL pending visits (including future weeks)
+      const totalPendingCount = allPendingVisits?.length || 0;
+
+      // NEW LOGIC: Calculate weekly visit counts for all weeks that have pending schedules
+      // This will help users understand their scheduling status across all weeks
+      const weeklyVisitCounts = new Map();
+      
+      // Process all pending visits to group them by week
+      if (allPendingVisits) {
+        allPendingVisits.forEach(visit => {
+          const visitDate = new Date(visit.visit_date);
+          const weekStart = new Date(visitDate);
+          const dayOfWeek = weekStart.getDay();
+          const daysToSubtract = dayOfWeek;
+          weekStart.setDate(visitDate.getDate() - daysToSubtract);
+          weekStart.setHours(0, 0, 0, 0);
+          
+          const weekKey = weekStart.toISOString().split('T')[0];
+          
+          if (!weeklyVisitCounts.has(weekKey)) {
+            weeklyVisitCounts.set(weekKey, {
+              weekStart: weekStart,
+              pending: 0,
+              completed: 0,
+              completedFlagged: 0,
+              total: 0
+            });
+          }
+          
+          const weekData = weeklyVisitCounts.get(weekKey);
+          if (visit.status === 'pending') {
+            weekData.pending++;
+          } else if (visit.status === 'completed') {
+            weekData.completed++;
+          } else if (visit.status === 'completed_flagged') {
+            weekData.completedFlagged++;
+          }
+          weekData.total++;
+        });
+      }
+      
+      // Also add current week completed visits to the map
+      if (visits) {
+        const currentWeekKey = weekStart.toISOString().split('T')[0];
+        if (!weeklyVisitCounts.has(currentWeekKey)) {
+          weeklyVisitCounts.set(currentWeekKey, {
+            weekStart: weekStart,
+            pending: 0,
+            completed: 0,
+            completedFlagged: 0,
+            total: 0
+          });
         }
+        
+        const currentWeekData = weeklyVisitCounts.get(currentWeekKey);
+        visits.forEach(visit => {
+          if (visit.status === 'pending') {
+            currentWeekData.pending++;
+          } else if (visit.status === 'completed') {
+            currentWeekData.completed++;
+          } else if (visit.status === 'completed_flagged') {
+            currentWeekData.completedFlagged++;
+          }
+          currentWeekData.total++;
+        });
       }
 
-      // Then, check if user has future schedules that would limit current week
-      if (futureVisitCount > 0) {
-        // If user has future schedules, they should only get 1 refresh slot
-        // This ensures they don't use up all their visits before reaching their scheduled dates
-        refreshSlots = Math.min(refreshSlots, 1);
-      }
-
-      // Calculate remaining visits for this week
-      const remainingVisits = Math.max(0, refreshSlots - visitCount);
+      // Calculate remaining visits for this week (based on current week visits only)
+      // This ensures that completed visits from previous weeks don't limit current week scheduling
+      const remainingVisits = Math.max(0, 2 - visitCount);
 
       // Debug logging
       console.log('Refresh Modal Weekly Visit Count Debug:', {
         userId: user.id,
         visitsFound: visits,
         visitCount: visitCount,
-        refreshSlots: refreshSlots,
         remainingVisits: remainingVisits,
+        totalPendingCount: totalPendingCount,
         futureVisitCount: futureVisitCount,
+        weeklyVisitCounts: Array.from(weeklyVisitCounts.entries()).map(([weekKey, data]) => ({
+          week: weekKey,
+          ...data
+        })),
         query: {
           table: 'scheduled_visits',
           filters: {
@@ -1854,10 +1911,7 @@ export async function setupEventListeners() {
       let statusText = '';
       let statusColor = '';
       
-      if (refreshSlots === 0) {
-        statusText = 'No new visits allowed until previous week is cleared';
-        statusColor = 'text-gray-600 dark:text-gray-400';
-      } else if (remainingVisits === 2) {
+      if (remainingVisits === 2) {
         statusText = '2 visits remaining';
         statusColor = 'text-green-600 dark:text-green-400';
       } else if (remainingVisits === 1) {
@@ -1871,10 +1925,47 @@ export async function setupEventListeners() {
       // Completely recreate the modal content to prevent duplicates
       const completedText = completedFlaggedCount > 0 ? `${completedCount + completedFlaggedCount} completed (${completedFlaggedCount} flagged)` : `${completedCount} completed`;
       let weekText = `(${pendingCount} pending, ${completedText})`;
-      // Optionally, show future schedules in a separate line, not in the main status
+      
+      // Add information about future weeks with pending schedules
       let futureText = '';
-      if (futureVisitCount > 0) {
-        futureText = `<div class="text-xs text-blue-600 dark:text-blue-400">Future schedules: ${futureVisitCount} visit(s)</div>`;
+      const sortedWeeks = Array.from(weeklyVisitCounts.entries()).sort(([a], [b]) => {
+        const dateA = new Date(a);
+        const dateB = new Date(b);
+        return dateA.getTime() - dateB.getTime();
+      });
+      
+      const currentWeekKey = weekStart.toISOString().split('T')[0];
+      const futureWeeksWithSchedules = sortedWeeks.filter(([weekKey]) => weekKey !== currentWeekKey);
+      
+      if (futureWeeksWithSchedules.length > 0) {
+        futureText = '<div class="mt-1 text-xs text-blue-600 dark:text-blue-400">';
+        futureText += '<strong>Future weeks with schedules:</strong><br>';
+        
+        futureWeeksWithSchedules.forEach(([weekKey, weekData]) => {
+          const weekStartDate = new Date(weekKey);
+          const weekEndDate = new Date(weekStartDate);
+          weekEndDate.setDate(weekStartDate.getDate() + 6);
+          
+          const weekStartMonth = weekStartDate.toLocaleString('en-US', { month: 'short' });
+          const weekStartDay = weekStartDate.getDate();
+          const weekEndMonth = weekEndDate.toLocaleString('en-US', { month: 'short' });
+          const weekEndDay = weekEndDate.getDate();
+          const weekYear = weekEndDate.getFullYear();
+          
+          let weekRangeStr = '';
+          if (weekStartMonth === weekEndMonth) {
+            weekRangeStr = `${weekStartMonth} ${weekStartDay}-${weekEndDay}, ${weekYear}`;
+          } else {
+            weekRangeStr = `${weekStartMonth} ${weekStartDay} - ${weekEndMonth} ${weekEndDay}, ${weekYear}`;
+          }
+          
+          const remainingInWeek = Math.max(0, 2 - weekData.total);
+          const statusColor = remainingInWeek === 2 ? 'text-green-600' : remainingInWeek === 1 ? 'text-yellow-600' : 'text-red-600';
+          
+          futureText += `• Week of ${weekRangeStr}: <span class="${statusColor}">${remainingInWeek} visits remaining</span> (${weekData.pending} pending)<br>`;
+        });
+        
+        futureText += '</div>';
       }
       
       modalWeeklyVisitCount.innerHTML = `

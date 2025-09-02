@@ -281,6 +281,70 @@ async function loadWeeklyVisitCount(userEmail: string) {
     // as part of the current week's visit limit
     const totalWeekVisits = visitCount;
     
+    // NEW: Calculate weekly visit counts for all weeks that have pending schedules
+    // This will help users understand their scheduling status across all weeks
+    const weeklyVisitCounts = new Map();
+    
+    // Process all pending visits to group them by week
+    if (allPendingVisits) {
+      allPendingVisits.forEach(visit => {
+        const visitDate = new Date(visit.visit_date);
+        const weekStart = new Date(visitDate);
+        const dayOfWeek = weekStart.getDay();
+        const daysToSubtract = dayOfWeek;
+        weekStart.setDate(visitDate.getDate() - daysToSubtract);
+        weekStart.setHours(0, 0, 0, 0);
+        
+        const weekKey = weekStart.toISOString().split('T')[0];
+        
+        if (!weeklyVisitCounts.has(weekKey)) {
+          weeklyVisitCounts.set(weekKey, {
+            weekStart: weekStart,
+            pending: 0,
+            completed: 0,
+            completedFlagged: 0,
+            total: 0
+          });
+        }
+        
+        const weekData = weeklyVisitCounts.get(weekKey);
+        if (visit.status === 'pending') {
+          weekData.pending++;
+        } else if (visit.status === 'completed') {
+          weekData.completed++;
+        } else if (visit.status === 'completed_flagged') {
+          weekData.completedFlagged++;
+        }
+        weekData.total++;
+      });
+    }
+    
+    // Also add current week completed visits to the map
+    if (visits) {
+      const currentWeekKey = weekStart.toISOString().split('T')[0];
+      if (!weeklyVisitCounts.has(currentWeekKey)) {
+        weeklyVisitCounts.set(currentWeekKey, {
+          weekStart: weekStart,
+          pending: 0,
+          completed: 0,
+          completedFlagged: 0,
+          total: 0
+        });
+      }
+      
+      const currentWeekData = weeklyVisitCounts.get(currentWeekKey);
+      visits.forEach(visit => {
+        if (visit.status === 'pending') {
+          currentWeekData.pending++;
+        } else if (visit.status === 'completed') {
+          currentWeekData.completed++;
+        } else if (visit.status === 'completed_flagged') {
+          currentWeekData.completedFlagged++;
+        }
+        currentWeekData.total++;
+      });
+    }
+    
     // Debug logging to understand the counts
     console.log('Weekly Visit Count Debug:', {
       currentWeek: {
@@ -300,6 +364,10 @@ async function loadWeeklyVisitCount(userEmail: string) {
         totalCompletedSchedules,
         totalWeekVisits
       },
+      weeklyVisitCounts: Array.from(weeklyVisitCounts.entries()).map(([weekKey, data]) => ({
+        week: weekKey,
+        ...data
+      })),
       weekBoundaries: {
         philippineToday: philippineToday.toISOString().split('T')[0],
         weekStart: weekStart.toISOString().split('T')[0],
@@ -340,6 +408,20 @@ async function loadWeeklyVisitCount(userEmail: string) {
     const debugInfo = `[Debug: ${totalWeekVisits} total this week, ${pendingCount} pending this week, ${completedCount} completed this week, ${completedFlaggedCount} flagged this week, ${remainingVisits} remaining]`;
     console.log(debugInfo);
     
+    // Create comprehensive weekly status display
+    let weeklyStatusHtml = '';
+    
+    // Sort weeks by date (current week first, then future weeks)
+    const sortedWeeks = Array.from(weeklyVisitCounts.entries()).sort(([a], [b]) => {
+      const dateA = new Date(a);
+      const dateB = new Date(b);
+      return dateA.getTime() - dateB.getTime();
+    });
+    
+    // Display current week status
+    const currentWeekKey = weekStart.toISOString().split('T')[0];
+    const currentWeekData = weeklyVisitCounts.get(currentWeekKey);
+    
     if (remainingVisits === 2) {
       const completedText = completedFlaggedCount > 0 ? `${totalCompletedSchedules} completed (${completedFlaggedCount} flagged)` : `${totalCompletedSchedules} completed`;
       statusHtml = `<span class="font-medium text-green-600 dark:text-green-400">2 visits remaining</span> (${pendingCount} pending this week, ${completedText})`;
@@ -366,7 +448,40 @@ async function loadWeeklyVisitCount(userEmail: string) {
       }
     }
 
-    weeklyVisitText.innerHTML = `<span class="block font-semibold">Week of ${weekRangeStr}</span>${statusHtml}`;
+    // Add information about future weeks with pending schedules
+    const futureWeeksWithSchedules = sortedWeeks.filter(([weekKey]) => weekKey !== currentWeekKey);
+    if (futureWeeksWithSchedules.length > 0) {
+      additionalInfo = '<div class="mt-2 text-xs text-gray-600 dark:text-gray-400">';
+      additionalInfo += '<strong>Future weeks with schedules:</strong><br>';
+      
+      futureWeeksWithSchedules.forEach(([weekKey, weekData]) => {
+        const weekStartDate = new Date(weekKey);
+        const weekEndDate = new Date(weekStartDate);
+        weekEndDate.setDate(weekStartDate.getDate() + 6);
+        
+        const weekStartMonth = weekStartDate.toLocaleString('en-US', { month: 'short' });
+        const weekStartDay = weekStartDate.getDate();
+        const weekEndMonth = weekEndDate.toLocaleString('en-US', { month: 'short' });
+        const weekEndDay = weekEndDate.getDate();
+        const weekYear = weekEndDate.getFullYear();
+        
+        let weekRangeStr = '';
+        if (weekStartMonth === weekEndMonth) {
+          weekRangeStr = `${weekStartMonth} ${weekStartDay}-${weekEndDay}, ${weekYear}`;
+        } else {
+          weekRangeStr = `${weekStartMonth} ${weekStartDay} - ${weekEndMonth} ${weekEndDay}, ${weekYear}`;
+        }
+        
+        const remainingInWeek = Math.max(0, 2 - weekData.total);
+        const statusColor = remainingInWeek === 2 ? 'text-green-600' : remainingInWeek === 1 ? 'text-yellow-600' : 'text-red-600';
+        
+        additionalInfo += `• Week of ${weekRangeStr}: <span class="${statusColor}">${remainingInWeek} visits remaining</span> (${weekData.pending} pending)<br>`;
+      });
+      
+      additionalInfo += '</div>';
+    }
+
+    weeklyVisitText.innerHTML = `<span class="block font-semibold">Week of ${weekRangeStr}</span>${statusHtml}${additionalInfo}`;
 
     // Add a small note about the limit - be more specific to avoid duplicates
     const existingNote = weeklyVisitCountDiv.querySelector('.visit-limit-note');
