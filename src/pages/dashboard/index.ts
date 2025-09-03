@@ -835,51 +835,79 @@ export function DashboardPage() {
 
         <!-- Current Visits Content -->
         <div id="visitorCurrentContent" class="space-y-4">
-          <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4 mb-6">
-            <h3 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Current Visits</h3>
-            <!-- Search and Filter Section -->
-            <div class="flex flex-col gap-3 w-full lg:w-auto">
-              <!-- Search and Filter Row -->
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                <!-- Search Input -->
-                <div class="relative">
-                  <input 
-                    type="text" 
-                    id="visitorCurrentSearchInput"
-                    placeholder="Search current visits..."
-                    class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
+          <!-- Current Visits Sub-tabs -->
+          <div class="border-b border-gray-200 dark:border-gray-700 mb-6">
+            <nav class="-mb-px flex space-x-8">
+              <button 
+                id="visitorTodayTab"
+                class="border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 px-1 py-2 text-sm font-medium"
+              >
+                Today
+              </button>
+              <button 
+                id="visitorFutureTab"
+                class="border-b-2 border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600 px-1 py-2 text-sm font-medium"
+              >
+                Future
+              </button>
+            </nav>
+          </div>
+
+          <!-- Today Visits Content -->
+          <div id="visitorTodayContent" class="space-y-4">
+            <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4 mb-6">
+              <h3 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Today's Visits</h3>
+              <!-- Search and Filter Section -->
+              <div class="flex flex-col gap-3 w-full lg:w-auto">
+                <!-- Search and Filter Row -->
+                <div class="grid grid-cols-1 sm:grid-cols-1 gap-2">
+                  <!-- Status Filter -->
+                  <select 
+                    id="visitorTodayStatusFilter"
+                    class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
                   >
-                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
-                  </div>
+                    <option value="all">All Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="unsuccessful">Unsuccessful</option>
+                  </select>
                 </div>
-                <!-- Status Filter -->
-                <select 
-                  id="visitorCurrentStatusFilter"
-                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
-                >
-                  <option value="all">All Status</option>
-                  <option value="pending">Pending</option>
-                  <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
-                  <option value="unsuccessful">Unsuccessful</option>
-                </select>
-                <!-- Date Filter -->
-                <select 
-                  id="visitorCurrentDateFilter"
-                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
-                >
-                  <option value="all">All Dates</option>
-                  <option value="today">Today</option>
-                  <option value="future">Future</option>
-                  <option value="past">Past</option>
-                </select>
               </div>
             </div>
+            <div id="visitorTodayVisitsList" class="space-y-4"></div>
           </div>
-          <div id="visitorCurrentVisitsList" class="space-y-4"></div>
+
+          <!-- Future Visits Content -->
+          <div id="visitorFutureContent" class="hidden space-y-4">
+            <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4 mb-6">
+              <h3 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Future Visits</h3>
+              <!-- Search and Filter Section -->
+              <div class="flex flex-col gap-3 w-full lg:w-auto">
+                <!-- Search and Filter Row -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <!-- Status Filter -->
+                  <select 
+                    id="visitorFutureStatusFilter"
+                    class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="unsuccessful">Unsuccessful</option>
+                  </select>
+                  <!-- Date Picker -->
+                  <input 
+                    type="date" 
+                    id="visitorFutureDatePicker"
+                    class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
+                  >
+                </div>
+              </div>
+            </div>
+            <div id="visitorFutureVisitsList" class="space-y-4"></div>
+          </div>
         </div>
 
         <!-- Past Schedules Content -->
@@ -4616,7 +4644,8 @@ function setupVisitorDashboardEventListeners() {
         await loadVisitorVisits();
         
         // Re-apply current filters
-        await applyVisitorCurrentFilters();
+        await applyVisitorTodayFilters();
+        await applyVisitorFutureFilters();
         await applyVisitorPastFilters();
         
         // Show success notification
@@ -4659,28 +4688,54 @@ function setupVisitorDashboardEventListeners() {
     visitorCurrentContent?.classList.add('hidden');
   });
 
-  // Current visits search and filter event listeners
-  const visitorCurrentSearchInput = document.getElementById('visitorCurrentSearchInput') as HTMLInputElement;
-  if (visitorCurrentSearchInput) {
-    visitorCurrentSearchInput.addEventListener('input', debounce(() => {
-      currentVisitorSearchTerm = visitorCurrentSearchInput.value;
-      applyVisitorCurrentFilters();
-    }, 300));
-  }
+  // Current visits sub-tab switching event listeners
+  const visitorTodayTab = document.getElementById('visitorTodayTab');
+  const visitorFutureTab = document.getElementById('visitorFutureTab');
+  const visitorTodayContent = document.getElementById('visitorTodayContent');
+  const visitorFutureContent = document.getElementById('visitorFutureContent');
 
-  const visitorCurrentStatusFilter = document.getElementById('visitorCurrentStatusFilter') as HTMLSelectElement;
-  if (visitorCurrentStatusFilter) {
-    visitorCurrentStatusFilter.addEventListener('change', async () => {
-      currentVisitorStatusFilter = visitorCurrentStatusFilter.value;
-      await applyVisitorCurrentFilters();
+  visitorTodayTab?.addEventListener('click', () => {
+    visitorTodayTab.classList.add('border-blue-500', 'text-blue-600', 'dark:text-blue-400');
+    visitorTodayTab.classList.remove('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+    visitorFutureTab?.classList.remove('border-blue-500', 'text-blue-600', 'dark:text-blue-400');
+    visitorFutureTab?.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+    visitorTodayContent?.classList.remove('hidden');
+    visitorFutureContent?.classList.add('hidden');
+    applyVisitorTodayFilters();
+  });
+
+  visitorFutureTab?.addEventListener('click', () => {
+    visitorFutureTab.classList.add('border-blue-500', 'text-blue-600', 'dark:text-blue-400');
+    visitorFutureTab.classList.remove('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+    visitorTodayTab?.classList.remove('border-blue-500', 'text-blue-600', 'dark:text-blue-400');
+    visitorTodayTab?.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+    visitorFutureContent?.classList.remove('hidden');
+    visitorTodayContent?.classList.add('hidden');
+    applyVisitorFutureFilters();
+  });
+
+  // Today visits filter event listeners
+  const visitorTodayStatusFilter = document.getElementById('visitorTodayStatusFilter') as HTMLSelectElement;
+  if (visitorTodayStatusFilter) {
+    visitorTodayStatusFilter.addEventListener('change', async () => {
+      currentVisitorStatusFilter = visitorTodayStatusFilter.value;
+      await applyVisitorTodayFilters();
     });
   }
 
-  const visitorCurrentDateFilter = document.getElementById('visitorCurrentDateFilter') as HTMLSelectElement;
-  if (visitorCurrentDateFilter) {
-    visitorCurrentDateFilter.addEventListener('change', async () => {
-      currentVisitorDateFilter = visitorCurrentDateFilter.value;
-      await applyVisitorCurrentFilters();
+  // Future visits filter event listeners
+  const visitorFutureStatusFilter = document.getElementById('visitorFutureStatusFilter') as HTMLSelectElement;
+  if (visitorFutureStatusFilter) {
+    visitorFutureStatusFilter.addEventListener('change', async () => {
+      currentVisitorStatusFilter = visitorFutureStatusFilter.value;
+      await applyVisitorFutureFilters();
+    });
+  }
+
+  const visitorFutureDatePicker = document.getElementById('visitorFutureDatePicker') as HTMLInputElement;
+  if (visitorFutureDatePicker) {
+    visitorFutureDatePicker.addEventListener('change', async () => {
+      await applyVisitorFutureFilters();
     });
   }
 
@@ -4719,59 +4774,55 @@ function setupVisitorDashboardEventListeners() {
   console.log('Visitor dashboard event listeners setup complete');
 }
 
-// Function to apply filters for current visits
-async function applyVisitorCurrentFilters() {
-  const currentDate = new Date();
-  currentDate.setHours(0, 0, 0, 0);
+// Function to apply filters for today visits
+async function applyVisitorTodayFilters() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   
   let filteredVisits = allVisitorVisits.filter(visit => {
     const visitDate = new Date(visit.visit_date);
-    return visitDate >= currentDate || visit.status === 'pending';
+    visitDate.setHours(0, 0, 0, 0);
+    return visitDate.getTime() === today.getTime();
   });
-
-  // Apply search filter
-  if (currentVisitorSearchTerm.trim()) {
-    const searchTerm = currentVisitorSearchTerm.toLowerCase();
-    filteredVisits = filteredVisits.filter(visit => {
-      const purpose = (visit.purpose || '').toLowerCase();
-      const otherPurpose = (visit.other_purpose || '').toLowerCase();
-      const places = Array.isArray(visit.places) ? visit.places : [];
-      const placeNames = places.map((place: any) => (place.place_name || '').toLowerCase()).join(' ');
-      
-      return purpose.includes(searchTerm) || 
-             otherPurpose.includes(searchTerm) || 
-             placeNames.includes(searchTerm);
-    });
-  }
 
   // Apply status filter
   if (currentVisitorStatusFilter !== 'all') {
     filteredVisits = filteredVisits.filter(visit => visit.status === currentVisitorStatusFilter);
   }
 
-  // Apply date filter
-  if (currentVisitorDateFilter !== 'all') {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+  await displayVisitorTodayVisits(filteredVisits);
+}
+
+// Function to apply filters for future visits
+async function applyVisitorFutureFilters() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  let filteredVisits = allVisitorVisits.filter(visit => {
+    const visitDate = new Date(visit.visit_date);
+    visitDate.setHours(0, 0, 0, 0);
+    return visitDate.getTime() > today.getTime();
+  });
+
+  // Apply status filter
+  if (currentVisitorStatusFilter !== 'all') {
+    filteredVisits = filteredVisits.filter(visit => visit.status === currentVisitorStatusFilter);
+  }
+
+  // Apply date picker filter
+  const visitorFutureDatePicker = document.getElementById('visitorFutureDatePicker') as HTMLInputElement;
+  if (visitorFutureDatePicker && visitorFutureDatePicker.value) {
+    const selectedDate = new Date(visitorFutureDatePicker.value);
+    selectedDate.setHours(0, 0, 0, 0);
     
     filteredVisits = filteredVisits.filter(visit => {
       const visitDate = new Date(visit.visit_date);
       visitDate.setHours(0, 0, 0, 0);
-      
-      switch (currentVisitorDateFilter) {
-        case 'today':
-          return visitDate.getTime() === today.getTime();
-        case 'future':
-          return visitDate.getTime() > today.getTime();
-        case 'past':
-          return visitDate.getTime() < today.getTime();
-        default:
-          return true;
-      }
+      return visitDate.getTime() === selectedDate.getTime();
     });
   }
 
-  await displayVisitorCurrentVisits(filteredVisits);
+  await displayVisitorFutureVisits(filteredVisits);
 }
 
 // Function to apply filters for past visits
@@ -6210,8 +6261,9 @@ async function loadVisitorVisits() {
       return visitDate < currentDate && visit.status !== 'pending';
     });
 
-    // Display current visits
-    await displayVisitorCurrentVisits(currentVisits);
+    // Display today and future visits
+    await applyVisitorTodayFilters();
+    await applyVisitorFutureFilters();
     
     // Display past visits
     await displayVisitorPastVisits(pastVisits);
@@ -6539,6 +6591,449 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
 
   visitorCurrentVisitsList.innerHTML = visitsHtml;
 }
+
+// Function to display visitor's today visits
+async function displayVisitorTodayVisits(visits: any[]): Promise<void> {
+  const visitorTodayVisitsList = document.getElementById('visitorTodayVisitsList');
+  if (!visitorTodayVisitsList) {
+    console.error('Visitor today visits list container not found');
+    return;
+  }
+
+  // Get user role to check if they can scan gates
+  const { data: { user } } = await supabase.auth.getUser();
+  let userRole = null;
+  
+  if (user) {
+    try {
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+      
+      userRole = roleData?.role;
+    } catch (error) {
+      console.error('Error checking user role:', error);
+    }
+  }
+
+  if (visits.length === 0) {
+    visitorTodayVisitsList.innerHTML = `
+      <div class="text-center py-8">
+        <div class="text-gray-500 dark:text-gray-400">
+          <svg class="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <p class="text-lg font-medium">No visits scheduled for today</p>
+          <p class="text-sm">You don't have any visits scheduled for today.</p>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  let visitsHtml = '';
+  
+  for (const visit of visits) {
+    const visitDate = new Date(visit.visit_date);
+    const isToday = visitDate.toDateString() === new Date().toDateString();
+    const isPast = visitDate < new Date();
+    
+    // Calculate progress for the visit
+    const progress = calculateVisitProgress(visit);
+    
+    // Parse places data
+    const places = Array.isArray(visit.places) ? visit.places : [];
+    const completedPlaces = places.filter((place: any) => place.status === 'completed').length;
+    const totalPlaces = places.length;
+    
+    let statusLabel = '';
+    if (visit.status === 'completed_flagged') {
+      if (!isToday && isPast) {
+        statusLabel = 'Completed (Flagged)';
+      } else {
+        statusLabel = (completedPlaces === totalPlaces && totalPlaces > 0) ? 'In Progress' : 'Pending';
+      }
+    } else if (visit.status === 'completed') {
+      statusLabel = 'Completed';
+    } else if (visit.status === 'pending' && completedPlaces === totalPlaces && totalPlaces > 0) {
+      statusLabel = 'In Progress';
+    } else if (visit.status === 'pending') {
+      statusLabel = 'Pending';
+    } else if (visit.status === 'unsuccessful' || visit.status === 'failed') {
+      statusLabel = 'Unsuccessful';
+    } else if (visit.status === 'cancelled') {
+      statusLabel = 'Cancelled';
+    } else {
+      statusLabel = visit.status.charAt(0).toUpperCase() + visit.status.slice(1);
+    }
+    
+    visitsHtml += `
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300 ease-in-out hover:shadow-lg hover:shadow-blue-500/20 hover:scale-[1.02] hover:border-blue-300 dark:hover:border-blue-600 cursor-pointer transform">
+        <div class="p-4 sm:p-6">
+          <!-- Visit Header -->
+          <div class="flex items-start justify-between mb-4">
+            <div class="flex-1">
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                Visit on ${visitDate.toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Purpose: ${visit.purpose}${visit.other_purpose ? ` - ${visit.other_purpose}` : ''}
+              </p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="px-3 py-1 rounded-full text-xs font-medium ${
+                visit.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                visit.status === 'completed_flagged' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
+                (visit.status === 'pending' && completedPlaces === totalPlaces && totalPlaces > 0) ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                visit.status === 'unsuccessful' || visit.status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                visit.status === 'cancelled' ? 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
+                'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+              }">
+                ${statusLabel}
+              </span>
+              ${isToday ?
+                `<span class="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full text-xs font-medium">
+                  Today
+                </span>` : ''
+              }
+            </div>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="mb-4">
+            <div class="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
+              <span>Overall Progress</span>
+              <span>${progress.overall}%</span>
+            </div>
+            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: ${progress.overall}%"></div>
+            </div>
+          </div>
+
+          <!-- Places Progress -->
+          ${places.length > 0 ? `
+            <div class="mb-4">
+              <div class="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
+                <span>Places Progress</span>
+                <span>${completedPlaces}/${totalPlaces} completed</span>
+              </div>
+              <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div class="bg-green-600 h-2 rounded-full transition-all duration-300" style="width: ${totalPlaces > 0 ? (completedPlaces / totalPlaces) * 100 : 0}%"></div>
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Gate Progress (if user has gate access) -->
+          ${userRole === 'admin' || userRole === 'security' ? `
+            <div class="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Gate Progress</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400">30% total</span>
+              </div>
+              <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2">
+                  <span class="text-gray-600 dark:text-gray-400">Entrance:</span>
+                  <span class="w-3 h-3 rounded-full ${progress.gateProgress.entrance ? 'bg-green-500' : 'bg-gray-400'}"></span>
+                  <span class="text-gray-500 dark:text-gray-400">${progress.gateProgress.entrance ? 'Scanned' : 'Pending'}</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <span class="text-gray-600 dark:text-gray-400">Exit:</span>
+                  <span class="w-3 h-3 rounded-full ${progress.gateProgress.exit ? 'bg-green-500' : 'bg-gray-400'}"></span>
+                  <span class="text-gray-500 dark:text-gray-400">${progress.gateProgress.exit ? 'Scanned' : 'Pending'}</span>
+                </div>
+              </div>
+              <div class="text-gray-500 dark:text-gray-400">
+                ${progress.gateProgress.entrance ? '15%' : '0%'} + ${progress.gateProgress.exit ? '15%' : '0%'} gate progress
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Places List -->
+          ${places.length > 0 ? `
+            <div class="space-y-3">
+              <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Places to visit:</h4>
+              ${places.map((place: any) => `
+                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div class="flex-1">
+                    <h5 class="text-sm font-medium text-gray-900 dark:text-white">${place.place_name}</h5>
+                    ${place.place_location ? `<p class="text-xs text-gray-600 dark:text-gray-400">${place.place_location}</p>` : ''}
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <span class="px-2 py-1 rounded-full text-xs font-medium ${
+                      place.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                      place.status === 'unsuccessful' || place.status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                      place.status === 'cancelled' ? 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
+                      'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                    }">
+                      ${place.status === 'failed' ? 'Failed' : place.status.charAt(0).toUpperCase() + place.status.slice(1)}
+                    </span>
+                    ${place.completed_at ? `
+                      <span class="text-xs text-gray-500 dark:text-gray-400">
+                        ${new Date(place.completed_at).toLocaleTimeString()}
+                      </span>
+                    ` : ''}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          ` : `
+            <div class="text-center py-4">
+              <p class="text-sm text-gray-500 dark:text-gray-400">No places assigned to this visit</p>
+            </div>
+          `}
+
+          <!-- Visit Details -->
+          <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div>
+                <span class="font-medium text-gray-700 dark:text-gray-300">Scheduled:</span>
+                <span class="text-gray-600 dark:text-gray-400 ml-2">
+                  ${new Date(visit.scheduled_at).toLocaleDateString()} at ${new Date(visit.scheduled_at).toLocaleTimeString()}
+                </span>
+              </div>
+              <div>
+                <span class="font-medium text-gray-700 dark:text-gray-300">Duration:</span>
+                <span class="text-gray-600 dark:text-gray-400 ml-2">
+                  ${visit.estimated_duration || 'Not specified'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  visitorTodayVisitsList.innerHTML = visitsHtml;
+}
+
+// Function to display visitor's future visits
+async function displayVisitorFutureVisits(visits: any[]): Promise<void> {
+  const visitorFutureVisitsList = document.getElementById('visitorFutureVisitsList');
+  if (!visitorFutureVisitsList) {
+    console.error('Visitor future visits list container not found');
+    return;
+  }
+
+  // Get user role to check if they can scan gates
+  const { data: { user } } = await supabase.auth.getUser();
+  let userRole = null;
+  
+  if (user) {
+    try {
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+      
+      userRole = roleData?.role;
+    } catch (error) {
+      console.error('Error checking user role:', error);
+    }
+  }
+
+  if (visits.length === 0) {
+    visitorFutureVisitsList.innerHTML = `
+      <div class="text-center py-8">
+        <div class="text-gray-500 dark:text-gray-400">
+          <svg class="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <p class="text-lg font-medium">No future visits scheduled</p>
+          <p class="text-sm">You don't have any visits scheduled for the future.</p>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  let visitsHtml = '';
+  
+  for (const visit of visits) {
+    const visitDate = new Date(visit.visit_date);
+    const isToday = visitDate.toDateString() === new Date().toDateString();
+    const isPast = visitDate < new Date();
+    
+    // Calculate progress for the visit
+    const progress = calculateVisitProgress(visit);
+    
+    // Parse places data
+    const places = Array.isArray(visit.places) ? visit.places : [];
+    const completedPlaces = places.filter((place: any) => place.status === 'completed').length;
+    const totalPlaces = places.length;
+    
+    let statusLabel = '';
+    if (visit.status === 'completed_flagged') {
+      if (!isToday && isPast) {
+        statusLabel = 'Completed (Flagged)';
+      } else {
+        statusLabel = (completedPlaces === totalPlaces && totalPlaces > 0) ? 'In Progress' : 'Pending';
+      }
+    } else if (visit.status === 'completed') {
+      statusLabel = 'Completed';
+    } else if (visit.status === 'pending' && completedPlaces === totalPlaces && totalPlaces > 0) {
+      statusLabel = 'In Progress';
+    } else if (visit.status === 'pending') {
+      statusLabel = 'Pending';
+    } else if (visit.status === 'unsuccessful' || visit.status === 'failed') {
+      statusLabel = 'Unsuccessful';
+    } else if (visit.status === 'cancelled') {
+      statusLabel = 'Cancelled';
+    } else {
+      statusLabel = visit.status.charAt(0).toUpperCase() + visit.status.slice(1);
+    }
+    
+    visitsHtml += `
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300 ease-in-out hover:shadow-lg hover:shadow-blue-500/20 hover:scale-[1.02] hover:border-blue-300 dark:hover:border-blue-600 cursor-pointer transform">
+        <div class="p-4 sm:p-6">
+          <!-- Visit Header -->
+          <div class="flex items-start justify-between mb-4">
+            <div class="flex-1">
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                Visit on ${visitDate.toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Purpose: ${visit.purpose}${visit.other_purpose ? ` - ${visit.other_purpose}` : ''}
+              </p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="px-3 py-1 rounded-full text-xs font-medium ${
+                visit.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                visit.status === 'completed_flagged' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
+                (visit.status === 'pending' && completedPlaces === totalPlaces && totalPlaces > 0) ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                visit.status === 'unsuccessful' || visit.status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                visit.status === 'cancelled' ? 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
+                'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+              }">
+                ${statusLabel}
+              </span>
+              <span class="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-xs font-medium">
+                Future
+              </span>
+            </div>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="mb-4">
+            <div class="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
+              <span>Overall Progress</span>
+              <span>${progress.overall}%</span>
+            </div>
+            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: ${progress.overall}%"></div>
+            </div>
+          </div>
+
+          <!-- Places Progress -->
+          ${places.length > 0 ? `
+            <div class="mb-4">
+              <div class="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
+                <span>Places Progress</span>
+                <span>${completedPlaces}/${totalPlaces} completed</span>
+              </div>
+              <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div class="bg-green-600 h-2 rounded-full transition-all duration-300" style="width: ${totalPlaces > 0 ? (completedPlaces / totalPlaces) * 100 : 0}%"></div>
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Gate Progress (if user has gate access) -->
+          ${userRole === 'admin' || userRole === 'security' ? `
+            <div class="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Gate Progress</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400">30% total</span>
+              </div>
+              <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2">
+                  <span class="text-gray-600 dark:text-gray-400">Entrance:</span>
+                  <span class="w-3 h-3 rounded-full ${progress.gateProgress.entrance ? 'bg-green-500' : 'bg-gray-400'}"></span>
+                  <span class="text-gray-500 dark:text-gray-400">${progress.gateProgress.entrance ? 'Scanned' : 'Pending'}</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <span class="text-gray-600 dark:text-gray-400">Exit:</span>
+                  <span class="w-3 h-3 rounded-full ${progress.gateProgress.exit ? 'bg-green-500' : 'bg-gray-400'}"></span>
+                  <span class="text-gray-500 dark:text-gray-400">${progress.gateProgress.exit ? 'Scanned' : 'Pending'}</span>
+                </div>
+              </div>
+              <div class="text-gray-500 dark:text-gray-400">
+                ${progress.gateProgress.entrance ? '15%' : '0%'} + ${progress.gateProgress.exit ? '15%' : '0%'} gate progress
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Places List -->
+          ${places.length > 0 ? `
+            <div class="space-y-3">
+              <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Places to visit:</h4>
+              ${places.map((place: any) => `
+                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div class="flex-1">
+                    <h5 class="text-sm font-medium text-gray-900 dark:text-white">${place.place_name}</h5>
+                    ${place.place_location ? `<p class="text-xs text-gray-600 dark:text-gray-400">${place.place_location}</p>` : ''}
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <span class="px-2 py-1 rounded-full text-xs font-medium ${
+                      place.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                      place.status === 'unsuccessful' || place.status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                      place.status === 'cancelled' ? 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
+                      'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                    }">
+                      ${place.status === 'failed' ? 'Failed' : place.status.charAt(0).toUpperCase() + place.status.slice(1)}
+                    </span>
+                    ${place.completed_at ? `
+                      <span class="text-xs text-gray-500 dark:text-gray-400">
+                        ${new Date(place.completed_at).toLocaleTimeString()}
+                      </span>
+                    ` : ''}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          ` : `
+            <div class="text-center py-4">
+              <p class="text-sm text-gray-500 dark:text-gray-400">No places assigned to this visit</p>
+            </div>
+          `}
+
+          <!-- Visit Details -->
+          <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div>
+                <span class="font-medium text-gray-700 dark:text-gray-300">Scheduled:</span>
+                <span class="text-gray-600 dark:text-gray-400 ml-2">
+                  ${new Date(visit.scheduled_at).toLocaleDateString()} at ${new Date(visit.scheduled_at).toLocaleTimeString()}
+                </span>
+              </div>
+              <div>
+                <span class="font-medium text-gray-700 dark:text-gray-300">Duration:</span>
+                <span class="text-gray-600 dark:text-gray-400 ml-2">
+                  ${visit.estimated_duration || 'Not specified'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  visitorFutureVisitsList.innerHTML = visitsHtml;
+}
+
 // Function to display visitor's past visits
 async function displayVisitorPastVisits(visits: any[]): Promise<void> {
   const visitorPastVisitsList = document.getElementById('visitorPastVisitsList');
