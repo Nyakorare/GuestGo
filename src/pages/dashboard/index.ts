@@ -6716,10 +6716,10 @@ async function displayVisitorTodayVisits(visits: any[]): Promise<void> {
           <div class="mb-4">
             <div class="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
               <span>Overall Progress</span>
-              <span>${progress.overall}%</span>
+              <span>${progress.percentage}%</span>
             </div>
             <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-              <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: ${progress.overall}%"></div>
+              <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: ${progress.percentage}%"></div>
             </div>
           </div>
 
@@ -6936,10 +6936,10 @@ async function displayVisitorFutureVisits(visits: any[]): Promise<void> {
           <div class="mb-4">
             <div class="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
               <span>Overall Progress</span>
-              <span>${progress.overall}%</span>
+              <span>${progress.percentage}%</span>
             </div>
             <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-              <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: ${progress.overall}%"></div>
+              <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: ${progress.percentage}%"></div>
             </div>
           </div>
 
