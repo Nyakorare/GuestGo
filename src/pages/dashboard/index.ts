@@ -885,18 +885,7 @@ export function DashboardPage() {
               <!-- Search and Filter Section -->
               <div class="flex flex-col gap-3 w-full lg:w-auto">
                 <!-- Search and Filter Row -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <!-- Status Filter -->
-                  <select 
-                    id="visitorFutureStatusFilter"
-                    class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
-                  >
-                    <option value="all">All Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
-                    <option value="unsuccessful">Unsuccessful</option>
-                  </select>
+                <div class="grid grid-cols-1 sm:grid-cols-1 gap-2">
                   <!-- Date Picker -->
                   <input 
                     type="date" 
@@ -4725,13 +4714,6 @@ function setupVisitorDashboardEventListeners() {
   }
 
   // Future visits filter event listeners
-  const visitorFutureStatusFilter = document.getElementById('visitorFutureStatusFilter') as HTMLSelectElement;
-  if (visitorFutureStatusFilter) {
-    visitorFutureStatusFilter.addEventListener('change', async () => {
-      currentVisitorStatusFilter = visitorFutureStatusFilter.value;
-      await applyVisitorFutureFilters();
-    });
-  }
 
   const visitorFutureDatePicker = document.getElementById('visitorFutureDatePicker') as HTMLInputElement;
   if (visitorFutureDatePicker) {
@@ -4809,11 +4791,6 @@ async function applyVisitorFutureFilters() {
     visitDate.setHours(0, 0, 0, 0);
     return visitDate.getTime() > today.getTime();
   });
-
-  // Apply status filter
-  if (currentVisitorStatusFilter !== 'all') {
-    filteredVisits = filteredVisits.filter(visit => visit.status === currentVisitorStatusFilter);
-  }
 
   // Apply date picker filter
   const visitorFutureDatePicker = document.getElementById('visitorFutureDatePicker') as HTMLInputElement;
