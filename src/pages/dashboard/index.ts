@@ -892,6 +892,7 @@ export function DashboardPage() {
                     id="visitorFutureDatePicker"
                     class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
                     min=""
+                    max=""
                   >
                 </div>
               </div>
@@ -4717,10 +4718,13 @@ function setupVisitorDashboardEventListeners() {
 
   const visitorFutureDatePicker = document.getElementById('visitorFutureDatePicker') as HTMLInputElement;
   if (visitorFutureDatePicker) {
-    // Set minimum date to tomorrow
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    visitorFutureDatePicker.min = tomorrow.toISOString().split('T')[0];
+    // Set date range to current month only
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    
+    visitorFutureDatePicker.min = firstDayOfMonth.toISOString().split('T')[0];
+    visitorFutureDatePicker.max = lastDayOfMonth.toISOString().split('T')[0];
     
     visitorFutureDatePicker.addEventListener('change', async () => {
       await applyVisitorFutureFilters();
