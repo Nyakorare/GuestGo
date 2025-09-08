@@ -3306,6 +3306,41 @@ function updateFinishedScheduleTypeTabs() {
   const todayFinishedSchedulesTab = document.getElementById('todayFinishedSchedulesTab') as HTMLButtonElement;
   const pastFinishedSchedulesTab = document.getElementById('pastFinishedSchedulesTab') as HTMLButtonElement;
 
+  // Helper: toggle visibility of finished date filters depending on active tab
+  function updateFinishedDateFilterVisibility() {
+    const finishedDateFilter = document.getElementById('finishedDateFilter') as HTMLSelectElement | null;
+    const finishedSpecificDateInput = document.getElementById('finishedSpecificDateFilter') as HTMLInputElement | null;
+    const clearSpecificDateBtn = document.getElementById('clearSpecificDateBtn') as HTMLButtonElement | null;
+
+    // The specific date input sits inside a wrapper div; hide the wrapper for better layout
+    const specificDateWrapper = finishedSpecificDateInput ? finishedSpecificDateInput.parentElement : null;
+
+    const isTodayTab = currentFinishedScheduleType === 'today';
+
+    if (finishedDateFilter) {
+      if (isTodayTab) {
+        finishedDateFilter.classList.add('hidden');
+        // Clear any selected range to avoid unintended filtering
+        currentFinishedDateFilter = 'all';
+        finishedDateFilter.value = 'all';
+      } else {
+        finishedDateFilter.classList.remove('hidden');
+      }
+    }
+
+    if (specificDateWrapper) {
+      if (isTodayTab) {
+        specificDateWrapper.classList.add('hidden');
+        // Clear specific date when hiding
+        currentFinishedSpecificDate = '';
+        if (finishedSpecificDateInput) finishedSpecificDateInput.value = '';
+        if (clearSpecificDateBtn) clearSpecificDateBtn.classList.add('hidden');
+      } else {
+        specificDateWrapper.classList.remove('hidden');
+      }
+    }
+  }
+
   // Reset all tabs to inactive state
   if (todayFinishedSchedulesTab) {
     todayFinishedSchedulesTab.classList.remove('bg-blue-600', 'text-white');
@@ -3323,12 +3358,14 @@ function updateFinishedScheduleTypeTabs() {
         todayFinishedSchedulesTab.classList.add('bg-blue-600', 'text-white');
         todayFinishedSchedulesTab.classList.remove('bg-gray-100', 'text-gray-700');
       }
+      updateFinishedDateFilterVisibility();
       break;
     case 'past':
       if (pastFinishedSchedulesTab) {
         pastFinishedSchedulesTab.classList.add('bg-blue-600', 'text-white');
         pastFinishedSchedulesTab.classList.remove('bg-gray-100', 'text-gray-700');
       }
+      updateFinishedDateFilterVisibility();
       break;
     default:
       // Default to 'today' if no valid state
@@ -3337,6 +3374,7 @@ function updateFinishedScheduleTypeTabs() {
         todayFinishedSchedulesTab.classList.add('bg-blue-600', 'text-white');
         todayFinishedSchedulesTab.classList.remove('bg-gray-100', 'text-gray-700');
       }
+      updateFinishedDateFilterVisibility();
       break;
   }
 }
