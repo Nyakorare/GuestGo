@@ -3316,9 +3316,10 @@ function updateFinishedScheduleTypeTabs() {
     const specificDateWrapper = finishedSpecificDateInput ? finishedSpecificDateInput.parentElement : null;
 
     const isTodayTab = currentFinishedScheduleType === 'today';
+    const isPastTab = currentFinishedScheduleType === 'past';
 
     if (finishedDateFilter) {
-      if (isTodayTab) {
+      if (isTodayTab || isPastTab) {
         finishedDateFilter.classList.add('hidden');
         // Clear any selected range to avoid unintended filtering
         currentFinishedDateFilter = 'all';
@@ -3329,7 +3330,7 @@ function updateFinishedScheduleTypeTabs() {
     }
 
     if (specificDateWrapper) {
-      if (isTodayTab) {
+      if (isTodayTab || isPastTab) {
         specificDateWrapper.classList.add('hidden');
         // Clear specific date when hiding
         currentFinishedSpecificDate = '';
