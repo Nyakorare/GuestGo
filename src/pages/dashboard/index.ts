@@ -798,6 +798,66 @@ export function DashboardPage() {
               Past Finished
             </button>
           </div>
+          
+          <!-- Calendar Filter for Past Finished Tab -->
+          <div id="pastFinishedCalendarFilter" class="hidden mb-4">
+            <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+              <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Filter by Date Range</h3>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <!-- Start Date -->
+                <div>
+                  <label for="pastFinishedStartDate" class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                    Start Date
+                  </label>
+                  <input 
+                    type="date" 
+                    id="pastFinishedStartDate"
+                    class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
+                  >
+                </div>
+                <!-- End Date -->
+                <div>
+                  <label for="pastFinishedEndDate" class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                    End Date
+                  </label>
+                  <input 
+                    type="date" 
+                    id="pastFinishedEndDate"
+                    class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
+                  >
+                </div>
+                <!-- Quick Date Buttons -->
+                <div class="flex flex-col gap-1">
+                  <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                    Quick Select
+                  </label>
+                  <div class="flex gap-1">
+                    <button 
+                      id="pastFinishedLastWeekBtn"
+                      class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
+                    >
+                      Last Week
+                    </button>
+                    <button 
+                      id="pastFinishedLastMonthBtn"
+                      class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
+                    >
+                      Last Month
+                    </button>
+                  </div>
+                </div>
+                <!-- Clear Button -->
+                <div class="flex items-end">
+                  <button 
+                    id="clearPastFinishedCalendarBtn"
+                    class="px-3 py-2 text-sm bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-300 dark:hover:bg-gray-500 w-full"
+                  >
+                    Clear Filter
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
           <div id="finishedVisitsList" class="space-y-4"></div>
         </div>
       </div>
@@ -3175,6 +3235,73 @@ function setupDashboardEventListeners() {
     });
   }
 
+  // Calendar filter event listeners for past finished tab
+  const pastFinishedStartDate = document.getElementById('pastFinishedStartDate') as HTMLInputElement;
+  const pastFinishedEndDate = document.getElementById('pastFinishedEndDate') as HTMLInputElement;
+  const pastFinishedLastWeekBtn = document.getElementById('pastFinishedLastWeekBtn') as HTMLButtonElement;
+  const pastFinishedLastMonthBtn = document.getElementById('pastFinishedLastMonthBtn') as HTMLButtonElement;
+  const clearPastFinishedCalendarBtn = document.getElementById('clearPastFinishedCalendarBtn') as HTMLButtonElement;
+
+  if (pastFinishedStartDate) {
+    pastFinishedStartDate.addEventListener('change', () => {
+      currentPastFinishedStartDate = pastFinishedStartDate.value;
+      applyFinishedFilters();
+    });
+  }
+
+  if (pastFinishedEndDate) {
+    pastFinishedEndDate.addEventListener('change', () => {
+      currentPastFinishedEndDate = pastFinishedEndDate.value;
+      applyFinishedFilters();
+    });
+  }
+
+  if (pastFinishedLastWeekBtn) {
+    pastFinishedLastWeekBtn.addEventListener('click', () => {
+      const today = new Date();
+      const lastWeekStart = new Date(today);
+      lastWeekStart.setDate(today.getDate() - 7);
+      const lastWeekEnd = new Date(today);
+      lastWeekEnd.setDate(today.getDate() - 1);
+      
+      currentPastFinishedStartDate = lastWeekStart.toISOString().split('T')[0];
+      currentPastFinishedEndDate = lastWeekEnd.toISOString().split('T')[0];
+      
+      if (pastFinishedStartDate) pastFinishedStartDate.value = currentPastFinishedStartDate;
+      if (pastFinishedEndDate) pastFinishedEndDate.value = currentPastFinishedEndDate;
+      
+      applyFinishedFilters();
+    });
+  }
+
+  if (pastFinishedLastMonthBtn) {
+    pastFinishedLastMonthBtn.addEventListener('click', () => {
+      const today = new Date();
+      const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+      
+      currentPastFinishedStartDate = lastMonthStart.toISOString().split('T')[0];
+      currentPastFinishedEndDate = lastMonthEnd.toISOString().split('T')[0];
+      
+      if (pastFinishedStartDate) pastFinishedStartDate.value = currentPastFinishedStartDate;
+      if (pastFinishedEndDate) pastFinishedEndDate.value = currentPastFinishedEndDate;
+      
+      applyFinishedFilters();
+    });
+  }
+
+  if (clearPastFinishedCalendarBtn) {
+    clearPastFinishedCalendarBtn.addEventListener('click', () => {
+      currentPastFinishedStartDate = '';
+      currentPastFinishedEndDate = '';
+      
+      if (pastFinishedStartDate) pastFinishedStartDate.value = '';
+      if (pastFinishedEndDate) pastFinishedEndDate.value = '';
+      
+      applyFinishedFilters();
+    });
+  }
+
   // Initialize tab visual states
   updateScheduleTypeTabs();
   updateFinishedScheduleTypeTabs();
@@ -3311,6 +3438,7 @@ function updateFinishedScheduleTypeTabs() {
     const finishedDateFilter = document.getElementById('finishedDateFilter') as HTMLSelectElement | null;
     const finishedSpecificDateInput = document.getElementById('finishedSpecificDateFilter') as HTMLInputElement | null;
     const clearSpecificDateBtn = document.getElementById('clearSpecificDateBtn') as HTMLButtonElement | null;
+    const pastFinishedCalendarFilter = document.getElementById('pastFinishedCalendarFilter') as HTMLDivElement | null;
 
     // The specific date input sits inside a wrapper div; hide the wrapper for better layout
     const specificDateWrapper = finishedSpecificDateInput ? finishedSpecificDateInput.parentElement : null;
@@ -3338,6 +3466,22 @@ function updateFinishedScheduleTypeTabs() {
         if (clearSpecificDateBtn) clearSpecificDateBtn.classList.add('hidden');
       } else {
         specificDateWrapper.classList.remove('hidden');
+      }
+    }
+
+    // Show/hide calendar filter based on tab
+    if (pastFinishedCalendarFilter) {
+      if (isPastTab) {
+        pastFinishedCalendarFilter.classList.remove('hidden');
+      } else {
+        pastFinishedCalendarFilter.classList.add('hidden');
+        // Clear calendar filter when hiding
+        currentPastFinishedStartDate = '';
+        currentPastFinishedEndDate = '';
+        const startDateInput = document.getElementById('pastFinishedStartDate') as HTMLInputElement;
+        const endDateInput = document.getElementById('pastFinishedEndDate') as HTMLInputElement;
+        if (startDateInput) startDateInput.value = '';
+        if (endDateInput) endDateInput.value = '';
       }
     }
   }
@@ -3935,6 +4079,8 @@ let currentFinishedRoleFilter = 'all';
 let currentFinishedDateFilter = 'all';
 let currentFinishedSpecificDate = '';
 let currentFinishedPlaceFilter = 'all';
+let currentPastFinishedStartDate = '';
+let currentPastFinishedEndDate = '';
 let visitsRefreshInterval: NodeJS.Timeout | null = null; // For auto-refresh
 let lastVisitsRefresh = 0; // Track last refresh time
 // Function to load scheduled visits for personnel
@@ -7390,6 +7536,31 @@ function applyFinishedFilters() {
     });
   }
 
+  // Apply calendar date range filter for past finished tab
+  if (currentFinishedScheduleType === 'past' && (currentPastFinishedStartDate || currentPastFinishedEndDate)) {
+    filteredVisits = filteredVisits.filter(visit => {
+      const visitDate = new Date(visit.visit_date);
+      visitDate.setHours(0, 0, 0, 0);
+      
+      let matchesStartDate = true;
+      let matchesEndDate = true;
+      
+      if (currentPastFinishedStartDate) {
+        const startDate = new Date(currentPastFinishedStartDate);
+        startDate.setHours(0, 0, 0, 0);
+        matchesStartDate = visitDate >= startDate;
+      }
+      
+      if (currentPastFinishedEndDate) {
+        const endDate = new Date(currentPastFinishedEndDate);
+        endDate.setHours(23, 59, 59, 999);
+        matchesEndDate = visitDate <= endDate;
+      }
+      
+      return matchesStartDate && matchesEndDate;
+    });
+  }
+
   // Apply place filter
   if (currentFinishedPlaceFilter !== 'all') {
     filteredVisits = filteredVisits.filter(visit => visit.place_id === currentFinishedPlaceFilter);
@@ -7426,7 +7597,7 @@ function displayFinishedVisits(visits: any[]): void {
       <div class="text-center py-8">
         <div class="text-gray-500 dark:text-gray-400 text-lg">No finished visits found</div>
         <div class="text-gray-400 dark:text-gray-500 text-sm mt-2">
-          ${currentFinishedSearchTerm || currentFinishedRoleFilter !== 'all' || currentFinishedPlaceFilter !== 'all' || currentFinishedDateFilter !== 'all' || currentFinishedSpecificDate || currentFinishedScheduleType !== 'today'
+          ${currentFinishedSearchTerm || currentFinishedRoleFilter !== 'all' || currentFinishedPlaceFilter !== 'all' || currentFinishedDateFilter !== 'all' || currentFinishedSpecificDate || currentFinishedScheduleType !== 'today' || currentPastFinishedStartDate || currentPastFinishedEndDate
             ? 'Try adjusting your search or filters' 
             : 'No visits have been completed or marked as unsuccessful'}
         </div>
