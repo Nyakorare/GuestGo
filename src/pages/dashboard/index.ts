@@ -289,6 +289,9 @@ export function DashboardPage() {
       // Load finished schedules when switching to finished tab
       await loadFinishedSchedules();
       
+      // Set max dates for finished schedule date filters
+      setMaxDateForFinishedFilters();
+      
       // Initialize finished schedule type tabs
       updateFinishedScheduleTypeTabs();
     });
@@ -2567,6 +2570,42 @@ document.addEventListener('DOMContentLoaded', () => {
 (window as any).togglePersonnelAvailability = togglePersonnelAvailability;
 (window as any).completeVisit = completeVisit;
 
+// Function to set max date for finished schedule date filters to prevent selecting future dates
+function setMaxDateForFinishedFilters() {
+  const today = new Date();
+  const todayString = today.toISOString().split('T')[0];
+  
+  // Set max date for finished specific date filter
+  const finishedSpecificDateFilter = document.getElementById('finishedSpecificDateFilter') as HTMLInputElement;
+  if (finishedSpecificDateFilter) {
+    finishedSpecificDateFilter.setAttribute('max', todayString);
+  }
+  
+  // Set max date for past finished start date filter
+  const pastFinishedStartDate = document.getElementById('pastFinishedStartDate') as HTMLInputElement;
+  if (pastFinishedStartDate) {
+    pastFinishedStartDate.setAttribute('max', todayString);
+  }
+  
+  // Set max date for past finished end date filter
+  const pastFinishedEndDate = document.getElementById('pastFinishedEndDate') as HTMLInputElement;
+  if (pastFinishedEndDate) {
+    pastFinishedEndDate.setAttribute('max', todayString);
+  }
+}
+
+// Function to update the clear date button visibility
+function updateClearDateButton() {
+  const clearSpecificDateBtn = document.getElementById('clearSpecificDateBtn');
+  if (clearSpecificDateBtn) {
+    if (currentFinishedSpecificDate) {
+      clearSpecificDateBtn.classList.remove('hidden');
+    } else {
+      clearSpecificDateBtn.classList.add('hidden');
+    }
+  }
+}
+
 // Setup dashboard-specific event listeners
 function setupDashboardEventListeners() {
   console.log('Setting up dashboard event listeners...');
@@ -3231,9 +3270,14 @@ function setupDashboardEventListeners() {
     pastFinishedSchedulesTab.addEventListener('click', async () => {
       currentFinishedScheduleType = 'past';
       updateFinishedScheduleTypeTabs();
+      // Set max dates for finished schedule date filters when past tab is selected
+      setMaxDateForFinishedFilters();
       applyFinishedFilters();
     });
   }
+
+  // Set max date for all date inputs to today (to prevent selecting future dates)
+  setMaxDateForFinishedFilters();
 
   // Calendar filter event listeners for past finished tab
   const pastFinishedStartDate = document.getElementById('pastFinishedStartDate') as HTMLInputElement;
@@ -4013,6 +4057,9 @@ async function loadPersonnelDashboard() {
     
     // Start automatic status updates for personnel
     startAutomaticStatusUpdates();
+    
+    // Set max dates for finished schedule date filters
+    setMaxDateForFinishedFilters();
   } catch (error) {
     console.error('Error in loadPersonnelDashboard:', error);
   }
