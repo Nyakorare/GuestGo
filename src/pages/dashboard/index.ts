@@ -643,7 +643,7 @@ export function DashboardPage() {
             <!-- Search and Filter Section -->
             <div class="flex flex-col gap-3 w-full lg:w-auto">
               <!-- Search and Filter Row -->
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                 <!-- Search Input -->
                 <div class="relative">
                   <input 
@@ -678,6 +678,22 @@ export function DashboardPage() {
                   <option value="visitor">Visitor</option>
                   <option value="guest">Guest</option>
                 </select>
+                <!-- Future Specific Date Filter (visible only on Future tab) -->
+                <div id="futureDateFilterContainer" class="relative hidden">
+                  <input 
+                    type="date" 
+                    id="futureSpecificDateFilter"
+                    class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
+                    placeholder="Select future date"
+                  >
+                  <button 
+                    id="clearFutureSpecificDateBtn"
+                    class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-sm hidden"
+                    title="Clear date"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -3132,6 +3148,37 @@ function setupDashboardEventListeners() {
     }, 300));
   }
 
+  // Future specific date filter
+  const futureSpecificDateFilter = document.getElementById('futureSpecificDateFilter') as HTMLInputElement;
+  const clearFutureSpecificDateBtn = document.getElementById('clearFutureSpecificDateBtn') as HTMLButtonElement;
+  if (futureSpecificDateFilter) {
+    // Ensure no past date can be picked
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    futureSpecificDateFilter.min = today.toISOString().split('T')[0];
+
+    futureSpecificDateFilter.addEventListener('change', async () => {
+      currentFutureSpecificDate = futureSpecificDateFilter.value;
+      if (clearFutureSpecificDateBtn) {
+        if (currentFutureSpecificDate) {
+          clearFutureSpecificDateBtn.classList.remove('hidden');
+        } else {
+          clearFutureSpecificDateBtn.classList.add('hidden');
+        }
+      }
+      await applyVisitsFilters();
+    });
+  }
+  if (clearFutureSpecificDateBtn) {
+    clearFutureSpecificDateBtn.addEventListener('click', async () => {
+      currentFutureSpecificDate = '';
+      const input = document.getElementById('futureSpecificDateFilter') as HTMLInputElement;
+      if (input) input.value = '';
+      clearFutureSpecificDateBtn.classList.add('hidden');
+      await applyVisitsFilters();
+    });
+  }
+
   // Status filter event listener
   const visitStatusFilter = document.getElementById('visitStatusFilter') as HTMLSelectElement;
   if (visitStatusFilter) {
@@ -3234,6 +3281,9 @@ function setupDashboardEventListeners() {
     allSchedulesTab.addEventListener('click', async () => {
       currentScheduleType = 'all';
       updateScheduleTypeTabs();
+      // Hide future date input when not on future tab
+      const futureContainer = document.getElementById('futureDateFilterContainer');
+      if (futureContainer) futureContainer.classList.add('hidden');
       await applyVisitsFilters();
     });
   }
@@ -3242,6 +3292,9 @@ function setupDashboardEventListeners() {
     todaySchedulesTab.addEventListener('click', async () => {
       currentScheduleType = 'today';
       updateScheduleTypeTabs();
+      // Hide future date input when not on future tab
+      const futureContainer = document.getElementById('futureDateFilterContainer');
+      if (futureContainer) futureContainer.classList.add('hidden');
       await applyVisitsFilters();
     });
   }
@@ -3250,6 +3303,9 @@ function setupDashboardEventListeners() {
     futureSchedulesTab.addEventListener('click', async () => {
       currentScheduleType = 'future';
       updateScheduleTypeTabs();
+      // Show future date input only on future tab
+      const futureContainer = document.getElementById('futureDateFilterContainer');
+      if (futureContainer) futureContainer.classList.remove('hidden');
       await applyVisitsFilters();
     });
   }
@@ -4121,6 +4177,7 @@ let currentFinishedScheduleType = 'today'; // 'today', 'past'
 let currentSearchTerm = '';
 let currentStatusFilter = 'all';
 let currentRoleFilter = 'all';
+let currentFutureSpecificDate = '';
 let currentFinishedSearchTerm = '';
 let currentFinishedRoleFilter = 'all';
 let currentFinishedDateFilter = 'all';
@@ -4572,6 +4629,15 @@ async function applyVisitsFilters() {
         visitDate.setHours(0, 0, 0, 0);
         const philippineVisitDate = toPhilippineTime(visitDate);
         philippineVisitDate.setHours(0, 0, 0, 0);
+        // If a specific future date is selected, match that date exactly
+        if (currentFutureSpecificDate) {
+          const selected = new Date(currentFutureSpecificDate);
+          selected.setHours(0, 0, 0, 0);
+          const selectedPh = toPhilippineTime(selected);
+          selectedPh.setHours(0, 0, 0, 0);
+          return philippineVisitDate.getTime() === selectedPh.getTime();
+        }
+        // Otherwise, any date strictly after today
         return philippineVisitDate.getTime() > philippineToday.getTime();
       });
       break;
