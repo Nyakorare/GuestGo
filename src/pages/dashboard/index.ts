@@ -41,7 +41,6 @@ let placeFilterOptions = [];
 // Visitor dashboard filters (global scope)
 let currentVisitorSearchTerm = '';
 let currentVisitorStatusFilter = 'all';
-let currentVisitorDateFilter = 'all';
 let allVisitorVisits: any[] = [];
 let filteredVisitorVisits: any[] = [];
 
@@ -1011,18 +1010,6 @@ export function DashboardPage() {
                   <option value="completed">Completed</option>
                   <option value="cancelled">Cancelled</option>
                   <option value="unsuccessful">Unsuccessful</option>
-                </select>
-                <!-- Date Range Filter -->
-                <select 
-                  id="visitorPastDateFilter"
-                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
-                >
-                  <option value="all">All Time</option>
-                  <option value="last7days">Last 7 Days</option>
-                  <option value="last30days">Last 30 Days</option>
-                  <option value="last3months">Last 3 Months</option>
-                  <option value="last6months">Last 6 Months</option>
-                  <option value="lastyear">Last Year</option>
                 </select>
                 <!-- Place Filter -->
                 <select 
@@ -5046,13 +5033,6 @@ function setupVisitorDashboardEventListeners() {
     });
   }
 
-  const visitorPastDateFilter = document.getElementById('visitorPastDateFilter') as HTMLSelectElement;
-  if (visitorPastDateFilter) {
-    visitorPastDateFilter.addEventListener('change', async () => {
-      currentVisitorDateFilter = visitorPastDateFilter.value;
-      await applyVisitorPastFilters();
-    });
-  }
 
   const visitorPastPlaceFilter = document.getElementById('visitorPastPlaceFilter') as HTMLSelectElement;
   if (visitorPastPlaceFilter) {
@@ -5140,41 +5120,6 @@ async function applyVisitorPastFilters() {
     filteredVisits = filteredVisits.filter(visit => visit.status === currentVisitorStatusFilter);
   }
 
-  // Apply date range filter
-  if (currentVisitorDateFilter !== 'all') {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    filteredVisits = filteredVisits.filter(visit => {
-      const visitDate = new Date(visit.visit_date);
-      visitDate.setHours(0, 0, 0, 0);
-      
-      switch (currentVisitorDateFilter) {
-        case 'last7days':
-          const sevenDaysAgo = new Date(today);
-          sevenDaysAgo.setDate(today.getDate() - 7);
-          return visitDate >= sevenDaysAgo;
-        case 'last30days':
-          const thirtyDaysAgo = new Date(today);
-          thirtyDaysAgo.setDate(today.getDate() - 30);
-          return visitDate >= thirtyDaysAgo;
-        case 'last3months':
-          const threeMonthsAgo = new Date(today);
-          threeMonthsAgo.setMonth(today.getMonth() - 3);
-          return visitDate >= threeMonthsAgo;
-        case 'last6months':
-          const sixMonthsAgo = new Date(today);
-          sixMonthsAgo.setMonth(today.getMonth() - 6);
-          return visitDate >= sixMonthsAgo;
-        case 'lastyear':
-          const oneYearAgo = new Date(today);
-          oneYearAgo.setFullYear(today.getFullYear() - 1);
-          return visitDate >= oneYearAgo;
-        default:
-          return true;
-      }
-    });
-  }
 
   // Apply place filter
   const visitorPastPlaceFilter = document.getElementById('visitorPastPlaceFilter') as HTMLSelectElement;
