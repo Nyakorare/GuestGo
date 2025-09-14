@@ -44,6 +44,10 @@ let currentVisitorStatusFilter = 'all';
 let allVisitorVisits: any[] = [];
 let filteredVisitorVisits: any[] = [];
 
+// Visitor past calendar filter state
+let currentVisitorPastStartDate = '';
+let currentVisitorPastEndDate = '';
+
 // Logs dashboard filters (global scope)
 let currentLogsTabFilter = 'all';
 
@@ -1018,6 +1022,76 @@ export function DashboardPage() {
                 >
                   <option value="all">All Places</option>
                 </select>
+                <!-- Calendar Filter Toggle -->
+                <button 
+                  id="visitorPastCalendarToggle"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-600"
+                >
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                  </svg>
+                  Date Filter
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Calendar Filter for Past Schedules -->
+          <div id="visitorPastCalendarFilter" class="hidden mb-4">
+            <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+              <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Filter by Date Range</h3>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <!-- Start Date -->
+                <div>
+                  <label for="visitorPastStartDate" class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                    Start Date
+                  </label>
+                  <input 
+                    type="date" 
+                    id="visitorPastStartDate"
+                    class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
+                  >
+                </div>
+                <!-- End Date -->
+                <div>
+                  <label for="visitorPastEndDate" class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                    End Date
+                  </label>
+                  <input 
+                    type="date" 
+                    id="visitorPastEndDate"
+                    class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
+                  >
+                </div>
+                <!-- Quick Date Buttons -->
+                <div class="flex flex-col gap-1">
+                  <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                    Quick Select
+                  </label>
+                  <div class="flex gap-1">
+                    <button 
+                      id="visitorPastLastWeekBtn"
+                      class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
+                    >
+                      Last Week
+                    </button>
+                    <button 
+                      id="visitorPastLastMonthBtn"
+                      class="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
+                    >
+                      Last Month
+                    </button>
+                  </div>
+                </div>
+                <!-- Clear Button -->
+                <div class="flex items-end">
+                  <button 
+                    id="clearVisitorPastCalendarBtn"
+                    class="px-3 py-2 text-xs bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-500 w-full"
+                  >
+                    Clear Dates
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -4953,6 +5027,13 @@ function setupVisitorDashboardEventListeners() {
     visitorPastTab?.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-400');
     visitorCurrentContent?.classList.remove('hidden');
     visitorPastContent?.classList.add('hidden');
+    
+    // Hide and clear visitor past calendar filter when switching away from past tab
+    const visitorPastCalendarFilter = document.getElementById('visitorPastCalendarFilter');
+    if (visitorPastCalendarFilter) {
+      visitorPastCalendarFilter.classList.add('hidden');
+    }
+    clearVisitorPastCalendarFilter();
   });
 
   visitorPastTab?.addEventListener('click', () => {
@@ -4962,6 +5043,9 @@ function setupVisitorDashboardEventListeners() {
     visitorCurrentTab?.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-400');
     visitorPastContent?.classList.remove('hidden');
     visitorCurrentContent?.classList.add('hidden');
+    
+    // Set max dates for visitor past calendar filters when past tab is selected
+    setMaxDateForVisitorPastFilters();
   });
 
   // Current visits sub-tab switching event listeners
@@ -5038,6 +5122,85 @@ function setupVisitorDashboardEventListeners() {
   if (visitorPastPlaceFilter) {
     visitorPastPlaceFilter.addEventListener('change', async () => {
       await applyVisitorPastFilters();
+    });
+  }
+
+  // Calendar filter event listeners for visitor past schedules
+  const visitorPastCalendarToggle = document.getElementById('visitorPastCalendarToggle');
+  const visitorPastCalendarFilter = document.getElementById('visitorPastCalendarFilter');
+  const visitorPastStartDate = document.getElementById('visitorPastStartDate') as HTMLInputElement;
+  const visitorPastEndDate = document.getElementById('visitorPastEndDate') as HTMLInputElement;
+  const visitorPastLastWeekBtn = document.getElementById('visitorPastLastWeekBtn') as HTMLButtonElement;
+  const visitorPastLastMonthBtn = document.getElementById('visitorPastLastMonthBtn') as HTMLButtonElement;
+  const clearVisitorPastCalendarBtn = document.getElementById('clearVisitorPastCalendarBtn') as HTMLButtonElement;
+
+  // Calendar toggle button
+  if (visitorPastCalendarToggle && visitorPastCalendarFilter) {
+    visitorPastCalendarToggle.addEventListener('click', () => {
+      visitorPastCalendarFilter.classList.toggle('hidden');
+    });
+  }
+
+  // Date input event listeners
+  if (visitorPastStartDate) {
+    visitorPastStartDate.addEventListener('change', () => {
+      currentVisitorPastStartDate = visitorPastStartDate.value;
+      applyVisitorPastFilters();
+    });
+  }
+
+  if (visitorPastEndDate) {
+    visitorPastEndDate.addEventListener('change', () => {
+      currentVisitorPastEndDate = visitorPastEndDate.value;
+      applyVisitorPastFilters();
+    });
+  }
+
+  // Quick date buttons
+  if (visitorPastLastWeekBtn) {
+    visitorPastLastWeekBtn.addEventListener('click', () => {
+      const today = new Date();
+      const lastWeekStart = new Date(today);
+      lastWeekStart.setDate(today.getDate() - 7);
+      const lastWeekEnd = new Date(today);
+      lastWeekEnd.setDate(today.getDate() - 1);
+      
+      currentVisitorPastStartDate = lastWeekStart.toISOString().split('T')[0];
+      currentVisitorPastEndDate = lastWeekEnd.toISOString().split('T')[0];
+      
+      if (visitorPastStartDate) visitorPastStartDate.value = currentVisitorPastStartDate;
+      if (visitorPastEndDate) visitorPastEndDate.value = currentVisitorPastEndDate;
+      
+      applyVisitorPastFilters();
+    });
+  }
+
+  if (visitorPastLastMonthBtn) {
+    visitorPastLastMonthBtn.addEventListener('click', () => {
+      const today = new Date();
+      const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+      
+      currentVisitorPastStartDate = lastMonthStart.toISOString().split('T')[0];
+      currentVisitorPastEndDate = lastMonthEnd.toISOString().split('T')[0];
+      
+      if (visitorPastStartDate) visitorPastStartDate.value = currentVisitorPastStartDate;
+      if (visitorPastEndDate) visitorPastEndDate.value = currentVisitorPastEndDate;
+      
+      applyVisitorPastFilters();
+    });
+  }
+
+  // Clear calendar button
+  if (clearVisitorPastCalendarBtn) {
+    clearVisitorPastCalendarBtn.addEventListener('click', () => {
+      currentVisitorPastStartDate = '';
+      currentVisitorPastEndDate = '';
+      
+      if (visitorPastStartDate) visitorPastStartDate.value = '';
+      if (visitorPastEndDate) visitorPastEndDate.value = '';
+      
+      applyVisitorPastFilters();
     });
   }
 
@@ -5120,7 +5283,6 @@ async function applyVisitorPastFilters() {
     filteredVisits = filteredVisits.filter(visit => visit.status === currentVisitorStatusFilter);
   }
 
-
   // Apply place filter
   const visitorPastPlaceFilter = document.getElementById('visitorPastPlaceFilter') as HTMLSelectElement;
   if (visitorPastPlaceFilter && visitorPastPlaceFilter.value !== 'all') {
@@ -5128,6 +5290,27 @@ async function applyVisitorPastFilters() {
     filteredVisits = filteredVisits.filter(visit => {
       const places = Array.isArray(visit.places) ? visit.places : [];
       return places.some((place: any) => place.place_name === selectedPlace);
+    });
+  }
+
+  // Apply date range filter
+  if (currentVisitorPastStartDate || currentVisitorPastEndDate) {
+    filteredVisits = filteredVisits.filter(visit => {
+      const visitDate = new Date(visit.visit_date);
+      const visitDateString = visitDate.toISOString().split('T')[0];
+      
+      let matchesStartDate = true;
+      let matchesEndDate = true;
+      
+      if (currentVisitorPastStartDate) {
+        matchesStartDate = visitDateString >= currentVisitorPastStartDate;
+      }
+      
+      if (currentVisitorPastEndDate) {
+        matchesEndDate = visitDateString <= currentVisitorPastEndDate;
+      }
+      
+      return matchesStartDate && matchesEndDate;
     });
   }
 
@@ -5156,6 +5339,36 @@ function toPhilippineTime(date: Date): Date {
   const utcTime = date.getTime() + (date.getTimezoneOffset() * 60000);
   const philippineTime = new Date(utcTime + (8 * 60 * 60 * 1000)); // Add 8 hours for UTC+8
   return philippineTime;
+}
+
+// Helper function to set max date for visitor past calendar filters
+function setMaxDateForVisitorPastFilters() {
+  const today = new Date();
+  const todayString = today.toISOString().split('T')[0];
+  
+  // Set max date for visitor past start date filter
+  const visitorPastStartDate = document.getElementById('visitorPastStartDate') as HTMLInputElement;
+  if (visitorPastStartDate) {
+    visitorPastStartDate.setAttribute('max', todayString);
+  }
+  
+  // Set max date for visitor past end date filter
+  const visitorPastEndDate = document.getElementById('visitorPastEndDate') as HTMLInputElement;
+  if (visitorPastEndDate) {
+    visitorPastEndDate.setAttribute('max', todayString);
+  }
+}
+
+// Helper function to clear visitor past calendar filter
+function clearVisitorPastCalendarFilter() {
+  currentVisitorPastStartDate = '';
+  currentVisitorPastEndDate = '';
+  
+  const visitorPastStartDate = document.getElementById('visitorPastStartDate') as HTMLInputElement;
+  const visitorPastEndDate = document.getElementById('visitorPastEndDate') as HTMLInputElement;
+  
+  if (visitorPastStartDate) visitorPastStartDate.value = '';
+  if (visitorPastEndDate) visitorPastEndDate.value = '';
 }
 
 // Helper function to get current Philippine time from database (real-time)
@@ -6442,6 +6655,9 @@ async function loadVisitorDashboard() {
 
     // Load visitor's scheduled visits (both current and past)
     await loadVisitorVisits();
+
+    // Set max dates for visitor past calendar filters
+    setMaxDateForVisitorPastFilters();
 
     // Setup visitor dashboard event listeners with a small delay to ensure DOM is ready
     setTimeout(() => {
