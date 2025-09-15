@@ -50,6 +50,8 @@ let currentVisitorPastEndDate = '';
 
 // Logs dashboard filters (global scope)
 let currentLogsTabFilter = 'all';
+let currentLogsStartDate = '';
+let currentLogsEndDate = '';
 
 // Mapping of available actions for each logs tab
 const LOGS_TAB_ACTIONS = {
@@ -515,6 +517,40 @@ export function DashboardPage() {
               >
                 Refresh Logs
               </button>
+            </div>
+            
+            <!-- Date Filter Section -->
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <div class="flex flex-col sm:flex-row gap-3 flex-1">
+                <!-- Start Date -->
+                <div class="flex-1">
+                  <label for="logsStartDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+                  <input 
+                    type="date" 
+                    id="logsStartDate"
+                    class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
+                  >
+                </div>
+                <!-- End Date -->
+                <div class="flex-1">
+                  <label for="logsEndDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
+                  <input 
+                    type="date" 
+                    id="logsEndDate"
+                    class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
+                  >
+                </div>
+              </div>
+              <!-- Clear Date Filter Button -->
+              <div class="flex items-end">
+                <button 
+                  id="clearLogsDateFilterBtn"
+                  class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 w-full sm:w-auto text-sm"
+                >
+                  Clear Date Filter
+                </button>
+              </div>
+            </div>
               <button 
                 id="cleanupVisitsBtn"
                 class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 w-full sm:w-auto"
@@ -3199,6 +3235,30 @@ function setupDashboardEventListeners() {
   actionFilter?.addEventListener('change', async () => {
     await applySearchAndFilterForLogs();
   });
+
+  // Date filter event listeners
+  const logsStartDate = document.getElementById('logsStartDate') as HTMLInputElement;
+  const logsEndDate = document.getElementById('logsEndDate') as HTMLInputElement;
+  const clearLogsDateFilterBtn = document.getElementById('clearLogsDateFilterBtn') as HTMLButtonElement;
+
+  // Start date filter event listener
+  logsStartDate?.addEventListener('change', async () => {
+    await applySearchAndFilterForLogs();
+  });
+
+  // End date filter event listener
+  logsEndDate?.addEventListener('change', async () => {
+    await applySearchAndFilterForLogs();
+  });
+
+  // Clear date filter button event listener
+  clearLogsDateFilterBtn?.addEventListener('click', async () => {
+    if (logsStartDate) logsStartDate.value = '';
+    if (logsEndDate) logsEndDate.value = '';
+    currentLogsStartDate = '';
+    currentLogsEndDate = '';
+    await applySearchAndFilterForLogs();
+  });
   
   // Add search and filter event listeners for scheduled visits
   const visitsSearchInput = document.getElementById('visitsSearchInput') as HTMLInputElement;
@@ -3494,39 +3554,56 @@ function setupDashboardEventListeners() {
     });
   }
 
+  // Function to clear date filter
+  function clearLogsDateFilter() {
+    const logsStartDate = document.getElementById('logsStartDate') as HTMLInputElement;
+    const logsEndDate = document.getElementById('logsEndDate') as HTMLInputElement;
+    
+    if (logsStartDate) logsStartDate.value = '';
+    if (logsEndDate) logsEndDate.value = '';
+    currentLogsStartDate = '';
+    currentLogsEndDate = '';
+  }
+
   if (logsTabAll) logsTabAll.addEventListener('click', () => {
     currentLogsTabFilter = 'all';
     setLogsTabActive(logsTabAll);
+    clearLogsDateFilter();
     updateLogsActionFilterOptions();
     applySearchAndFilterForLogs();
   });
   if (logsTabGate) logsTabGate.addEventListener('click', () => {
     currentLogsTabFilter = 'gate';
     setLogsTabActive(logsTabGate);
+    clearLogsDateFilter();
     updateLogsActionFilterOptions();
     applySearchAndFilterForLogs();
   });
   if (logsTabPlace) logsTabPlace.addEventListener('click', () => {
     currentLogsTabFilter = 'place';
     setLogsTabActive(logsTabPlace);
+    clearLogsDateFilter();
     updateLogsActionFilterOptions();
     applySearchAndFilterForLogs();
   });
   if (logsTabPersonnel) logsTabPersonnel.addEventListener('click', () => {
     currentLogsTabFilter = 'personnel';
     setLogsTabActive(logsTabPersonnel);
+    clearLogsDateFilter();
     updateLogsActionFilterOptions();
     applySearchAndFilterForLogs();
   });
   if (logsTabAccount) logsTabAccount.addEventListener('click', () => {
     currentLogsTabFilter = 'account';
     setLogsTabActive(logsTabAccount);
+    clearLogsDateFilter();
     updateLogsActionFilterOptions();
     applySearchAndFilterForLogs();
   });
   if (logsTabSchedules) logsTabSchedules.addEventListener('click', () => {
     currentLogsTabFilter = 'schedules';
     setLogsTabActive(logsTabSchedules);
+    clearLogsDateFilter();
     updateLogsActionFilterOptions();
     applySearchAndFilterForLogs();
   });
@@ -3768,9 +3845,17 @@ function setupAdminTabEventListeners() {
 async function applySearchAndFilterForLogs() {
   const searchInput = document.getElementById('logsSearchInput') as HTMLInputElement;
   const actionFilter = document.getElementById('actionFilter') as HTMLSelectElement;
+  const startDateInput = document.getElementById('logsStartDate') as HTMLInputElement;
+  const endDateInput = document.getElementById('logsEndDate') as HTMLInputElement;
   
   const searchTerm = searchInput?.value.toLowerCase() || '';
   const actionValue = actionFilter?.value || 'all';
+  const startDate = startDateInput?.value || '';
+  const endDate = endDateInput?.value || '';
+
+  // Update global date filter state
+  currentLogsStartDate = startDate;
+  currentLogsEndDate = endDate;
 
   // Start with all logs
   let filtered = [...allLogs];
@@ -3801,6 +3886,27 @@ async function applySearchAndFilterForLogs() {
   // Apply action filter
   if (actionValue !== 'all') {
     filtered = filtered.filter(log => log.action === actionValue);
+  }
+
+  // Apply date filter
+  if (startDate || endDate) {
+    filtered = filtered.filter(log => {
+      const logDate = new Date(log.created_at);
+      const logDateOnly = new Date(logDate.getFullYear(), logDate.getMonth(), logDate.getDate());
+      
+      if (startDate && endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        return logDateOnly >= start && logDateOnly <= end;
+      } else if (startDate) {
+        const start = new Date(startDate);
+        return logDateOnly >= start;
+      } else if (endDate) {
+        const end = new Date(endDate);
+        return logDateOnly <= end;
+      }
+      return true;
+    });
   }
 
   // Apply tab filter
