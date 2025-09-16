@@ -389,77 +389,100 @@ export function DashboardPage() {
 
       <!-- Admin Content -->
       <div id="placesContent" class="bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-          <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">Places Management</h2>
-          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-4">
-            <!-- Search and Filter Section -->
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-3">
+        <div class="flex flex-col gap-6 mb-6">
+          <!-- Header Section -->
+          <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">Places Management</h2>
+            <button 
+              id="addPlaceBtn"
+              class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 w-full sm:w-auto flex items-center justify-center gap-2"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+              </svg>
+              Add New Place
+            </button>
+          </div>
+
+          <!-- Filters Section -->
+          <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+            <div class="flex flex-col lg:flex-row gap-4">
               <!-- Search Input -->
-              <div class="relative">
-                <input 
-                  type="text" 
-                  id="placesSearchInput"
-                  placeholder="Search places..."
-                  class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
-                >
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                  </svg>
+              <div class="relative flex-1">
+                <label for="placesSearchInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Places</label>
+                <div class="relative">
+                  <input 
+                    type="text" 
+                    id="placesSearchInput"
+                    placeholder="Search by name, location, or description..."
+                    class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
+                  >
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                  </div>
                 </div>
               </div>
               <!-- Availability Filter -->
-              <select 
-                id="availabilityFilter"
-                class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
-              >
-                <option value="all">All Places</option>
-                <option value="available">Available Only</option>
-                <option value="unavailable">Unavailable Only</option>
-              </select>
+              <div class="flex-1 lg:max-w-xs">
+                <label for="availabilityFilter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Availability Status</label>
+                <select 
+                  id="availabilityFilter"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
+                >
+                  <option value="all">All Places</option>
+                  <option value="available">Available Only</option>
+                  <option value="unavailable">Unavailable Only</option>
+                </select>
+              </div>
             </div>
-            <button 
-              id="addPlaceBtn"
-              class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 w-full sm:w-auto"
-            >
-              Add New Place
-            </button>
           </div>
         </div>
         <div id="placesList" class="space-y-4"></div>
       </div>
 
       <div id="accountsContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-          <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">Accounts Management</h2>
-          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-4">
-            <!-- Search and Filter Section -->
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-3">
+        <div class="flex flex-col gap-6 mb-6">
+          <!-- Header Section -->
+          <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">Accounts Management</h2>
+          </div>
+
+          <!-- Filters Section -->
+          <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+            <div class="flex flex-col lg:flex-row gap-4">
               <!-- Search Input -->
-              <div class="relative">
-                <input 
-                  type="text" 
-                  id="accountsSearchInput"
-                  placeholder="Search accounts..."
-                  class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
-                >
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                  </svg>
+              <div class="relative flex-1">
+                <label for="accountsSearchInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Accounts</label>
+                <div class="relative">
+                  <input 
+                    type="text" 
+                    id="accountsSearchInput"
+                    placeholder="Search by name, email, or role..."
+                    class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
+                  >
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                  </div>
                 </div>
               </div>
               <!-- Role Filter -->
-              <select 
-                id="roleFilter"
-                class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
-              >
-                <option value="all">All Roles</option>
-                <option value="log">Log</option>
-                <option value="personnel">Personnel</option>
-                <option value="visitor">Visitor</option>
-                <option value="guest">Guest</option>
-              </select>
+              <div class="flex-1 lg:max-w-xs">
+                <label for="roleFilter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">User Role</label>
+                <select 
+                  id="roleFilter"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
+                >
+                  <option value="all">All Roles</option>
+                  <option value="log">Log</option>
+                  <option value="personnel">Personnel</option>
+                  <option value="visitor">Visitor</option>
+                  <option value="guest">Guest</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
@@ -467,9 +490,23 @@ export function DashboardPage() {
       </div>
 
       <div id="logsContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
-        <div class="flex flex-col gap-4 mb-6">
-          <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">System Logs</h2>
-          <div class="flex flex-row flex-wrap gap-2 mb-2">
+        <div class="flex flex-col gap-6 mb-6">
+          <!-- Header Section -->
+          <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">System Logs</h2>
+            <button 
+              id="refreshLogsBtn"
+              class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 w-full sm:w-auto flex items-center justify-center gap-2"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+              Refresh Logs
+            </button>
+          </div>
+
+          <!-- Category Tabs -->
+          <div class="flex flex-row flex-wrap gap-2">
             <button id="logsTabAll" class="px-4 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm">All</button>
             <button id="logsTabGate" class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm">Gate</button>
             <button id="logsTabPlace" class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm">Place</button>
@@ -477,54 +514,63 @@ export function DashboardPage() {
             <button id="logsTabAccount" class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm">Account</button>
             <button id="logsTabSchedules" class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm">Schedules</button>
           </div>
-          <div class="flex flex-col gap-4">
-            <!-- Search and Filter Section -->
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+
+          <!-- Filters Section -->
+          <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 space-y-4">
+            <!-- Search and Action Filter Row -->
+            <div class="flex flex-col lg:flex-row gap-4">
               <!-- Search Input -->
               <div class="relative flex-1">
-                <input 
-                  type="text" 
-                  id="logsSearchInput"
-                  placeholder="Search logs..."
-                  class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
-                >
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                  </svg>
+                <label for="logsSearchInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Logs</label>
+                <div class="relative">
+                  <input 
+                    type="text" 
+                    id="logsSearchInput"
+                    placeholder="Search by user, action, or details..."
+                    class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
+                  >
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                  </div>
                 </div>
               </div>
               <!-- Action Filter -->
-              <select 
-                id="actionFilter"
-                class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full sm:w-auto"
-              >
-                <option value="all">All Actions</option>
-                <option value="password_change">Password Change</option>
-                <option value="place_update">Place Update</option>
-                <option value="place_availability_toggle">Place Availability Toggle</option>
-                <option value="place_create">Place Create</option>
-                <option value="personnel_assignment">Personnel Assignment</option>
-                <option value="personnel_removal">Personnel Removal</option>
-                <option value="personnel_availability_change">Personnel Availability Change</option>
-                <option value="visit_scheduled">Visit Scheduled</option>
-                <option value="visit_completed">Visit Completed</option>
-                <option value="visit_unsuccessful">Visit Unsuccessful</option>
-              </select>
-              <button 
-                id="refreshLogsBtn"
-                class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 w-full sm:w-auto"
-              >
-                Refresh Logs
-              </button>
+              <div class="flex-1 lg:max-w-xs">
+                <label for="actionFilter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Action Type</label>
+                <select 
+                  id="actionFilter"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
+                >
+                  <option value="all">All Actions</option>
+                  <option value="password_change">Password Change</option>
+                  <option value="place_update">Place Update</option>
+                  <option value="place_availability_toggle">Place Availability Toggle</option>
+                  <option value="place_create">Place Create</option>
+                  <option value="personnel_assignment">Personnel Assignment</option>
+                  <option value="personnel_removal">Personnel Removal</option>
+                  <option value="personnel_availability_change">Personnel Availability Change</option>
+                  <option value="visit_scheduled">Visit Scheduled</option>
+                  <option value="visit_completed">Visit Completed</option>
+                  <option value="visit_completed_flagged">Visit Completed (Flagged)</option>
+                  <option value="visit_unsuccessful">Visit Unsuccessful</option>
+                  <option value="gate_create">Gate Create</option>
+                  <option value="gate_update">Gate Update</option>
+                  <option value="gate_status_change">Gate Status Change</option>
+                  <option value="gate_entrance_scan">Gate Entrance Scan</option>
+                  <option value="gate_exit_scan">Gate Exit Scan</option>
+                  <option value="visit_flagged_no_exit">Visit Flagged (No Exit)</option>
+                </select>
+              </div>
             </div>
-            
-            <!-- Date Filter Section -->
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              <div class="flex flex-col sm:flex-row gap-3 flex-1">
+
+            <!-- Date Filter Row -->
+            <div class="flex flex-col lg:flex-row gap-4">
+              <div class="flex flex-col sm:flex-row gap-4 flex-1">
                 <!-- Start Date -->
                 <div class="flex-1">
-                  <label for="logsStartDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+                  <label for="logsStartDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Start Date</label>
                   <input 
                     type="date" 
                     id="logsStartDate"
@@ -533,7 +579,7 @@ export function DashboardPage() {
                 </div>
                 <!-- End Date -->
                 <div class="flex-1">
-                  <label for="logsEndDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
+                  <label for="logsEndDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">End Date</label>
                   <input 
                     type="date" 
                     id="logsEndDate"
@@ -541,22 +587,27 @@ export function DashboardPage() {
                   >
                 </div>
               </div>
-              <!-- Clear Date Filter Button -->
-              <div class="flex items-end">
+              <!-- Filter Actions -->
+              <div class="flex flex-col sm:flex-row gap-2 lg:items-end">
                 <button 
                   id="clearLogsDateFilterBtn"
-                  class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 w-full sm:w-auto text-sm"
+                  class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm flex items-center justify-center gap-2"
                 >
-                  Clear Date Filter
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                  Clear Dates
+                </button>
+                <button 
+                  id="cleanupVisitsBtn"
+                  class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 text-sm flex items-center justify-center gap-2"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                  </svg>
+                  Cleanup Past Visits
                 </button>
               </div>
-            </div>
-              <button 
-                id="cleanupVisitsBtn"
-                class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 w-full sm:w-auto"
-              >
-                Cleanup Past Visits
-              </button>
             </div>
           </div>
         </div>
