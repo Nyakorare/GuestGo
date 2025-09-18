@@ -517,10 +517,10 @@ export function DashboardPage() {
 
           <!-- Filters Section -->
           <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 space-y-4">
-            <!-- Search and Action Filter Row -->
-            <div class="flex flex-col lg:flex-row gap-4">
+            <!-- Search Row with Filters Toggle -->
+            <div class="flex flex-col gap-2">
               <!-- Search Input -->
-              <div class="relative flex-1">
+              <div class="relative">
                 <label for="logsSearchInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Logs</label>
                 <div class="relative">
                   <input 
@@ -536,77 +536,96 @@ export function DashboardPage() {
                   </div>
                 </div>
               </div>
-              <!-- Action Filter -->
-              <div class="flex-1 lg:max-w-xs">
-                <label for="actionFilter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Action Type</label>
-                <select 
-                  id="actionFilter"
-                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
+              <!-- Filters dropdown toggle button -->
+              <div class="flex justify-end">
+                <button 
+                  id="logsFiltersDropdownBtn"
+                  class="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  aria-haspopup="true"
+                  aria-expanded="false"
                 >
-                  <option value="all">All Actions</option>
-                  <option value="password_change">Password Change</option>
-                  <option value="place_update">Place Update</option>
-                  <option value="place_availability_toggle">Place Availability Toggle</option>
-                  <option value="place_create">Place Create</option>
-                  <option value="personnel_assignment">Personnel Assignment</option>
-                  <option value="personnel_removal">Personnel Removal</option>
-                  <option value="personnel_availability_change">Personnel Availability Change</option>
-                  <option value="visit_scheduled">Visit Scheduled</option>
-                  <option value="visit_completed">Visit Completed</option>
-                  <option value="visit_completed_flagged">Visit Completed (Flagged)</option>
-                  <option value="visit_unsuccessful">Visit Unsuccessful</option>
-                  <option value="gate_create">Gate Create</option>
-                  <option value="gate_update">Gate Update</option>
-                  <option value="gate_status_change">Gate Status Change</option>
-                  <option value="gate_entrance_scan">Gate Entrance Scan</option>
-                  <option value="gate_exit_scan">Gate Exit Scan</option>
-                  <option value="visit_flagged_no_exit">Visit Flagged (No Exit)</option>
-                </select>
+                  More Filters
+                  <svg class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
               </div>
             </div>
 
-            <!-- Date Filter Row -->
-            <div class="flex flex-col lg:flex-row gap-4">
-              <div class="flex flex-col sm:flex-row gap-4 flex-1">
-                <!-- Start Date -->
+            <!-- Dropdown content -->
+            <div id="logsFiltersDropdown" class="hidden relative">
+              <div class="absolute z-20 right-0 w-full sm:w-auto min-w-[280px] max-w-full sm:max-w-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg p-4 space-y-4">
+                <!-- Action Filter -->
                 <div class="flex-1">
-                  <label for="logsStartDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Start Date</label>
-                  <input 
-                    type="date" 
-                    id="logsStartDate"
+                  <label for="actionFilter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Action Type</label>
+                  <select 
+                    id="actionFilter"
                     class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
                   >
+                    <option value="all">All Actions</option>
+                    <option value="password_change">Password Change</option>
+                    <option value="place_update">Place Update</option>
+                    <option value="place_availability_toggle">Place Availability Toggle</option>
+                    <option value="place_create">Place Create</option>
+                    <option value="personnel_assignment">Personnel Assignment</option>
+                    <option value="personnel_removal">Personnel Removal</option>
+                    <option value="personnel_availability_change">Personnel Availability Change</option>
+                    <option value="visit_scheduled">Visit Scheduled</option>
+                    <option value="visit_completed">Visit Completed</option>
+                    <option value="visit_completed_flagged">Visit Completed (Flagged)</option>
+                    <option value="visit_unsuccessful">Visit Unsuccessful</option>
+                    <option value="gate_create">Gate Create</option>
+                    <option value="gate_update">Gate Update</option>
+                    <option value="gate_status_change">Gate Status Change</option>
+                    <option value="gate_entrance_scan">Gate Entrance Scan</option>
+                    <option value="gate_exit_scan">Gate Exit Scan</option>
+                    <option value="visit_flagged_no_exit">Visit Flagged (No Exit)</option>
+                  </select>
                 </div>
-                <!-- End Date -->
-                <div class="flex-1">
-                  <label for="logsEndDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">End Date</label>
-                  <input 
-                    type="date" 
-                    id="logsEndDate"
-                    class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
+
+                <!-- Date Filter Row -->
+                <div class="flex flex-col sm:flex-row gap-4">
+                  <!-- Start Date -->
+                  <div class="flex-1">
+                    <label for="logsStartDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Start Date</label>
+                    <input 
+                      type="date" 
+                      id="logsStartDate"
+                      class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
+                    >
+                  </div>
+                  <!-- End Date -->
+                  <div class="flex-1">
+                    <label for="logsEndDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">End Date</label>
+                    <input 
+                      type="date" 
+                      id="logsEndDate"
+                      class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
+                    >
+                  </div>
+                </div>
+
+                <!-- Filter Actions -->
+                <div class="flex flex-col sm:flex-row gap-2 sm:items-end">
+                  <button 
+                    id="clearLogsDateFilterBtn"
+                    class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm flex items-center justify-center gap-2"
                   >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                    Clear Dates
+                  </button>
+                  <button 
+                    id="cleanupVisitsBtn"
+                    class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 text-sm flex items-center justify-center gap-2"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                    Cleanup Past Visits
+                  </button>
                 </div>
-              </div>
-              <!-- Filter Actions -->
-              <div class="flex flex-col sm:flex-row gap-2 lg:items-end">
-                <button 
-                  id="clearLogsDateFilterBtn"
-                  class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm flex items-center justify-center gap-2"
-                >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                  </svg>
-                  Clear Dates
-                </button>
-                <button 
-                  id="cleanupVisitsBtn"
-                  class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 text-sm flex items-center justify-center gap-2"
-                >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                  </svg>
-                  Cleanup Past Visits
-                </button>
               </div>
             </div>
           </div>
@@ -3276,6 +3295,8 @@ function setupDashboardEventListeners() {
   // Logs search and filter event listeners
   const logsSearchInput = document.getElementById('logsSearchInput');
   const actionFilter = document.getElementById('actionFilter');
+  const logsFiltersDropdownBtn = document.getElementById('logsFiltersDropdownBtn');
+  const logsFiltersDropdown = document.getElementById('logsFiltersDropdown');
 
   // Logs search input event listener
   logsSearchInput?.addEventListener('input', async () => {
@@ -3286,6 +3307,44 @@ function setupDashboardEventListeners() {
   actionFilter?.addEventListener('change', async () => {
     await applySearchAndFilterForLogs();
   });
+
+  // Logs filters dropdown toggle
+  if (logsFiltersDropdownBtn && logsFiltersDropdown) {
+    logsFiltersDropdownBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isExpanded = logsFiltersDropdownBtn.getAttribute('aria-expanded') === 'true';
+      logsFiltersDropdownBtn.setAttribute('aria-expanded', (!isExpanded).toString());
+      logsFiltersDropdown.classList.toggle('hidden');
+      const arrow = logsFiltersDropdownBtn.querySelector('svg');
+      if (arrow) {
+        if (isExpanded) {
+          arrow.classList.remove('rotate-180');
+        } else {
+          arrow.classList.add('rotate-180');
+        }
+      }
+    });
+
+    // Close on outside click
+    document.addEventListener('click', (e) => {
+      if (!logsFiltersDropdownBtn.contains(e.target as Node) && !logsFiltersDropdown.contains(e.target as Node)) {
+        logsFiltersDropdownBtn.setAttribute('aria-expanded', 'false');
+        logsFiltersDropdown.classList.add('hidden');
+        const arrow = logsFiltersDropdownBtn.querySelector('svg');
+        if (arrow) arrow.classList.remove('rotate-180');
+      }
+    });
+
+    // Close on Escape
+    document.addEventListener('keydown', (e) => {
+      if ((e as KeyboardEvent).key === 'Escape') {
+        logsFiltersDropdownBtn.setAttribute('aria-expanded', 'false');
+        logsFiltersDropdown.classList.add('hidden');
+        const arrow = logsFiltersDropdownBtn.querySelector('svg');
+        if (arrow) arrow.classList.remove('rotate-180');
+      }
+    });
+  }
 
   // Date filter event listeners
   const logsStartDate = document.getElementById('logsStartDate') as HTMLInputElement;
