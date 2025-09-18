@@ -519,36 +519,39 @@ export function DashboardPage() {
           <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 space-y-4">
             <!-- Search Row with Filters Toggle -->
             <div class="flex flex-col gap-2">
-              <!-- Search Input -->
-              <div class="relative">
-                <label for="logsSearchInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Logs</label>
-                <div class="relative">
-                  <input 
-                    type="text" 
-                    id="logsSearchInput"
-                    placeholder="Search by user, action, or details..."
-                    class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
-                  >
-                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
+              <!-- Search Input and Filters Button Row -->
+              <div class="flex gap-3 items-end">
+                <!-- Search Input -->
+                <div class="relative flex-1">
+                  <label for="logsSearchInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Logs</label>
+                  <div class="relative">
+                    <input 
+                      type="text" 
+                      id="logsSearchInput"
+                      placeholder="Search by user, action, or details..."
+                      class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
+                    >
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                      </svg>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <!-- Filters dropdown toggle button -->
-              <div class="flex justify-end">
-                <button 
-                  id="logsFiltersDropdownBtn"
-                  class="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500"
-                  aria-haspopup="true"
-                  aria-expanded="false"
-                >
-                  More Filters
-                  <svg class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
+                <!-- Filters dropdown toggle button -->
+                <div class="flex-shrink-0">
+                  <button 
+                    id="logsFiltersDropdownBtn"
+                    class="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                  >
+                    More Filters
+                    <svg class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
 
