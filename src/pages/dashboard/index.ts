@@ -3954,6 +3954,59 @@ function setupAdminTabEventListeners() {
 // Make function available globally
 (window as any).setupAdminTabEventListeners = setupAdminTabEventListeners;
 
+// Helper to compute effective display action for a log (used in filtering and rendering)
+function getEffectiveLogAction(log: any): string {
+  try {
+    if (!log) return '';
+    let action = log.action;
+    if (action !== 'visit_scheduled') return action;
+
+    const parsedDetails = log.details
+      ? (typeof log.details === 'string' ? JSON.parse(log.details) : log.details)
+      : null;
+
+    if (!parsedDetails) return action;
+
+    // Derive effective action from current_status
+    if (parsedDetails.current_status === 'completed') return 'visit_completed';
+    if (parsedDetails.current_status === 'completed_flagged') return 'visit_completed_flagged';
+    if (
+      parsedDetails.current_status === 'unsuccessful' ||
+      parsedDetails.current_status === 'failed' ||
+      parsedDetails.current_status === 'marked_unsuccessful'
+    ) {
+      return 'visit_unsuccessful';
+    }
+
+    // If pending, inspect history to infer completion/flagged/unsuccessful
+    if (Array.isArray(parsedDetails.history) && parsedDetails.history.length > 0) {
+      const lastEvent = parsedDetails.history[parsedDetails.history.length - 1];
+      if (lastEvent?.event === 'completed') return 'visit_completed';
+      if (lastEvent?.event === 'completed_flagged') return 'visit_completed_flagged';
+      if (
+        lastEvent?.event === 'unsuccessful' ||
+        lastEvent?.event === 'failed' ||
+        lastEvent?.event === 'marked_unsuccessful'
+      ) {
+        return 'visit_unsuccessful';
+      }
+
+      // Special case: all places completed but exit scan pending still treated as completed in UI
+      if (
+        (lastEvent?.event === 'completed' || lastEvent?.event === 'place_completed') &&
+        lastEvent?.details?.all_places_completed
+      ) {
+        return 'visit_completed';
+      }
+    }
+
+    // Default to original action
+    return action;
+  } catch (_) {
+    return log?.action || '';
+  }
+}
+
 // Function to apply search and filter for logs
 async function applySearchAndFilterForLogs() {
   const searchInput = document.getElementById('logsSearchInput') as HTMLInputElement;
@@ -3996,9 +4049,12 @@ async function applySearchAndFilterForLogs() {
     });
   }
 
-  // Apply action filter
+  // Apply action filter (use effective action to capture derived states)
   if (actionValue !== 'all') {
-    filtered = filtered.filter(log => log.action === actionValue);
+    filtered = filtered.filter(log => {
+      const effective = getEffectiveLogAction(log);
+      return log.action === actionValue || effective === actionValue;
+    });
   }
 
   // Apply date filter
