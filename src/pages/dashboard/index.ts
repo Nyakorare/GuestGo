@@ -5854,6 +5854,13 @@ function calculateVisitProgress(visit: any): { percentage: number; status: strin
     const entranceScanned = visit.gate_entrance_scanned || false;
     const exitScanned = visit.gate_exit_scanned || false;
     
+    // Check if this is today's visit
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const visitDate = new Date(visit.visit_date);
+    visitDate.setHours(0, 0, 0, 0);
+    const isToday = visitDate.getTime() === today.getTime();
+    
     if (totalPlaces === 0) {
       return { 
         percentage: 0, 
@@ -5863,8 +5870,18 @@ function calculateVisitProgress(visit: any): { percentage: number; status: strin
       };
     }
     
-    // Calculate places progress (70% weight)
-    const placesPercentage = Math.round((completedPlaces / totalPlaces) * 70);
+    // If it's today's visit and gate entrance is not scanned, block progress
+    if (isToday && !entranceScanned) {
+      return { 
+        percentage: 0, 
+        status: 'Waiting for Gate Entrance Scan', 
+        color: 'bg-orange-500',
+        gateProgress: { entrance: entranceScanned, exit: exitScanned }
+      };
+    }
+    
+    // Calculate places progress (70% weight) - only if gate entrance is scanned for today's visits
+    const placesPercentage = (isToday && !entranceScanned) ? 0 : Math.round((completedPlaces / totalPlaces) * 70);
     
     // Calculate gate progress (30% weight)
     let gatePercentage = 0;
@@ -5876,7 +5893,10 @@ function calculateVisitProgress(visit: any): { percentage: number; status: strin
     let status = 'Pending';
     let color = 'bg-blue-500';
     
-    if (totalPercentage === 0) {
+    if (isToday && !entranceScanned) {
+      status = 'Waiting for Gate Entrance Scan';
+      color = 'bg-orange-500';
+    } else if (totalPercentage === 0) {
       status = 'Not Started';
       color = 'bg-gray-500';
     } else if (totalPercentage < 25) {
@@ -5950,6 +5970,31 @@ async function completeVisitPlace(visitId: string, placeId: string) {
       return;
     }
 
+    // Check if gate entrance scan is required and completed
+    const { data: visitData, error: visitError } = await supabase
+      .from('scheduled_visits')
+      .select('gate_entrance_scanned, visit_date')
+      .eq('id', visitId)
+      .single();
+
+    if (visitError) {
+      console.error('Error fetching visit data:', visitError);
+      showNotification('Error fetching visit data', 'error');
+      return;
+    }
+
+    // Check if this is today's visit and gate entrance scan is required
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const visitDate = new Date(visitData.visit_date);
+    visitDate.setHours(0, 0, 0, 0);
+    const isToday = visitDate.getTime() === today.getTime();
+
+    if (isToday && !visitData.gate_entrance_scanned) {
+      showNotification('Gate entrance must be scanned by the visitor before places can be completed', 'error');
+      return;
+    }
+
     // Show confirmation dialog
     const confirmed = confirm('Are you sure you want to mark this place as completed?');
     if (!confirmed) {
@@ -6003,6 +6048,31 @@ async function completeVisit(visitId: string) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       showNotification('You must be logged in to complete visits', 'error');
+      return;
+    }
+
+    // Check if gate entrance scan is required and completed
+    const { data: visitData, error: visitError } = await supabase
+      .from('scheduled_visits')
+      .select('gate_entrance_scanned, visit_date')
+      .eq('id', visitId)
+      .single();
+
+    if (visitError) {
+      console.error('Error fetching visit data:', visitError);
+      showNotification('Error fetching visit data', 'error');
+      return;
+    }
+
+    // Check if this is today's visit and gate entrance scan is required
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const visitDate = new Date(visitData.visit_date);
+    visitDate.setHours(0, 0, 0, 0);
+    const isToday = visitDate.getTime() === today.getTime();
+
+    if (isToday && !visitData.gate_entrance_scanned) {
+      showNotification('Gate entrance must be scanned by the visitor before places can be completed', 'error');
       return;
     }
 
@@ -7424,6 +7494,59 @@ async function displayVisitorTodayVisits(visits: any[]): Promise<void> {
                   Today
                 </span>` : ''
               }
+              ${visit.status !== 'unsuccessful' && visit.status !== 'failed' && visit.status !== 'completed' && visit.status !== 'completed_flagged' ? `
+                <button 
+                  onclick="printVisitCard('${visit.id}')"
+                  class="px-3 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded-full text-xs font-medium hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors duration-200 flex items-center space-x-1"
+                  title="Print Visit Card with QR Code"
+                >
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                  </svg>
+                  <span>Print</span>
+                </button>
+              ` : ''}
+              ${isToday && visit.status === 'pending' && !visit.gate_entrance_scanned && userRole === 'visitor' ? `
+                <button 
+                  onclick="scanGateEntrance('${visit.id}')"
+                  class="px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full text-xs font-medium hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors duration-200 flex items-center space-x-1"
+                  title="Scan Gate Entrance to Start Visit"
+                >
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1721 9z"></path>
+                  </svg>
+                  <span>Scan Entrance</span>
+                </button>
+              ` : ''}
+              ${isToday && visit.status === 'pending' && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && completedPlaces === totalPlaces && totalPlaces > 0 ? `
+                <button 
+                  onclick="scanGateExit('${visit.id}')"
+                  class="px-3 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded-full text-xs font-medium hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors duration-200 flex items-center space-x-1"
+                  title="Scan Gate Exit to Complete Visit"
+                >
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                  </svg>
+                  <span>Scan Exit</span>
+                </button>
+              ` : ''}
+              ${isToday && visit.status === 'pending' && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && (completedPlaces < totalPlaces || totalPlaces === 0) ? `
+                <div class="flex flex-col items-end space-y-1">
+                  <button 
+                    disabled
+                    class="px-3 py-1 bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500 rounded-full text-xs font-medium cursor-not-allowed flex items-center space-x-1"
+                    title="All places must be completed by personnel before scanning exit gate"
+                  >
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                    </svg>
+                    <span>Scan Exit</span>
+                  </button>
+                  <span class="text-xs text-gray-500 dark:text-gray-400 text-right">
+                    Waiting for personnel to complete all places
+                  </span>
+                </div>
+              ` : ''}
             </div>
           </div>
 
@@ -7644,6 +7767,59 @@ async function displayVisitorFutureVisits(visits: any[]): Promise<void> {
               <span class="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-xs font-medium">
                 Future
               </span>
+              ${visit.status !== 'unsuccessful' && visit.status !== 'failed' && visit.status !== 'completed' && visit.status !== 'completed_flagged' ? `
+                <button 
+                  onclick="printVisitCard('${visit.id}')"
+                  class="px-3 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded-full text-xs font-medium hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors duration-200 flex items-center space-x-1"
+                  title="Print Visit Card with QR Code"
+                >
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                  </svg>
+                  <span>Print</span>
+                </button>
+              ` : ''}
+              ${isToday && visit.status === 'pending' && !visit.gate_entrance_scanned && userRole === 'visitor' ? `
+                <button 
+                  onclick="scanGateEntrance('${visit.id}')"
+                  class="px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full text-xs font-medium hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors duration-200 flex items-center space-x-1"
+                  title="Scan Gate Entrance to Start Visit"
+                >
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1721 9z"></path>
+                  </svg>
+                  <span>Scan Entrance</span>
+                </button>
+              ` : ''}
+              ${isToday && visit.status === 'pending' && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && completedPlaces === totalPlaces && totalPlaces > 0 ? `
+                <button 
+                  onclick="scanGateExit('${visit.id}')"
+                  class="px-3 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded-full text-xs font-medium hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors duration-200 flex items-center space-x-1"
+                  title="Scan Gate Exit to Complete Visit"
+                >
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                  </svg>
+                  <span>Scan Exit</span>
+                </button>
+              ` : ''}
+              ${isToday && visit.status === 'pending' && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && (completedPlaces < totalPlaces || totalPlaces === 0) ? `
+                <div class="flex flex-col items-end space-y-1">
+                  <button 
+                    disabled
+                    class="px-3 py-1 bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500 rounded-full text-xs font-medium cursor-not-allowed flex items-center space-x-1"
+                    title="All places must be completed by personnel before scanning exit gate"
+                  >
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                    </svg>
+                    <span>Scan Exit</span>
+                  </button>
+                  <span class="text-xs text-gray-500 dark:text-gray-400 text-right">
+                    Waiting for personnel to complete all places
+                  </span>
+                </div>
+              ` : ''}
             </div>
           </div>
 
@@ -8642,6 +8818,16 @@ function ensureHistoryModalExists() {
   if (modal) {
     modal.remove();
   }
+};
+
+// Global function to scan gate entrance (accessible from onclick)
+(window as any).scanGateEntrance = function(visitId: string) {
+  showGateScanningModal(visitId);
+};
+
+// Global function to scan gate exit (accessible from onclick)
+(window as any).scanGateExit = function(visitId: string) {
+  showGateExitScanningModal(visitId);
 };
 
 // Global function to print visit card (accessible from onclick)

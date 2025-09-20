@@ -1,4 +1,4 @@
-import { setupEventListeners } from '../components/ModalFunctions';
+import { setupEventListeners, setupConfirmationModalListeners } from '../components/ModalFunctions';
 import supabase from '../config/supabase';
 import { loadPlaces } from './dashboard/index';
 
@@ -940,6 +940,9 @@ export function HomePage() {
     
     // Setup event listeners after button visibility is updated
     setupEventListeners();
+    
+    // Setup confirmation modal event listeners
+    setupConfirmationModalListeners();
 
   }, 100);
 
@@ -1153,6 +1156,105 @@ export function HomePage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Visit Confirmation Modal -->
+      <div id="visitConfirmationModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" style="z-index: 9999;">
+        <div class="relative top-10 mx-auto p-3 sm:p-5 border w-full max-w-md md:max-w-lg shadow-lg rounded-md bg-white dark:bg-gray-800">
+          <div class="mt-3">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white">Confirm Visit Details</h3>
+              <button 
+                id="closeConfirmationModalBtn"
+                class="text-gray-400 hover:text-gray-500 focus:outline-none"
+              >
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <!-- Visit Details Summary -->
+            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
+              <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-3">Visit Information</h4>
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-300">Name:</span>
+                  <span class="text-gray-900 dark:text-white font-medium" id="confirmationName">-</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-300">Email:</span>
+                  <span class="text-gray-900 dark:text-white font-medium" id="confirmationEmail">-</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-300">Phone:</span>
+                  <span class="text-gray-900 dark:text-white font-medium" id="confirmationPhone">-</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-300">Visit Date:</span>
+                  <span class="text-gray-900 dark:text-white font-medium" id="confirmationDate">-</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-300">Place(s):</span>
+                  <span class="text-gray-900 dark:text-white font-medium" id="confirmationPlaces">-</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-300">Purpose:</span>
+                  <span class="text-gray-900 dark:text-white font-medium" id="confirmationPurpose">-</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Agreement Section -->
+            <div class="mb-6">
+              <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-3">Terms and Agreement</h4>
+              <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-4">
+                <div class="text-sm text-yellow-800 dark:text-yellow-200">
+                  <p class="font-medium mb-2">Important Guidelines:</p>
+                  <ul class="list-disc list-inside space-y-1 text-xs">
+                    <li>Please arrive on time for your scheduled visit</li>
+                    <li>Bring a valid ID for verification</li>
+                    <li>Follow all security protocols and guidelines</li>
+                    <li>Notify us at least 24 hours in advance if you need to reschedule</li>
+                    <li>Maximum 2 visits per week per user account</li>
+                    <li>Visits are subject to approval and may be cancelled due to security concerns</li>
+                  </ul>
+                </div>
+              </div>
+              
+              <div class="flex items-start space-x-3">
+                <input 
+                  type="checkbox" 
+                  id="visitAgreement" 
+                  class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  required
+                >
+                <label for="visitAgreement" class="text-sm text-gray-700 dark:text-gray-300">
+                  I have read and agree to the terms and conditions above. I understand that my visit is subject to approval and I will follow all security protocols during my visit.
+                </label>
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
+              <button 
+                type="button"
+                id="cancelConfirmationBtn"
+                class="w-full sm:w-auto px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+              >
+                Cancel
+              </button>
+              <button 
+                type="button"
+                id="confirmScheduleBtn"
+                class="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled
+              >
+                Confirm & Schedule Visit
+              </button>
+            </div>
           </div>
         </div>
       </div>

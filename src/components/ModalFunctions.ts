@@ -2,6 +2,14 @@ import { sendVerificationEmail } from '../config/emailjs';
 import supabase from '../config/supabase';
 import { showNotification } from '../pages/dashboard/index';
 
+// Global variables for form state management
+let isEmailVerified = false;
+let verificationCodeSent = false;
+let countdownInterval: number | null = null;
+let codeExpirationTimeout: number | null = null;
+let currentCode: string | null = null;
+let emailCheckTimeout: number | null = null;
+
 // Helper function to get current Philippine time
 function getPhilippineTime(): Date {
   const now = new Date();
@@ -330,12 +338,6 @@ export async function setupEventListeners() {
     sendVerificationCode.classList.add('opacity-50', 'cursor-not-allowed');
   }
 
-  let isEmailVerified = false;
-  let verificationCodeSent = false;
-  let countdownInterval: number | null = null;
-  let codeExpirationTimeout: number | null = null;
-  let currentCode: string | null = null;
-  let emailCheckTimeout: number | null = null;
 
   // Function to generate a random 6-digit code
   function generateVerificationCode(): string {
@@ -429,12 +431,15 @@ export async function setupEventListeners() {
 
   // Function to enable verification inputs
   function enableVerificationInputs() {
+  const verificationCode = document.getElementById('verificationCode') as HTMLInputElement;
+  const verifyCode = document.getElementById('verifyCode') as HTMLButtonElement;
+  
     if (verificationCode) {
-      (verificationCode as HTMLInputElement).disabled = false;
+    verificationCode.disabled = false;
       verificationCode.classList.remove('opacity-50', 'cursor-not-allowed');
     }
     if (verifyCode) {
-      (verifyCode as HTMLButtonElement).disabled = false;
+    verifyCode.disabled = false;
       verifyCode.classList.remove('opacity-50', 'cursor-not-allowed');
     }
   }
@@ -813,18 +818,14 @@ export async function setupEventListeners() {
     });
   }
 
-  // Handle form submission
+  // Handle form submission - now shows confirmation modal instead of direct scheduling
   if (scheduleForm) {
     let isScheduling = false;
     scheduleForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       if (isScheduling) return;
       isScheduling = true;
-      // Show loading state
-      if (scheduleSubmitBtn) {
-        scheduleSubmitBtn.disabled = true;
-        scheduleSubmitBtn.textContent = 'Scheduling...';
-      }
+      
       try {
         // Get form data
         const firstName = (document.getElementById('scheduleFirstName') as HTMLInputElement).value;
@@ -876,11 +877,11 @@ export async function setupEventListeners() {
         }
 
         // Check if date is more than 1 month in the future
-        const philippineMaxDate = new Date(philippineToday);
-        philippineMaxDate.setMonth(philippineMaxDate.getMonth() + 1);
+        // Set max date to the last day of the current month
+        const philippineMaxDate = new Date(philippineToday.getFullYear(), philippineToday.getMonth() + 1, 0);
         
         if (philippineSelectedDate.getTime() > philippineMaxDate.getTime()) {
-          throw new Error(`Cannot schedule visits more than 1 month in advance. Maximum allowed date is ${philippineMaxDate.toLocaleDateString()}.`);
+          throw new Error(`Cannot schedule visits beyond the current month. Maximum allowed date is ${philippineMaxDate.toLocaleDateString()}.`);
         }
 
         // Additional validation: Check if the date input has validation errors
@@ -891,7 +892,10 @@ export async function setupEventListeners() {
 
         // Get current user if logged in
         const { data: { user } } = await supabase.auth.getUser();
-        const visitorUserId = user?.id || null;
+        // Ensure we properly handle undefined/null values and convert empty strings to null
+        const visitorUserId = (user?.id && user.id.trim() !== '') ? user.id : null;
+        
+        console.log('Form submission - User data:', { user, visitorUserId, userIdType: typeof user?.id });
 
         // If user is logged in, check if they have visitor role
         if (user) {
@@ -927,176 +931,35 @@ export async function setupEventListeners() {
           if (selectedPlaces.length === 0) {
             throw new Error('Please select at least one place to visit');
           }
+        }
 
-          let scheduleError = null;
-          let visitData = null;
-          if (placeToVisit === 'multiple') {
-            // Check if multiple places option is available
-            if (availablePlacesCount < 2) {
-              throw new Error('Multiple places option is not available. Please select a single place.');
-            }
-            const selectedPlaces = Array.from(document.querySelectorAll('input[name="places"]:checked'))
-              .map((checkbox) => (checkbox as HTMLInputElement).value);
-            if (selectedPlaces.length === 0) {
-              throw new Error('Please select at least one place to visit');
-            }
-            const result = await supabase.rpc('schedule_visit', {
-              p_visitor_first_name: firstName,
-              p_visitor_last_name: lastName,
-              p_visitor_email: email,
-              p_visitor_phone: phone,
-              p_place_ids: selectedPlaces,
-              p_visit_date: visitDate,
-              p_purpose: purpose === 'other' ? otherPurpose : purpose,
-              p_other_purpose: purpose === 'other' ? otherPurpose : null,
-              p_visitor_user_id: visitorUserId
-            });
-            visitData = result.data;
-            scheduleError = result.error;
-          } else {
-            const result = await supabase.rpc('schedule_visit', {
-              p_visitor_first_name: firstName,
-              p_visitor_last_name: lastName,
-              p_visitor_email: email,
-              p_visitor_phone: phone,
-              p_place_ids: [placeToVisit],
-              p_visit_date: visitDate,
-              p_purpose: purpose === 'other' ? otherPurpose : purpose,
-              p_other_purpose: purpose === 'other' ? otherPurpose : null,
-              p_visitor_user_id: visitorUserId
-            });
-            visitData = result.data;
-            scheduleError = result.error;
-          }
-          if (scheduleError) {
-            if (scheduleError.message.includes('Maximum of 2 visits per week allowed per user account')) {
-              throw new Error('Weekly visit limit exceeded. You can only schedule 2 visits per week per user account.');
-            } else if (scheduleError.message.includes('Maximum of 2 visits per week allowed per email address')) {
-              throw new Error('Weekly visit limit exceeded. You can only schedule 2 visits per week per email address.');
-            } else if (scheduleError.message.includes('Cannot schedule visits for past dates')) {
-              throw new Error('Cannot schedule visits for past dates. Please select today or a future date.');
-            } else if (scheduleError.message.includes('Cannot schedule visits more than 1 month in advance')) {
-              throw new Error('Cannot schedule visits more than 1 month in advance. Please select a date within the next month.');
-            } else if (scheduleError.message.includes('Only users with visitor role can schedule visits')) {
-              throw new Error('Only visitors can schedule visits. Please contact an administrator if you need access.');
-            } else if (scheduleError.message.includes('You already have a scheduled visit on this date.')) {
-              // Only show inline error, no notification
-              isScheduling = false;
-              if (scheduleSubmitBtn) {
-                scheduleSubmitBtn.disabled = false;
-                scheduleSubmitBtn.textContent = 'Schedule Visit';
-              }
-              return;
-            } else {
-              throw new Error(`Scheduling failed: ${scheduleError.message}`);
-            }
-          }
-          // Only show success if there was NO error
-          showNotification('Visit scheduled successfully! You will receive a confirmation email shortly.', 'success');
-          const modal = document.getElementById('scheduleModal');
-          if (modal) {
-            modal.classList.add('hidden');
-          }
-          scheduleForm.reset();
-          resetDateValidation();
-          isEmailVerified = false;
-          verificationCodeSent = false;
-          verificationCodeContainer?.classList.add('hidden');
-          verificationCode.value = '';
-          if (verificationStatus) verificationStatus.textContent = '';
-          if (emailValidationStatus) {
-            emailValidationStatus.textContent = '';
-            emailValidationStatus.className = 'mt-1 text-sm';
-          }
-          clearTimers();
-          if (sendVerificationCode) sendVerificationCode.textContent = 'Send Code';
-          if (scheduleEmail) {
-            scheduleEmail.disabled = false;
-            scheduleEmail.classList.remove('opacity-50', 'cursor-not-allowed');
-          }
-          if (sendVerificationCode) {
-            sendVerificationCode.disabled = false;
-            sendVerificationCode.classList.remove('opacity-50', 'cursor-not-allowed');
-          }
-          currentCode = null;
-          enableVerificationInputs();
-          isScheduling = false;
-          // Hide error modal if it exists (fix for stale error modal)
-          const errorModal = document.getElementById('scheduleErrorConfirmationModal');
-          if (errorModal) {
-            errorModal.classList.add('hidden');
-          }
-          setTimeout(() => { window.location.reload(); }, 1000);
-          return; // <--- Ensure we return here so catch is not triggered after success
-        } else {
-          // Schedule visit for single place
-          const { data: visitData, error: scheduleError } = await supabase.rpc('schedule_visit', {
-            p_visitor_first_name: firstName,
-            p_visitor_last_name: lastName,
-            p_visitor_email: email,
-            p_visitor_phone: phone,
-            p_place_ids: [placeToVisit],
-            p_visit_date: visitDate,
-            p_purpose: purpose === 'other' ? otherPurpose : purpose,
-            p_other_purpose: purpose === 'other' ? otherPurpose : null,
-            p_visitor_user_id: visitorUserId
-          });
+        // Show confirmation modal instead of directly scheduling
+        console.log('About to show confirmation modal with data:', {
+          firstName,
+          lastName,
+          email,
+          phone,
+          visitDate,
+          placeToVisit,
+          purpose,
+          otherPurpose,
+          visitorUserId
+        });
+        
+        showVisitConfirmationModal({
+          firstName,
+          lastName,
+          email,
+          phone,
+          visitDate,
+          placeToVisit,
+          purpose,
+          otherPurpose,
+          visitorUserId
+        });
 
-          if (scheduleError) {
-            // Handle specific database validation errors
-            if (scheduleError.message.includes('Maximum of 2 visits per week allowed per user account')) {
-              throw new Error('Weekly visit limit exceeded. You can only schedule 2 visits per week per user account.');
-            } else if (scheduleError.message.includes('Maximum of 2 visits per week allowed per email address')) {
-              throw new Error('Weekly visit limit exceeded. You can only schedule 2 visits per week per email address.');
-            } else if (scheduleError.message.includes('Cannot schedule visits for past dates')) {
-              throw new Error('Cannot schedule visits for past dates. Please select today or a future date.');
-            } else if (scheduleError.message.includes('Cannot schedule visits more than 1 month in advance')) {
-              throw new Error('Cannot schedule visits more than 1 month in advance. Please select a date within the next month.');
-            } else if (scheduleError.message.includes('Only users with visitor role can schedule visits')) {
-              throw new Error('Only visitors can schedule visits. Please contact an administrator if you need access.');
-            } else {
-              throw new Error(`Scheduling failed: ${scheduleError.message}`);
-            }
-          }
-        }
-        // Show success message only if no error
-        showNotification('Visit scheduled successfully! You will receive a confirmation email shortly.', 'success');
-        // Close modal and reset form
-        const modal = document.getElementById('scheduleModal');
-        if (modal) {
-          modal.classList.add('hidden');
-        }
-        scheduleForm.reset();
-        resetDateValidation();
-        isEmailVerified = false;
-        verificationCodeSent = false;
-        verificationCodeContainer?.classList.add('hidden');
-        verificationCode.value = '';
-        if (verificationStatus) verificationStatus.textContent = '';
-        if (emailValidationStatus) {
-          emailValidationStatus.textContent = '';
-          emailValidationStatus.className = 'mt-1 text-sm';
-        }
-        clearTimers();
-        if (sendVerificationCode) sendVerificationCode.textContent = 'Send Code';
-        if (scheduleEmail) {
-          scheduleEmail.disabled = false;
-          scheduleEmail.classList.remove('opacity-50', 'cursor-not-allowed');
-        }
-        if (sendVerificationCode) {
-          sendVerificationCode.disabled = false;
-          sendVerificationCode.classList.remove('opacity-50', 'cursor-not-allowed');
-        }
-        currentCode = null;
-        enableVerificationInputs();
+        // Reset scheduling flag since we're not actually scheduling yet
         isScheduling = false;
-        // Hide error modal if it exists (fix for stale error modal)
-        const errorModal = document.getElementById('scheduleErrorConfirmationModal');
-        if (errorModal) {
-          errorModal.classList.add('hidden');
-        }
-        setTimeout(() => { window.location.reload(); }, 1000);
-        return; // <--- Ensure we return here so catch is not triggered after success
       } catch (error: any) {
         if (error && (error.message === '__SILENT_SUCCESS__' || error === '__SILENT_SUCCESS__')) return;
         console.error('Error scheduling visit:', error);
@@ -1175,8 +1038,8 @@ export async function setupEventListeners() {
       philippineToday = getPhilippineDate();
     }
     
-    philippineMaxDate = new Date(philippineToday);
-    philippineMaxDate.setMonth(philippineMaxDate.getMonth() + 1);
+    // Set max date to the last day of the current month
+    philippineMaxDate = new Date(philippineToday.getFullYear(), philippineToday.getMonth() + 1, 0);
 
     // Set min and max dates
     visitDateInput.min = philippineToday.toISOString().split('T')[0];
@@ -1247,11 +1110,11 @@ export async function setupEventListeners() {
         return false;
       }
 
-      // Check if date is more than 1 month in the future
+      // Check if date is beyond the current month
       if (philippineSelectedDate.getTime() > philippineMaxDate.getTime()) {
         visitDateInput.classList.add('border-red-500', 'focus:border-red-500');
         if (dateValidationStatus) {
-          dateValidationStatus.textContent = `❌ Cannot schedule more than 1 month in advance. Maximum allowed date is ${philippineMaxDate.toLocaleDateString()}.`;
+          dateValidationStatus.textContent = `❌ Cannot schedule beyond the current month. Maximum allowed date is ${philippineMaxDate.toLocaleDateString()}.`;
           dateValidationStatus.className = 'mt-1 text-sm text-red-600 font-medium';
         }
         return false;
@@ -1488,172 +1351,95 @@ export async function setupEventListeners() {
         philippineToday = getPhilippineDate();
       }
       
-      // Calculate the week boundaries (Sunday to Saturday)
+      // Calculate the week boundaries (Sunday to Saturday) - same as home page
       const weekStart = new Date(philippineToday);
-      weekStart.setDate(philippineToday.getDate() - philippineToday.getDay());
+      const dayOfWeek = weekStart.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      const daysToSubtract = dayOfWeek; // Days to go back to Sunday
+      weekStart.setDate(philippineToday.getDate() - daysToSubtract);
       weekStart.setHours(0, 0, 0, 0);
       
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 6);
       weekEnd.setHours(23, 59, 59, 999);
 
-      // Calculate previous week boundaries
-      const prevWeekStart = new Date(weekStart);
-      prevWeekStart.setDate(weekStart.getDate() - 7);
-      prevWeekStart.setHours(0, 0, 0, 0);
-      const prevWeekEnd = new Date(prevWeekStart);
-      prevWeekEnd.setDate(prevWeekStart.getDate() + 6);
-      prevWeekEnd.setHours(23, 59, 59, 999);
-
-      // Calculate next week boundaries
-      const nextWeekStart = new Date(weekStart);
-      nextWeekStart.setDate(weekStart.getDate() + 7);
-      nextWeekStart.setHours(0, 0, 0, 0);
-      const nextWeekEnd = new Date(nextWeekStart);
-      nextWeekEnd.setDate(nextWeekStart.getDate() + 6);
-      nextWeekEnd.setHours(23, 59, 59, 999);
-
-      // Calculate end of current month
-      const endOfMonth = new Date(philippineToday.getFullYear(), philippineToday.getMonth() + 1, 0);
-      endOfMonth.setHours(23, 59, 59, 999);
-
       // Query the database for all pending, completed, and completed_flagged visits for the current week
+      // Use the same logic as home page - only current week visits matter
       const { data: visits, error } = await supabase
         .from('scheduled_visits')
         .select('visit_date, status')
-        .eq('visitor_user_id', user.id)
-        .in('status', ['pending', 'completed', 'completed_flagged'])
-        .gte('visit_date', weekStart.toISOString())
-        .lte('visit_date', weekEnd.toISOString());
-
-      // Query the database for all pending, completed, and completed_flagged visits for the previous week
-      const { data: prevWeekVisits, error: prevWeekError } = await supabase
-        .from('scheduled_visits')
-        .select('visit_date, status')
-        .eq('visitor_user_id', user.id)
-        .in('status', ['pending', 'completed', 'completed_flagged'])
-        .gte('visit_date', prevWeekStart.toISOString())
-        .lte('visit_date', prevWeekEnd.toISOString());
-
-      // Query for future schedules (next week and beyond within the month)
-      const { data: futureVisits, error: futureError } = await supabase
-        .from('scheduled_visits')
-        .select('visit_date, status')
-        .eq('visitor_user_id', user.id)
-        .in('status', ['pending', 'completed', 'completed_flagged'])
-        .gte('visit_date', nextWeekStart.toISOString())
-        .lte('visit_date', endOfMonth.toISOString());
+        .or(`visitor_user_id.eq.${user.id},visitor_email.eq.${user.email}`)
+        .in('status', ['pending', 'completed', 'completed_flagged']);
 
       if (error) {
         console.error('Error loading weekly visit count for modal:', error);
         return;
       }
-      if (prevWeekError) {
-        console.error('Error loading previous week visits for modal:', prevWeekError);
-      }
-      if (futureError) {
-        console.error('Error loading future visits for modal:', futureError);
-      }
 
-      // Count the pending, completed, and completed_flagged visits for the current week
-      const visitCount = visits?.length || 0;
-      const pendingCount = visits?.filter(v => v.status === 'pending').length || 0;
-      const completedCount = visits?.filter(v => v.status === 'completed').length || 0;
-      const completedFlaggedCount = visits?.filter(v => v.status === 'completed_flagged').length || 0;
+      // Filter visits in JavaScript to ensure proper date comparison (same as home page)
+      const currentWeekVisits = visits?.filter(visit => {
+        const visitDate = new Date(visit.visit_date);
+        return visitDate >= weekStart && visitDate <= weekEnd;
+      }) || [];
 
-      // Count the pending, completed, and completed_flagged visits for the previous week
-      const prevPendingCount = prevWeekVisits?.filter(v => v.status === 'pending').length || 0;
-      const prevCompletedCount = prevWeekVisits?.filter(v => v.status === 'completed').length || 0;
-      const prevCompletedFlaggedCount = prevWeekVisits?.filter(v => v.status === 'completed_flagged').length || 0;
-      const prevTotalCount = prevWeekVisits?.length || 0;
+      // Count the visits for current week only
+      const visitCount = currentWeekVisits.length;
+      const pendingCount = currentWeekVisits.filter(v => v.status === 'pending').length;
+      const completedCount = currentWeekVisits.filter(v => v.status === 'completed').length;
+      const completedFlaggedCount = currentWeekVisits.filter(v => v.status === 'completed_flagged').length;
+      const totalCompletedSchedules = completedCount + completedFlaggedCount;
 
-      // Count future visits
-      const futureVisitCount = futureVisits?.length || 0;
+      // Calculate remaining visits for this week (same logic as home page)
+      const remainingVisits = Math.max(0, 2 - visitCount);
 
-      // NEW LOGIC: Determine refresh slots based on previous week AND future schedules
-      let refreshSlots = 2; // default: allow 2 visits
-      // First, check previous week logic
-      if (prevTotalCount > 0) {
-        const prevCompletedTotal = prevCompletedCount + prevCompletedFlaggedCount;
-        if (prevPendingCount === 2) {
-          refreshSlots = 0; // 2 pending = no refresh
-        } else if (prevPendingCount === 1 && prevCompletedTotal === 1) {
-          refreshSlots = 1; // 1 pending, 1 completed (including flagged) = 1 refresh
-        } else if (prevPendingCount === 0 && prevCompletedTotal === 2) {
-          refreshSlots = 2; // 2 completed (including flagged) = 2 refresh
+      // Format the week range for display (same as home page)
+      const weekStartMonth = weekStart.toLocaleString('en-US', { month: 'short' });
+      const weekStartDay = weekStart.getDate();
+      const weekEndMonth = weekEnd.toLocaleString('en-US', { month: 'short' });
+      const weekEndDay = weekEnd.getDate();
+      const weekYear = weekEnd.getFullYear();
+      let weekRangeStr = '';
+      if (weekStartMonth === weekEndMonth) {
+        weekRangeStr = `${weekStartMonth} ${weekStartDay}-${weekEndDay}, ${weekYear}`;
         } else {
-          // For any other combination (e.g., only 1 visit last week)
-          refreshSlots = 2 - prevPendingCount; // e.g., 1 completed, 0 pending = 1 refresh
-        }
+        weekRangeStr = `${weekStartMonth} ${weekStartDay} - ${weekEndMonth} ${weekEndDay}, ${weekYear}`;
       }
 
-      // Then, check if user has future schedules that would limit current week
-      if (futureVisitCount > 0) {
-        // If user has future schedules, they should only get 1 refresh slot
-        // This ensures they don't use up all their visits before reaching their scheduled dates
-        refreshSlots = Math.min(refreshSlots, 1);
-      }
-
-      // Calculate remaining visits for this week
-      const remainingVisits = Math.max(0, refreshSlots - visitCount);
-
-      // Debug logging
-      console.log('Modal Weekly Visit Count Debug:', {
-        userId: user.id,
-        visitsFound: visits,
-        visitCount: visitCount,
-        refreshSlots: refreshSlots,
-        remainingVisits: remainingVisits,
-        futureVisitCount: futureVisitCount,
-        query: {
-          table: 'scheduled_visits',
-          filters: {
-            visitor_user_id: user.id,
-            status_in: ['pending', 'completed']
-          }
-        }
-      });
-
-      let statusText = '';
-      let statusColor = '';
-      
-      if (refreshSlots === 0) {
-        statusText = 'No new visits allowed until previous week is cleared';
-        statusColor = 'text-gray-600 dark:text-gray-400';
-      } else if (remainingVisits === 2) {
-        statusText = '2 visits remaining';
-        statusColor = 'text-green-600 dark:text-green-400';
+      // Create status display (same as home page)
+      let statusHtml = '';
+      if (remainingVisits === 2) {
+        const completedText = completedFlaggedCount > 0 ? `${totalCompletedSchedules} completed (${completedFlaggedCount} flagged)` : `${totalCompletedSchedules} completed`;
+        statusHtml = `<span class="font-medium text-green-600 dark:text-green-400">2 visits remaining</span> (${pendingCount} pending this week, ${completedText})`;
       } else if (remainingVisits === 1) {
-        statusText = '1 visit remaining';
-        statusColor = 'text-yellow-600 dark:text-yellow-400';
+        const completedText = completedFlaggedCount > 0 ? `${totalCompletedSchedules} completed (${completedFlaggedCount} flagged)` : `${totalCompletedSchedules} completed`;
+        statusHtml = `<span class="font-medium text-yellow-600 dark:text-yellow-400">1 visit remaining</span> (${pendingCount} pending this week, ${completedText})`;
       } else {
-        statusText = 'No visits remaining';
-        statusColor = 'text-red-600 dark:text-red-400';
+        const completedText = completedFlaggedCount > 0 ? `${totalCompletedSchedules} completed (${completedFlaggedCount} flagged)` : `${totalCompletedSchedules} completed`;
+        statusHtml = `<span class="font-medium text-red-600 dark:text-red-400">No visits remaining</span> (${pendingCount} pending this week, ${completedText})`;
       }
 
-      // Create the weekly visit count display
+      // Create the weekly visit count display (same styling as home page)
       const weeklyVisitDiv = document.createElement('div');
       weeklyVisitDiv.id = 'modalWeeklyVisitCount';
-      weeklyVisitDiv.className = 'mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md';
-      
-      const completedText = completedFlaggedCount > 0 ? `${completedCount + completedFlaggedCount} completed (${completedFlaggedCount} flagged)` : `${completedCount} completed`;
-      let weekText = `(${pendingCount} pending, ${completedText})`;
-      if (futureVisitCount > 0) {
-        weekText += ` • ${futureVisitCount} future schedule(s)`;
-      }
+      weeklyVisitDiv.className = 'mt-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4';
       
       weeklyVisitDiv.innerHTML = `
-        <div class="flex items-center text-sm">
-          <svg class="h-4 w-4 text-blue-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
-          <span class="font-medium ${statusColor}">${statusText}</span>
-          <span class="text-gray-600 dark:text-gray-400 ml-1">
-            ${weekText}
-          </span>
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-blue-800 dark:text-blue-200">
+              Weekly Visit Status
+            </h3>
+            <div class="mt-1 text-sm text-blue-700 dark:text-blue-300">
+              <span class="block font-semibold">Week of ${weekRangeStr}</span>${statusHtml}
         </div>
         <div class="mt-1 text-xs text-blue-600 dark:text-blue-400">
           Maximum 2 visits per week per user account
+            </div>
+          </div>
         </div>
       `;
 
@@ -1724,234 +1510,52 @@ export async function setupEventListeners() {
         philippineToday = getPhilippineDate();
       }
       
-      // Calculate the week boundaries (Sunday to Saturday)
+      // Calculate the week boundaries (Sunday to Saturday) - same as home page
       const weekStart = new Date(philippineToday);
-      weekStart.setDate(philippineToday.getDate() - philippineToday.getDay());
+      const dayOfWeek = weekStart.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      const daysToSubtract = dayOfWeek; // Days to go back to Sunday
+      weekStart.setDate(philippineToday.getDate() - daysToSubtract);
       weekStart.setHours(0, 0, 0, 0);
       
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 6);
       weekEnd.setHours(23, 59, 59, 999);
 
-      // Calculate previous week boundaries
-      const prevWeekStart = new Date(weekStart);
-      prevWeekStart.setDate(weekStart.getDate() - 7);
-      prevWeekStart.setHours(0, 0, 0, 0);
-      const prevWeekEnd = new Date(prevWeekStart);
-      prevWeekEnd.setDate(prevWeekStart.getDate() + 6);
-      prevWeekEnd.setHours(23, 59, 59, 999);
-
-      // Calculate next week boundaries
-      const nextWeekStart = new Date(weekStart);
-      nextWeekStart.setDate(weekStart.getDate() + 7);
-      nextWeekStart.setHours(0, 0, 0, 0);
-      const nextWeekEnd = new Date(nextWeekStart);
-      nextWeekEnd.setDate(nextWeekStart.getDate() + 6);
-      nextWeekEnd.setHours(23, 59, 59, 999);
-
-      // Calculate end of current month
-      const endOfMonth = new Date(philippineToday.getFullYear(), philippineToday.getMonth() + 1, 0);
-      endOfMonth.setHours(23, 59, 59, 999);
-
-      // Query for ALL pending visits (including future weeks) for this user
-      const { data: allPendingVisits, error: allPendingError } = await supabase
-        .from('scheduled_visits')
-        .select('visit_date, status')
-        .or(`visitor_user_id.eq.${user.id},visitor_email.eq.${user.email}`)
-        .eq('status', 'pending');
-
       // Query the database for all pending, completed, and completed_flagged visits for the current week
+      // Use the same logic as home page - only current week visits matter
       const { data: visits, error } = await supabase
         .from('scheduled_visits')
         .select('visit_date, status')
         .or(`visitor_user_id.eq.${user.id},visitor_email.eq.${user.email}`)
-        .in('status', ['pending', 'completed', 'completed_flagged'])
-        .gte('visit_date', weekStart.toISOString())
-        .lte('visit_date', weekEnd.toISOString());
-
-      // Query the database for all pending, completed, and completed_flagged visits for the previous week
-      const { data: prevWeekVisits, error: prevWeekError } = await supabase
-        .from('scheduled_visits')
-        .select('visit_date, status')
-        .or(`visitor_user_id.eq.${user.id},visitor_email.eq.${user.email}`)
-        .in('status', ['pending', 'completed', 'completed_flagged'])
-        .gte('visit_date', prevWeekStart.toISOString())
-        .lte('visit_date', prevWeekEnd.toISOString());
-
-      // Query for future schedules (next week and beyond within the month)
-      const { data: futureVisits, error: futureError } = await supabase
-        .from('scheduled_visits')
-        .select('visit_date, status')
-        .or(`visitor_user_id.eq.${user.id},visitor_email.eq.${user.email}`)
-        .eq('status', 'pending')
-        .gte('visit_date', nextWeekStart.toISOString())
-        .lte('visit_date', endOfMonth.toISOString());
+        .in('status', ['pending', 'completed', 'completed_flagged']);
 
       if (error) {
         console.error('Error refreshing weekly visit count for modal:', error);
         return;
       }
-      if (allPendingError) {
-        console.error('Error loading all pending visits for modal:', allPendingError);
-      }
-      if (prevWeekError) {
-        console.error('Error loading previous week visits for modal:', prevWeekError);
-      }
-      if (futureError) {
-        console.error('Error loading future visits for modal:', futureError);
-      }
 
-      // Count the pending, completed, and completed_flagged visits for the current week
-      const visitCount = visits?.length || 0;
-      const pendingCount = visits?.filter(v => v.status === 'pending').length || 0;
-      const completedCount = visits?.filter(v => v.status === 'completed').length || 0;
-      const completedFlaggedCount = visits?.filter(v => v.status === 'completed_flagged').length || 0;
-
-      // Count the pending, completed, and completed_flagged visits for the previous week
-      const prevPendingCount = prevWeekVisits?.filter(v => v.status === 'pending').length || 0;
-      const prevCompletedCount = prevWeekVisits?.filter(v => v.status === 'completed').length || 0;
-      const prevCompletedFlaggedCount = prevWeekVisits?.filter(v => v.status === 'completed_flagged').length || 0;
-      const prevTotalCount = prevWeekVisits?.length || 0;
-
-      // Count future visits
-      const futureVisitCount = futureVisits?.length || 0;
-      
-      // Count ALL pending visits (including future weeks)
-      const totalPendingCount = allPendingVisits?.length || 0;
-
-      // NEW LOGIC: Calculate weekly visit counts for all weeks that have pending schedules
-      // This will help users understand their scheduling status across all weeks
-      const weeklyVisitCounts = new Map();
-      
-      // Process all pending visits to group them by week
-      if (allPendingVisits) {
-        allPendingVisits.forEach(visit => {
+      // Filter visits in JavaScript to ensure proper date comparison (same as home page)
+      const currentWeekVisits = visits?.filter(visit => {
           const visitDate = new Date(visit.visit_date);
-          const weekStart = new Date(visitDate);
-          const dayOfWeek = weekStart.getDay();
-          const daysToSubtract = dayOfWeek;
-          weekStart.setDate(visitDate.getDate() - daysToSubtract);
-          weekStart.setHours(0, 0, 0, 0);
-          
-          const weekKey = weekStart.toISOString().split('T')[0];
-          
-          if (!weeklyVisitCounts.has(weekKey)) {
-            weeklyVisitCounts.set(weekKey, {
-              weekStart: weekStart,
-              pending: 0,
-              completed: 0,
-              completedFlagged: 0,
-              total: 0
-            });
-          }
-          
-          const weekData = weeklyVisitCounts.get(weekKey);
-          if (visit.status === 'pending') {
-            weekData.pending++;
-          } else if (visit.status === 'completed') {
-            weekData.completed++;
-          } else if (visit.status === 'completed_flagged') {
-            weekData.completedFlagged++;
-          }
-          weekData.total++;
-        });
-      }
-      
-      // Also add current week completed visits to the map
-      if (visits) {
-        const currentWeekKey = weekStart.toISOString().split('T')[0];
-        if (!weeklyVisitCounts.has(currentWeekKey)) {
-          weeklyVisitCounts.set(currentWeekKey, {
-            weekStart: weekStart,
-            pending: 0,
-            completed: 0,
-            completedFlagged: 0,
-            total: 0
-          });
-        }
-        
-        const currentWeekData = weeklyVisitCounts.get(currentWeekKey);
-        visits.forEach(visit => {
-          if (visit.status === 'pending') {
-            currentWeekData.pending++;
-          } else if (visit.status === 'completed') {
-            currentWeekData.completed++;
-          } else if (visit.status === 'completed_flagged') {
-            currentWeekData.completedFlagged++;
-          }
-          currentWeekData.total++;
-        });
-      }
+        return visitDate >= weekStart && visitDate <= weekEnd;
+      }) || [];
 
-      // Calculate remaining visits for this week (based on current week visits only)
-      // This ensures that completed visits from previous weeks don't limit current week scheduling
+      // Count the visits for current week only
+      const visitCount = currentWeekVisits.length;
+      const pendingCount = currentWeekVisits.filter(v => v.status === 'pending').length;
+      const completedCount = currentWeekVisits.filter(v => v.status === 'completed').length;
+      const completedFlaggedCount = currentWeekVisits.filter(v => v.status === 'completed_flagged').length;
+      const totalCompletedSchedules = completedCount + completedFlaggedCount;
+
+      // Calculate remaining visits for this week (same logic as home page)
       const remainingVisits = Math.max(0, 2 - visitCount);
 
-      // Debug logging
-      console.log('Refresh Modal Weekly Visit Count Debug:', {
-        userId: user.id,
-        visitsFound: visits,
-        visitCount: visitCount,
-        remainingVisits: remainingVisits,
-        totalPendingCount: totalPendingCount,
-        futureVisitCount: futureVisitCount,
-        weeklyVisitCounts: Array.from(weeklyVisitCounts.entries()).map(([weekKey, data]) => ({
-          week: weekKey,
-          ...data
-        })),
-        query: {
-          table: 'scheduled_visits',
-          filters: {
-            visitor_user_id: user.id,
-            status_in: ['pending', 'completed']
-          }
-        }
-      });
-
-      let statusText = '';
-      let statusColor = '';
-      
-      if (remainingVisits === 2) {
-        statusText = '2 visits remaining';
-        statusColor = 'text-green-600 dark:text-green-400';
-      } else if (remainingVisits === 1) {
-        statusText = '1 visit remaining';
-        statusColor = 'text-yellow-600 dark:text-yellow-400';
-      } else {
-        statusText = 'No visits remaining';
-        statusColor = 'text-red-600 dark:text-red-400';
-      }
-
-      // Completely recreate the modal content to prevent duplicates
-      const completedText = completedFlaggedCount > 0 ? `${completedCount + completedFlaggedCount} completed (${completedFlaggedCount} flagged)` : `${completedCount} completed`;
-      let weekText = `(${pendingCount} pending, ${completedText})`;
-      
-      // Add information about future weeks with pending schedules
-      let futureText = '';
-      const sortedWeeks = Array.from(weeklyVisitCounts.entries()).sort(([a], [b]) => {
-        const dateA = new Date(a);
-        const dateB = new Date(b);
-        return dateA.getTime() - dateB.getTime();
-      });
-      
-      const currentWeekKey = weekStart.toISOString().split('T')[0];
-      const futureWeeksWithSchedules = sortedWeeks.filter(([weekKey]) => weekKey !== currentWeekKey);
-      
-      if (futureWeeksWithSchedules.length > 0) {
-        futureText = '<div class="mt-1 text-xs text-blue-600 dark:text-blue-400">';
-        futureText += '<strong>Future weeks with schedules:</strong><br>';
-        
-        futureWeeksWithSchedules.forEach(([weekKey, weekData]) => {
-          const weekStartDate = new Date(weekKey);
-          const weekEndDate = new Date(weekStartDate);
-          weekEndDate.setDate(weekStartDate.getDate() + 6);
-          
-          const weekStartMonth = weekStartDate.toLocaleString('en-US', { month: 'short' });
-          const weekStartDay = weekStartDate.getDate();
-          const weekEndMonth = weekEndDate.toLocaleString('en-US', { month: 'short' });
-          const weekEndDay = weekEndDate.getDate();
-          const weekYear = weekEndDate.getFullYear();
-          
+      // Format the week range for display (same as home page)
+      const weekStartMonth = weekStart.toLocaleString('en-US', { month: 'short' });
+      const weekStartDay = weekStart.getDate();
+      const weekEndMonth = weekEnd.toLocaleString('en-US', { month: 'short' });
+      const weekEndDay = weekEnd.getDate();
+      const weekYear = weekEnd.getFullYear();
           let weekRangeStr = '';
           if (weekStartMonth === weekEndMonth) {
             weekRangeStr = `${weekStartMonth} ${weekStartDay}-${weekEndDay}, ${weekYear}`;
@@ -1959,28 +1563,38 @@ export async function setupEventListeners() {
             weekRangeStr = `${weekStartMonth} ${weekStartDay} - ${weekEndMonth} ${weekEndDay}, ${weekYear}`;
           }
           
-          const remainingInWeek = Math.max(0, 2 - weekData.total);
-          const statusColor = remainingInWeek === 2 ? 'text-green-600' : remainingInWeek === 1 ? 'text-yellow-600' : 'text-red-600';
-          
-          futureText += `• Week of ${weekRangeStr}: <span class="${statusColor}">${remainingInWeek} visits remaining</span> (${weekData.pending} pending)<br>`;
-        });
-        
-        futureText += '</div>';
+      // Create status display (same as home page)
+      let statusHtml = '';
+      if (remainingVisits === 2) {
+        const completedText = completedFlaggedCount > 0 ? `${totalCompletedSchedules} completed (${completedFlaggedCount} flagged)` : `${totalCompletedSchedules} completed`;
+        statusHtml = `<span class="font-medium text-green-600 dark:text-green-400">2 visits remaining</span> (${pendingCount} pending this week, ${completedText})`;
+      } else if (remainingVisits === 1) {
+        const completedText = completedFlaggedCount > 0 ? `${totalCompletedSchedules} completed (${completedFlaggedCount} flagged)` : `${totalCompletedSchedules} completed`;
+        statusHtml = `<span class="font-medium text-yellow-600 dark:text-yellow-400">1 visit remaining</span> (${pendingCount} pending this week, ${completedText})`;
+      } else {
+        const completedText = completedFlaggedCount > 0 ? `${totalCompletedSchedules} completed (${completedFlaggedCount} flagged)` : `${totalCompletedSchedules} completed`;
+        statusHtml = `<span class="font-medium text-red-600 dark:text-red-400">No visits remaining</span> (${pendingCount} pending this week, ${completedText})`;
       }
-      
+
+      // Update the display (same styling as home page)
       modalWeeklyVisitCount.innerHTML = `
-        <div class="flex items-center text-sm">
-          <svg class="h-4 w-4 text-blue-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
-          <span class="font-medium ${statusColor}">${statusText}</span>
-          <span class="text-gray-600 dark:text-gray-400 ml-1">
-            ${weekText}
-          </span>
         </div>
-        ${futureText}
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-blue-800 dark:text-blue-200">
+              Weekly Visit Status
+            </h3>
+            <div class="mt-1 text-sm text-blue-700 dark:text-blue-300">
+              <span class="block font-semibold">Week of ${weekRangeStr}</span>${statusHtml}
+            </div>
         <div class="mt-1 text-xs text-blue-600 dark:text-blue-400">
           Maximum 2 visits per week per user account
+            </div>
+          </div>
         </div>
       `;
 
@@ -2230,3 +1844,352 @@ export async function setupEventListeners() {
     }
   }, 500);
 } 
+
+// Interface for visit confirmation data
+interface VisitConfirmationData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  visitDate: string;
+  placeToVisit: string;
+  purpose: string;
+  otherPurpose: string;
+  visitorUserId: string | null;
+}
+
+// Function to show the visit confirmation modal
+export function showVisitConfirmationModal(data: VisitConfirmationData) {
+  console.log('showVisitConfirmationModal called with data:', data);
+  const modal = document.getElementById('visitConfirmationModal');
+  console.log('Modal element found:', !!modal);
+  if (!modal) {
+    console.error('Confirmation modal not found in DOM');
+    return;
+  }
+
+  // Ensure visitorUserId is properly handled before storing
+  const cleanData = {
+    ...data,
+    visitorUserId: (data.visitorUserId && data.visitorUserId.trim() !== '') ? data.visitorUserId : null
+  };
+  
+  console.log('showVisitConfirmationModal - Original data:', data);
+  console.log('showVisitConfirmationModal - Cleaned data:', cleanData);
+  
+  // Store the data in the modal for later use
+  (modal as any).visitData = cleanData;
+
+  // Get place names for display
+  let placesText = '';
+  if (data.placeToVisit === 'multiple') {
+    const selectedPlaces = Array.from(document.querySelectorAll('input[name="places"]:checked'))
+      .map((checkbox) => {
+        const label = document.querySelector(`label[for="${(checkbox as HTMLInputElement).id}"]`);
+        return label?.textContent?.trim() || (checkbox as HTMLInputElement).value;
+      });
+    placesText = selectedPlaces.join(', ');
+  } else {
+    const placeSelect = document.getElementById('placeToVisit') as HTMLSelectElement;
+    const selectedOption = placeSelect?.options[placeSelect.selectedIndex];
+    placesText = selectedOption?.textContent?.trim() || data.placeToVisit;
+  }
+
+  // Format the visit date for display
+  const visitDate = new Date(data.visitDate);
+  const formattedDate = visitDate.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+
+  // Format the purpose for display
+  const purposeText = data.purpose === 'other' ? data.otherPurpose : data.purpose;
+
+  // Update the confirmation modal with the visit details
+  const confirmationName = document.getElementById('confirmationName');
+  const confirmationEmail = document.getElementById('confirmationEmail');
+  const confirmationPhone = document.getElementById('confirmationPhone');
+  const confirmationDate = document.getElementById('confirmationDate');
+  const confirmationPlaces = document.getElementById('confirmationPlaces');
+  const confirmationPurpose = document.getElementById('confirmationPurpose');
+
+  if (confirmationName) confirmationName.textContent = `${data.firstName} ${data.lastName}`;
+  if (confirmationEmail) confirmationEmail.textContent = data.email;
+  if (confirmationPhone) confirmationPhone.textContent = `+63${data.phone}`;
+  if (confirmationDate) confirmationDate.textContent = formattedDate;
+  if (confirmationPlaces) confirmationPlaces.textContent = placesText;
+  if (confirmationPurpose) confirmationPurpose.textContent = purposeText;
+
+  // Reset the agreement checkbox
+  const agreementCheckbox = document.getElementById('visitAgreement') as HTMLInputElement;
+  if (agreementCheckbox) {
+    agreementCheckbox.checked = false;
+  }
+
+  // Disable the confirm button initially
+  const confirmBtn = document.getElementById('confirmScheduleBtn') as HTMLButtonElement;
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+  }
+
+  // Show the modal
+  modal.classList.remove('hidden');
+  
+  // Set up event listeners for this modal instance
+  setupConfirmationModalEventListeners();
+}
+
+// Function to handle the actual visit scheduling
+async function scheduleVisitFromConfirmation(data: VisitConfirmationData) {
+  const confirmBtn = document.getElementById('confirmScheduleBtn') as HTMLButtonElement;
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Scheduling...';
+  }
+
+  try {
+    let placeIds: string[];
+    
+    if (data.placeToVisit === 'multiple') {
+      placeIds = Array.from(document.querySelectorAll('input[name="places"]:checked'))
+        .map((checkbox) => (checkbox as HTMLInputElement).value);
+    } else {
+      placeIds = [data.placeToVisit];
+    }
+
+    // Ensure visitorUserId is properly handled - convert empty string to null
+    const visitorUserId = data.visitorUserId && data.visitorUserId.trim() !== '' ? data.visitorUserId : null;
+    
+    console.log('Scheduling visit with data:', {
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+      phone: data.phone,
+      placeIds,
+      visitDate: data.visitDate,
+      purpose: data.purpose === 'other' ? data.otherPurpose : data.purpose,
+      otherPurpose: data.purpose === 'other' ? data.otherPurpose : null,
+      visitorUserId
+    });
+
+    // Call the schedule_visit function
+    const { data: visitData, error: scheduleError } = await supabase.rpc('schedule_visit', {
+      p_visitor_first_name: data.firstName,
+      p_visitor_last_name: data.lastName,
+      p_visitor_email: data.email,
+      p_visitor_phone: data.phone,
+      p_place_ids: placeIds,
+      p_visit_date: data.visitDate,
+      p_purpose: data.purpose === 'other' ? data.otherPurpose : data.purpose,
+      p_other_purpose: data.purpose === 'other' ? data.otherPurpose : null,
+      p_visitor_user_id: visitorUserId
+    });
+
+    if (scheduleError) {
+      // Handle specific database validation errors
+      if (scheduleError.message.includes('Maximum of 2 visits per week allowed per user account')) {
+        throw new Error('Weekly visit limit exceeded. You can only schedule 2 visits per week per user account.');
+      } else if (scheduleError.message.includes('Maximum of 2 visits per week allowed per email address')) {
+        throw new Error('Weekly visit limit exceeded. You can only schedule 2 visits per week per email address.');
+      } else if (scheduleError.message.includes('Cannot schedule visits for past dates')) {
+        throw new Error('Cannot schedule visits for past dates. Please select today or a future date.');
+      } else if (scheduleError.message.includes('Cannot schedule visits more than 1 month in advance')) {
+        throw new Error('Cannot schedule visits beyond the current month. Please select a date within this month.');
+      } else if (scheduleError.message.includes('Only users with visitor role can schedule visits')) {
+        throw new Error('Only visitors can schedule visits. Please contact an administrator if you need access.');
+      } else if (scheduleError.message.includes('You already have a scheduled visit on this date.')) {
+        throw new Error('You already have a scheduled visit on this date. Please choose a different date.');
+      } else {
+        throw new Error(`Scheduling failed: ${scheduleError.message}`);
+      }
+    }
+
+    // Show success message
+    showNotification('Visit scheduled successfully! You will receive a confirmation email shortly.', 'success');
+    
+    // Close both modals
+    const confirmationModal = document.getElementById('visitConfirmationModal');
+    const scheduleModal = document.getElementById('scheduleModal');
+    
+    if (confirmationModal) {
+      confirmationModal.classList.add('hidden');
+    }
+    if (scheduleModal) {
+      scheduleModal.classList.add('hidden');
+    }
+
+    // Reset the schedule form
+    const scheduleForm = document.getElementById('scheduleForm') as HTMLFormElement;
+    if (scheduleForm) {
+      scheduleForm.reset();
+    }
+
+    // Reset form state
+    resetDateValidation();
+    isEmailVerified = false;
+    verificationCodeSent = false;
+    const verificationCodeContainer = document.getElementById('verificationCodeContainer');
+    const verificationCode = document.getElementById('verificationCode') as HTMLInputElement;
+    const verificationStatus = document.getElementById('verificationStatus');
+    const emailValidationStatus = document.getElementById('emailValidationStatus');
+    const sendVerificationCode = document.getElementById('sendVerificationCode');
+    const scheduleEmail = document.getElementById('scheduleEmail') as HTMLInputElement;
+
+    if (verificationCodeContainer) verificationCodeContainer.classList.add('hidden');
+    if (verificationCode) verificationCode.value = '';
+    if (verificationStatus) verificationStatus.textContent = '';
+    if (emailValidationStatus) {
+      emailValidationStatus.textContent = '';
+      emailValidationStatus.className = 'mt-1 text-sm';
+    }
+    clearTimers();
+    if (sendVerificationCode) sendVerificationCode.textContent = 'Send Code';
+    if (scheduleEmail) {
+      scheduleEmail.disabled = false;
+      scheduleEmail.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+    if (sendVerificationCode) {
+      sendVerificationCode.disabled = false;
+      sendVerificationCode.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+    currentCode = null;
+    enableVerificationInputs();
+
+    // Refresh the page after a short delay
+    setTimeout(() => { window.location.reload(); }, 1000);
+
+  } catch (error: any) {
+    console.error('Error scheduling visit:', error);
+    showNotification(error.message || 'Failed to schedule visit. Please try again.', 'error');
+    
+    // Re-enable the confirm button
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'Confirm & Schedule Visit';
+    }
+  }
+}
+
+// Set up confirmation modal event listeners (called when modal is shown)
+function setupConfirmationModalEventListeners() {
+  console.log('Setting up confirmation modal event listeners...');
+  
+  // Close confirmation modal when clicking outside
+  const confirmationModal = document.getElementById('visitConfirmationModal');
+  console.log('Confirmation modal found:', !!confirmationModal);
+  if (confirmationModal) {
+    // Remove any existing listeners to prevent duplicates
+    confirmationModal.removeEventListener('click', handleModalClick);
+    confirmationModal.addEventListener('click', handleModalClick);
+  }
+
+  // Close confirmation modal button
+  const closeConfirmationBtn = document.getElementById('closeConfirmationModalBtn');
+  console.log('Close confirmation button found:', !!closeConfirmationBtn);
+  if (closeConfirmationBtn) {
+    closeConfirmationBtn.removeEventListener('click', handleCloseModal);
+    closeConfirmationBtn.addEventListener('click', handleCloseModal);
+  }
+
+  // Cancel confirmation button
+  const cancelConfirmationBtn = document.getElementById('cancelConfirmationBtn');
+  console.log('Cancel confirmation button found:', !!cancelConfirmationBtn);
+  if (cancelConfirmationBtn) {
+    cancelConfirmationBtn.removeEventListener('click', handleCloseModal);
+    cancelConfirmationBtn.addEventListener('click', handleCloseModal);
+  }
+
+  // Agreement checkbox - enable/disable confirm button
+  const agreementCheckbox = document.getElementById('visitAgreement') as HTMLInputElement;
+  const confirmBtn = document.getElementById('confirmScheduleBtn') as HTMLButtonElement;
+  
+  console.log('Agreement checkbox found:', !!agreementCheckbox);
+  console.log('Confirm button found:', !!confirmBtn);
+  
+  if (agreementCheckbox && confirmBtn) {
+    agreementCheckbox.removeEventListener('change', handleAgreementChange);
+    agreementCheckbox.addEventListener('change', handleAgreementChange);
+  }
+
+  // Confirm schedule button
+  if (confirmBtn) {
+    confirmBtn.removeEventListener('click', handleConfirmSchedule);
+    confirmBtn.addEventListener('click', handleConfirmSchedule);
+  }
+}
+
+// Event handler functions
+function handleModalClick(e: Event) {
+  const target = e.target as HTMLElement;
+  const modal = document.getElementById('visitConfirmationModal');
+  if (target === modal) {
+    modal?.classList.add('hidden');
+  }
+}
+
+function handleCloseModal() {
+  console.log('Close/Cancel button clicked');
+  const modal = document.getElementById('visitConfirmationModal');
+  if (modal) {
+    modal.classList.add('hidden');
+  }
+}
+
+function handleAgreementChange(e: Event) {
+  const checkbox = e.target as HTMLInputElement;
+  const confirmBtn = document.getElementById('confirmScheduleBtn') as HTMLButtonElement;
+  console.log('Agreement checkbox changed:', checkbox.checked);
+  if (confirmBtn) {
+    confirmBtn.disabled = !checkbox.checked;
+  }
+}
+
+async function handleConfirmSchedule() {
+  console.log('Confirm schedule button clicked');
+  
+  // Get the stored data from the modal instead of reading from form fields
+  const modal = document.getElementById('visitConfirmationModal');
+  if (!modal || !(modal as any).visitData) {
+    console.error('No visit data found in modal');
+    return;
+  }
+
+  const visitData = (modal as any).visitData as VisitConfirmationData;
+  console.log('handleConfirmSchedule - Using stored visit data:', visitData);
+
+  // Ensure visitorUserId is properly handled - convert empty string to null
+  if (visitData.visitorUserId && visitData.visitorUserId.trim() === '') {
+    visitData.visitorUserId = null;
+  }
+
+  console.log('handleConfirmSchedule - Final visit data:', visitData);
+
+  await scheduleVisitFromConfirmation(visitData);
+}
+
+// Set up confirmation modal event listeners (legacy function for initial setup)
+export function setupConfirmationModalListeners() {
+  console.log('Setting up confirmation modal listeners...');
+  // This function is kept for compatibility but the real setup happens when modal is shown
+}
+
+// Test function to manually show confirmation modal (for debugging)
+(window as any).testConfirmationModal = () => {
+  console.log('Testing confirmation modal...');
+  const testData: VisitConfirmationData = {
+    firstName: 'John',
+    lastName: 'Doe',
+    email: 'john.doe@example.com',
+    phone: '9123456789',
+    visitDate: '2024-01-15',
+    placeToVisit: 'Office Building A',
+    purpose: 'Meeting',
+    otherPurpose: '',
+    visitorUserId: null
+  };
+  
+  showVisitConfirmationModal(testData);
+  console.log('Confirmation modal should now be visible');
+}; 
