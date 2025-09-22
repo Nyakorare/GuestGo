@@ -122,47 +122,61 @@ export function AboutPage() {
       <!-- Interactive Company Timeline -->
       <div class="mb-16">
         <h2 class="text-2xl font-bold mb-8 text-center animate-fade-in-up" style="animation-delay:2.4s;">Our Journey</h2>
-        <div class="relative">
-          <div class="absolute left-1/2 transform -translate-x-1/2 w-1 h-full bg-blue-200 dark:bg-blue-800"></div>
-          <div class="space-y-12">
-            <div class="timeline-item flex items-center justify-center relative">
-              <div class="w-6 h-6 bg-blue-600 rounded-full border-4 border-white dark:border-gray-900 z-10"></div>
-              <div class="absolute left-1/2 transform -translate-x-1/2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 ml-8">
-                <div class="text-sm text-blue-600 dark:text-blue-400 font-semibold">2020</div>
-                <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Company Founded</h3>
-                <p class="text-gray-600 dark:text-gray-300">Started with a vision to revolutionize guest management systems.</p>
+        <div class="max-w-4xl mx-auto">
+          <div class="space-y-8">
+            <div class="timeline-item flex flex-col md:flex-row items-center gap-6 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <div class="flex-shrink-0">
+                <div class="w-12 h-12 bg-blue-600 rounded-full border-4 border-white dark:border-gray-900 flex items-center justify-center">
+                  <span class="text-white font-bold text-sm">2020</span>
+                </div>
+              </div>
+              <div class="flex-1 text-center md:text-left">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Company Founded</h3>
+                <p class="text-gray-600 dark:text-gray-300">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
               </div>
             </div>
-            <div class="timeline-item flex items-center justify-center relative">
-              <div class="w-6 h-6 bg-green-600 rounded-full border-4 border-white dark:border-gray-900 z-10"></div>
-              <div class="absolute left-1/2 transform -translate-x-1/2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mr-8">
-                <div class="text-sm text-green-600 dark:text-green-400 font-semibold">2021</div>
-                <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">First Product Launch</h3>
-                <p class="text-gray-600 dark:text-gray-300">Released our first QR-based check-in system to the market.</p>
+            <div class="timeline-item flex flex-col md:flex-row items-center gap-6 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <div class="flex-shrink-0">
+                <div class="w-12 h-12 bg-green-600 rounded-full border-4 border-white dark:border-gray-900 flex items-center justify-center">
+                  <span class="text-white font-bold text-sm">2021</span>
+                </div>
+              </div>
+              <div class="flex-1 text-center md:text-left">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">First Product Launch</h3>
+                <p class="text-gray-600 dark:text-gray-300">Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
               </div>
             </div>
-            <div class="timeline-item flex items-center justify-center relative">
-              <div class="w-6 h-6 bg-purple-600 rounded-full border-4 border-white dark:border-gray-900 z-10"></div>
-              <div class="absolute left-1/2 transform -translate-x-1/2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 ml-8">
-                <div class="text-sm text-purple-600 dark:text-purple-400 font-semibold">2022</div>
-                <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Series A Funding</h3>
-                <p class="text-gray-600 dark:text-gray-300">Raised $2M to expand our team and accelerate product development.</p>
+            <div class="timeline-item flex flex-col md:flex-row items-center gap-6 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <div class="flex-shrink-0">
+                <div class="w-12 h-12 bg-purple-600 rounded-full border-4 border-white dark:border-gray-900 flex items-center justify-center">
+                  <span class="text-white font-bold text-sm">2022</span>
+                </div>
+              </div>
+              <div class="flex-1 text-center md:text-left">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Series A Funding</h3>
+                <p class="text-gray-600 dark:text-gray-300">Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
               </div>
             </div>
-            <div class="timeline-item flex items-center justify-center relative">
-              <div class="w-6 h-6 bg-orange-600 rounded-full border-4 border-white dark:border-gray-900 z-10"></div>
-              <div class="absolute left-1/2 transform -translate-x-1/2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mr-8">
-                <div class="text-sm text-orange-600 dark:text-orange-400 font-semibold">2023</div>
-                <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">International Expansion</h3>
-                <p class="text-gray-600 dark:text-gray-300">Expanded to 5 countries with over 1000+ businesses using our platform.</p>
+            <div class="timeline-item flex flex-col md:flex-row items-center gap-6 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <div class="flex-shrink-0">
+                <div class="w-12 h-12 bg-orange-600 rounded-full border-4 border-white dark:border-gray-900 flex items-center justify-center">
+                  <span class="text-white font-bold text-sm">2023</span>
+                </div>
+              </div>
+              <div class="flex-1 text-center md:text-left">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">International Expansion</h3>
+                <p class="text-gray-600 dark:text-gray-300">Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
               </div>
             </div>
-            <div class="timeline-item flex items-center justify-center relative">
-              <div class="w-6 h-6 bg-red-600 rounded-full border-4 border-white dark:border-gray-900 z-10"></div>
-              <div class="absolute left-1/2 transform -translate-x-1/2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 ml-8">
-                <div class="text-sm text-red-600 dark:text-red-400 font-semibold">2024</div>
-                <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">AI Integration</h3>
-                <p class="text-gray-600 dark:text-gray-300">Launched AI-powered analytics and predictive visitor management.</p>
+            <div class="timeline-item flex flex-col md:flex-row items-center gap-6 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <div class="flex-shrink-0">
+                <div class="w-12 h-12 bg-red-600 rounded-full border-4 border-white dark:border-gray-900 flex items-center justify-center">
+                  <span class="text-white font-bold text-sm">2024</span>
+                </div>
+              </div>
+              <div class="flex-1 text-center md:text-left">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">AI Integration</h3>
+                <p class="text-gray-600 dark:text-gray-300">Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.</p>
               </div>
             </div>
           </div>
@@ -170,7 +184,7 @@ export function AboutPage() {
       </div>
 
       <!-- Interactive Company Values -->
-      <div class="mb-16">
+      <div class="mb-20 mt-8">
         <h2 class="text-2xl font-bold mb-8 text-center animate-fade-in-up" style="animation-delay:2.6s;">Our Values</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div class="value-card group bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 text-center hover:shadow-2xl transform hover:-translate-y-2 transition-all duration-300 ease-out cursor-pointer">
@@ -213,7 +227,7 @@ export function AboutPage() {
       </div>
 
       <!-- Interactive Technology Stack -->
-      <div class="mb-16">
+      <div class="mb-20 mt-8">
         <h2 class="text-2xl font-bold mb-8 text-center animate-fade-in-up" style="animation-delay:2.8s;">Technology Stack</h2>
         <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
           <div class="tech-item group bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 text-center hover:shadow-2xl transform hover:scale-110 transition-all duration-300 ease-out cursor-pointer relative">
@@ -280,7 +294,7 @@ export function AboutPage() {
       </div>
 
       <!-- Interactive Statistics Dashboard -->
-      <div class="mb-16">
+      <div class="mb-20 mt-8">
         <h2 class="text-2xl font-bold mb-8 text-center animate-fade-in-up" style="animation-delay:3s;">By the Numbers</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div class="stat-card bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 text-center hover:shadow-2xl transform hover:-translate-y-2 transition-all duration-300 ease-out">
@@ -323,7 +337,7 @@ export function AboutPage() {
       </div>
 
       <!-- Interactive Company Culture Gallery -->
-      <div class="mb-16">
+      <div class="mb-20 mt-8">
         <h2 class="text-2xl font-bold mb-8 text-center animate-fade-in-up" style="animation-delay:3.2s;">Our Culture</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div class="culture-card group bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden hover:shadow-2xl transform hover:-translate-y-2 transition-all duration-300 ease-out cursor-pointer">
@@ -522,15 +536,15 @@ export function AboutPage() {
       /* Timeline animations */
       .timeline-item {
         opacity: 0;
-        transform: translateY(30px);
-        animation: timelineFadeIn 0.8s ease-out forwards;
+        transform: translateY(20px);
+        animation: timelineFadeIn 0.6s ease-out forwards;
       }
       
-      .timeline-item:nth-child(1) { animation-delay: 0.2s; }
-      .timeline-item:nth-child(2) { animation-delay: 0.4s; }
-      .timeline-item:nth-child(3) { animation-delay: 0.6s; }
-      .timeline-item:nth-child(4) { animation-delay: 0.8s; }
-      .timeline-item:nth-child(5) { animation-delay: 1s; }
+      .timeline-item:nth-child(1) { animation-delay: 0.1s; }
+      .timeline-item:nth-child(2) { animation-delay: 0.2s; }
+      .timeline-item:nth-child(3) { animation-delay: 0.3s; }
+      .timeline-item:nth-child(4) { animation-delay: 0.4s; }
+      .timeline-item:nth-child(5) { animation-delay: 0.5s; }
       
       @keyframes timelineFadeIn {
         to {
