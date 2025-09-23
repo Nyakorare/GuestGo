@@ -5362,14 +5362,31 @@ function setupVisitorDashboardEventListeners() {
 
   const visitorFutureDatePicker = document.getElementById('visitorFutureDatePicker') as HTMLInputElement;
   if (visitorFutureDatePicker) {
-    // Set date range to current month only
+    // Allow only strictly future dates within the current month
     const now = new Date();
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    
-    visitorFutureDatePicker.min = firstDayOfMonth.toISOString().split('T')[0];
-    visitorFutureDatePicker.max = lastDayOfMonth.toISOString().split('T')[0];
-    
+
+    const minDate = tomorrow;
+    const maxDate = lastDayOfMonth;
+
+    visitorFutureDatePicker.min = minDate.toISOString().split('T')[0];
+    visitorFutureDatePicker.max = maxDate.toISOString().split('T')[0];
+
+    // If current value is not in the allowed range, clear it
+    if (visitorFutureDatePicker.value) {
+      const picked = new Date(visitorFutureDatePicker.value);
+      picked.setHours(0, 0, 0, 0);
+      if (picked.getTime() < minDate.getTime() || picked.getTime() > maxDate.getTime()) {
+        visitorFutureDatePicker.value = '';
+      }
+    }
+
     visitorFutureDatePicker.addEventListener('change', async () => {
       await applyVisitorFutureFilters();
     });
