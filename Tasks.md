@@ -1,7 +1,8 @@
 Ongoing:
  - Home/Landing Page Design Overhaul
  - GuestGo Visit Card Design and Detail Overhaul
- - AI
+ - AI Face Verification
+ - Finalize Complete Documentation (Members section + Thesis Paper deliverables)
 
 Planned:
 
@@ -14,7 +15,7 @@ Planned:
  - Logs Backup Mechanic (Plano kong i-ZIP file)
  - System Vulnerabilty Testing
  - Hanap Client for System????
- - Complete Documentation of System (Algorithms, Features, Members) *KASAMA NA THESIS PAPER
+ - Complete Documentation of System (Features, Members) *KASAMA NA THESIS PAPER
  - Hide API Keys once start of deployment (Propbably tapos na buong system)
 
 Completed:
@@ -29,6 +30,7 @@ Completed:
  - Scheduled Visits Print Option
  - Screen Responsive Pages
  - Email OTP for Guests Scheduling (EmailJS)
+ - Email Notifications: basic integration present (EmailJS)
  - Dark Mode Theme Toggle System
  - Real-time Notification System (Success/Error Messages)
  - Advanced Search and Filtering System (Dashboard, Logs, Visits, Places, Accounts)
@@ -66,3 +68,6 @@ Completed:
  - Dashboard Loading Pagination
  - Page Navigation & Loading Pagination
  - Entrance and Exit before and after scheduling
+ - Feature Modules, Steps, and Expected Results table (README)
+ - Algorithms overview file (ALGORITHMS.md)
+ - AI module documentation (BlazeFace detection + OpenCV Haar verification)

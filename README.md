@@ -1,6 +1,56 @@
-## GuestGo — Feature Modules, Steps, and Expected Results
+## GuestGo
 
-This document summarizes the end-to-end features of GuestGo, organized by modules, the steps users take, and the expected results. It also specifies where and how facial detection and recognition AI is integrated.
+Visitor Management and Gate Access Control system with QR flows and AI-powered face detection/verification.
+
+### Highlights
+
+- Fast QR generation/scan, gate entry/exit processing, dashboard and logs
+- AI verification at schedule enrollment, entrance, and exit (YOLO + MediaPipe)
+- Role-based access (admin, guards/personnel, staff, visitors)
+
+### Quick Start
+
+1) Install dependencies
+
+   - npm install
+
+2) Start dev server
+
+   - npm run dev
+
+3) Build for production
+
+   - npm run build
+
+4) Preview production build
+
+   - npm run preview
+
+### Environment
+
+Create a `.env` (or `.env.local`) with at least:
+
+- VITE_SUPABASE_URL=...
+- VITE_SUPABASE_ANON_KEY=...
+- VITE_EMAILJS_SERVICE_ID=...
+- VITE_EMAILJS_TEMPLATE_ID=...
+- VITE_EMAILJS_PUBLIC_KEY=...
+
+### Tech Stack
+
+- Vite + TypeScript
+- Tailwind CSS
+- Supabase (auth, database, RPC)
+- jsQR, qrcode (QR flows)
+- YOLO (detection), MediaPipe (verification) for face AI
+
+### Documentation
+
+- Algorithms overview: see `ALGORITHMS.md`
+
+## Feature Modules, Steps, and Expected Results
+
+This section summarizes end-to-end features, steps, and expected results. It also specifies where and how facial detection and verification AI is integrated.
 
 ## System Modules
 
@@ -43,8 +93,8 @@ This document summarizes the end-to-end features of GuestGo, organized by module
   - Basic metrics for scan latency, AI inference time, and error rates.
 
 - **Facial Detection & Recognition AI (Detection + Verification)**
-  - Detection: MediaPipe BlazeFace (face presence and bounding box).
-  - Verification: OpenCV Haar-based face recognition for identity verification.
+  - Detection: YOLO (face detection bounding boxes + confidence).
+  - Verification: MediaPipe-based face verification using landmarks/embeddings.
   - Applied only during: Schedule creation (enrollment), Entrance gate, Exit gate.
 
 ## End-to-End Steps to Be Taken (User Flows)
@@ -75,7 +125,7 @@ This document summarizes the end-to-end features of GuestGo, organized by module
 | --- | --- | --- | --- | --- |
 | Authentication & Access Control | Sign in via Supabase | Session established; role resolved | Session token | Login success/failure logged |
 | Scheduling (Visitor Pre-Registration) | Enter visitor details, date/time, purpose; optionally enroll face | Schedule saved; visit QR generated | `visit` record; QR asset; optional biometric template | Email to visitor (optional); audit log |
-| Facial Enrollment (Schedule) | Detect face (BlazeFace); capture best frame; confirm | Enrollment template saved for later verification | Encrypted biometric template linked to visitor/visit | AI enrollment decision logged |
+| Facial Enrollment (Schedule) | Detect face (YOLO); capture best frame; confirm | Enrollment template saved for later verification | Encrypted biometric template linked to visitor/visit | AI enrollment decision logged |
 | Entrance Gate Processing | Scan gate/visit QR or verify face | Admission granted; visit marked entered | Visit status → entered | Gate entry log; flagged alert if any |
 | Flagged Visits & Alerts | System finds flags on visitor/visit | Guard sees flagged modal; can override | Flag incident/override record | Alert log; optional email/SMS |
 | Exit Gate Processing | Scan gate/visit QR or verify face | Exit recorded; visit closed | Visit status → exited | Gate exit log |
@@ -84,23 +134,23 @@ This document summarizes the end-to-end features of GuestGo, organized by module
 | Notifications | Trigger on schedule, flags, completion | Emails/alerts sent | Notification records (optional) | Delivery status logged |
 | Audit Logging | Perform CRUD/gate/AI actions | Immutable audit trail | Log records | Accessible in logs/reporting |
 
-## Facial Detection & Recognition AI Module
+## Facial Detection & Verification AI Module
 
 Scope: Used only during Schedule creation (enrollment), Entrance gate, and Exit gate.
 
-- **Detection (MediaPipe BlazeFace)**
-  - Purpose: Quickly detect a face and return a bounding box to capture a high-quality frame.
-  - Output: Face bounding box + confidence score. If low confidence, ask user to retry.
+- **Detection (YOLO)**
+  - Purpose: Real-time face detection providing bounding boxes and confidence.
+  - Output: Bounding box + confidence. If low confidence, request re-capture.
 
-- **Verification (OpenCV Haar-based)**
-  - Purpose: Confirm that the detected face matches the enrolled face template for the visit/visitor.
-  - Output: Match/No-Match with a confidence threshold. If below threshold, fallback to QR or manual verification.
+- **Verification (MediaPipe)**
+  - Purpose: Verify identity by comparing landmarks/embeddings to the enrollment template.
+  - Output: Similarity score vs threshold → Match/No-Match. If below threshold, fallback to QR or manual verification.
 
 - **Enrollment Flow (Schedule Creation)**
-  - Detect face (BlazeFace) → capture stable frame(s) → extract features → save enrollment template linked to visitor/visit.
+  - Detect face (YOLO) → capture stable frame(s) → extract features/embedding → save enrollment template linked to visitor/visit.
 
 - **Entrance/Exit Verification Flow**
-  - Detect face (BlazeFace) → compare against enrollment template (Haar-based) → if match within threshold, proceed as if QR validated.
+  - Detect face (YOLO) → compare against enrollment template (MediaPipe) → if match within threshold, proceed as if QR validated.
 
 - **Privacy & Security**
   - Store templates, not raw images, whenever possible.
@@ -125,8 +175,8 @@ Scope: Used only during Schedule creation (enrollment), Entrance gate, and Exit 
 Proposed additions for AI module (high-level):
 
 - `src/utils/face/`
-  - `detector.ts` (BlazeFace wrapper)
-  - `verifier.ts` (Haar-based verification)
+  - `detector.ts` (YOLO wrapper)
+  - `verifier.ts` (MediaPipe verification)
   - `enrollment.ts` (create/update templates)
 - Gate pages call into `detector`/`verifier` for entrance/exit; schedule creation calls into `enrollment`.
 

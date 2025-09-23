@@ -6,8 +6,8 @@ Below is a concise, prioritized summary of the key algorithms and techniques use
 
 | Area | Algorithm Type | Library/Implementation |
 | --- | --- | --- |
-| Facial detection | Convolutional Neural Network (single-shot face detector) | MediaPipe BlazeFace |
-| Facial verification | Haar-like features cascade classifier (template verification) | OpenCV Haar |
+| Facial detection | CNN object detector (You Only Look Once) | YOLO |
+| Facial verification | Landmark/embedding-based face verification | MediaPipe |
 | QR encoding | Reed–Solomon error-correcting codes (ECC L/M), bit-matrix encoding | `qrcode` |
 | QR decoding | Finder pattern detection → perspective transform → Reed–Solomon decoding | `jsQR` |
 | Adaptive scan scheduling | Heuristic feedback control loop (dynamic interval) | Custom |
@@ -23,10 +23,10 @@ Below is a concise, prioritized summary of the key algorithms and techniques use
 ### 1) Facial Detection & Recognition (Primary)
 - Purpose: Fast, reliable identity checks during schedule enrollment, entrance gate, and exit gate.
 - Components:
-  - Detection: MediaPipe BlazeFace.
-    - Type: Convolutional Neural Network (CNN) single-shot face detector optimized for real-time inference.
-  - Verification: OpenCV Haar-based verification.
-    - Type: Haar-like features with cascade/boosting-based classifier used for identity verification against an enrolled template.
+  - Detection: YOLO (You Only Look Once).
+    - Type: CNN object detector for faces; single-pass detection with bounding boxes + confidence.
+  - Verification: MediaPipe-based verification.
+    - Type: Landmark/embedding-based comparison against an enrolled template with a similarity threshold.
 - Flow:
   - Enrollment: Detect face → capture stable frame(s) → extract features → store template (encrypted, access-controlled).
   - Gate Verify: Detect face → compare features to stored template → pass/fail by threshold → fallback to QR/manual on fail.
