@@ -1041,10 +1041,20 @@ function setupChangeImageForm(): void {
         throw new Error('User not authenticated');
       }
 
+      // Fetch existing gate details to satisfy required RPC parameters
+      const existingGate = allGates.find(g => g.id === gateId);
+      if (!existingGate) {
+        throw new Error('Gate not found');
+      }
+
       const { error } = await supabase.rpc('update_gate', {
         p_gate_id: gateId,
-        p_updated_by: user.id,
-        p_image_url: finalImageUrl
+        p_name: existingGate.name,
+        p_description: existingGate.description || null,
+        p_location: existingGate.location || null,
+        p_image_url: finalImageUrl,
+        p_gate_type: existingGate.gate_type,
+        p_updated_by: user.id
       });
 
       if (error) {
