@@ -29,7 +29,7 @@ function toPhilippineTime(date: Date): Date {
 // Function to load and display weekly visit count for logged-in users
 // FIXED: Previous week completed visits no longer affect current week scheduling limits
 // Each week is now treated independently with its own 2-visit limit
-async function loadWeeklyVisitCount(userEmail: string) {
+async function loadWeeklyVisitCount(_userEmail: string) {
   try {
     const weeklyVisitCountDiv = document.getElementById('weeklyVisitCount');
     const weeklyVisitText = document.getElementById('weeklyVisitText');
@@ -195,7 +195,7 @@ async function loadWeeklyVisitCount(userEmail: string) {
       .eq('status', 'pending');
 
     // Debug: Also get all visits for this user to see what's in the database
-    const { data: allVisits, error: allVisitsError } = await supabase
+    const { data: allVisits } = await supabase
       .from('scheduled_visits')
       .select('visit_date, status, visitor_first_name, visitor_last_name, visitor_email, visitor_user_id')
       .or(`visitor_user_id.eq.${user.id},visitor_email.eq.${user.email}`)
@@ -210,7 +210,7 @@ async function loadWeeklyVisitCount(userEmail: string) {
     });
 
     // Query the database for all pending, completed, and completed_flagged visits for the previous week
-    const { data: prevWeekVisits, error: prevWeekError } = await supabase
+    const { data: _prevWeekVisits, error: prevWeekError } = await supabase
       .from('scheduled_visits')
       .select('visit_date, status')
       .or(`visitor_user_id.eq.${user.id},visitor_email.eq.${user.email}`)
@@ -262,10 +262,11 @@ async function loadWeeklyVisitCount(userEmail: string) {
     const totalPendingCount = allPendingVisits?.length || 0;
 
     // Count the pending, completed, and completed_flagged visits for the previous week
-    const prevPendingCount = prevWeekVisits?.filter(v => v.status === 'pending').length || 0;
-    const prevCompletedCount = prevWeekVisits?.filter(v => v.status === 'completed').length || 0;
-    const prevCompletedFlaggedCount = prevWeekVisits?.filter(v => v.status === 'completed_flagged').length || 0;
-    const prevTotalCount = prevWeekVisits?.length || 0;
+    // Previous-week metrics available if needed for future UI
+    // const prevPendingCount = prevWeekVisits?.filter(v => v.status === 'pending').length || 0;
+    // const prevCompletedCount = prevWeekVisits?.filter(v => v.status === 'completed').length || 0;
+    // const prevCompletedFlaggedCount = prevWeekVisits?.filter(v => v.status === 'completed_flagged').length || 0;
+    // const prevTotalCount = prevWeekVisits?.length || 0;
 
     // Count future visits (all future visits are pending since they haven't happened yet)
     const futureVisitCount = futureVisits?.length || 0;
@@ -409,7 +410,7 @@ async function loadWeeklyVisitCount(userEmail: string) {
     console.log(debugInfo);
     
     // Create comprehensive weekly status display
-    let weeklyStatusHtml = '';
+    // removed unused weeklyStatusHtml
     
     // Sort weeks by date (current week first, then future weeks)
     const sortedWeeks = Array.from(weeklyVisitCounts.entries()).sort(([a], [b]) => {
@@ -420,7 +421,7 @@ async function loadWeeklyVisitCount(userEmail: string) {
     
     // Display current week status
     const currentWeekKey = weekStart.toISOString().split('T')[0];
-    const currentWeekData = weeklyVisitCounts.get(currentWeekKey);
+    // const currentWeekData = weeklyVisitCounts.get(currentWeekKey);
     
     if (remainingVisits === 2) {
       const completedText = completedFlaggedCount > 0 ? `${totalCompletedSchedules} completed (${completedFlaggedCount} flagged)` : `${totalCompletedSchedules} completed`;
@@ -623,7 +624,7 @@ async function loadWeeklyVisitCount(userEmail: string) {
     console.log('User Email:', user.email);
 
     // Test 1: Get all visits for this user
-    const { data: allVisits, error: allError } = await supabase
+    const { data: allVisits, error: _allError } = await supabase
       .from('scheduled_visits')
       .select('*')
       .eq('visitor_user_id', user.id);
@@ -632,7 +633,7 @@ async function loadWeeklyVisitCount(userEmail: string) {
     console.log('All visits count:', allVisits?.length || 0);
 
     // Test 2: Get pending and completed visits for this user
-    const { data: activeVisits, error: activeError } = await supabase
+    const { data: activeVisits, error: _activeError } = await supabase
       .from('scheduled_visits')
       .select('*')
       .eq('visitor_user_id', user.id)
@@ -642,7 +643,7 @@ async function loadWeeklyVisitCount(userEmail: string) {
     console.log('Active visits count:', activeVisits?.length || 0);
 
     // Test 3: Get pending visits for this user
-    const { data: pendingVisits, error: pendingError } = await supabase
+    const { data: pendingVisits, error: _pendingError } = await supabase
       .from('scheduled_visits')
       .select('*')
       .eq('visitor_user_id', user.id)
@@ -652,7 +653,7 @@ async function loadWeeklyVisitCount(userEmail: string) {
     console.log('Pending visits count:', pendingVisits?.length || 0);
 
     // Test 4: Get completed visits for this user
-    const { data: completedVisits, error: completedError } = await supabase
+    const { data: completedVisits, error: _completedError } = await supabase
       .from('scheduled_visits')
       .select('*')
       .eq('visitor_user_id', user.id)
@@ -662,7 +663,7 @@ async function loadWeeklyVisitCount(userEmail: string) {
     console.log('Completed visits count:', completedVisits?.length || 0);
 
     // Test 5: Check if there are any visits at all in the database
-    const { data: anyVisits, error: anyError } = await supabase
+    const { data: anyVisits, error: _anyError } = await supabase
       .from('scheduled_visits')
       .select('*')
       .limit(5);
@@ -944,6 +945,52 @@ export function HomePage() {
     // Setup confirmation modal event listeners
     setupConfirmationModalListeners();
 
+    // Interactive: Feature cards hover animations for keyboard users
+    document.querySelectorAll('.feature-card').forEach(el => {
+      el.addEventListener('focus', () => el.classList.add('ring-2', 'ring-blue-500'));
+      el.addEventListener('blur', () => el.classList.remove('ring-2', 'ring-blue-500'));
+    });
+
+    // Interactive: Workflow stepper toggles
+    document.querySelectorAll('[data-workflow-step]').forEach(stepBtn => {
+      stepBtn.addEventListener('click', () => {
+        const step = (stepBtn as HTMLElement).dataset.workflowStep;
+        if (!step) return;
+        // Collapse others
+        document.querySelectorAll('[data-workflow-panel]').forEach(panel => {
+          const isTarget = (panel as HTMLElement).dataset.workflowPanel === step;
+          (panel as HTMLElement).classList.toggle('hidden', !isTarget);
+        });
+        document.querySelectorAll('[data-workflow-step]').forEach(btn => {
+          const isActive = (btn as HTMLElement).dataset.workflowStep === step;
+          btn.classList.toggle('bg-blue-600', isActive);
+          btn.classList.toggle('text-white', isActive);
+          btn.classList.toggle('bg-white', !isActive);
+          btn.classList.toggle('dark:bg-gray-800', !isActive);
+          btn.classList.toggle('text-blue-600', !isActive);
+          btn.classList.toggle('dark:text-blue-400', !isActive);
+          btn.classList.toggle('border', !isActive);
+          btn.classList.toggle('border-blue-200', !isActive);
+          btn.classList.toggle('dark:border-gray-700', !isActive);
+        });
+      });
+    });
+
+    // Interactive: FAQ accordion
+    document.querySelectorAll('[data-faq-toggle]').forEach(toggle => {
+      toggle.addEventListener('click', () => {
+        const id = (toggle as HTMLElement).dataset.faqToggle;
+        if (!id) return;
+        const panel = document.querySelector(`[data-faq-panel="${id}"]`);
+        if (!panel) return;
+        panel.classList.toggle('hidden');
+        const icon = (toggle as HTMLElement).querySelector('[data-faq-icon]');
+        if (icon) {
+          icon.classList.toggle('rotate-180');
+        }
+      });
+    });
+
   }, 100);
 
   return `    <div class="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8 md:py-12">
@@ -956,6 +1003,41 @@ export function HomePage() {
           <p class="text-base sm:text-xl text-gray-600 dark:text-gray-300 transition-colors duration-200">
             Your one-stop solution for guest management and hospitality services.
           </p>
+          <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="feature-card group rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 transition-shadow hover:shadow-md focus:outline-none" tabindex="0">
+              <div class="flex items-center space-x-3">
+                <div class="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                </div>
+                <div>
+                  <p class="font-semibold">Smart Scheduling</p>
+                  <p class="text-xs text-gray-600 dark:text-gray-400">Limit-aware, timezone-accurate, fast.</p>
+                </div>
+              </div>
+            </div>
+            <div class="feature-card group rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 transition-shadow hover:shadow-md focus:outline-none" tabindex="0">
+              <div class="flex items-center space-x-3">
+                <div class="p-2 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <div>
+                  <p class="font-semibold">Secure Verification</p>
+                  <p class="text-xs text-gray-600 dark:text-gray-400">Email code checks and approvals.</p>
+                </div>
+              </div>
+            </div>
+            <div class="feature-card group rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 transition-shadow hover:shadow-md focus:outline-none" tabindex="0">
+              <div class="flex items-center space-x-3">
+                <div class="p-2 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405M19 13V7a2 2 0 00-2-2h-4l-2-2H7a2 2 0 00-2 2v6m0 8h12"/></svg>
+                </div>
+                <div>
+                  <p class="font-semibold">Real-time Tracking</p>
+                  <p class="text-xs text-gray-600 dark:text-gray-400">Status updates and QR scanning.</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -987,6 +1069,63 @@ export function HomePage() {
       >
         Schedule Now
       </button>
+
+      <!-- How GuestGo Works -->
+      <section class="mb-10">
+        <h2 class="text-xl sm:text-2xl font-bold mb-3">How GuestGo Works</h2>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+          <button class="rounded-lg px-3 py-2 text-sm bg-blue-600 text-white" data-workflow-step="1">1. Request</button>
+          <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="2">2. Verify</button>
+          <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="3">3. Approve</button>
+          <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="4">4. Check-in</button>
+        </div>
+        <div class="space-y-2">
+          <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800" data-workflow-panel="1">
+            <p class="font-semibold mb-1">Request a Visit</p>
+            <p class="text-sm text-gray-600 dark:text-gray-400">Fill out the form with your details, pick a date (PH time), and choose the place to visit. We enforce a maximum of 2 visits per week.</p>
+          </div>
+          <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="2">
+            <p class="font-semibold mb-1">Verify Your Email</p>
+            <p class="text-sm text-gray-600 dark:text-gray-400">We send a one-time code to your Gmail. Enter the code to proceed and reduce fraud.</p>
+          </div>
+          <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="3">
+            <p class="font-semibold mb-1">Approval & Scheduling</p>
+            <p class="text-sm text-gray-600 dark:text-gray-400">Personnel review your request. You’ll see the status in your weekly visit tracker.</p>
+          </div>
+          <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="4">
+            <p class="font-semibold mb-1">On-site Check-in</p>
+            <p class="text-sm text-gray-600 dark:text-gray-400">Arrive with a valid ID. Staff can scan your QR to confirm and log your visit.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- FAQ -->
+      <section class="mb-8">
+        <h2 class="text-xl sm:text-2xl font-bold mb-3">Frequently Asked Questions</h2>
+        <div class="divide-y divide-gray-200 dark:divide-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <div class="p-4">
+            <button class="w-full flex justify-between items-center text-left" data-faq-toggle="limit">
+              <span class="font-medium">How many visits can I schedule?</span>
+              <svg data-faq-icon class="w-5 h-5 text-gray-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            <div class="mt-2 text-sm text-gray-600 dark:text-gray-400 hidden" data-faq-panel="limit">Each user can have up to 2 visits per week. The counter resets weekly (Sunday to Saturday, PH time).</div>
+          </div>
+          <div class="p-4">
+            <button class="w-full flex justify-between items-center text-left" data-faq-toggle="email">
+              <span class="font-medium">Why do I need to verify my email?</span>
+              <svg data-faq-icon class="w-5 h-5 text-gray-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            <div class="mt-2 text-sm text-gray-600 dark:text-gray-400 hidden" data-faq-panel="email">Email verification prevents duplicate or fraudulent bookings and helps us contact you with updates.</div>
+          </div>
+          <div class="p-4">
+            <button class="w-full flex justify-between items-center text-left" data-faq-toggle="resched">
+              <span class="font-medium">Can I reschedule?</span>
+              <svg data-faq-icon class="w-5 h-5 text-gray-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            <div class="mt-2 text-sm text-gray-600 dark:text-gray-400 hidden" data-faq-panel="resched">Yes. Please notify us at least 24 hours before your visit so we can accommodate changes.</div>
+          </div>
+        </div>
+      </section>
 
       <!-- Schedule Modal -->
       <div id="scheduleModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">

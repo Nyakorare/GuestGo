@@ -1299,6 +1299,9 @@ export async function setupEventListeners() {
     }
   }
 
+  // Expose for external callers (e.g., confirmation scheduler)
+  (window as any).resetDateValidation = resetDateValidation;
+
   // Function to add weekly visit count display to the modal
   async function addWeeklyVisitCountToModal() {
     // Prevent multiple simultaneous calls
