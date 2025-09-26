@@ -381,6 +381,9 @@ export async function setupEventListeners() {
     }
   }
 
+  // Expose timers clearer for external flows (e.g., confirmation scheduling)
+  (window as any).modalClearTimers = clearTimers;
+
   // Function to check if email is Gmail
   function isGmailEmail(email: string): boolean {
     return email.toLowerCase().endsWith('@gmail.com');
@@ -483,7 +486,11 @@ export async function setupEventListeners() {
     verificationCodeSent = false;
     verificationCodeContainer?.classList.add('hidden');
     verificationCode.value = '';
-    clearTimers();
+    if (typeof (window as any).modalClearTimers === 'function') {
+      (window as any).modalClearTimers();
+    } else {
+      clearTimers();
+    }
     if (sendVerificationCode) {
       sendVerificationCode.textContent = 'Send Code';
     }
@@ -769,7 +776,11 @@ export async function setupEventListeners() {
       emailValidationStatus.textContent = '';
       emailValidationStatus.className = 'mt-1 text-sm';
     }
-    clearTimers();
+    if (typeof (window as any).modalClearTimers === 'function') {
+      (window as any).modalClearTimers();
+    } else {
+      clearTimers();
+    }
     
     // Re-enable email input field and send code button
     if (scheduleEmail) {

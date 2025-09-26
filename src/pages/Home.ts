@@ -991,16 +991,36 @@ export function HomePage() {
       });
     });
 
+    // Personalize hero and CTA based on auth state
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const heroTitle = document.getElementById('heroTitle');
+      const heroSubtitle = document.getElementById('heroSubtitle');
+      const scheduleNowBtn = document.getElementById('scheduleNowBtn');
+      if (user) {
+        const firstName = (user.user_metadata && (user.user_metadata.first_name || user.user_metadata.firstName)) || '';
+        if (heroTitle) heroTitle.textContent = firstName ? `Welcome back, ${firstName}` : 'Welcome back to GuestGo';
+        if (heroSubtitle) heroSubtitle.textContent = 'Manage your visits, track status, and plan ahead.';
+        if (scheduleNowBtn) scheduleNowBtn.textContent = 'Schedule Another Visit';
+      } else {
+        if (heroTitle) heroTitle.textContent = 'Welcome to GuestGo';
+        if (heroSubtitle) heroSubtitle.textContent = 'Your one-stop solution for guest management and hospitality services.';
+        if (scheduleNowBtn) scheduleNowBtn.textContent = 'Schedule Now';
+      }
+    } catch (e) {
+      // ignore personalization errors
+    }
+
   }, 100);
 
   return `    <div class="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8 md:py-12">
       <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-4 sm:space-y-0 mb-8">
         <img src="/guestgo-logo.png" alt="GuestGo Logo" class="h-14 w-14 sm:h-16 sm:w-16 mx-auto sm:mx-0" />
         <div class="text-center sm:text-left">
-          <h1 class="text-2xl sm:text-4xl font-bold text-gray-900 dark:text-white transition-colors duration-200">
+          <h1 id="heroTitle" class="text-2xl sm:text-4xl font-bold text-gray-900 dark:text-white transition-colors duration-200">
             Welcome to GuestGo
           </h1>
-          <p class="text-base sm:text-xl text-gray-600 dark:text-gray-300 transition-colors duration-200">
+          <p id="heroSubtitle" class="text-base sm:text-xl text-gray-600 dark:text-gray-300 transition-colors duration-200">
             Your one-stop solution for guest management and hospitality services.
           </p>
           <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
