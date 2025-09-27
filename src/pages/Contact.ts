@@ -66,30 +66,30 @@ export function ContactPage() {
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="form-group">
               <label for="firstName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">First Name *</label>
-              <input type="text" id="firstName" name="firstName" required 
-                     class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:text-white"
+              <input type="text" id="firstName" name="firstName" required disabled
+                     class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:text-white opacity-50 cursor-not-allowed"
                      placeholder="Enter your first name">
               <div class="error-message text-red-500 text-sm mt-1 hidden"></div>
             </div>
             <div class="form-group">
               <label for="lastName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Last Name *</label>
-              <input type="text" id="lastName" name="lastName" required 
-                     class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:text-white"
+              <input type="text" id="lastName" name="lastName" required disabled
+                     class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:text-white opacity-50 cursor-not-allowed"
                      placeholder="Enter your last name">
               <div class="error-message text-red-500 text-sm mt-1 hidden"></div>
             </div>
           </div>
           <div class="form-group">
             <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email Address *</label>
-            <input type="email" id="email" name="email" required 
-                   class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:text-white"
+            <input type="email" id="email" name="email" required disabled
+                   class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:text-white opacity-50 cursor-not-allowed"
                    placeholder="Enter your email address">
             <div class="error-message text-red-500 text-sm mt-1 hidden"></div>
           </div>
           <div class="form-group">
             <label for="subject" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Subject *</label>
-            <select id="subject" name="subject" required 
-                    class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:text-white">
+            <select id="subject" name="subject" required disabled
+                    class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:text-white opacity-50 cursor-not-allowed">
               <option value="">Select a subject</option>
               <option value="general">General Inquiry</option>
               <option value="support">Technical Support</option>
@@ -101,19 +101,19 @@ export function ContactPage() {
           </div>
           <div class="form-group">
             <label for="message" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Message *</label>
-            <textarea id="message" name="message" rows="5" required 
-                      class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:text-white resize-none"
+            <textarea id="message" name="message" rows="5" required disabled
+                      class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:text-white resize-none opacity-50 cursor-not-allowed"
                       placeholder="Tell us how we can help you..."></textarea>
             <div class="error-message text-red-500 text-sm mt-1 hidden"></div>
           </div>
           <div class="flex items-center">
-            <input type="checkbox" id="newsletter" name="newsletter" 
-                   class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+            <input type="checkbox" id="newsletter" name="newsletter" disabled
+                   class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded opacity-50 cursor-not-allowed">
             <label for="newsletter" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
               Subscribe to our newsletter for updates and tips
             </label>
           </div>
-          <button type="submit" 
+          <button type="submit" disabled
                   class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
             <span class="submit-text">Send Message</span>
             <span class="loading-text hidden">Sending...</span>

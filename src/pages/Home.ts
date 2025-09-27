@@ -991,39 +991,72 @@ export function HomePage() {
       });
     });
 
-    // Personalize hero and CTA based on auth state
+    // Personalize hero and CTA based on auth state and role
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const heroTitle = document.getElementById('heroTitle');
       const heroSubtitle = document.getElementById('heroSubtitle');
       const scheduleNowBtn = document.getElementById('scheduleNowBtn');
+      
+      let userRole = null;
       if (user) {
+        try {
+          const { data: roleData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id)
+            .single();
+          userRole = roleData?.role || null;
+        } catch (e) {
+          // ignore role fetch errors
+        }
+      }
+      
+      if (user && userRole) {
         const firstName = (user.user_metadata && (user.user_metadata.first_name || user.user_metadata.firstName)) || '';
-        if (heroTitle) heroTitle.textContent = firstName ? `Welcome back, ${firstName}` : 'Welcome back to GuestGo';
-        if (heroSubtitle) heroSubtitle.textContent = 'Manage your visits, track status, and plan ahead.';
-        if (scheduleNowBtn) scheduleNowBtn.textContent = 'Schedule Another Visit';
+        
+        if (userRole === 'visitor') {
+          if (heroTitle) heroTitle.textContent = firstName ? `Welcome back, ${firstName}` : 'Welcome back to GuestGo';
+          if (heroSubtitle) heroSubtitle.textContent = 'Manage your visits, track status, and plan ahead.';
+          if (scheduleNowBtn) {
+            scheduleNowBtn.textContent = 'Schedule Another Visit';
+            scheduleNowBtn.onclick = () => window.openScheduleModal();
+          }
+        } else if (userRole === 'personnel') {
+          if (heroTitle) heroTitle.textContent = firstName ? `Welcome, ${firstName}` : 'Welcome to GuestGo';
+          if (heroSubtitle) heroSubtitle.textContent = 'Scan QR codes, manage visits, and track guest arrivals.';
+          if (scheduleNowBtn) {
+            scheduleNowBtn.textContent = 'Open QR Scanner';
+            scheduleNowBtn.onclick = () => window.navigateToPage('qr-scanner');
+          }
+        } else if (userRole === 'admin') {
+          if (heroTitle) heroTitle.textContent = firstName ? `Welcome, ${firstName}` : 'Welcome to GuestGo';
+          if (heroSubtitle) heroSubtitle.textContent = 'Manage the system, oversee visits, and configure settings.';
+          if (scheduleNowBtn) {
+            scheduleNowBtn.textContent = 'Open Dashboard';
+            scheduleNowBtn.onclick = () => window.navigateToPage('dashboard');
+          }
+        } else if (userRole === 'logs') {
+          if (heroTitle) heroTitle.textContent = firstName ? `Welcome, ${firstName}` : 'Welcome to GuestGo';
+          if (heroSubtitle) heroSubtitle.textContent = 'View system logs, monitor activities, and track system events.';
+          if (scheduleNowBtn) {
+            scheduleNowBtn.textContent = 'View Logs';
+            scheduleNowBtn.onclick = () => window.navigateToPage('logs');
+          }
+        }
       } else {
         if (heroTitle) heroTitle.textContent = 'Welcome to GuestGo';
         if (heroSubtitle) heroSubtitle.textContent = 'Your one-stop solution for guest management and hospitality services.';
         if (scheduleNowBtn) scheduleNowBtn.textContent = 'Schedule Now';
       }
-    } catch (e) {
-      // ignore personalization errors
-    }
-
-  }, 100);
-
-  return `    <div class="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8 md:py-12">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-4 sm:space-y-0 mb-8">
-        <img src="/guestgo-logo.png" alt="GuestGo Logo" class="h-14 w-14 sm:h-16 sm:w-16 mx-auto sm:mx-0" />
-        <div class="text-center sm:text-left">
-          <h1 id="heroTitle" class="text-2xl sm:text-4xl font-bold text-gray-900 dark:text-white transition-colors duration-200">
-            Welcome to GuestGo
-          </h1>
-          <p id="heroSubtitle" class="text-base sm:text-xl text-gray-600 dark:text-gray-300 transition-colors duration-200">
-            Your one-stop solution for guest management and hospitality services.
-          </p>
-          <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+      
+      // Update feature cards based on role
+      const featureCardsContainer = document.getElementById('featureCards');
+      if (featureCardsContainer) {
+        let cardsHtml = '';
+        
+        if (user && userRole === 'visitor') {
+          cardsHtml = `
             <div class="feature-card group rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 transition-shadow hover:shadow-md focus:outline-none" tabindex="0">
               <div class="flex items-center space-x-3">
                 <div class="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
@@ -1057,6 +1090,339 @@ export function HomePage() {
                 </div>
               </div>
             </div>
+          `;
+        } else if (user && userRole === 'personnel') {
+          cardsHtml = `
+            <div class="feature-card group rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 transition-shadow hover:shadow-md focus:outline-none" tabindex="0">
+              <div class="flex items-center space-x-3">
+                <div class="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <div>
+                  <p class="font-semibold">QR Scanner</p>
+                  <p class="text-xs text-gray-600 dark:text-gray-400">Quick check-in and verification.</p>
+                </div>
+              </div>
+            </div>
+            <div class="feature-card group rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 transition-shadow hover:shadow-md focus:outline-none" tabindex="0">
+              <div class="flex items-center space-x-3">
+                <div class="p-2 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+                </div>
+                <div>
+                  <p class="font-semibold">Visit Management</p>
+                  <p class="text-xs text-gray-600 dark:text-gray-400">Track and manage guest visits.</p>
+                </div>
+              </div>
+            </div>
+            <div class="feature-card group rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 transition-shadow hover:shadow-md focus:outline-none" tabindex="0">
+              <div class="flex items-center space-x-3">
+                <div class="p-2 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                </div>
+                <div>
+                  <p class="font-semibold">Real-time Updates</p>
+                  <p class="text-xs text-gray-600 dark:text-gray-400">Live visit status and notifications.</p>
+                </div>
+              </div>
+            </div>
+          `;
+        } else if (user && userRole === 'admin') {
+          cardsHtml = `
+            <div class="feature-card group rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 transition-shadow hover:shadow-md focus:outline-none" tabindex="0">
+              <div class="flex items-center space-x-3">
+                <div class="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                </div>
+                <div>
+                  <p class="font-semibold">System Overview</p>
+                  <p class="text-xs text-gray-600 dark:text-gray-400">Monitor all visits and activities.</p>
+                </div>
+              </div>
+            </div>
+            <div class="feature-card group rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 transition-shadow hover:shadow-md focus:outline-none" tabindex="0">
+              <div class="flex items-center space-x-3">
+                <div class="p-2 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/></svg>
+                </div>
+                <div>
+                  <p class="font-semibold">System Settings</p>
+                  <p class="text-xs text-gray-600 dark:text-gray-400">Configure gates, places, and users.</p>
+                </div>
+              </div>
+            </div>
+            <div class="feature-card group rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 transition-shadow hover:shadow-md focus:outline-none" tabindex="0">
+              <div class="flex items-center space-x-3">
+                <div class="p-2 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <div>
+                  <p class="font-semibold">User Management</p>
+                  <p class="text-xs text-gray-600 dark:text-gray-400">Manage roles and permissions.</p>
+                </div>
+              </div>
+            </div>
+          `;
+        } else if (user && userRole === 'logs') {
+          cardsHtml = `
+            <div class="feature-card group rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 transition-shadow hover:shadow-md focus:outline-none" tabindex="0">
+              <div class="flex items-center space-x-3">
+                <div class="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                </div>
+                <div>
+                  <p class="font-semibold">System Logs</p>
+                  <p class="text-xs text-gray-600 dark:text-gray-400">View detailed system activity logs.</p>
+                </div>
+              </div>
+            </div>
+            <div class="feature-card group rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 transition-shadow hover:shadow-md focus:outline-none" tabindex="0">
+              <div class="flex items-center space-x-3">
+                <div class="p-2 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                </div>
+                <div>
+                  <p class="font-semibold">Activity Monitoring</p>
+                  <p class="text-xs text-gray-600 dark:text-gray-400">Track user actions and system events.</p>
+                </div>
+              </div>
+            </div>
+            <div class="feature-card group rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 transition-shadow hover:shadow-md focus:outline-none" tabindex="0">
+              <div class="flex items-center space-x-3">
+                <div class="p-2 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                </div>
+                <div>
+                  <p class="font-semibold">Audit Trail</p>
+                  <p class="text-xs text-gray-600 dark:text-gray-400">Complete record of system changes.</p>
+                </div>
+              </div>
+            </div>
+          `;
+        } else {
+          // Default cards for non-logged in users
+          cardsHtml = `
+            <div class="feature-card group rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 transition-shadow hover:shadow-md focus:outline-none" tabindex="0">
+              <div class="flex items-center space-x-3">
+                <div class="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                </div>
+                <div>
+                  <p class="font-semibold">Smart Scheduling</p>
+                  <p class="text-xs text-gray-600 dark:text-gray-400">Limit-aware, timezone-accurate, fast.</p>
+                </div>
+              </div>
+            </div>
+            <div class="feature-card group rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 transition-shadow hover:shadow-md focus:outline-none" tabindex="0">
+              <div class="flex items-center space-x-3">
+                <div class="p-2 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <div>
+                  <p class="font-semibold">Secure Verification</p>
+                  <p class="text-xs text-gray-600 dark:text-gray-400">Email code checks and approvals.</p>
+                </div>
+              </div>
+            </div>
+            <div class="feature-card group rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 transition-shadow hover:shadow-md focus:outline-none" tabindex="0">
+              <div class="flex items-center space-x-3">
+                <div class="p-2 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405M19 13V7a2 2 0 00-2-2h-4l-2-2H7a2 2 0 00-2 2v6m0 8h12"/></svg>
+                </div>
+                <div>
+                  <p class="font-semibold">Real-time Tracking</p>
+                  <p class="text-xs text-gray-600 dark:text-gray-400">Status updates and QR scanning.</p>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+        
+        featureCardsContainer.innerHTML = cardsHtml;
+      }
+      
+      // Update workflow steps and panels based on role
+      const workflowStepsContainer = document.getElementById('workflowSteps');
+      const workflowPanelsContainer = document.getElementById('workflowPanels');
+      
+      if (workflowStepsContainer && workflowPanelsContainer) {
+        let stepsHtml = '';
+        let panelsHtml = '';
+        
+        if (user && userRole === 'visitor') {
+          stepsHtml = `
+            <button class="rounded-lg px-3 py-2 text-sm bg-blue-600 text-white" data-workflow-step="1">1. Request</button>
+            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="2">2. Verify</button>
+            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="3">3. Approve</button>
+            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="4">4. Check-in</button>
+          `;
+          panelsHtml = `
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800" data-workflow-panel="1">
+              <p class="font-semibold mb-1">Request a Visit</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Fill out the form with your details, pick a date (PH time), and choose the place to visit. We enforce a maximum of 2 visits per week.</p>
+            </div>
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="2">
+              <p class="font-semibold mb-1">Verify Your Email</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">We send a one-time code to your Gmail. Enter the code to proceed and reduce fraud.</p>
+            </div>
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="3">
+              <p class="font-semibold mb-1">Approval & Scheduling</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Personnel review your request. You'll see the status in your weekly visit tracker.</p>
+            </div>
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="4">
+              <p class="font-semibold mb-1">On-site Check-in</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Arrive with a valid ID. Staff can scan your QR to confirm and log your visit.</p>
+            </div>
+          `;
+        } else if (user && userRole === 'personnel') {
+          stepsHtml = `
+            <button class="rounded-lg px-3 py-2 text-sm bg-blue-600 text-white" data-workflow-step="1">1. Scan QR</button>
+            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="2">2. Verify</button>
+            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="3">3. Check-in</button>
+            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="4">4. Log Visit</button>
+          `;
+          panelsHtml = `
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800" data-workflow-panel="1">
+              <p class="font-semibold mb-1">Scan QR Code</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Use the QR scanner to scan the visitor's QR code from their confirmation email or mobile device.</p>
+            </div>
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="2">
+              <p class="font-semibold mb-1">Verify Details</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Check the visitor's information, visit date, and approval status before allowing entry.</p>
+            </div>
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="3">
+              <p class="font-semibold mb-1">Check-in Visitor</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Confirm the visitor's arrival and update their visit status in the system.</p>
+            </div>
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="4">
+              <p class="font-semibold mb-1">Log Visit</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Record the visit details and any notes for tracking and reporting purposes.</p>
+            </div>
+          `;
+        } else if (user && userRole === 'admin') {
+          stepsHtml = `
+            <button class="rounded-lg px-3 py-2 text-sm bg-blue-600 text-white" data-workflow-step="1">1. Monitor</button>
+            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="2">2. Manage</button>
+            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="3">3. Configure</button>
+            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="4">4. Report</button>
+          `;
+          panelsHtml = `
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800" data-workflow-panel="1">
+              <p class="font-semibold mb-1">Monitor System</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Track all visits, user activities, and system performance in real-time through the dashboard.</p>
+            </div>
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="2">
+              <p class="font-semibold mb-1">Manage Users</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Oversee user roles, permissions, and access levels for visitors and personnel.</p>
+            </div>
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="3">
+              <p class="font-semibold mb-1">Configure Settings</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Set up gates, places, visit limits, and other system parameters.</p>
+            </div>
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="4">
+              <p class="font-semibold mb-1">Generate Reports</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Create detailed reports on visit statistics, user activities, and system usage.</p>
+            </div>
+          `;
+        } else if (user && userRole === 'logs') {
+          stepsHtml = `
+            <button class="rounded-lg px-3 py-2 text-sm bg-blue-600 text-white" data-workflow-step="1">1. View Logs</button>
+            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="2">2. Filter</button>
+            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="3">3. Analyze</button>
+            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="4">4. Export</button>
+          `;
+          panelsHtml = `
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800" data-workflow-panel="1">
+              <p class="font-semibold mb-1">View System Logs</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Access comprehensive system logs including user activities, visit records, and system events in real-time.</p>
+            </div>
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="2">
+              <p class="font-semibold mb-1">Filter & Search</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Use advanced filters to search logs by date, user, action type, or specific events for detailed analysis.</p>
+            </div>
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="3">
+              <p class="font-semibold mb-1">Analyze Patterns</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Review log patterns to identify trends, anomalies, or potential issues in system usage and user behavior.</p>
+            </div>
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="4">
+              <p class="font-semibold mb-1">Export Reports</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Generate and export detailed log reports for compliance, auditing, or further analysis purposes.</p>
+            </div>
+          `;
+        } else {
+          // Default workflow for non-logged in users
+          stepsHtml = `
+            <button class="rounded-lg px-3 py-2 text-sm bg-blue-600 text-white" data-workflow-step="1">1. Request</button>
+            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="2">2. Verify</button>
+            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="3">3. Approve</button>
+            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="4">4. Check-in</button>
+          `;
+          panelsHtml = `
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800" data-workflow-panel="1">
+              <p class="font-semibold mb-1">Request a Visit</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Fill out the form with your details, pick a date (PH time), and choose the place to visit. We enforce a maximum of 2 visits per week.</p>
+            </div>
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="2">
+              <p class="font-semibold mb-1">Verify Your Email</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">We send a one-time code to your Gmail. Enter the code to proceed and reduce fraud.</p>
+            </div>
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="3">
+              <p class="font-semibold mb-1">Approval & Scheduling</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Personnel review your request. You'll see the status in your weekly visit tracker.</p>
+            </div>
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="4">
+              <p class="font-semibold mb-1">On-site Check-in</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Arrive with a valid ID. Staff can scan your QR to confirm and log your visit.</p>
+            </div>
+          `;
+        }
+        
+        workflowStepsContainer.innerHTML = stepsHtml;
+        workflowPanelsContainer.innerHTML = panelsHtml;
+        
+        // Re-setup workflow step event listeners for dynamically generated content
+        document.querySelectorAll('[data-workflow-step]').forEach(stepBtn => {
+          stepBtn.addEventListener('click', () => {
+            const step = (stepBtn as HTMLElement).dataset.workflowStep;
+            if (!step) return;
+            
+            // Update button states
+            document.querySelectorAll('[data-workflow-step]').forEach(btn => {
+              btn.classList.remove('bg-blue-600', 'text-white');
+              btn.classList.add('bg-white', 'dark:bg-gray-800', 'text-blue-600', 'dark:text-blue-400', 'border', 'border-blue-200', 'dark:border-gray-700');
+            });
+            stepBtn.classList.remove('bg-white', 'dark:bg-gray-800', 'text-blue-600', 'dark:text-blue-400', 'border', 'border-blue-200', 'dark:border-gray-700');
+            stepBtn.classList.add('bg-blue-600', 'text-white');
+            
+            // Show corresponding panel
+            document.querySelectorAll('[data-workflow-panel]').forEach(panel => {
+              panel.classList.add('hidden');
+            });
+            const targetPanel = document.querySelector(`[data-workflow-panel="${step}"]`);
+            if (targetPanel) {
+              targetPanel.classList.remove('hidden');
+            }
+          });
+        });
+      }
+    } catch (e) {
+      // ignore personalization errors
+    }
+
+  }, 100);
+
+  return `    <div class="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8 md:py-12">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-4 sm:space-y-0 mb-8">
+        <img src="/guestgo-logo.png" alt="GuestGo Logo" class="h-14 w-14 sm:h-16 sm:w-16 mx-auto sm:mx-0" />
+        <div class="text-center sm:text-left">
+          <h1 id="heroTitle" class="text-2xl sm:text-4xl font-bold text-gray-900 dark:text-white transition-colors duration-200">
+            Welcome to GuestGo
+          </h1>
+          <p id="heroSubtitle" class="text-base sm:text-xl text-gray-600 dark:text-gray-300 transition-colors duration-200">
+            Your one-stop solution for guest management and hospitality services.
+          </p>
+          <div id="featureCards" class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <!-- Feature cards will be populated dynamically based on role -->
           </div>
         </div>
       </div>
@@ -1093,29 +1459,11 @@ export function HomePage() {
       <!-- How GuestGo Works -->
       <section class="mb-10">
         <h2 class="text-xl sm:text-2xl font-bold mb-3">How GuestGo Works</h2>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
-          <button class="rounded-lg px-3 py-2 text-sm bg-blue-600 text-white" data-workflow-step="1">1. Request</button>
-          <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="2">2. Verify</button>
-          <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="3">3. Approve</button>
-          <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="4">4. Check-in</button>
+        <div id="workflowSteps" class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+          <!-- Workflow steps will be populated dynamically based on role -->
         </div>
-        <div class="space-y-2">
-          <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800" data-workflow-panel="1">
-            <p class="font-semibold mb-1">Request a Visit</p>
-            <p class="text-sm text-gray-600 dark:text-gray-400">Fill out the form with your details, pick a date (PH time), and choose the place to visit. We enforce a maximum of 2 visits per week.</p>
-          </div>
-          <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="2">
-            <p class="font-semibold mb-1">Verify Your Email</p>
-            <p class="text-sm text-gray-600 dark:text-gray-400">We send a one-time code to your Gmail. Enter the code to proceed and reduce fraud.</p>
-          </div>
-          <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="3">
-            <p class="font-semibold mb-1">Approval & Scheduling</p>
-            <p class="text-sm text-gray-600 dark:text-gray-400">Personnel review your request. You’ll see the status in your weekly visit tracker.</p>
-          </div>
-          <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="4">
-            <p class="font-semibold mb-1">On-site Check-in</p>
-            <p class="text-sm text-gray-600 dark:text-gray-400">Arrive with a valid ID. Staff can scan your QR to confirm and log your visit.</p>
-          </div>
+        <div id="workflowPanels" class="space-y-2">
+          <!-- Workflow panels will be populated dynamically based on role -->
         </div>
       </section>
 
