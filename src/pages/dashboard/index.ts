@@ -74,6 +74,7 @@ const LOGS_TAB_ACTIONS = {
     { value: 'gate_entrance_scan', label: 'Gate Entrance Scan' },
     { value: 'gate_exit_scan', label: 'Gate Exit Scan' },
     { value: 'visit_flagged_no_exit', label: 'Visit Flagged (No Exit)' },
+    { value: 'role_change', label: 'Role Change' },
   ],
   gate: [
     { value: 'all', label: 'All Actions' },
@@ -95,6 +96,7 @@ const LOGS_TAB_ACTIONS = {
   account: [
     { value: 'all', label: 'All Actions' },
     { value: 'password_change', label: 'Password Change' },
+    { value: 'role_change', label: 'Role Change' },
   ],
   schedules: [
     { value: 'all', label: 'All Actions' },
@@ -583,6 +585,7 @@ export function DashboardPage() {
                     <option value="gate_entrance_scan">Gate Entrance Scan</option>
                     <option value="gate_exit_scan">Gate Exit Scan</option>
                     <option value="visit_flagged_no_exit">Visit Flagged (No Exit)</option>
+                    <option value="role_change">Role Change</option>
                   </select>
                 </div>
 
@@ -1934,6 +1937,7 @@ async function renderLogs(): Promise<void> {
                       log.displayAction === 'gate_entrance_scan' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
                       log.displayAction === 'gate_exit_scan' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
                       log.displayAction === 'visit_flagged_no_exit' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                      log.displayAction === 'role_change' ? 'bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200' :
                       'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
                     }">
                       ${log.displayAction === 'visit_completed_flagged' ? 'Completed (Flagged)' : log.displayAction.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
@@ -2007,6 +2011,7 @@ async function renderLogs(): Promise<void> {
                       log.displayAction === 'gate_entrance_scan' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
                       log.displayAction === 'gate_exit_scan' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
                       log.displayAction === 'visit_flagged_no_exit' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                      log.displayAction === 'role_change' ? 'bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200' :
                       'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
                     }">
                       ${log.displayAction === 'visit_completed_flagged' ? 'Completed (Flagged)' : log.displayAction.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
@@ -2570,6 +2575,29 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
         
         return detailsHtml;
       }
+      case 'role_change': {
+        const roleColors: { [key: string]: string } = {
+          'admin': 'text-red-600 dark:text-red-400',
+          'log': 'text-blue-600 dark:text-blue-400',
+          'personnel': 'text-green-600 dark:text-green-400',
+          'visitor': 'text-yellow-600 dark:text-yellow-400',
+          'guest': 'text-gray-600 dark:text-gray-400'
+        };
+        
+        const oldRoleClass = roleColors[parsedDetails.old_role] || 'text-gray-600 dark:text-gray-400';
+        const newRoleClass = roleColors[parsedDetails.new_role] || 'text-gray-600 dark:text-gray-400';
+        
+        let detailsHtml = `<div><span class="font-medium">Target User:</span> <span class="font-semibold">${parsedDetails.target_user_name || 'Unknown User'}</span></div>`;
+        detailsHtml += `<div><span class="font-medium">Email:</span> <span class="text-sm text-gray-600 dark:text-gray-400">${parsedDetails.target_user_email || 'Unknown'}</span></div>`;
+        detailsHtml += `<div><span class="font-medium">Role Change:</span> <span class="${oldRoleClass} font-semibold">${parsedDetails.old_role}</span> <span class="text-gray-500">→</span> <span class="${newRoleClass} font-semibold">${parsedDetails.new_role}</span></div>`;
+        detailsHtml += `<div><span class="font-medium">Changed By:</span> <span class="font-semibold">${parsedDetails.admin_user_name || 'Unknown Admin'}</span></div>`;
+        
+        if (parsedDetails.changed_at) {
+          detailsHtml += `<div><span class="font-medium">Changed:</span> ${new Date(parsedDetails.changed_at).toLocaleString()}</div>`;
+        }
+        
+        return detailsHtml;
+      }
       default:
         return `<pre class="text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto">${JSON.stringify(parsedDetails, null, 2)}</pre>`;
     }
@@ -2589,19 +2617,25 @@ async function changeUserRole(userId: string, newRole: string) {
     return;
   }
 
-  const { error } = await supabase
-    .from('user_roles')
-    .update({ role: newRole })
-    .eq('user_id', userId);
-
-  if (error) {
-    console.error('Error updating user role:', error);
-    showNotification('Error updating user role. Please try again.', 'error');
+  try {
+    // Import the logging function
+    const { changeUserRoleWithLogging } = await import('../../utils/logging');
+    
+    // Use the new function that includes logging
+    const result = await changeUserRoleWithLogging(userId, newRole);
+    
+    if (!result.success) {
+      console.error('Error updating user role:', result.error);
+      showNotification(`Error updating user role: ${result.error}`, 'error');
     return;
   }
 
   showNotification(`User role changed to ${newRole.charAt(0).toUpperCase() + newRole.slice(1)} successfully!`, 'success');
   loadAccounts(); // Reload the accounts list
+  } catch (error) {
+    console.error('Error in changeUserRole:', error);
+    showNotification('Error updating user role. Please try again.', 'error');
+  }
 }
 
 // Make function available globally

@@ -1,6 +1,6 @@
 import supabase from '../config/supabase';
 
-export type LogAction = 'password_change' | 'place_update' | 'place_availability_toggle' | 'place_create' | 'personnel_assignment' | 'personnel_removal' | 'personnel_availability_change' | 'visit_scheduled' | 'visit_completed' | 'gate_create' | 'gate_update' | 'gate_status_change';
+export type LogAction = 'password_change' | 'place_update' | 'place_availability_toggle' | 'place_create' | 'personnel_assignment' | 'personnel_removal' | 'personnel_availability_change' | 'visit_scheduled' | 'visit_completed' | 'gate_create' | 'gate_update' | 'gate_status_change' | 'role_change';
 
 export interface LogDetails {
   [key: string]: any;
@@ -101,6 +101,72 @@ export async function getLogs(): Promise<any[]> {
     return logsWithUsers;
   } catch (error) {
     console.error('Error in getLogs:', error);
+    return [];
+  }
+}
+
+// Helper function to change user role with logging
+export async function changeUserRoleWithLogging(
+  targetUserId: string,
+  newRole: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { data, error } = await supabase.rpc('change_user_role', {
+      p_target_user_id: targetUserId,
+      p_new_role: newRole,
+      p_changed_by: (await supabase.auth.getUser()).data.user?.id
+    });
+
+    if (error) {
+      console.error('Error changing user role:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error in changeUserRoleWithLogging:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+}
+
+// Helper function to get role change history for a specific user
+export async function getUserRoleHistory(userId: string): Promise<any[]> {
+  try {
+    const { data, error } = await supabase.rpc('get_user_role_history', {
+      p_user_id: userId,
+      p_requested_by: (await supabase.auth.getUser()).data.user?.id
+    });
+
+    if (error) {
+      console.error('Error fetching user role history:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getUserRoleHistory:', error);
+    return [];
+  }
+}
+
+// Helper function to get all role change history
+export async function getAllRoleChangeHistory(): Promise<any[]> {
+  try {
+    const { data, error } = await supabase.rpc('get_all_role_change_history', {
+      p_requested_by: (await supabase.auth.getUser()).data.user?.id
+    });
+
+    if (error) {
+      console.error('Error fetching all role change history:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getAllRoleChangeHistory:', error);
     return [];
   }
 } 
