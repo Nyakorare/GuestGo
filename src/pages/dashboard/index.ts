@@ -197,6 +197,21 @@ export function DashboardPage() {
           if (accountsContent) accountsContent.classList.add('hidden');
           if (logsContent) logsContent.classList.add('hidden');
           loadPersonnelDashboard();
+        } else if (roleData.role === 'guard') {
+          // Guard: show guard content, hide admin tabs
+          if (adminTabs) adminTabs.classList.add('hidden');
+          if (logsTab) logsTab.classList.add('hidden');
+          if (placesTab) placesTab.classList.add('hidden');
+          if (accountsTab) accountsTab.classList.add('hidden');
+          if (placesContent) placesContent.classList.add('hidden');
+          if (accountsContent) accountsContent.classList.add('hidden');
+          if (logsContent) logsContent.classList.add('hidden');
+          
+          // Show guard content
+          const guardContent = document.getElementById('guardContent');
+          if (guardContent) guardContent.classList.remove('hidden');
+          
+          loadGuardDashboard();
         } else if (roleData.role === 'visitor') {
           // Visitor: show visitor content, hide admin tabs
           if (adminTabs) adminTabs.classList.add('hidden');
@@ -481,6 +496,7 @@ export function DashboardPage() {
                   <option value="all">All Roles</option>
                   <option value="log">Log</option>
                   <option value="personnel">Personnel</option>
+                  <option value="guard">Guard</option>
                   <option value="visitor">Visitor</option>
                   <option value="guest">Guest</option>
                 </select>
@@ -1211,6 +1227,58 @@ export function DashboardPage() {
         </div>
       </div>
 
+      <!-- Guard Dashboard Content -->
+      <div id="guardContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+          <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">Guard Dashboard</h2>
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-4">
+            <button 
+              id="refreshGuardBtn"
+              class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 w-full sm:w-auto"
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        <!-- Guard Scan History Section -->
+        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6">
+          <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Scan History</h3>
+            <div class="flex flex-col sm:flex-row gap-2">
+              <!-- Search Input -->
+              <div class="relative">
+                <input 
+                  type="text" 
+                  id="guardSearchInput"
+                  placeholder="Search scan history..."
+                  class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
+                >
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                  </svg>
+                </div>
+              </div>
+              <!-- Action Filter -->
+              <select 
+                id="guardActionFilter"
+                class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+              >
+                <option value="all">All Actions</option>
+                <option value="entrance">Entrance</option>
+                <option value="exit">Exit</option>
+              </select>
+            </div>
+          </div>
+          
+          <!-- Scan History List -->
+          <div id="guardScanHistoryList" class="space-y-4">
+            <!-- Scan history will be loaded here -->
+          </div>
+        </div>
+      </div>
+
       <!-- Edit Place Modal -->
       <div id="editPlaceModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
         <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
@@ -1673,6 +1741,7 @@ function renderAccounts(): void {
                   <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full transition-all duration-200 hover:scale-105 hover:shadow-md ${
                     account.role === 'log' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
                     account.role === 'personnel' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                    account.role === 'guard' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
                     account.role === 'visitor' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
                     'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
                   }">
@@ -1690,6 +1759,7 @@ function renderAccounts(): void {
                   >
                     <option value="log" ${account.role === 'log' ? 'selected' : ''}>Log</option>
                     <option value="personnel" ${account.role === 'personnel' ? 'selected' : ''}>Personnel</option>
+                    <option value="guard" ${account.role === 'guard' ? 'selected' : ''}>Guard</option>
                     <option value="visitor" ${account.role === 'visitor' ? 'selected' : ''}>Visitor</option>
                     <option value="guest" ${account.role === 'guest' ? 'selected' : ''}>Guest</option>
                   </select>
@@ -4490,6 +4560,320 @@ async function loadPersonnelDashboard() {
     console.error('Error in loadPersonnelDashboard:', error);
   }
 }
+
+// Function to load guard dashboard
+async function loadGuardDashboard() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    console.error('No user found');
+    return;
+  }
+
+  try {
+    const guardContent = document.getElementById('guardContent');
+    if (guardContent) {
+      guardContent.classList.remove('hidden');
+    }
+
+    // Load guard scan history
+    await loadGuardScanHistory();
+
+    // Setup event listeners
+    const refreshGuardBtn = document.getElementById('refreshGuardBtn');
+    const guardSearchInput = document.getElementById('guardSearchInput');
+    const guardActionFilter = document.getElementById('guardActionFilter');
+
+    refreshGuardBtn?.addEventListener('click', async () => {
+      await loadGuardScanHistory();
+    });
+
+    guardSearchInput?.addEventListener('input', () => {
+      applyGuardSearchAndFilter();
+    });
+
+    guardActionFilter?.addEventListener('change', () => {
+      applyGuardSearchAndFilter();
+    });
+
+  } catch (error) {
+    console.error('Error in loadGuardDashboard:', error);
+  }
+}
+
+// Function to load guard scan history
+async function loadGuardScanHistory() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    console.error('No user found');
+    return;
+  }
+
+  try {
+    // Get guard scan history from logs
+    const { data: scanHistory, error } = await supabase
+      .from('logs')
+      .select(`
+        id,
+        action,
+        details,
+        created_at
+      `)
+      .eq('user_id', user.id)
+      .eq('action', 'guard_action')
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) {
+      console.error('Error loading guard scan history:', error);
+      return;
+    }
+
+    // Store scan history globally for filtering
+    (window as any).guardScanHistory = scanHistory || [];
+    
+    // Render scan history
+    renderGuardScanHistory(scanHistory || []);
+
+  } catch (error) {
+    console.error('Error in loadGuardScanHistory:', error);
+  }
+}
+
+// Function to render guard scan history
+function renderGuardScanHistory(scanHistory: any[]) {
+  const guardScanHistoryList = document.getElementById('guardScanHistoryList');
+  if (!guardScanHistoryList) return;
+
+  if (scanHistory.length === 0) {
+    guardScanHistoryList.innerHTML = `
+      <div class="text-center py-8">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No scan history</h3>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Your scan history will appear here after you log entrance or exit actions.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const scanHistoryHtml = scanHistory.map(scan => {
+    const details = scan.details || {};
+    const action = details.action || 'unknown';
+    const visitId = details.visit_id || 'Unknown';
+    const timestamp = new Date(scan.created_at);
+    
+    return `
+      <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow duration-200">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <div class="flex-shrink-0">
+              <div class="w-10 h-10 rounded-full flex items-center justify-center ${
+                action === 'entrance' ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-200' :
+                action === 'exit' ? 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-200' :
+                'bg-gray-100 text-gray-600 dark:bg-gray-900 dark:text-gray-200'
+              }">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  ${action === 'entrance' ? 
+                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>' :
+                    action === 'exit' ?
+                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path>' :
+                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>'
+                  }
+                </svg>
+              </div>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center space-x-2">
+                <h4 class="text-sm font-medium text-gray-900 dark:text-white">
+                  ${action === 'entrance' ? 'Entrance Logged' : action === 'exit' ? 'Exit Logged' : 'Action Logged'}
+                </h4>
+                <span class="px-2 py-1 text-xs font-medium rounded-full ${
+                  action === 'entrance' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                  action === 'exit' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                  'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                }">
+                  ${action.charAt(0).toUpperCase() + action.slice(1)}
+                </span>
+              </div>
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                Visit ID: ${visitId.substring(0, 8)}...
+              </p>
+              <p class="text-xs text-gray-400 dark:text-gray-500">
+                ${timestamp.toLocaleDateString()} at ${timestamp.toLocaleTimeString()}
+              </p>
+            </div>
+          </div>
+          <div class="flex-shrink-0">
+            <button 
+              onclick="viewGuardScanDetails('${scan.id}')"
+              class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium"
+            >
+              View Details
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  guardScanHistoryList.innerHTML = scanHistoryHtml;
+}
+
+// Function to apply search and filter for guard scan history
+function applyGuardSearchAndFilter() {
+  const searchInput = document.getElementById('guardSearchInput') as HTMLInputElement;
+  const actionFilter = document.getElementById('guardActionFilter') as HTMLSelectElement;
+  
+  const searchTerm = searchInput?.value.toLowerCase() || '';
+  const actionValue = actionFilter?.value || 'all';
+
+  // Get stored scan history
+  const allScans = (window as any).guardScanHistory || [];
+  let filtered = [...allScans];
+
+  // Apply search filter
+  if (searchTerm) {
+    filtered = filtered.filter(scan => {
+      const details = scan.details || {};
+      const action = details.action || '';
+      const visitId = details.visit_id || '';
+      const timestamp = new Date(scan.created_at).toLocaleString().toLowerCase();
+      
+      return action.toLowerCase().includes(searchTerm) ||
+             visitId.toLowerCase().includes(searchTerm) ||
+             timestamp.includes(searchTerm);
+    });
+  }
+
+  // Apply action filter
+  if (actionValue !== 'all') {
+    filtered = filtered.filter(scan => {
+      const details = scan.details || {};
+      return details.action === actionValue;
+    });
+  }
+
+  renderGuardScanHistory(filtered);
+}
+
+// Function to view guard scan details
+(window as any).viewGuardScanDetails = function(scanId: string) {
+  const allScans = (window as any).guardScanHistory || [];
+  const scan = allScans.find((s: any) => s.id === scanId);
+  
+  if (!scan) {
+    console.error('Scan not found');
+    return;
+  }
+
+  const details = scan.details || {};
+  const action = details.action || 'unknown';
+  const visitId = details.visit_id || 'Unknown';
+  const timestamp = new Date(scan.created_at);
+
+  // Create modal
+  const modalHtml = `
+    <div id="guardScanDetailsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div class="relative top-10 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white dark:bg-gray-800">
+        <div class="mt-3">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Scan Details</h3>
+            <button 
+              id="closeGuardScanDetailsModal"
+              class="text-gray-400 hover:text-gray-500 focus:outline-none"
+            >
+              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <div class="space-y-4">
+            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+              <div class="flex items-center space-x-3 mb-3">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center ${
+                  action === 'entrance' ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-200' :
+                  action === 'exit' ? 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-200' :
+                  'bg-gray-100 text-gray-600 dark:bg-gray-900 dark:text-gray-200'
+                }">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    ${action === 'entrance' ? 
+                      '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>' :
+                      action === 'exit' ?
+                      '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path>' :
+                      '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>'
+                    }
+                  </svg>
+                </div>
+                <div>
+                  <h4 class="text-sm font-medium text-gray-900 dark:text-white">
+                    ${action === 'entrance' ? 'Entrance Logged' : action === 'exit' ? 'Exit Logged' : 'Action Logged'}
+                  </h4>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">${timestamp.toLocaleString()}</p>
+                </div>
+              </div>
+              
+              <div class="space-y-2 text-sm">
+                <div>
+                  <span class="font-medium text-gray-700 dark:text-gray-300">Action:</span>
+                  <span class="ml-2 px-2 py-1 text-xs font-medium rounded-full ${
+                    action === 'entrance' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                    action === 'exit' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                    'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                  }">
+                    ${action.charAt(0).toUpperCase() + action.slice(1)}
+                  </span>
+                </div>
+                <div>
+                  <span class="font-medium text-gray-700 dark:text-gray-300">Visit ID:</span>
+                  <span class="ml-2 font-mono text-gray-600 dark:text-gray-400">${visitId}</span>
+                </div>
+                <div>
+                  <span class="font-medium text-gray-700 dark:text-gray-300">Timestamp:</span>
+                  <span class="ml-2 text-gray-600 dark:text-gray-400">${timestamp.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="flex justify-end mt-6">
+            <button 
+              id="closeGuardScanDetailsModalBtn"
+              class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Add modal to page
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+  // Add event listeners
+  const modal = document.getElementById('guardScanDetailsModal');
+  const closeBtn1 = document.getElementById('closeGuardScanDetailsModal');
+  const closeBtn2 = document.getElementById('closeGuardScanDetailsModalBtn');
+
+  const closeModal = () => {
+    if (modal) {
+      modal.remove();
+    }
+  };
+
+  closeBtn1?.addEventListener('click', closeModal);
+  closeBtn2?.addEventListener('click', closeModal);
+
+  // Close on background click
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closeModal();
+    }
+  });
+};
 
 // Function to update personnel button states based on assignment
 function updatePersonnelButtonStates(isAssigned: boolean) {

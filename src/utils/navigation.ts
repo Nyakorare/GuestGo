@@ -4,6 +4,7 @@ import { ContactPage } from '../pages/Contact';
 import { DashboardPage } from '../pages/dashboard';
 import { QRScannerPage } from '../pages/QRScanner';
 import { GatePage, setupGatePage } from '../pages/GatePage';
+import { GuardDashboardPage } from '../pages/GuardDashboard';
 import { setupAboutPageInteractivity } from './eventHandlers';
 import { performanceMonitor } from './performance';
 
@@ -46,6 +47,8 @@ export function renderPage(path: string): string {
       return ContactPage();
     case '/dashboard':
       return DashboardPage();
+    case '/guard-dashboard':
+      return GuardDashboardPage();
     case '/qr-scanner':
       return QRScannerPage();
     default:
@@ -143,6 +146,12 @@ async function performNavigation() {
       return;
     }
     
+    if (path === '/guard-dashboard' && role !== 'guard') {
+      window.location.hash = '/';
+      performanceMonitor.endNavigation(path);
+      return;
+    }
+    
     if (path.startsWith('/gate/') && role !== 'admin') {
       window.location.hash = '/dashboard';
       performanceMonitor.endNavigation(path);
@@ -216,6 +225,15 @@ async function setupPageFunctionality(path: string, user: any, role: string | nu
         setupGatePage(gateId);
       }, 100);
     }
+  }
+  
+  if (path === '/guard-dashboard') {
+    // Import and initialize guard dashboard functionality
+    import('../pages/GuardDashboard').then(({ initializeGuardDashboard }) => {
+      setTimeout(() => {
+        initializeGuardDashboard();
+      }, 100);
+    });
   }
 }
 

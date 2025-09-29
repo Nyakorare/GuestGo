@@ -23,6 +23,8 @@ function getCachedElement(id: string): HTMLElement | null {
 function updateAuthUI(session: any) {
   const dashboardLink = getCachedElement('dashboard-link');
   const mobileDashboardLink = getCachedElement('mobile-dashboard-link');
+  const guardDashboardLink = getCachedElement('guard-dashboard-link');
+  const mobileGuardDashboardLink = getCachedElement('mobile-guard-dashboard-link');
   const welcomeMessage = getCachedElement('welcome-message');
   const qrScannerLink = getCachedElement('qr-scanner-link');
   const mobileQrScannerLink = getCachedElement('mobile-qr-scanner-link');
@@ -42,6 +44,10 @@ function updateAuthUI(session: any) {
     // Show QR scanner link for personnel
     if (qrScannerLink) qrScannerLink.classList.remove('hidden');
     if (mobileQrScannerLink) mobileQrScannerLink.classList.remove('hidden');
+
+    // Show guard dashboard link for guards
+    if (guardDashboardLink) guardDashboardLink.classList.remove('hidden');
+    if (mobileGuardDashboardLink) mobileGuardDashboardLink.classList.remove('hidden');
   } else {
     // Hide dashboard link
     if (dashboardLink) dashboardLink.classList.add('hidden');
@@ -53,6 +59,10 @@ function updateAuthUI(session: any) {
     // Hide QR scanner link
     if (qrScannerLink) qrScannerLink.classList.add('hidden');
     if (mobileQrScannerLink) mobileQrScannerLink.classList.add('hidden');
+
+    // Hide guard dashboard link
+    if (guardDashboardLink) guardDashboardLink.classList.add('hidden');
+    if (mobileGuardDashboardLink) mobileGuardDashboardLink.classList.add('hidden');
   }
 }
 
@@ -92,6 +102,7 @@ export default function setupApp() {
             <a href="#/about" class="nav-link">About</a>
             <a href="#/contact" class="nav-link">Contact Us</a>
             <a href="#/dashboard" class="nav-link hidden" id="dashboard-link">Dashboard</a>
+            <a href="#/guard-dashboard" class="nav-link hidden" id="guard-dashboard-link">Guard Dashboard</a>
             <a href="#/qr-scanner" class="nav-link hidden" id="qr-scanner-link">QR Scanner</a>
           </div>
 
@@ -152,6 +163,7 @@ export default function setupApp() {
             <a href="#/about" class="block px-3 py-2 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500">About</a>
             <a href="#/contact" class="block px-3 py-2 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500">Contact Us</a>
             <a href="#/dashboard" class="block px-3 py-2 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500 hidden" id="mobile-dashboard-link">Dashboard</a>
+            <a href="#/guard-dashboard" class="block px-3 py-2 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500 hidden" id="mobile-guard-dashboard-link">Guard Dashboard</a>
             <a href="#/qr-scanner" class="block px-3 py-2 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500 hidden" id="mobile-qr-scanner-link">QR Scanner</a>
             <div id="mobile-auth-buttons" style="display: none;">
               <!-- Content will be dynamically updated based on auth state -->

@@ -573,6 +573,8 @@ async function updateNavigationBasedOnRole() {
         const mobileQrScannerLink = document.getElementById('mobile-qr-scanner-link');
         const dashboardLink = document.getElementById('dashboard-link');
         const mobileDashboardLink = document.getElementById('mobile-dashboard-link');
+        const guardDashboardLink = document.getElementById('guard-dashboard-link');
+        const mobileGuardDashboardLink = document.getElementById('mobile-guard-dashboard-link');
         
         // Show/hide QR Scanner links based on role
         if (userRole === 'personnel') {
@@ -581,6 +583,15 @@ async function updateNavigationBasedOnRole() {
         } else {
           qrScannerLink?.classList.add('hidden');
           mobileQrScannerLink?.classList.add('hidden');
+        }
+        
+        // Show/hide Guard Dashboard links based on role
+        if (userRole === 'guard') {
+          guardDashboardLink?.classList.remove('hidden');
+          mobileGuardDashboardLink?.classList.remove('hidden');
+        } else {
+          guardDashboardLink?.classList.add('hidden');
+          mobileGuardDashboardLink?.classList.add('hidden');
         }
         
         // Show dashboard link for all authenticated users
@@ -593,11 +604,15 @@ async function updateNavigationBasedOnRole() {
       const mobileQrScannerLink = document.getElementById('mobile-qr-scanner-link');
       const dashboardLink = document.getElementById('dashboard-link');
       const mobileDashboardLink = document.getElementById('mobile-dashboard-link');
+      const guardDashboardLink = document.getElementById('guard-dashboard-link');
+      const mobileGuardDashboardLink = document.getElementById('mobile-guard-dashboard-link');
       
       qrScannerLink?.classList.add('hidden');
       mobileQrScannerLink?.classList.add('hidden');
       dashboardLink?.classList.add('hidden');
       mobileDashboardLink?.classList.add('hidden');
+      guardDashboardLink?.classList.add('hidden');
+      mobileGuardDashboardLink?.classList.add('hidden');
     }
   } catch (error) {
     console.error('Error updating navigation based on role:', error);
