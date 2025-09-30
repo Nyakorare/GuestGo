@@ -447,6 +447,9 @@ export async function setupEventListeners() {
     }
   }
 
+  // Expose verification input enabler for external flows
+  (window as any).modalEnableVerificationInputs = enableVerificationInputs;
+
   // Function to check if email is already registered
   async function isEmailRegistered(email: string): Promise<boolean> {
     try {
@@ -495,7 +498,7 @@ export async function setupEventListeners() {
       sendVerificationCode.textContent = 'Send Code';
     }
     currentCode = null;
-    enableVerificationInputs();
+    (window as any).modalEnableVerificationInputs?.();
     updateSubmitButtonState();
 
     // Clear previous status messages
@@ -887,12 +890,18 @@ export async function setupEventListeners() {
           throw new Error(`Cannot schedule visits for past dates. Current Philippine date is ${philippineToday.toLocaleDateString()}. Please select today or a future date.`);
         }
 
-        // Check if date is more than 1 month in the future
-        // Set max date to the last day of the current month
-        const philippineMaxDate = new Date(philippineToday.getFullYear(), philippineToday.getMonth() + 1, 0);
-        
+        // Determine max date:
+        // - If today is the last day of the month, allow selecting dates into next month
+        // - Otherwise, cap at the end of the current month
+        const endOfCurrentMonth = new Date(philippineToday.getFullYear(), philippineToday.getMonth() + 1, 0);
+        const isLastDayOfMonth = philippineToday.getDate() === endOfCurrentMonth.getDate();
+        const philippineMaxDate = isLastDayOfMonth
+          ? new Date(philippineToday.getFullYear(), philippineToday.getMonth() + 2, 0)
+          : endOfCurrentMonth;
+
         if (philippineSelectedDate.getTime() > philippineMaxDate.getTime()) {
-          throw new Error(`Cannot schedule visits beyond the current month. Maximum allowed date is ${philippineMaxDate.toLocaleDateString()}.`);
+          const maxRangeLabel = isLastDayOfMonth ? 'next month' : 'the current month';
+          throw new Error(`Cannot schedule visits beyond ${maxRangeLabel}. Maximum allowed date is ${philippineMaxDate.toLocaleDateString()}.`);
         }
 
         // Additional validation: Check if the date input has validation errors
@@ -1049,8 +1058,14 @@ export async function setupEventListeners() {
       philippineToday = getPhilippineDate();
     }
     
-    // Set max date to the last day of the current month
-    philippineMaxDate = new Date(philippineToday.getFullYear(), philippineToday.getMonth() + 1, 0);
+    // Determine max date:
+    // - If today is the last day of the month, allow selecting dates into next month
+    // - Otherwise, cap at the end of the current month
+    const endOfCurrentMonth = new Date(philippineToday.getFullYear(), philippineToday.getMonth() + 1, 0);
+    const isLastDayOfMonth = philippineToday.getDate() === endOfCurrentMonth.getDate();
+    philippineMaxDate = isLastDayOfMonth
+      ? new Date(philippineToday.getFullYear(), philippineToday.getMonth() + 2, 0)
+      : endOfCurrentMonth;
 
     // Set min and max dates
     visitDateInput.min = philippineToday.toISOString().split('T')[0];
@@ -1121,11 +1136,12 @@ export async function setupEventListeners() {
         return false;
       }
 
-      // Check if date is beyond the current month
+      // Check if date is beyond the allowed max date
       if (philippineSelectedDate.getTime() > philippineMaxDate.getTime()) {
         visitDateInput.classList.add('border-red-500', 'focus:border-red-500');
         if (dateValidationStatus) {
-          dateValidationStatus.textContent = `❌ Cannot schedule beyond the current month. Maximum allowed date is ${philippineMaxDate.toLocaleDateString()}.`;
+          const maxRangeLabel = isLastDayOfMonth ? 'next month' : 'the current month';
+          dateValidationStatus.textContent = `❌ Cannot schedule beyond ${maxRangeLabel}. Maximum allowed date is ${philippineMaxDate.toLocaleDateString()}.`;
           dateValidationStatus.className = 'mt-1 text-sm text-red-600 font-medium';
         }
         return false;
@@ -2058,7 +2074,7 @@ async function scheduleVisitFromConfirmation(data: VisitConfirmationData) {
       emailValidationStatus.textContent = '';
       emailValidationStatus.className = 'mt-1 text-sm';
     }
-    clearTimers();
+    (window as any).modalClearTimers?.();
     if (sendVerificationCode) sendVerificationCode.textContent = 'Send Code';
     if (scheduleEmail) {
       scheduleEmail.disabled = false;

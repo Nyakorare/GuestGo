@@ -509,8 +509,11 @@ async function fetchGuardVisitData(visitId: string) {
       purpose: visits.purpose,
       places: places,
       status: visits.status,
-      scheduledAt: visits.scheduled_at
-    };
+      scheduledAt: visits.scheduled_at,
+      // Extra fields used by guard modal logic
+      gateEntranceScanned: visits.gate_entrance_scanned === true,
+      gateExitScanned: visits.gate_exit_scanned === true
+    } as any;
 
     guardCurrentVisitData = visitData;
     showGuardVisitDetails(visitData);
@@ -537,6 +540,20 @@ function showGuardVisitConfirmationModal(visitData: VisitQRData) {
   const isFuture = visitDateOnly.getTime() > today.getTime();
   const isPast = visitDateOnly.getTime() < today.getTime();
   const isToday = visitDateOnly.getTime() === today.getTime();
+
+  // Determine which actions are needed based on place completion
+  const placeStatuses = (visitData.places || []).map(p => (p.status || '').toLowerCase());
+  const isCompletedStatus = (s: string) => ['completed', 'completed_flagged', 'cancelled', 'failed', 'unsuccessful'].includes(s);
+  const allPlacesCompleted = placeStatuses.length > 0 && placeStatuses.every(isCompletedStatus);
+  const noneStarted = placeStatuses.length > 0 && placeStatuses.every(s => s === 'pending');
+  const midProgress = !noneStarted && !allPlacesCompleted;
+
+  // Gate state (from fetched visit)
+  const gateEntranceScanned = (visitData as any).gateEntranceScanned === true;
+
+  const shouldEnableEntrance = isToday && !gateEntranceScanned && noneStarted;
+  const shouldEnableExit = isToday && gateEntranceScanned && allPlacesCompleted;
+  const shouldDisableBoth = isFuture || isPast || (gateEntranceScanned && !allPlacesCompleted) || midProgress || (!shouldEnableEntrance && !shouldEnableExit);
 
   // Create modal HTML
   const modalHTML = `
@@ -659,8 +676,8 @@ function showGuardVisitConfirmationModal(visitData: VisitQRData) {
           <div class="flex flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-4">
             <button 
               id="guardEntranceConfirmBtn"
-              class="w-full sm:w-auto px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200 font-medium flex items-center justify-center space-x-2 ${isFuture ? 'opacity-50 cursor-not-allowed' : ''}"
-              ${isFuture ? 'disabled' : ''}
+              class="w-full sm:w-auto px-6 py-3 bg-green-600 text-white rounded-md ${shouldEnableEntrance ? 'hover:bg-green-700' : 'opacity-50 cursor-not-allowed'} transition-colors duration-200 font-medium flex items-center justify-center space-x-2"
+              ${shouldEnableEntrance ? '' : 'disabled'}
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
@@ -669,8 +686,8 @@ function showGuardVisitConfirmationModal(visitData: VisitQRData) {
             </button>
             <button 
               id="guardExitConfirmBtn"
-              class="w-full sm:w-auto px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors duration-200 font-medium flex items-center justify-center space-x-2 ${isFuture ? 'opacity-50 cursor-not-allowed' : ''}"
-              ${isFuture ? 'disabled' : ''}
+              class="w-full sm:w-auto px-6 py-3 bg-red-600 text-white rounded-md ${shouldEnableExit ? 'hover:bg-red-700' : 'opacity-50 cursor-not-allowed'} transition-colors duration-200 font-medium flex items-center justify-center space-x-2"
+              ${shouldEnableExit ? '' : 'disabled'}
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path>
@@ -686,8 +703,12 @@ function showGuardVisitConfirmationModal(visitData: VisitQRData) {
           </div>
 
           <!-- Status Message -->
-          <div id="guardModalStatus" class="mt-4 text-center hidden">
-            <!-- Status messages will be shown here -->
+          <div id="guardModalStatus" class="mt-4 text-center ${shouldDisableBoth && !isFuture && !isPast ? '' : 'hidden'}">
+            ${shouldDisableBoth && !isFuture && !isPast ? `
+              <div class="p-3 rounded-md bg-yellow-50 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200">
+                <p class="text-sm font-medium">${gateEntranceScanned && !allPlacesCompleted ? 'Place to visit still pending' : 'Finish the scheduled places first'}</p>
+              </div>
+            ` : ''}
           </div>
         </div>
       </div>
@@ -730,12 +751,12 @@ function showGuardVisitConfirmationModal(visitData: VisitQRData) {
   closeBtn?.addEventListener('click', closeModal);
   cancelBtn?.addEventListener('click', closeModal);
   entranceBtn?.addEventListener('click', () => {
-    closeModal();
-    logGuardAction('entrance');
+    // Do not close/reset before logging to preserve visit data
+    logGuardAction('entrance', visitData);
   });
   exitBtn?.addEventListener('click', () => {
-    closeModal();
-    logGuardAction('exit');
+    // Do not close/reset before logging to preserve visit data
+    logGuardAction('exit', visitData);
   });
   refreshBtn?.addEventListener('click', refreshModal);
 
@@ -759,8 +780,9 @@ function showGuardVisitConfirmationModal(visitData: VisitQRData) {
   }
 }
 
-async function logGuardAction(action: 'entrance' | 'exit') {
-  if (!guardCurrentVisitData) {
+async function logGuardAction(action: 'entrance' | 'exit', visitDataOverride?: VisitQRData) {
+  const activeVisit = visitDataOverride || guardCurrentVisitData;
+  if (!activeVisit) {
     showGuardError('Error', 'No visit data available.');
     return;
   }
@@ -774,7 +796,7 @@ async function logGuardAction(action: 'entrance' | 'exit') {
 
     // Log the guard action
     const { error } = await supabase.rpc('log_guard_action', {
-      p_visit_id: guardCurrentVisitData.visitId,
+      p_visit_id: activeVisit.visitId,
       p_action: action,
       p_guard_id: user.id
     });
@@ -785,8 +807,35 @@ async function logGuardAction(action: 'entrance' | 'exit') {
       return;
     }
 
+    // If entrance was logged by a guard, also mark the visit as entrance scanned
+    if (action === 'entrance') {
+      try {
+        const { error: updateError } = await supabase
+          .from('scheduled_visits')
+          .update({
+            gate_entrance_scanned: true,
+            gate_entrance_scanned_at: new Date().toISOString(),
+            gate_entrance_scanned_by: user.id
+          })
+          .eq('id', activeVisit.visitId);
+
+        if (updateError) {
+          console.error('Error updating entrance scanned fields:', updateError);
+          // Non-fatal; continue
+        }
+      } catch (e) {
+        console.error('Unexpected error updating gate entrance scanned:', e);
+      }
+    }
+
+    // Close modal on successful entrance (and exit for consistency)
+    const openModal = document.getElementById('guardVisitModal');
+    if (openModal) {
+      openModal.remove();
+    }
+
     // Show success message
-    showGuardSuccess(`${action.charAt(0).toUpperCase() + action.slice(1)} logged successfully for ${guardCurrentVisitData.visitorName}!`);
+    showGuardSuccess(`${action.charAt(0).toUpperCase() + action.slice(1)} logged successfully for ${activeVisit.visitorName}!`);
 
     // Reset scanner after successful logging
     setTimeout(() => {
