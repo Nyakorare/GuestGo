@@ -797,7 +797,7 @@ export async function setupEventListeners() {
     }
     
     currentCode = null;
-    enableVerificationInputs();
+    (window as any).modalEnableVerificationInputs?.();
     updateSubmitButtonState();
   });
 
