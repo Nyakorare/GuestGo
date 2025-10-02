@@ -828,6 +828,33 @@ async function logGuardAction(action: 'entrance' | 'exit', visitDataOverride?: V
       }
     }
 
+    // When exit is logged, mark gate exit fields and move visit to completed flow
+    if (action === 'exit') {
+      try {
+        const hasFlaggedPlace = Array.isArray(activeVisit.places)
+          ? activeVisit.places.some(p => (p.status || '').toLowerCase() === 'completed_flagged')
+          : false;
+        const finalStatus = hasFlaggedPlace ? 'completed_flagged' : 'completed';
+
+        const { error: updateExitError } = await supabase
+          .from('scheduled_visits')
+          .update({
+            gate_exit_scanned: true,
+            gate_exit_scanned_at: new Date().toISOString(),
+            gate_exit_scanned_by: user.id,
+            status: finalStatus
+          })
+          .eq('id', activeVisit.visitId);
+
+        if (updateExitError) {
+          console.error('Error updating exit scanned/status fields:', updateExitError);
+          // Non-fatal; continue
+        }
+      } catch (e) {
+        console.error('Unexpected error updating gate exit scanned/status:', e);
+      }
+    }
+
     // Close modal on successful entrance (and exit for consistency)
     const openModal = document.getElementById('guardVisitModal');
     if (openModal) {

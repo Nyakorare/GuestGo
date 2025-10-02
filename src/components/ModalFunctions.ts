@@ -1,6 +1,7 @@
 import { sendVerificationEmail } from '../config/emailjs';
 import supabase from '../config/supabase';
 import { showNotification } from '../pages/dashboard/index';
+import { showLoadingOverlay, updateLoadingOverlay, hideLoadingOverlay } from '../utils/loadingOverlay';
 
 // Global variables for form state management
 let isEmailVerified = false;
@@ -1979,6 +1980,9 @@ async function scheduleVisitFromConfirmation(data: VisitConfirmationData) {
     confirmBtn.textContent = 'Scheduling...';
   }
 
+  // Show global loading overlay during scheduling
+  showLoadingOverlay('Scheduling in progress');
+
   try {
     let placeIds: string[];
     
@@ -2036,8 +2040,9 @@ async function scheduleVisitFromConfirmation(data: VisitConfirmationData) {
       }
     }
 
-    // Show success message
+    // Show success message and update overlay
     showNotification('Visit scheduled successfully! You will receive a confirmation email shortly.', 'success');
+    updateLoadingOverlay('Completed');
     
     // Close both modals
     const confirmationModal = document.getElementById('visitConfirmationModal');
@@ -2085,9 +2090,10 @@ async function scheduleVisitFromConfirmation(data: VisitConfirmationData) {
       sendVerificationCode.classList.remove('opacity-50', 'cursor-not-allowed');
     }
     currentCode = null;
-    enableVerificationInputs();
+    // Use global-safe accessor to avoid reference errors when this function is out of scope
+    (window as any).modalEnableVerificationInputs?.();
 
-    // Refresh the page after a short delay
+    // Refresh the page after a brief delay to allow "Completed" to be seen
     setTimeout(() => { window.location.reload(); }, 1000);
 
   } catch (error: any) {
@@ -2100,6 +2106,9 @@ async function scheduleVisitFromConfirmation(data: VisitConfirmationData) {
       confirmBtn.textContent = 'Confirm & Schedule Visit';
     }
   }
+
+  // Hide overlay if still present (in case of error or after scheduling triggers reload)
+  hideLoadingOverlay();
 }
 
 // Set up confirmation modal event listeners (called when modal is shown)
