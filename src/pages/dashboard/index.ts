@@ -2436,6 +2436,30 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
         const flaggedReason = parsedDetails.reason || 'No exit scan recorded';
         return `<div><span class="font-medium">Visitor:</span> ${flaggedVisitorName}</div><div><span class="font-medium">Flagged at:</span> ${flaggedTime}</div><div><span class="font-medium">Reason:</span> <span class="text-red-600 dark:text-red-400">${flaggedReason}</span></div>`;
 
+      case 'guard_action': {
+        const guardAction = (parsedDetails.action || '').toLowerCase();
+        const actionLabel = guardAction === 'entrance' ? 'Entrance Logged' : guardAction === 'exit' ? 'Exit Logged' : 'Action Logged';
+        const actionClass = guardAction === 'entrance'
+          ? 'text-green-600 dark:text-green-400'
+          : guardAction === 'exit'
+          ? 'text-red-600 dark:text-red-400'
+          : 'text-gray-700 dark:text-gray-300';
+
+        const visitShort = parsedDetails.visit_id ? `${String(parsedDetails.visit_id).substring(0, 8)}...` : 'Unknown';
+        const when = parsedDetails.timestamp ? new Date(parsedDetails.timestamp).toLocaleString() : 'Unknown time';
+        const guardName = parsedDetails.guard_id ? await getUserName(parsedDetails.guard_id) : getUserDisplayName(log?.user_id || '');
+
+        return `
+          <div>
+            <span class="font-medium">Action:</span>
+            <span class="${actionClass} font-semibold">${actionLabel}</span>
+          </div>
+          <div><span class="font-medium">Guard:</span> ${guardName}</div>
+          <div><span class="font-medium">Visit:</span> ${visitShort}</div>
+          <div><span class="font-medium">Time:</span> ${when}</div>
+        `;
+      }
+
 
       case 'visit_completed':
         const completedVisitPlaceName = await getPlaceName(parsedDetails.place_id);
