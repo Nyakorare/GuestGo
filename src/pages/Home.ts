@@ -162,7 +162,7 @@ async function loadWeeklyVisitCount(_userEmail: string) {
       .from('scheduled_visits')
       .select('visit_date, status')
       .or(`visitor_user_id.eq.${user.id},visitor_email.eq.${user.email}`)
-      .in('status', ['pending', 'completed', 'completed_flagged']);
+      .in('status', ['pending', 'completed', 'completed_flagged', 'temporary_exit']);
 
     if (allUserError) {
       console.error('Error loading all user visits:', allUserError);
@@ -214,7 +214,7 @@ async function loadWeeklyVisitCount(_userEmail: string) {
       .from('scheduled_visits')
       .select('visit_date, status')
       .or(`visitor_user_id.eq.${user.id},visitor_email.eq.${user.email}`)
-      .in('status', ['pending', 'completed', 'completed_flagged'])
+      .in('status', ['pending', 'completed', 'completed_flagged', 'temporary_exit'])
       .gte('visit_date', prevWeekStart.toISOString())
       .lte('visit_date', prevWeekEnd.toISOString());
 
@@ -246,8 +246,10 @@ async function loadWeeklyVisitCount(_userEmail: string) {
     // Count the pending, completed, and completed_flagged visits for the current week
     const visitCount = visits?.length || 0;
     const pendingCount = visits?.filter(v => v.status === 'pending').length || 0;
+    const temporaryExitCount = visits?.filter(v => v.status === 'temporary_exit').length || 0;
     const completedCount = visits?.filter(v => v.status === 'completed').length || 0;
     const completedFlaggedCount = visits?.filter(v => v.status === 'completed_flagged').length || 0;
+    const activeCountThisWeek = pendingCount + temporaryExitCount;
     
     // Debug: Log individual visit details for current week
     if (visits && visits.length > 0) {
@@ -406,7 +408,7 @@ async function loadWeeklyVisitCount(_userEmail: string) {
     const scheduleNowBtn = document.getElementById('scheduleNowBtn');
     
     // Add debug info to help understand the counts
-    const debugInfo = `[Debug: ${totalWeekVisits} total this week, ${pendingCount} pending this week, ${completedCount} completed this week, ${completedFlaggedCount} flagged this week, ${remainingVisits} remaining]`;
+    const debugInfo = `[Debug: ${totalWeekVisits} total this week, ${activeCountThisWeek} active (pending + temp exit) this week, ${completedCount} completed this week, ${completedFlaggedCount} flagged this week, ${remainingVisits} remaining]`;
     console.log(debugInfo);
     
     // Create comprehensive weekly status display
@@ -425,7 +427,7 @@ async function loadWeeklyVisitCount(_userEmail: string) {
     
     if (remainingVisits === 2) {
       const completedText = completedFlaggedCount > 0 ? `${totalCompletedSchedules} completed (${completedFlaggedCount} flagged)` : `${totalCompletedSchedules} completed`;
-      statusHtml = `<span class="font-medium text-green-600 dark:text-green-400">2 visits remaining</span> (${pendingCount} pending this week, ${completedText})`;
+      statusHtml = `<span class="font-medium text-green-600 dark:text-green-400">2 visits remaining</span> (${activeCountThisWeek} active this week, ${completedText})`;
       if (scheduleNowBtn) {
         scheduleNowBtn.removeAttribute('disabled');
         scheduleNowBtn.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -433,7 +435,7 @@ async function loadWeeklyVisitCount(_userEmail: string) {
       }
     } else if (remainingVisits === 1) {
       const completedText = completedFlaggedCount > 0 ? `${totalCompletedSchedules} completed (${completedFlaggedCount} flagged)` : `${totalCompletedSchedules} completed`;
-      statusHtml = `<span class="font-medium text-yellow-600 dark:text-yellow-400">1 visit remaining</span> (${pendingCount} pending this week, ${completedText})`;
+      statusHtml = `<span class="font-medium text-yellow-600 dark:text-yellow-400">1 visit remaining</span> (${activeCountThisWeek} active this week, ${completedText})`;
       if (scheduleNowBtn) {
         scheduleNowBtn.removeAttribute('disabled');
         scheduleNowBtn.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -441,7 +443,7 @@ async function loadWeeklyVisitCount(_userEmail: string) {
       }
     } else {
       const completedText = completedFlaggedCount > 0 ? `${totalCompletedSchedules} completed (${completedFlaggedCount} flagged)` : `${totalCompletedSchedules} completed`;
-      statusHtml = `<span class="font-medium text-red-600 dark:text-red-400">No visits remaining</span> (${pendingCount} pending this week, ${completedText})`;
+      statusHtml = `<span class="font-medium text-red-600 dark:text-red-400">No visits remaining</span> (${activeCountThisWeek} active this week, ${completedText})`;
       if (scheduleNowBtn) {
         scheduleNowBtn.setAttribute('disabled', 'true');
         scheduleNowBtn.classList.add('opacity-50', 'cursor-not-allowed');

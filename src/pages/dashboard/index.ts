@@ -74,6 +74,7 @@ const LOGS_TAB_ACTIONS = {
     { value: 'gate_entrance_scan', label: 'Gate Entrance Scan' },
     { value: 'gate_exit_scan', label: 'Gate Exit Scan' },
     { value: 'visit_flagged_no_exit', label: 'Visit Flagged (No Exit)' },
+    { value: 'visit_temporary_exit', label: 'Visit Temporary Exit' },
     { value: 'role_change', label: 'Role Change' },
   ],
   gate: [
@@ -83,6 +84,7 @@ const LOGS_TAB_ACTIONS = {
     { value: 'gate_status_change', label: 'Gate Status Change' },
     { value: 'gate_entrance_scan', label: 'Gate Entrance Scan' },
     { value: 'gate_exit_scan', label: 'Gate Exit Scan' },
+    { value: 'visit_temporary_exit', label: 'Visit Temporary Exit' },
   ],
   place: [
     { value: 'all', label: 'All Actions' },
@@ -107,6 +109,7 @@ const LOGS_TAB_ACTIONS = {
     { value: 'gate_entrance_scan', label: 'Gate Entrance Scan' },
     { value: 'gate_exit_scan', label: 'Gate Exit Scan' },
     { value: 'visit_flagged_no_exit', label: 'Visit Flagged (No Exit)' },
+    { value: 'visit_temporary_exit', label: 'Visit Temporary Exit' },
   ],
   personnel: [
     { value: 'all', label: 'All Actions' },
@@ -6298,6 +6301,18 @@ function calculateVisitProgress(visit: any): { percentage: number; status: strin
     return { 
       percentage: 100, 
       status: 'Completed (Flagged)', 
+      color: 'bg-orange-500',
+      gateProgress: { entrance: entranceScanned, exit: exitScanned }
+    };
+  }
+  
+  // Handle temporary exit explicitly
+  if (visit.status === 'temporary_exit') {
+    const entranceScanned = visit.gate_entrance_scanned || false;
+    const exitScanned = visit.gate_exit_scanned || false;
+    return {
+      percentage: 50,
+      status: 'Temporary Exit',
       color: 'bg-orange-500',
       gateProgress: { entrance: entranceScanned, exit: exitScanned }
     };

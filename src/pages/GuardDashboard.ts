@@ -551,9 +551,11 @@ function showGuardVisitConfirmationModal(visitData: VisitQRData) {
   // Gate state (from fetched visit)
   const gateEntranceScanned = (visitData as any).gateEntranceScanned === true;
 
-  const shouldEnableEntrance = isToday && !gateEntranceScanned && noneStarted;
+  const isTemporaryExit = (visitData.status === 'temporary_exit');
+  const shouldEnableEntrance = (isToday && !gateEntranceScanned && noneStarted) || isTemporaryExit;
   const shouldEnableExit = isToday && gateEntranceScanned && allPlacesCompleted;
-  const shouldDisableBoth = isFuture || isPast || (gateEntranceScanned && !allPlacesCompleted) || midProgress || (!shouldEnableEntrance && !shouldEnableExit);
+  const shouldEnableTemporaryExit = isToday && gateEntranceScanned && visitData.status !== 'temporary_exit' && !allPlacesCompleted;
+  const shouldDisableBoth = isFuture || isPast || (gateEntranceScanned && !allPlacesCompleted) || midProgress || (!shouldEnableEntrance && !shouldEnableExit && !shouldEnableTemporaryExit);
 
   // Create modal HTML
   const modalHTML = `
@@ -685,6 +687,16 @@ function showGuardVisitConfirmationModal(visitData: VisitQRData) {
               <span>Log Entrance</span>
             </button>
             <button 
+              id="guardTempExitBtn"
+              class="w-full sm:w-auto px-6 py-3 bg-amber-600 text-white rounded-md ${shouldEnableTemporaryExit ? 'hover:bg-amber-700' : 'opacity-50 cursor-not-allowed'} transition-colors duration-200 font-medium flex items-center justify-center space-x-2"
+              ${shouldEnableTemporaryExit ? '' : 'disabled'}
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v8m4-4H8" />
+              </svg>
+              <span>Temporary Exit</span>
+            </button>
+            <button 
               id="guardExitConfirmBtn"
               class="w-full sm:w-auto px-6 py-3 bg-red-600 text-white rounded-md ${shouldEnableExit ? 'hover:bg-red-700' : 'opacity-50 cursor-not-allowed'} transition-colors duration-200 font-medium flex items-center justify-center space-x-2"
               ${shouldEnableExit ? '' : 'disabled'}
@@ -723,6 +735,7 @@ function showGuardVisitConfirmationModal(visitData: VisitQRData) {
   const closeBtn = document.getElementById('closeGuardModalBtn');
   const cancelBtn = document.getElementById('guardCancelBtn');
   const entranceBtn = document.getElementById('guardEntranceConfirmBtn');
+  const tempExitBtn = document.getElementById('guardTempExitBtn');
   const exitBtn = document.getElementById('guardExitConfirmBtn');
   const refreshBtn = document.getElementById('refreshGuardModalBtn');
 
@@ -754,6 +767,9 @@ function showGuardVisitConfirmationModal(visitData: VisitQRData) {
     // Do not close/reset before logging to preserve visit data
     logGuardAction('entrance', visitData);
   });
+  tempExitBtn?.addEventListener('click', () => {
+    logGuardAction('temporary_exit', visitData);
+  });
   exitBtn?.addEventListener('click', () => {
     // Do not close/reset before logging to preserve visit data
     logGuardAction('exit', visitData);
@@ -780,7 +796,7 @@ function showGuardVisitConfirmationModal(visitData: VisitQRData) {
   }
 }
 
-async function logGuardAction(action: 'entrance' | 'exit', visitDataOverride?: VisitQRData) {
+async function logGuardAction(action: 'entrance' | 'exit' | 'temporary_exit', visitDataOverride?: VisitQRData) {
   const activeVisit = visitDataOverride || guardCurrentVisitData;
   if (!activeVisit) {
     showGuardError('Error', 'No visit data available.');
@@ -794,22 +810,35 @@ async function logGuardAction(action: 'entrance' | 'exit', visitDataOverride?: V
       return;
     }
 
-    // Log the guard action
-    const { error } = await supabase.rpc('log_guard_action', {
-      p_visit_id: activeVisit.visitId,
-      p_action: action,
-      p_guard_id: user.id
-    });
+    // Log the guard action (only for entrance/exit which backend supports)
+    if (action === 'entrance' || action === 'exit') {
+      const { error } = await supabase.rpc('log_guard_action', {
+        p_visit_id: activeVisit.visitId,
+        p_action: action,
+        p_guard_id: user.id
+      });
 
-    if (error) {
-      console.error('Error logging guard action:', error);
-      showGuardError('Logging Error', `Error logging ${action}: ${error.message}`);
-      return;
+      if (error) {
+        console.error('Error logging guard action:', error);
+        showGuardError('Logging Error', `Error logging ${action}: ${error.message}`);
+        return;
+      }
     }
 
     // If entrance was logged by a guard, also mark the visit as entrance scanned
     if (action === 'entrance') {
       try {
+        // If returning from temporary exit, call resume function; else, mark entrance scanned
+        if (activeVisit.status === 'temporary_exit') {
+          const { error: resumeError } = await supabase.rpc('resume_visit_after_temporary_exit', {
+            p_visit_id: activeVisit.visitId,
+            p_actor: user.id
+          });
+          if (resumeError) {
+            console.error('Error resuming visit from temporary exit:', resumeError);
+          }
+        }
+
         const { error: updateError } = await supabase
           .from('scheduled_visits')
           .update({
@@ -825,6 +854,37 @@ async function logGuardAction(action: 'entrance' | 'exit', visitDataOverride?: V
         }
       } catch (e) {
         console.error('Unexpected error updating gate entrance scanned:', e);
+      }
+    }
+
+    // When temporary exit is logged, set status accordingly and log the action
+    if (action === 'temporary_exit') {
+      try {
+        const { error: tempExitError } = await supabase
+          .from('scheduled_visits')
+          .update({
+            status: 'temporary_exit'
+          })
+          .eq('id', activeVisit.visitId);
+
+        if (tempExitError) {
+          console.error('Error updating temporary exit status:', tempExitError);
+          showGuardError('Error', 'Could not set temporary exit status.');
+          return;
+        }
+
+        // Also write a log entry via backend function (will be a no-op until migration applied)
+        try {
+          await supabase.rpc('log_guard_action', {
+            p_visit_id: activeVisit.visitId,
+            p_action: 'temporary_exit',
+            p_guard_id: user.id
+          });
+        } catch (_) {
+          // Non-fatal
+        }
+      } catch (e) {
+        console.error('Unexpected error setting temporary exit:', e);
       }
     }
 
@@ -862,7 +922,7 @@ async function logGuardAction(action: 'entrance' | 'exit', visitDataOverride?: V
     }
 
     // Show success message
-    showGuardSuccess(`${action.charAt(0).toUpperCase() + action.slice(1)} logged successfully for ${activeVisit.visitorName}!`);
+    showGuardSuccess(`${action.charAt(0).toUpperCase() + action.slice(1).replace('_',' ')} logged successfully for ${activeVisit.visitorName}!`);
 
     // Reset scanner after successful logging
     setTimeout(() => {
