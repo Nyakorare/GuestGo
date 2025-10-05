@@ -2695,6 +2695,14 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
         
         return detailsHtml;
       }
+      case 'visit_temporary_exit': {
+        const visitorName = parsedDetails.visitor_name || 'Unknown Visitor';
+        const visitId = parsedDetails.visit_id ? parsedDetails.visit_id.substring(0, 8) + '...' : 'Unknown';
+        const timestamp = parsedDetails.timestamp ? new Date(parsedDetails.timestamp).toLocaleString() : 'Unknown time';
+        const guardId = parsedDetails.guard_id ? parsedDetails.guard_id.substring(0, 8) + '...' : 'Unknown';
+        
+        return `<div><span class="font-medium">Visitor:</span> ${visitorName}</div><div><span class="font-medium">Visit ID:</span> ${visitId}</div><div><span class="font-medium">Temporary Exit Time:</span> <span class="text-blue-600 dark:text-blue-400 font-semibold">${timestamp}</span></div><div><span class="font-medium">Processed by Guard:</span> ${guardId}</div>`;
+      }
       default:
         return `<pre class="text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto">${JSON.stringify(parsedDetails, null, 2)}</pre>`;
     }
@@ -5534,7 +5542,8 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
       completed_flagged: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
       cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
       unsuccessful: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-      failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+      failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+      temporary_exit: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
     };
 
     const roleColors: { [key: string]: string } = {

@@ -193,7 +193,8 @@ BEGIN
             jsonb_build_object(
                 'visit_id', p_visit_id,
                 'guard_id', p_guard_id,
-                'timestamp', public.get_philippine_timestamp()
+                'timestamp', public.get_philippine_timestamp(),
+                'visitor_name', (SELECT visitor_first_name || ' ' || visitor_last_name FROM scheduled_visits WHERE id = p_visit_id)
             )
         );
         RETURN TRUE;
