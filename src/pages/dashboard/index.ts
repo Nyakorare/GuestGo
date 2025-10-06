@@ -1867,6 +1867,9 @@ async function renderLogs(): Promise<void> {
             displayAction = 'visit_completed';
           } else if (parsedDetails.current_status === 'completed_flagged') {
             displayAction = 'visit_completed_flagged';
+          } else if (parsedDetails.current_status === 'temporary_exit') {
+            // Reflect temporary exit state as its own action
+            displayAction = 'visit_temporary_exit';
           } else if (parsedDetails.current_status === 'pending') {
             // Check if all places are completed but exit scan is pending
             if (Array.isArray(parsedDetails.history) && parsedDetails.history.length > 0) {
@@ -1886,6 +1889,8 @@ async function renderLogs(): Promise<void> {
               displayAction = 'visit_completed';
             } else if (lastEvent.event === 'completed_flagged') {
               displayAction = 'visit_completed_flagged';
+            } else if (lastEvent.event === 'temporary_exit') {
+              displayAction = 'visit_temporary_exit';
             } else if (lastEvent.event === 'unsuccessful' || lastEvent.event === 'failed' || lastEvent.event === 'marked_unsuccessful') {
               displayAction = 'visit_unsuccessful';
             }
@@ -1935,6 +1940,23 @@ async function renderLogs(): Promise<void> {
                   current_status: 'completed_flagged',
                   completed_at: visitRow.completed_at,
                   completed_by: visitRow.completed_by,
+                  history: Array.isArray(parsedDetails.history)
+                    ? [...parsedDetails.history, syntheticEvent]
+                    : [syntheticEvent]
+                };
+              } else if (visitRow && visitRow.status === 'temporary_exit') {
+                displayAction = 'visit_temporary_exit';
+                const syntheticEvent = {
+                  event: 'temporary_exit',
+                  timestamp: new Date().toISOString(),
+                  details: {
+                    by: 'system',
+                    note: 'Visit temporarily exited - current state'
+                  }
+                };
+                overrideDetails = {
+                  ...parsedDetails,
+                  current_status: 'temporary_exit',
                   history: Array.isArray(parsedDetails.history)
                     ? [...parsedDetails.history, syntheticEvent]
                     : [syntheticEvent]
@@ -2001,6 +2023,7 @@ async function renderLogs(): Promise<void> {
                       log.displayAction === 'personnel_removal' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
                       log.displayAction === 'personnel_availability_change' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' :
                       log.displayAction === 'visit_scheduled' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' :
+                      log.displayAction === 'visit_temporary_exit' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
                       log.displayAction === 'visit_completed' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
                       log.displayAction === 'visit_completed_flagged' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
                       log.displayAction === 'visit_unsuccessful' ? 'bg-gray-200 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
@@ -2075,6 +2098,7 @@ async function renderLogs(): Promise<void> {
                       log.displayAction === 'personnel_removal' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
                       log.displayAction === 'personnel_availability_change' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' :
                       log.displayAction === 'visit_scheduled' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' :
+                      log.displayAction === 'visit_temporary_exit' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
                       log.displayAction === 'visit_completed' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
                       log.displayAction === 'visit_completed_flagged' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
                       log.displayAction === 'visit_unsuccessful' ? 'bg-gray-200 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
@@ -2243,10 +2267,22 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
         // Check if the visit has a current status (e.g., marked as unsuccessful or completed)
         let statusHtml = '';
         if (parsedDetails.current_status) {
-          const statusClass = parsedDetails.current_status === 'unsuccessful' 
-            ? 'text-red-600 dark:text-red-400 font-semibold' 
-            : 'text-green-600 dark:text-green-400 font-semibold';
-          const statusText = parsedDetails.current_status === 'unsuccessful' ? 'Unsuccessful' : 'Completed';
+          const status = parsedDetails.current_status;
+          let statusClass = 'text-blue-600 dark:text-blue-400 font-semibold';
+          let statusText = status.charAt(0).toUpperCase() + status.slice(1).replace('_',' ');
+          if (status === 'unsuccessful' || status === 'failed') {
+            statusClass = 'text-red-600 dark:text-red-400 font-semibold';
+            statusText = 'Unsuccessful';
+          } else if (status === 'completed') {
+            statusClass = 'text-green-600 dark:text-green-400 font-semibold';
+            statusText = 'Completed';
+          } else if (status === 'completed_flagged') {
+            statusClass = 'text-yellow-600 dark:text-yellow-400 font-semibold';
+            statusText = 'Completed (Flagged)';
+          } else if (status === 'temporary_exit') {
+            statusClass = 'text-blue-600 dark:text-blue-400 font-semibold';
+            statusText = 'Temporary Exit';
+          }
           statusHtml = `<div><span class="font-medium">Current Status:</span> <span class="${statusClass}">${statusText}</span></div>`;
         }
         
@@ -2273,7 +2309,7 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
         }
         
         let historyHtml = '';
-        if (Array.isArray(parsedDetails.history) && parsedDetails.history.length > 0) {
+        {
           const historyId = `history-${log?.id || Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
           
           // Get gate scan information for this visit
@@ -2331,7 +2367,9 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
             }
           }
           
-          const historyItems = parsedDetails.history.map((event: any) => {
+          // Build existing history items (may be empty)
+          const baseHistory = Array.isArray(parsedDetails.history) ? parsedDetails.history : [];
+          const historyItemsFromLog = baseHistory.map((event: any) => {
             try {
               const eventType = event.event ? event.event.charAt(0).toUpperCase() + event.event.slice(1) : 'Event';
               const eventTime = event.timestamp ? new Date(event.timestamp).toLocaleString() : '';
@@ -2361,33 +2399,64 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
                     : String(event.details.completed_places);
                   details += `<span class='text-xs text-green-500'>Places: ${completedPlaces}</span> `;
                 }
+                if (event.event === 'temporary_exit') {
+                  details += `<span class='text-xs text-blue-500'>Temporary exit recorded</span> `;
+                }
               }
               return `<li class="py-1 border-b border-gray-100 dark:border-gray-700 last:border-b-0"><span class='font-semibold'>${eventType}</span> <span class='text-xs text-gray-400'>${eventTime}</span> ${details}</li>`;
             } catch (error) {
               console.error('Error processing history event:', error, event);
               return `<li class="py-1 border-b border-gray-100 dark:border-gray-700 last:border-b-0"><span class='font-semibold text-red-600'>Error processing event</span></li>`;
             }
-          }).filter(item => item).join('');
+          }).filter(item => item);
+
+          // Fetch temporary-exit logs for this visit and append as history items with time
+          let tempExitItems: string[] = [];
+          if (parsedDetails.visit_id) {
+            try {
+              const { data: tempExitLogs, error: tempErr } = await supabase
+                .from('logs')
+                .select('created_at, details')
+                .eq('action', 'visit_temporary_exit')
+                .contains('details', { visit_id: parsedDetails.visit_id });
+              if (!tempErr && Array.isArray(tempExitLogs)) {
+                tempExitItems = await Promise.all(tempExitLogs.map(async (row: any) => {
+                  const when = row?.details?.timestamp || row?.created_at;
+                  const guardId = row?.details?.guard_id;
+                  const guardName = guardId ? await getUserName(guardId) : 'Guard';
+                  const timeText = when ? new Date(when).toLocaleString() : 'Unknown time';
+                  return `<li class="py-1 border-b border-gray-100 dark:border-gray-700 last:border-b-0"><span class='font-semibold'>Temporary Exit</span> <span class='text-xs text-gray-400'>${timeText}</span> <span class='text-xs text-blue-500'>(By: ${guardName})</span></li>`;
+                }));
+              }
+            } catch (e) {
+              console.error('Error fetching temporary-exit logs:', e);
+            }
+          }
+
+          const combinedHistoryItems = [...historyItemsFromLog, ...tempExitItems].join('');
           
-          historyHtml = `
-            <div class="mt-2">
-              <button 
-                class="text-blue-600 hover:text-blue-800 dark:text-blue-500 dark:hover:text-blue-400 text-sm font-medium flex items-center gap-1 w-full justify-between p-2 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors duration-200 touch-manipulation"
-                id="btn-${historyId}"
-                style="min-height: 44px; -webkit-tap-highlight-color: transparent;"
-              >
-                <span>See History (${parsedDetails.history.length} events)</span>
-                <svg class="w-4 h-4 transition-transform duration-200 flex-shrink-0" id="icon-${historyId}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                </svg>
-              </button>
-              <div class="hidden mt-2 bg-gray-50 dark:bg-gray-800 rounded-md p-3" id="${historyId}">
-                ${gateScanInfo}
-                <ul class="space-y-1 text-sm">
-                  ${historyItems}
-                </ul>
-              </div>
-            </div>`;
+          if (combinedHistoryItems.length > 0) {
+            const totalCount = (Array.isArray(parsedDetails.history) ? parsedDetails.history.length : 0) + tempExitItems.length;
+            historyHtml = `
+              <div class="mt-2">
+                <button 
+                  class="text-blue-600 hover:text-blue-800 dark:text-blue-500 dark:hover:text-blue-400 text-sm font-medium flex items-center gap-1 w-full justify-between p-2 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors duration-200 touch-manipulation"
+                  id="btn-${historyId}"
+                  style="min-height: 44px; -webkit-tap-highlight-color: transparent;"
+                >
+                  <span>See History (${totalCount} events)</span>
+                  <svg class="w-4 h-4 transition-transform duration-200 flex-shrink-0" id="icon-${historyId}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                  </svg>
+                </button>
+                <div class="hidden mt-2 bg-gray-50 dark:bg-gray-800 rounded-md p-3" id="${historyId}">
+                  ${gateScanInfo}
+                  <ul class="space-y-1 text-sm">
+                    ${combinedHistoryItems}
+                  </ul>
+                </div>
+              </div>`;
+          }
         }
         return `<div><span class="font-medium">Visitor:</span> ${visitorName || 'Unknown visitor'}</div><div><span class="font-medium">Date:</span> ${parsedDetails.visit_date ? new Date(parsedDetails.visit_date).toLocaleDateString() : 'Unknown date'}</div>${placesHtml}<div><span class="font-medium">Purpose:</span> ${parsedDetails.purpose || 'Not specified'}</div>${personnelHtml}${statusHtml}${historyHtml}`;
       }

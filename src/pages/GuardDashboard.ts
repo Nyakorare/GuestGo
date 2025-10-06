@@ -857,34 +857,20 @@ async function logGuardAction(action: 'entrance' | 'exit' | 'temporary_exit', vi
       }
     }
 
-    // When temporary exit is logged, set status accordingly and log the action
+    // When temporary exit is logged, call backend helper to set status and log
     if (action === 'temporary_exit') {
       try {
-        const { error: tempExitError } = await supabase
-          .from('scheduled_visits')
-          .update({
-            status: 'temporary_exit'
-          })
-          .eq('id', activeVisit.visitId);
-
-        if (tempExitError) {
-          console.error('Error updating temporary exit status:', tempExitError);
+        const { error: rpcError } = await supabase.rpc('set_temporary_exit', {
+          p_visit_id: activeVisit.visitId,
+          p_guard_id: user.id
+        });
+        if (rpcError) {
+          console.error('Error setting temporary exit via RPC:', rpcError);
           showGuardError('Error', 'Could not set temporary exit status.');
           return;
         }
-
-        // Also write a log entry via backend function (will be a no-op until migration applied)
-        try {
-          await supabase.rpc('log_guard_action', {
-            p_visit_id: activeVisit.visitId,
-            p_action: 'temporary_exit',
-            p_guard_id: user.id
-          });
-        } catch (_) {
-          // Non-fatal
-        }
       } catch (e) {
-        console.error('Unexpected error setting temporary exit:', e);
+        console.error('Unexpected error setting temporary exit via RPC:', e);
       }
     }
 
