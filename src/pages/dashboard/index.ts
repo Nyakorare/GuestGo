@@ -4713,7 +4713,7 @@ async function loadGuardScanHistory() {
   }
 
   try {
-    // Get guard scan history from logs
+    // Get guard scan history from logs (include temporary exit events)
     const { data: scanHistory, error } = await supabase
       .from('logs')
       .select(`
@@ -4723,7 +4723,7 @@ async function loadGuardScanHistory() {
         created_at
       `)
       .eq('user_id', user.id)
-      .eq('action', 'guard_action')
+      .in('action', ['guard_action', 'visit_temporary_exit'])
       .order('created_at', { ascending: false })
       .limit(50);
 
@@ -4755,7 +4755,7 @@ function renderGuardScanHistory(scanHistory: any[]) {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
         </svg>
         <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No scan history</h3>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Your scan history will appear here after you log entrance or exit actions.</p>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Your scan history will appear here after you log entrance, exit, or temporary exit actions.</p>
       </div>
     `;
     return;
@@ -4763,7 +4763,7 @@ function renderGuardScanHistory(scanHistory: any[]) {
 
   const scanHistoryHtml = scanHistory.map(scan => {
     const details = scan.details || {};
-    const action = details.action || 'unknown';
+    const normalizedAction = (details.action || '').toLowerCase() || (scan.action === 'visit_temporary_exit' ? 'temporary_exit' : 'unknown');
     const visitId = details.visit_id || 'Unknown';
     const timestamp = new Date(scan.created_at);
     
@@ -4773,15 +4773,18 @@ function renderGuardScanHistory(scanHistory: any[]) {
           <div class="flex items-center space-x-3">
             <div class="flex-shrink-0">
               <div class="w-10 h-10 rounded-full flex items-center justify-center ${
-                action === 'entrance' ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-200' :
-                action === 'exit' ? 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-200' :
+                normalizedAction === 'entrance' ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-200' :
+                normalizedAction === 'exit' ? 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-200' :
+                normalizedAction === 'temporary_exit' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-200' :
                 'bg-gray-100 text-gray-600 dark:bg-gray-900 dark:text-gray-200'
               }">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  ${action === 'entrance' ? 
+                  ${normalizedAction === 'entrance' ? 
                     '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>' :
-                    action === 'exit' ?
+                    normalizedAction === 'exit' ?
                     '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path>' :
+                    normalizedAction === 'temporary_exit' ?
+                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3"></path>' :
                     '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>'
                   }
                 </svg>
@@ -4790,14 +4793,15 @@ function renderGuardScanHistory(scanHistory: any[]) {
             <div class="flex-1 min-w-0">
               <div class="flex items-center space-x-2">
                 <h4 class="text-sm font-medium text-gray-900 dark:text-white">
-                  ${action === 'entrance' ? 'Entrance Logged' : action === 'exit' ? 'Exit Logged' : 'Action Logged'}
+                  ${normalizedAction === 'entrance' ? 'Entrance Logged' : normalizedAction === 'exit' ? 'Exit Logged' : normalizedAction === 'temporary_exit' ? 'Temporary Exit Logged' : 'Action Logged'}
                 </h4>
                 <span class="px-2 py-1 text-xs font-medium rounded-full ${
-                  action === 'entrance' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                  action === 'exit' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                  normalizedAction === 'entrance' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                  normalizedAction === 'exit' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                  normalizedAction === 'temporary_exit' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
                   'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
                 }">
-                  ${action.charAt(0).toUpperCase() + action.slice(1)}
+                  ${normalizedAction.charAt(0).toUpperCase() + normalizedAction.slice(1)}
                 </span>
               </div>
               <p class="text-sm text-gray-500 dark:text-gray-400">
@@ -4840,7 +4844,7 @@ function applyGuardSearchAndFilter() {
   if (searchTerm) {
     filtered = filtered.filter(scan => {
       const details = scan.details || {};
-      const action = details.action || '';
+      const action = (details.action || '').toLowerCase() || (scan.action === 'visit_temporary_exit' ? 'temporary_exit' : '');
       const visitId = details.visit_id || '';
       const timestamp = new Date(scan.created_at).toLocaleString().toLowerCase();
       
@@ -4854,7 +4858,8 @@ function applyGuardSearchAndFilter() {
   if (actionValue !== 'all') {
     filtered = filtered.filter(scan => {
       const details = scan.details || {};
-      return details.action === actionValue;
+      const normalizedAction = (details.action || '').toLowerCase() || (scan.action === 'visit_temporary_exit' ? 'temporary_exit' : '');
+      return normalizedAction === actionValue;
     });
   }
 
