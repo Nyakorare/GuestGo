@@ -1271,6 +1271,7 @@ export function DashboardPage() {
                 <option value="all">All Actions</option>
                 <option value="entrance">Entrance</option>
                 <option value="exit">Exit</option>
+                <option value="temporary_exit">Temporary Exit</option>
               </select>
             </div>
           </div>
@@ -1279,6 +1280,12 @@ export function DashboardPage() {
           <div id="guardScanHistoryList" class="space-y-4">
             <!-- Scan history will be loaded here -->
           </div>
+        <!-- Pagination -->
+        <div id="guardScanHistoryPagination" class="flex items-center justify-between mt-4">
+          <button id="guardPrevPageBtn" class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded disabled:opacity-50">Previous</button>
+          <span id="guardPageInfo" class="text-sm text-gray-700 dark:text-gray-300">Page 1</span>
+          <button id="guardNextPageBtn" class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded disabled:opacity-50">Next</button>
+        </div>
         </div>
       </div>
 
@@ -4732,11 +4739,13 @@ async function loadGuardScanHistory() {
       return;
     }
 
-    // Store scan history globally for filtering
+    // Store scan history globally for filtering and pagination
     (window as any).guardScanHistory = scanHistory || [];
+    (window as any).guardFilteredScanHistory = scanHistory || [];
+    (window as any).guardCurrentPage = (window as any).guardCurrentPage || 1;
     
-    // Render scan history
-    renderGuardScanHistory(scanHistory || []);
+    // Render scan history (pagination handled inside)
+    renderGuardScanHistory((window as any).guardFilteredScanHistory);
 
   } catch (error) {
     console.error('Error in loadGuardScanHistory:', error);
@@ -4746,7 +4755,19 @@ async function loadGuardScanHistory() {
 // Function to render guard scan history
 function renderGuardScanHistory(scanHistory: any[]) {
   const guardScanHistoryList = document.getElementById('guardScanHistoryList');
+  const pageInfo = document.getElementById('guardPageInfo');
+  const prevBtn = document.getElementById('guardPrevPageBtn') as HTMLButtonElement | null;
+  const nextBtn = document.getElementById('guardNextPageBtn') as HTMLButtonElement | null;
   if (!guardScanHistoryList) return;
+
+  // Pagination state
+  const itemsPerPage = 10;
+  const totalItems = scanHistory.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+  let currentPage = (window as any).guardCurrentPage || 1;
+  if (currentPage > totalPages) currentPage = totalPages;
+  if (currentPage < 1) currentPage = 1;
+  (window as any).guardCurrentPage = currentPage;
 
   if (scanHistory.length === 0) {
     guardScanHistoryList.innerHTML = `
@@ -4758,10 +4779,17 @@ function renderGuardScanHistory(scanHistory: any[]) {
         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Your scan history will appear here after you log entrance, exit, or temporary exit actions.</p>
       </div>
     `;
+    if (pageInfo) pageInfo.textContent = 'Page 1';
+    if (prevBtn) prevBtn.disabled = true;
+    if (nextBtn) nextBtn.disabled = true;
     return;
   }
 
-  const scanHistoryHtml = scanHistory.map(scan => {
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+  const pageItems = scanHistory.slice(startIndex, endIndex);
+
+  const scanHistoryHtml = pageItems.map(scan => {
     const details = scan.details || {};
     const normalizedAction = (details.action || '').toLowerCase() || (scan.action === 'visit_temporary_exit' ? 'temporary_exit' : 'unknown');
     const visitId = details.visit_id || 'Unknown';
@@ -4826,6 +4854,31 @@ function renderGuardScanHistory(scanHistory: any[]) {
   }).join('');
 
   guardScanHistoryList.innerHTML = scanHistoryHtml;
+
+  // Update pagination controls
+  if (pageInfo) pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+  if (prevBtn) prevBtn.disabled = currentPage <= 1;
+  if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
+
+  // Attach handlers once (idempotent)
+  if (prevBtn && !(prevBtn as any)._bound) {
+    (prevBtn as any)._bound = true;
+    prevBtn.addEventListener('click', () => {
+      const state = (window as any);
+      state.guardCurrentPage = Math.max(1, (state.guardCurrentPage || 1) - 1);
+      renderGuardScanHistory(state.guardFilteredScanHistory || state.guardScanHistory || []);
+    });
+  }
+  if (nextBtn && !(nextBtn as any)._bound) {
+    (nextBtn as any)._bound = true;
+    nextBtn.addEventListener('click', () => {
+      const state = (window as any);
+      const list = state.guardFilteredScanHistory || state.guardScanHistory || [];
+      const pages = Math.max(1, Math.ceil(list.length / itemsPerPage));
+      state.guardCurrentPage = Math.min(pages, (state.guardCurrentPage || 1) + 1);
+      renderGuardScanHistory(list);
+    });
+  }
 }
 
 // Function to apply search and filter for guard scan history
@@ -4863,6 +4916,9 @@ function applyGuardSearchAndFilter() {
     });
   }
 
+  // Save filtered list and reset to first page on filter/search change
+  (window as any).guardFilteredScanHistory = filtered;
+  (window as any).guardCurrentPage = 1;
   renderGuardScanHistory(filtered);
 }
 
@@ -4877,7 +4933,10 @@ function applyGuardSearchAndFilter() {
   }
 
   const details = scan.details || {};
-  const action = details.action || 'unknown';
+  const normalizedAction = ((details.action || '') as string).toLowerCase() ||
+    (scan.action === 'visit_temporary_exit' ? 'temporary_exit' :
+     scan.action === 'visit_entrance' ? 'entrance' :
+     scan.action === 'visit_exit' ? 'exit' : 'unknown');
   const visitId = details.visit_id || 'Unknown';
   const timestamp = new Date(scan.created_at);
 
@@ -4902,22 +4961,25 @@ function applyGuardSearchAndFilter() {
             <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
               <div class="flex items-center space-x-3 mb-3">
                 <div class="w-8 h-8 rounded-full flex items-center justify-center ${
-                  action === 'entrance' ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-200' :
-                  action === 'exit' ? 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-200' :
+                  normalizedAction === 'entrance' ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-200' :
+                  normalizedAction === 'exit' ? 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-200' :
+                  normalizedAction === 'temporary_exit' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-200' :
                   'bg-gray-100 text-gray-600 dark:bg-gray-900 dark:text-gray-200'
                 }">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    ${action === 'entrance' ? 
+                    ${normalizedAction === 'entrance' ? 
                       '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>' :
-                      action === 'exit' ?
+                      normalizedAction === 'exit' ?
                       '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path>' :
+                      normalizedAction === 'temporary_exit' ?
+                      '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3"></path>' :
                       '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>'
                     }
                   </svg>
                 </div>
                 <div>
                   <h4 class="text-sm font-medium text-gray-900 dark:text-white">
-                    ${action === 'entrance' ? 'Entrance Logged' : action === 'exit' ? 'Exit Logged' : 'Action Logged'}
+                    ${normalizedAction === 'entrance' ? 'Entrance Logged' : normalizedAction === 'exit' ? 'Exit Logged' : normalizedAction === 'temporary_exit' ? 'Temporary Exit Logged' : 'Action Logged'}
                   </h4>
                   <p class="text-xs text-gray-500 dark:text-gray-400">${timestamp.toLocaleString()}</p>
                 </div>
@@ -4927,11 +4989,12 @@ function applyGuardSearchAndFilter() {
                 <div>
                   <span class="font-medium text-gray-700 dark:text-gray-300">Action:</span>
                   <span class="ml-2 px-2 py-1 text-xs font-medium rounded-full ${
-                    action === 'entrance' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                    action === 'exit' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                    normalizedAction === 'entrance' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                    normalizedAction === 'exit' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                    normalizedAction === 'temporary_exit' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
                     'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
                   }">
-                    ${action.charAt(0).toUpperCase() + action.slice(1)}
+                    ${normalizedAction === 'temporary_exit' ? 'Temporary Exit' : (normalizedAction.charAt(0).toUpperCase() + normalizedAction.slice(1))}
                   </span>
                 </div>
                 <div>
