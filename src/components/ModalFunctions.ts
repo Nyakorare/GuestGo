@@ -2093,8 +2093,8 @@ async function scheduleVisitFromConfirmation(data: VisitConfirmationData) {
     // Use global-safe accessor to avoid reference errors when this function is out of scope
     (window as any).modalEnableVerificationInputs?.();
 
-    // Refresh the page after a brief delay to allow "Completed" to be seen
-    setTimeout(() => { window.location.reload(); }, 1000);
+    // Refresh the page after a brief delay to allow loading overlay to be seen
+    setTimeout(() => { window.location.reload(); }, 2000);
 
   } catch (error: any) {
     console.error('Error scheduling visit:', error);
@@ -2105,10 +2105,9 @@ async function scheduleVisitFromConfirmation(data: VisitConfirmationData) {
       confirmBtn.disabled = false;
       confirmBtn.textContent = 'Confirm & Schedule Visit';
     }
+    // Hide overlay on error only
+    hideLoadingOverlay();
   }
-
-  // Hide overlay if still present (in case of error or after scheduling triggers reload)
-  hideLoadingOverlay();
 }
 
 // Set up confirmation modal event listeners (called when modal is shown)
