@@ -1205,12 +1205,22 @@ function showPersonnelVisitModal(visitData: VisitQRData & { places: any[] }, cur
                           ${place.status === 'completed_flagged' ? 'Completed (Flagged)' : place.status.charAt(0).toUpperCase() + place.status.slice(1)}
                         </span>
                         ${!isFuture && place.status === 'pending' && place.isAssignedToCurrentUser ? `
-                          <button 
-                            onclick="completeVisitPlace('${visitData.visitId}', '${place.placeId}')"
-                            class="ml-2 px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200 text-xs font-medium"
-                          >
-                            Mark Complete
-                          </button>
+                          ${visitData.status === 'completed_flagged' ? `
+                            <button 
+                              disabled
+                              class="ml-2 px-3 py-1 bg-gray-300 text-gray-500 rounded-md cursor-not-allowed text-xs font-medium"
+                              title="Visit is Completed (Flagged). You cannot mark places complete."
+                            >
+                              Mark Complete
+                            </button>
+                          ` : `
+                            <button 
+                              onclick="completeVisitPlace('${visitData.visitId}', '${place.placeId}')"
+                              class="ml-2 px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200 text-xs font-medium"
+                            >
+                              Mark Complete
+                            </button>
+                          `}
                         ` : ''}
                       </div>
                     </div>
