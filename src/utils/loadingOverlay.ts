@@ -8,25 +8,37 @@ export function showLoadingOverlay(message: string = 'Loading...') {
 
 	const overlay = document.createElement('div');
 	overlay.id = 'globalLoadingOverlay';
-	overlay.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50';
+	overlay.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm';
 
 	const container = document.createElement('div');
-	container.className = 'flex flex-col items-center space-y-4 p-6 rounded-lg bg-white shadow-lg dark:bg-gray-800';
+	container.className = 'flex flex-col items-center space-y-6 p-8 rounded-xl bg-white shadow-2xl dark:bg-gray-800 border border-gray-200 dark:border-gray-700';
 
 	const spinner = document.createElement('div');
-	spinner.className = 'h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin';
+	spinner.className = 'h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin';
 
 	const text = document.createElement('div');
 	text.id = 'globalLoadingOverlayText';
-	text.className = 'text-gray-800 dark:text-gray-100 text-sm font-medium';
+	text.className = 'text-gray-800 dark:text-gray-100 text-base font-medium text-center';
 	text.textContent = message;
+
+	// Add a subtle pulse animation to the container
+	container.style.animation = 'pulse 2s ease-in-out infinite';
 
 	container.appendChild(spinner);
 	container.appendChild(text);
 	overlay.appendChild(container);
 
+	// Add fade-in animation
+	overlay.style.opacity = '0';
+	overlay.style.transition = 'opacity 0.3s ease-out';
+
 	document.body.appendChild(overlay);
 	overlayElement = overlay;
+
+	// Trigger fade-in
+	setTimeout(() => {
+		overlay.style.opacity = '1';
+	}, 10);
 }
 
 export function updateLoadingOverlay(message: string) {
@@ -38,10 +50,17 @@ export function updateLoadingOverlay(message: string) {
 
 export function hideLoadingOverlay() {
 	if (overlayElement) {
-		try {
-			document.body.removeChild(overlayElement);
-		} catch {}
-		overlayElement = null;
+		// Add fade-out animation
+		overlayElement.style.transition = 'opacity 0.3s ease-out';
+		overlayElement.style.opacity = '0';
+		
+		// Remove from DOM after animation
+		setTimeout(() => {
+			try {
+				document.body.removeChild(overlayElement!);
+			} catch {}
+			overlayElement = null;
+		}, 300);
 	}
 }
 

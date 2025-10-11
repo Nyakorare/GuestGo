@@ -7,6 +7,7 @@ import { GatePage, setupGatePage } from '../pages/GatePage';
 import { GuardDashboardPage } from '../pages/GuardDashboard';
 import { setupAboutPageInteractivity } from './eventHandlers';
 import { performanceMonitor } from './performance';
+import { showLoadingOverlay, hideLoadingOverlay } from './loadingOverlay';
 
 // Cache for page content to avoid re-rendering
 const pageCache = new Map<string, string>();
@@ -123,17 +124,19 @@ async function performNavigation() {
   performanceMonitor.startNavigation(path);
   
   const mainContent = document.querySelector('main');
+  const navbar = document.querySelector('nav');
   
   if (!mainContent) return;
 
-  // Show loading state
-  const loadingDiv = document.createElement('div');
-  loadingDiv.className = 'page-transition';
-  loadingDiv.innerHTML = '<div class="flex justify-center items-center py-8"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>';
+  // Hide navbar and show loading overlay
+  if (navbar) {
+    navbar.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
+    navbar.style.opacity = '0';
+    navbar.style.transform = 'translateY(-10px)';
+  }
   
-  // Update content with loading state
-  mainContent.innerHTML = '';
-  mainContent.appendChild(loadingDiv);
+  // Show global loading overlay
+  showLoadingOverlay('Loading page...');
 
   try {
     // Get user data (cached)
@@ -142,18 +145,24 @@ async function performNavigation() {
     // Check access permissions
     if (path === '/qr-scanner' && role !== 'personnel') {
       window.location.hash = '/';
+      hideLoadingOverlay();
+      showNavbar();
       performanceMonitor.endNavigation(path);
       return;
     }
     
     if (path === '/guard-dashboard' && role !== 'guard') {
       window.location.hash = '/';
+      hideLoadingOverlay();
+      showNavbar();
       performanceMonitor.endNavigation(path);
       return;
     }
     
     if (path.startsWith('/gate/') && role !== 'admin') {
       window.location.hash = '/dashboard';
+      hideLoadingOverlay();
+      showNavbar();
       performanceMonitor.endNavigation(path);
       return;
     }
@@ -172,12 +181,14 @@ async function performNavigation() {
       }
     }
 
-    // Update DOM efficiently
+    // Update DOM efficiently with smooth transition
     const contentDiv = document.createElement('div');
     contentDiv.className = 'page-transition';
+    contentDiv.style.opacity = '0';
+    contentDiv.style.transform = 'translateY(20px)';
     contentDiv.innerHTML = pageContent;
     
-    // Replace loading state with actual content
+    // Replace content
     mainContent.innerHTML = '';
     mainContent.appendChild(contentDiv);
 
@@ -192,14 +203,42 @@ async function performNavigation() {
       (window as any).updateScheduleButtonVisibility();
     }
 
+    // Animate content in and show navbar
+    setTimeout(() => {
+      contentDiv.style.transition = 'opacity 0.5s ease-out, transform 0.5s ease-out';
+      contentDiv.style.opacity = '1';
+      contentDiv.style.transform = 'translateY(0)';
+      
+      // Hide loading overlay and show navbar after content animation starts
+      setTimeout(() => {
+        hideLoadingOverlay();
+        // Add a slight delay before showing navbar for smoother transition
+        setTimeout(() => {
+          showNavbar();
+        }, 150);
+      }, 100);
+    }, 50);
+
     // End performance monitoring
     performanceMonitor.endNavigation(path);
 
   } catch (error) {
     console.error('Navigation error:', error);
+    hideLoadingOverlay();
+    showNavbar();
     // Fallback to home page
     window.location.hash = '/';
     performanceMonitor.endNavigation(path);
+  }
+}
+
+// Helper function to show navbar with animation
+function showNavbar() {
+  const navbar = document.querySelector('nav');
+  if (navbar) {
+    navbar.style.transition = 'opacity 0.5s ease-out, transform 0.5s ease-out';
+    navbar.style.opacity = '1';
+    navbar.style.transform = 'translateY(0)';
   }
 }
 

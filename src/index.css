@@ -19,6 +19,34 @@
 
 .page-transition {
   animation: fadeIn 0.5s ease-out;
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+
+/* Enhanced page transition animations */
+.page-transition-enter {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.page-transition-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+
+/* Navbar transition styles */
+.navbar-transition {
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+}
+
+.navbar-hidden {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.navbar-visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .dropdown-transition {
@@ -73,6 +101,40 @@
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+/* Loading overlay animations */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+/* Enhanced page transition with stagger effect */
+.page-transition-stagger > * {
+  animation: fadeInUp 0.6s ease-out forwards;
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.page-transition-stagger > *:nth-child(1) { animation-delay: 0.1s; }
+.page-transition-stagger > *:nth-child(2) { animation-delay: 0.2s; }
+.page-transition-stagger > *:nth-child(3) { animation-delay: 0.3s; }
+.page-transition-stagger > *:nth-child(4) { animation-delay: 0.4s; }
+.page-transition-stagger > *:nth-child(5) { animation-delay: 0.5s; }
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

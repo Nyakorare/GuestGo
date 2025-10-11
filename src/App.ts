@@ -74,7 +74,7 @@ export default function setupApp() {
   const app = document.querySelector<HTMLDivElement>('#app')!;
   
   app.innerHTML = `    <div class="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-200">
-      <nav class="fixed top-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-md z-40">
+      <nav class="fixed top-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-md z-40 navbar-transition">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div class="flex justify-between items-center h-16"><!-- Logo, brand name and theme toggle -->
           <div class="flex items-center space-x-2">

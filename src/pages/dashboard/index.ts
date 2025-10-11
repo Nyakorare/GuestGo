@@ -2327,6 +2327,13 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
                 p_visit_id: parsedDetails.visit_id
               });
               
+              // Also get visit data from scheduled_visits table as fallback
+              const { data: visitData, error: visitError } = await supabase
+                .from('scheduled_visits')
+                .select('gate_entrance_scanned, gate_entrance_scanned_at, gate_entrance_scanned_by, gate_exit_scanned, gate_exit_scanned_at, gate_exit_scanned_by')
+                .eq('id', parsedDetails.visit_id)
+                .single();
+              
               if (!gateError && gateScans && gateScans.length > 0) {
                 const entranceScan = gateScans.find((scan: any) => scan.scan_type === 'entrance');
                 const exitScan = gateScans.find((scan: any) => scan.scan_type === 'exit');
@@ -2337,6 +2344,10 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
                 if (entranceScan) {
                   const entranceTime = new Date(entranceScan.scanned_at).toLocaleString();
                   gateScanInfo += `<div class="text-xs text-green-600 dark:text-green-400">✅ Entrance: ${entranceScan.gate_name} at ${entranceTime}</div>`;
+                } else if (visitData && visitData.gate_entrance_scanned) {
+                  // Fallback to scheduled_visits table data
+                  const entranceTime = visitData.gate_entrance_scanned_at ? new Date(visitData.gate_entrance_scanned_at).toLocaleString() : 'Unknown time';
+                  gateScanInfo += `<div class="text-xs text-green-600 dark:text-green-400">✅ Entrance: Scanned at ${entranceTime}</div>`;
                 } else {
                   gateScanInfo += `<div class="text-xs text-gray-500">⏳ Entrance: Not scanned</div>`;
                 }
@@ -2363,6 +2374,30 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
                     
                     gateScanInfo += `<div class="text-xs text-purple-600 dark:text-purple-400 font-medium mt-1">⏱️ Total Visit Time: ${durationText}</div>`;
                   }
+                } else if (visitData && visitData.gate_exit_scanned) {
+                  // Fallback to scheduled_visits table data for exit
+                  const exitTime = visitData.gate_exit_scanned_at ? new Date(visitData.gate_exit_scanned_at).toLocaleString() : 'Unknown time';
+                  gateScanInfo += `<div class="text-xs text-green-600 dark:text-green-400">✅ Exit: Scanned at ${exitTime}</div>`;
+                } else {
+                  gateScanInfo += `<div class="text-xs text-gray-500">⏳ Exit: Not scanned</div>`;
+                }
+                
+                gateScanInfo += '</div>';
+              } else if (visitData && (visitData.gate_entrance_scanned || visitData.gate_exit_scanned)) {
+                // Fallback: use scheduled_visits table data when gate_scans table is empty
+                gateScanInfo = '<div class="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-md">';
+                gateScanInfo += '<div class="font-medium text-blue-800 dark:text-blue-200 mb-1">Gate Scans:</div>';
+                
+                if (visitData.gate_entrance_scanned) {
+                  const entranceTime = visitData.gate_entrance_scanned_at ? new Date(visitData.gate_entrance_scanned_at).toLocaleString() : 'Unknown time';
+                  gateScanInfo += `<div class="text-xs text-green-600 dark:text-green-400">✅ Entrance: Scanned at ${entranceTime}</div>`;
+                } else {
+                  gateScanInfo += `<div class="text-xs text-gray-500">⏳ Entrance: Not scanned</div>`;
+                }
+                
+                if (visitData.gate_exit_scanned) {
+                  const exitTime = visitData.gate_exit_scanned_at ? new Date(visitData.gate_exit_scanned_at).toLocaleString() : 'Unknown time';
+                  gateScanInfo += `<div class="text-xs text-green-600 dark:text-green-400">✅ Exit: Scanned at ${exitTime}</div>`;
                 } else {
                   gateScanInfo += `<div class="text-xs text-gray-500">⏳ Exit: Not scanned</div>`;
                 }
@@ -5188,16 +5223,16 @@ async function loadScheduledVisits() {
       }
     }
     
-    // --- Call database function to mark past visits as unsuccessful ---
+    // --- Call database function to update visit statuses (mark past visits as unsuccessful) ---
     try {
-      const { data: markResult, error: markError } = await supabase.rpc('mark_past_visits_unsuccessful');
+      const { data: markResult, error: markError } = await supabase.rpc('update_visit_statuses');
       if (markError) {
-        console.error('Error marking past visits as unsuccessful:', markError);
+        console.error('Error updating visit statuses:', markError);
       } else if (markResult && markResult > 0) {
-        console.log(`Marked ${markResult} past visits as unsuccessful`);
+        console.log(`Updated ${markResult} visit statuses (marked past visits as unsuccessful)`);
       }
     } catch (markErr) {
-      console.error('Error calling mark_past_visits_unsuccessful:', markErr);
+      console.error('Error calling update_visit_statuses:', markErr);
     }
     
     // --- Get scheduled visits for this personnel ---
