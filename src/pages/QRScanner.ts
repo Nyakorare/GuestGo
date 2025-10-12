@@ -62,7 +62,7 @@ export function QRScannerPage() {
             <canvas id="qrCanvas" class="hidden"></canvas>
             
             <!-- Scanner Overlay -->
-            <div class="absolute inset-0 max-w-xs sm:max-w-md md:max-w-lg mx-auto flex items-center justify-center pointer-events-none">
+            <div id="scannerOverlay" class="absolute inset-0 max-w-xs sm:max-w-md md:max-w-lg mx-auto flex items-center justify-center pointer-events-none hidden">
               <div class="w-48 h-48 sm:w-64 sm:h-64 border-2 border-blue-500 rounded-lg relative">
                 <div class="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-blue-500"></div>
                 <div class="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-blue-500"></div>
@@ -344,28 +344,47 @@ async function startScanner() {
     });
 
     video.srcObject = stream;
-    scanning = true;
-    consecutiveFailures = 0;
-    scanInterval = 100; // Reset scan interval
-    scanCount = 0;
-    lastPerformanceUpdate = Date.now();
     
-    // Show performance indicator
-    const performanceIndicator = document.getElementById('performanceIndicator');
-    if (performanceIndicator) {
-      performanceIndicator.classList.remove('hidden');
-    }
+    // Show loading state while camera initializes
+    if (status) status.innerHTML = '<p class="text-sm text-blue-600 dark:text-blue-400">Initializing camera...</p>';
+    if (startBtn) startBtn.classList.add('hidden');
+    if (stopBtn) stopBtn.classList.remove('hidden');
+    
+    // Wait for video to be ready before showing overlay and starting scan
+    video.onloadedmetadata = () => {
+      // Show the scanner overlay now that camera is ready
+      const scannerOverlay = document.getElementById('scannerOverlay');
+      if (scannerOverlay) {
+        scannerOverlay.classList.remove('hidden');
+      }
+      
+      scanning = true;
+      consecutiveFailures = 0;
+      scanInterval = 100; // Reset scan interval
+      scanCount = 0;
+      lastPerformanceUpdate = Date.now();
+      
+      // Show performance indicator
+      const performanceIndicator = document.getElementById('performanceIndicator');
+      if (performanceIndicator) {
+        performanceIndicator.classList.remove('hidden');
+      }
 
-    // Update UI
-    startBtn.classList.add('hidden');
-    stopBtn.classList.remove('hidden');
-    status.innerHTML = '<p class="text-sm text-green-600 dark:text-green-400">Scanner active - Point camera at QR code</p>';
+      // Update UI status
+      status.innerHTML = '<p class="text-sm text-green-600 dark:text-green-400">Scanner active - Point camera at QR code</p>';
 
-    // Initialize live feedback
-    updateLiveFeedback('Position QR code in frame', 'searching');
+      // Initialize live feedback
+      updateLiveFeedback('Position QR code in frame', 'searching');
 
-    // Start scanning loop
-    scanLoop();
+      // Start scanning loop
+      scanLoop();
+    };
+
+    // Handle video loading errors
+    video.onerror = () => {
+      console.error('Error loading video stream');
+      showError('Camera Error', 'Failed to load camera feed. Please try again.');
+    };
 
   } catch (error) {
     console.error('Error starting scanner:', error);
@@ -403,11 +422,13 @@ function stopScanner() {
   const status = document.getElementById('scannerStatus');
   const startBtn = document.getElementById('startScanBtn');
   const stopBtn = document.getElementById('stopScanBtn');
+  const scannerOverlay = document.getElementById('scannerOverlay');
 
   if (video) video.srcObject = null;
   if (status) status.innerHTML = '<p class="text-sm text-gray-600 dark:text-gray-400">Scanner stopped</p>';
   if (startBtn) startBtn.classList.remove('hidden');
   if (stopBtn) stopBtn.classList.add('hidden');
+  if (scannerOverlay) scannerOverlay.classList.add('hidden');
   
   // Reset live feedback
   updateLiveFeedback('Scanner stopped', 'error');
@@ -587,11 +608,13 @@ function resetScanner() {
   const errorSection = document.getElementById('errorSection');
   const scannerSection = document.getElementById('scannerSection');
   const qrPreviewSection = document.getElementById('qrPreviewSection');
+  const scannerOverlay = document.getElementById('scannerOverlay');
   
   if (resultsSection) resultsSection.classList.add('hidden');
   if (errorSection) errorSection.classList.add('hidden');
   if (qrPreviewSection) qrPreviewSection.classList.add('hidden');
   if (scannerSection) scannerSection.classList.remove('hidden');
+  if (scannerOverlay) scannerOverlay.classList.add('hidden');
   
   // Clear timeout
   if (emptyQRTimeout) {
