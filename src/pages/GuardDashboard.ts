@@ -11,7 +11,7 @@ export function GuardDashboardPage() {
           <div class="flex flex-col sm:flex-row justify-between items-center py-4 space-y-2 sm:space-y-0">
             <div class="flex items-center w-full sm:w-auto justify-between sm:justify-start">
               <button 
-                onclick="window.history.back()"
+                onclick="window.location.hash = '/dashboard'; window.location.reload();"
                 class="mr-2 sm:mr-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200"
               >
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -56,7 +56,7 @@ export function GuardDashboardPage() {
             <canvas id="guardCanvas" class="hidden"></canvas>
             
             <!-- Scanner Overlay -->
-            <div class="absolute inset-0 max-w-xs sm:max-w-md md:max-w-lg mx-auto flex items-center justify-center pointer-events-none">
+            <div id="guardScannerOverlay" class="absolute inset-0 max-w-xs sm:max-w-md md:max-w-lg mx-auto flex items-center justify-center pointer-events-none hidden">
               <div class="w-48 h-48 sm:w-64 sm:h-64 border-2 border-blue-500 rounded-lg relative">
                 <div class="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-blue-500"></div>
                 <div class="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-blue-500"></div>
@@ -225,28 +225,47 @@ async function startGuardScanner() {
     });
 
     video.srcObject = guardStream;
-    guardScanning = true;
-    guardConsecutiveFailures = 0;
-    guardScanInterval = 100;
-    guardScanCount = 0;
-    guardLastPerformanceUpdate = Date.now();
     
-    // Show performance indicator
-    const performanceIndicator = document.getElementById('guardPerformanceIndicator');
-    if (performanceIndicator) {
-      performanceIndicator.classList.remove('hidden');
-    }
+    // Show loading state while camera initializes
+    if (status) status.innerHTML = '<p class="text-sm text-blue-600 dark:text-blue-400">Initializing camera...</p>';
+    if (startBtn) startBtn.classList.add('hidden');
+    if (stopBtn) stopBtn.classList.remove('hidden');
+    
+    // Wait for video to be ready before showing overlay and starting scan
+    video.onloadedmetadata = () => {
+      // Show the scanner overlay now that camera is ready
+      const scannerOverlay = document.getElementById('guardScannerOverlay');
+      if (scannerOverlay) {
+        scannerOverlay.classList.remove('hidden');
+      }
+      
+      guardScanning = true;
+      guardConsecutiveFailures = 0;
+      guardScanInterval = 100;
+      guardScanCount = 0;
+      guardLastPerformanceUpdate = Date.now();
+      
+      // Show performance indicator
+      const performanceIndicator = document.getElementById('guardPerformanceIndicator');
+      if (performanceIndicator) {
+        performanceIndicator.classList.remove('hidden');
+      }
 
-    // Update UI
-    startBtn.classList.add('hidden');
-    stopBtn.classList.remove('hidden');
-    status.innerHTML = '<p class="text-sm text-green-600 dark:text-green-400">Scanner active - Point camera at QR code</p>';
+      // Update UI status
+      status.innerHTML = '<p class="text-sm text-green-600 dark:text-green-400">Scanner active - Point camera at QR code</p>';
 
-    // Initialize live feedback
-    updateGuardLiveFeedback('Position QR code in frame', 'searching');
+      // Initialize live feedback
+      updateGuardLiveFeedback('Position QR code in frame', 'searching');
 
-    // Start scanning loop
-    guardScanLoop();
+      // Start scanning loop
+      guardScanLoop();
+    };
+
+    // Handle video loading errors
+    video.onerror = () => {
+      console.error('Error loading video stream');
+      showGuardError('Camera Error', 'Failed to load camera feed. Please try again.');
+    };
 
   } catch (error) {
     console.error('Error starting guard scanner:', error);
@@ -284,11 +303,13 @@ function stopGuardScanner() {
   const status = document.getElementById('guardScannerStatus');
   const startBtn = document.getElementById('guardStartScanBtn');
   const stopBtn = document.getElementById('guardStopScanBtn');
+  const scannerOverlay = document.getElementById('guardScannerOverlay');
 
   if (video) video.srcObject = null;
   if (status) status.innerHTML = '<p class="text-sm text-gray-600 dark:text-gray-400">Scanner stopped</p>';
   if (startBtn) startBtn.classList.remove('hidden');
   if (stopBtn) stopBtn.classList.add('hidden');
+  if (scannerOverlay) scannerOverlay.classList.add('hidden');
   
   // Reset live feedback
   updateGuardLiveFeedback('Scanner stopped', 'error');
@@ -1011,10 +1032,12 @@ function resetGuardScanner() {
   const scannerSection = document.getElementById('scannerSection');
   const qrPreviewSection = document.getElementById('guardQrPreviewSection');
   const messageSection = document.getElementById('guardMessageSection');
+  const scannerOverlay = document.getElementById('guardScannerOverlay');
   
   if (scannerSection) scannerSection.classList.remove('hidden');
   if (qrPreviewSection) qrPreviewSection.classList.add('hidden');
   if (messageSection) messageSection.classList.add('hidden');
+  if (scannerOverlay) scannerOverlay.classList.add('hidden');
   
   // Clear timeout
   if (guardEmptyQRTimeout) {
