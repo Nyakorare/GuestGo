@@ -3,7 +3,7 @@ import emailjs from '@emailjs/browser';
 
 // Initialize EmailJS with your public key
 emailjs.init({
-  publicKey: 'UkkUbmROWvLZ1Gv2u'
+  publicKey: import.meta.env.VITE_EMAILJS_PUBLIC_KEY as string
 });
 
 // Function to send verification email
@@ -18,8 +18,8 @@ export async function sendVerificationEmail(email: string, code: string): Promis
     };
 
     const response = await emailjs.send(
-      'service_m3k5w0u', // Your EmailJS service ID
-      'template_ib0lrti', // Your EmailJS template ID
+      import.meta.env.VITE_EMAILJS_SERVICE_ID as string,
+      import.meta.env.VITE_EMAILJS_TEMPLATE_ID as string,
       templateParams
     );
 
