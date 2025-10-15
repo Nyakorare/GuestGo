@@ -166,7 +166,17 @@ async function performNavigation() {
 
   try {
     // Get user data (cached)
-    const { user, role } = await getUserData();
+    let { user, role } = await getUserData();
+
+    // If navigating to a protected route and we have a user but no role yet,
+    // force a single re-fetch to avoid redirecting due to a race condition.
+    const isProtectedRoute = path === '/qr-scanner' || path === '/guard-dashboard' || path === '/track-schedule' || path.startsWith('/gate/');
+    if (isProtectedRoute && user && !role) {
+      clearUserCache();
+      const refreshed = await getUserData();
+      user = refreshed.user;
+      role = refreshed.role;
+    }
     
     // Check access permissions
     if (path === '/qr-scanner' && role !== 'personnel') {
