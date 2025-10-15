@@ -5989,7 +5989,7 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
         ` : canComplete ? `
           <div class="flex justify-end">
             <button 
-              onclick="completeVisitPlace('${visit.visit_id}', '${visit.place_id}')"
+              onclick="showCompletePlaceConfirmModal('${visit.visit_id}', '${visit.place_id}')"
               class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-sm font-medium transition-all duration-200 hover:scale-105 hover:shadow-md"
             >
               Mark Place Complete
@@ -6800,13 +6800,6 @@ async function completeVisitPlace(visitId: string, placeId: string) {
       showNotification('Gate entrance must be scanned by the visitor before places can be completed', 'error');
       return;
     }
-
-    // Show confirmation dialog
-    const confirmed = confirm('Are you sure you want to mark this place as completed?');
-    if (!confirmed) {
-      return;
-    }
-
     // Call the database function to complete the specific place
     const { data, error } = await supabase.rpc('complete_visit_place', {
       p_visit_id: visitId,
@@ -6843,11 +6836,112 @@ async function completeVisitPlace(visitId: string, placeId: string) {
 
 // Make function available globally
 (window as any).completeVisitPlace = completeVisitPlace;
+(window as any).showCompletePlaceConfirmModal = showCompletePlaceConfirmModal;
 (window as any).completeVisit = completeVisit;
 (window as any).scanGateEntrance = scanGateEntrance;
 (window as any).scanGateExit = scanGateExit;
 (window as any).manualFlagVisitsWithoutExitScans = manualFlagVisitsWithoutExitScans;
 
+// Show confirmation modal for completing a specific place
+async function showCompletePlaceConfirmModal(visitId: string, placeId: string) {
+  try {
+    // Fetch visit and place details for confirmation
+    const { data: visit, error } = await supabase
+      .from('scheduled_visits')
+      .select(`
+        id,
+        visitor_first_name,
+        visitor_last_name,
+        visitor_email,
+        visit_date,
+        purpose,
+        status,
+        gate_entrance_scanned,
+        scheduled_visit_places!inner(
+          place_id,
+          status,
+          places_to_visit(
+            name,
+            location
+          )
+        )
+      `)
+      .eq('id', visitId)
+      .single();
+
+    if (error || !visit) {
+      showNotification('Unable to load visit details for confirmation', 'error');
+      return;
+    }
+
+    const place = (visit.scheduled_visit_places || []).find((p: any) => p.place_id === placeId);
+    if (!place) {
+      showNotification('Place not found for this visit', 'error');
+      return;
+    }
+
+    // Build modal HTML
+    const modalHtml = `
+      <div id="completePlaceConfirmModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full p-5">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Confirm Place Completion</h3>
+            <button id="closeCompletePlaceConfirmBtn" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+          <div class="space-y-3">
+            <div class="bg-gray-50 dark:bg-gray-700 rounded p-3">
+              <p class="text-sm text-gray-600 dark:text-gray-300"><strong>Visitor:</strong> ${visit.visitor_first_name} ${visit.visitor_last_name} (${visit.visitor_email || 'N/A'})</p>
+              <p class="text-sm text-gray-600 dark:text-gray-300"><strong>Visit Date:</strong> ${new Date(visit.visit_date).toLocaleDateString()}</p>
+              <p class="text-sm text-gray-600 dark:text-gray-300"><strong>Purpose:</strong> ${visit.purpose || 'N/A'}</p>
+              <p class="text-sm text-gray-600 dark:text-gray-300"><strong>Visit Status:</strong> ${visit.status}</p>
+              <p class="text-sm ${visit.gate_entrance_scanned ? 'text-green-700 dark:text-green-300' : 'text-orange-700 dark:text-orange-300'}"><strong>Entrance Scan:</strong> ${visit.gate_entrance_scanned ? 'Scanned' : 'Not Scanned'}</p>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-700 rounded p-3">
+              <p class="text-sm text-gray-600 dark:text-gray-300"><strong>Place:</strong> ${place.places_to_visit?.name || 'Unknown'}</p>
+              <p class="text-sm text-gray-600 dark:text-gray-300"><strong>Location:</strong> ${place.places_to_visit?.location || 'N/A'}</p>
+              <p class="text-sm text-gray-600 dark:text-gray-300"><strong>Current Place Status:</strong> ${place.status}</p>
+            </div>
+            ${!visit.gate_entrance_scanned ? `
+              <div class="p-3 rounded bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300 text-sm">
+                ⚠️ Gate entrance must be scanned by the visitor before places can be completed.
+              </div>
+            ` : ''}
+            <p class="text-sm text-gray-700 dark:text-gray-300">Are you sure you want to mark this place as completed?</p>
+          </div>
+          <div class="mt-5 flex justify-end gap-2">
+            <button id="cancelCompletePlaceBtn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200">Cancel</button>
+            <button id="confirmCompletePlaceBtn" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 ${!visit.gate_entrance_scanned ? 'opacity-50 cursor-not-allowed' : ''}" ${!visit.gate_entrance_scanned ? 'disabled' : ''}>Confirm</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Insert modal
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    const closeModal = () => {
+      const modal = document.getElementById('completePlaceConfirmModal');
+      modal?.remove();
+    };
+
+    document.getElementById('closeCompletePlaceConfirmBtn')?.addEventListener('click', closeModal);
+    document.getElementById('cancelCompletePlaceBtn')?.addEventListener('click', closeModal);
+    document.getElementById('completePlaceConfirmModal')?.addEventListener('click', (e) => {
+      if (e.target === document.getElementById('completePlaceConfirmModal')) closeModal();
+    });
+
+    document.getElementById('confirmCompletePlaceBtn')?.addEventListener('click', async () => {
+      // Run the original completion function (which handles auth and guards)
+      await completeVisitPlace(visitId, placeId);
+      closeModal();
+    });
+  } catch (e) {
+    console.error('Error showing completion confirmation modal:', e);
+    showNotification('Failed to show confirmation modal', 'error');
+  }
+}
 // Function to complete an entire visit (all places)
 async function completeVisit(visitId: string) {
   try {

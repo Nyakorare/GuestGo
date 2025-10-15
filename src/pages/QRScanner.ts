@@ -1105,6 +1105,8 @@ async function displayVisitDetails(visitData: VisitQRData) {
 function showPersonnelVisitModal(visitData: VisitQRData & { places: any[] }, currentUserId: string) {
   const isCompleted = visitData.status === 'completed';
   const isTemporaryExit = visitData.status === 'temporary_exit';
+  const hasEntranceScan = Boolean((visitData as any).gate_entrance_scanned);
+  const requiresEntranceBeforeCompletion = visitData.status === 'pending' && !hasEntranceScan;
   // Date logic
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -1150,6 +1152,20 @@ function showPersonnelVisitModal(visitData: VisitQRData & { places: any[] }, cur
         <h4 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">Temporary Exit</h4>
         <p class="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
           The visitor is currently on a temporary exit. Marking places as complete is disabled until they re-enter.
+        </p>
+      </div>
+    </div>`;
+    disableComplete = true;
+  }
+
+  // Pending visit without entrance scan disables completion
+  if (!isCompleted && requiresEntranceBeforeCompletion) {
+    statusNotice += `<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4 flex items-center">
+      <svg class="h-5 w-5 text-blue-400 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 9a1 1 0 100 2h4a1 1 0 100-2H8z" clip-rule="evenodd" /></svg>
+      <div>
+        <h4 class="text-sm font-medium text-blue-800 dark:text-blue-200">Entrance Scan Required</h4>
+        <p class="text-sm text-blue-700 dark:text-blue-300 mt-1">
+          This scheduled visit is still pending and has no recorded entrance at the gate. Please scan the entrance gate first before marking any place as complete.
         </p>
       </div>
     </div>`;
@@ -1274,6 +1290,14 @@ function showPersonnelVisitModal(visitData: VisitQRData & { places: any[] }, cur
                               disabled
                               class="ml-2 px-3 py-1 bg-gray-300 text-gray-500 rounded-md cursor-not-allowed text-xs font-medium"
                               title="Visitor is on temporary exit. You cannot mark places complete until re-entry."
+                            >
+                              Mark Complete
+                            </button>
+                          ` : requiresEntranceBeforeCompletion ? `
+                            <button 
+                              disabled
+                              class="ml-2 px-3 py-1 bg-gray-300 text-gray-500 rounded-md cursor-not-allowed text-xs font-medium"
+                              title="Entrance scan required at gate before completing places."
                             >
                               Mark Complete
                             </button>
@@ -1603,6 +1627,23 @@ function checkForPotentialQRPattern(imageData: ImageData): boolean {
     const visitData = await fetchVisitDataFromDatabase(visitId, user.id);
     if (visitData && visitData.status === 'temporary_exit') {
       showPersonnelModalStatus('Cannot complete while visitor is on temporary exit. Please scan re-entry first.', 'error');
+      return;
+    }
+
+    // Guard: prevent completion for pending visit without entrance gate scanned
+    try {
+      const { data: gateCheck, error: gateCheckError } = await supabase
+        .from('scheduled_visits')
+        .select('status, gate_entrance_scanned')
+        .eq('id', visitId)
+        .single();
+      if (!gateCheckError && gateCheck && gateCheck.status === 'pending' && !gateCheck.gate_entrance_scanned) {
+        showPersonnelModalStatus('Entrance scan required at gate before completing places.', 'error');
+        return;
+      }
+    } catch (e) {
+      // If gate check fails, fail closed to be safe
+      showPersonnelModalStatus('Unable to verify entrance scan. Please try again after scanning entrance.', 'error');
       return;
     }
 
