@@ -129,7 +129,7 @@ export function QRScannerPage() {
           <div class="relative top-10 mx-auto p-3 sm:p-5 border w-full max-w-sm sm:max-w-md md:max-w-lg shadow-lg rounded-md bg-white dark:bg-gray-800">
             <div class="mt-3">
               <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white">Manual QR Code Input</h3>
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">Manual Visit ID Input</h3>
                 <button 
                   id="closeManualModalBtn"
                   class="text-gray-400 hover:text-gray-500 focus:outline-none"
@@ -142,13 +142,13 @@ export function QRScannerPage() {
               <div class="space-y-4">
                 <div>
                   <label for="qrDataInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Paste QR Code Data
+                    Enter scheduled_visit_id
                   </label>
                   <textarea 
                     id="qrDataInput"
                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     rows="4"
-                    placeholder="Paste the QR code data here..."
+                    placeholder="e.g. 123e4567-e89b-12d3-a456-426614174000"
                   ></textarea>
                 </div>
                 <div class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
@@ -591,15 +591,31 @@ function hideManualInputModal() {
 
 async function processManualInput() {
   const input = document.getElementById('qrDataInput') as HTMLTextAreaElement;
-  const qrData = input.value.trim();
+  const manualId = input.value.trim();
   
-  if (!qrData) {
-    showError('Invalid Input', 'Please enter QR code data.');
+  if (!manualId) {
+    showError('Invalid Input', 'Please enter the scheduled_visit_id.');
     return;
   }
   
   hideManualInputModal();
-  await processQRCodeData(qrData);
+  try {
+    // If in gate scanning mode, fall back to existing QR/code flow
+    if (isGateScanning && visitIdForGateScan) {
+      await processGateQRCode(manualId);
+      return;
+    }
+
+    const fetchedVisitData = await fetchVisitDataFromDatabase(manualId);
+    if (fetchedVisitData) {
+      displayVisitDetails(fetchedVisitData);
+    } else {
+      showError('Visit Not Found', 'No visit found for the provided scheduled_visit_id.');
+    }
+  } catch (error) {
+    console.error('Error processing manual visit ID:', error);
+    showError('Lookup Error', 'There was a problem fetching the visit by ID.');
+  }
 }
 
 function resetScanner() {
@@ -1088,6 +1104,7 @@ async function displayVisitDetails(visitData: VisitQRData) {
 
 function showPersonnelVisitModal(visitData: VisitQRData & { places: any[] }, currentUserId: string) {
   const isCompleted = visitData.status === 'completed';
+  const isTemporaryExit = visitData.status === 'temporary_exit';
   // Date logic
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -1118,6 +1135,21 @@ function showPersonnelVisitModal(visitData: VisitQRData & { places: any[] }, cur
         <h4 class="text-sm font-medium text-red-800 dark:text-red-200">Visit Date Passed</h4>
         <p class="text-sm text-red-700 dark:text-red-300 mt-1">
           This visit is already past the scheduled date and is marked as unsuccessful.
+        </p>
+      </div>
+    </div>`;
+    disableComplete = true;
+  }
+
+  // Temporary exit notice disables completion
+  let statusNotice = '';
+  if (!isCompleted && isTemporaryExit) {
+    statusNotice = `<div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-4 flex items-center">
+      <svg class="h-5 w-5 text-yellow-400 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-1-7V7a1 1 0 112 0v4a1 1 0 01-1 1H9a1 1 0 110-2h1z" clip-rule="evenodd" /></svg>
+      <div>
+        <h4 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">Temporary Exit</h4>
+        <p class="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+          The visitor is currently on a temporary exit. Marking places as complete is disabled until they re-enter.
         </p>
       </div>
     </div>`;
@@ -1173,6 +1205,7 @@ function showPersonnelVisitModal(visitData: VisitQRData & { places: any[] }, cur
           ` : ''}
 
           ${!isCompleted && dateNotice ? dateNotice : ''}
+          ${!isCompleted && statusNotice ? statusNotice : ''}
 
           <!-- Visit Information -->
           <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
@@ -1233,6 +1266,14 @@ function showPersonnelVisitModal(visitData: VisitQRData & { places: any[] }, cur
                               disabled
                               class="ml-2 px-3 py-1 bg-gray-300 text-gray-500 rounded-md cursor-not-allowed text-xs font-medium"
                               title="Visit is Completed (Flagged). You cannot mark places complete."
+                            >
+                              Mark Complete
+                            </button>
+                          ` : isTemporaryExit ? `
+                            <button 
+                              disabled
+                              class="ml-2 px-3 py-1 bg-gray-300 text-gray-500 rounded-md cursor-not-allowed text-xs font-medium"
+                              title="Visitor is on temporary exit. You cannot mark places complete until re-entry."
                             >
                               Mark Complete
                             </button>
@@ -1555,6 +1596,13 @@ function checkForPotentialQRPattern(imageData: ImageData): boolean {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       showPersonnelModalStatus('Error: User not authenticated', 'error');
+      return;
+    }
+
+    // Guard: prevent completion if visit is currently in temporary_exit status
+    const visitData = await fetchVisitDataFromDatabase(visitId, user.id);
+    if (visitData && visitData.status === 'temporary_exit') {
+      showPersonnelModalStatus('Cannot complete while visitor is on temporary exit. Please scan re-entry first.', 'error');
       return;
     }
 

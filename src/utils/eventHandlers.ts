@@ -596,8 +596,8 @@ async function updateNavigationBasedOnRole() {
           mobileGuardDashboardLink?.classList.add('hidden');
         }
         
-        // Show/hide Track Schedule links based on role (hide for logs and guards)
-        if (userRole === 'log' || userRole === 'guard') {
+        // Show/hide Track Schedule links based on role (hide for logs, guards, and personnel)
+        if (userRole === 'log' || userRole === 'guard' || userRole === 'personnel') {
           trackScheduleLink?.classList.add('hidden');
           mobileTrackScheduleLink?.classList.add('hidden');
         } else {

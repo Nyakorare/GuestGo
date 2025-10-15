@@ -2365,4 +2365,19 @@ function closeVisitIdQRModal() {
   if (modal) {
     modal.remove();
   }
+  // After closing the success modal, refresh the Home page UI if we're on Home
+  try {
+    const hash = window.location.hash || '';
+    const isHome = hash === '' || hash === '#' || hash === '#/' || hash === '#/home';
+    if (isHome) {
+      // Defer to allow DOM to settle
+      setTimeout(() => {
+        (window as any).refreshWeeklyVisitCount?.();
+        (window as any).updateScheduleButtonVisibility?.();
+      }, 0);
+    }
+  } catch (e) {
+    // Non-fatal; ignore refresh errors
+    console.error('Home refresh after modal close failed:', e);
+  }
 } 

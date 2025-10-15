@@ -53,6 +53,10 @@ let currentLogsTabFilter = 'all';
 let currentLogsStartDate = '';
 let currentLogsEndDate = '';
 
+// Logs pagination variables
+let currentLogsPage = 1;
+const logsPageSize = 10;
+
 // Mapping of available actions for each logs tab
 const LOGS_TAB_ACTIONS = {
   all: [
@@ -657,8 +661,28 @@ export function DashboardPage() {
         </div>
         <div id="logsList" class="overflow-x-auto space-y-4"></div>
         
-        <!-- Flagged Visit Details Modal -->
-        ${createFlaggedVisitModal()}
+        <!-- Logs Pagination Controls -->
+        <div id="logsPagination" class="flex items-center justify-between mt-6 px-4 py-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+          <div class="flex items-center text-sm text-gray-700 dark:text-gray-300">
+            <span id="logsPageInfo">Page 1 of 1</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button 
+              id="logsPrevBtn"
+              class="px-3 py-1 text-sm font-medium text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled
+            >
+              Previous
+            </button>
+            <button 
+              id="logsNextBtn"
+              class="px-3 py-1 text-sm font-medium text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled
+            >
+              Next
+            </button>
+          </div>
+        </div>
       </div>
 
       <div id="gatesContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
@@ -1846,6 +1870,10 @@ async function loadLogs() {
 // Function to render logs based on current filters
 async function renderLogs(): Promise<void> {
   const logsList = document.getElementById('logsList');
+  const logsPageInfo = document.getElementById('logsPageInfo');
+  const logsPrevBtn = document.getElementById('logsPrevBtn') as HTMLButtonElement;
+  const logsNextBtn = document.getElementById('logsNextBtn') as HTMLButtonElement;
+  
   if (logsList) {
     if (filteredLogs.length === 0) {
       logsList.innerHTML = `
@@ -1853,12 +1881,28 @@ async function renderLogs(): Promise<void> {
           <p class="text-gray-600 dark:text-gray-300">No logs found matching your criteria.</p>
         </div>
       `;
+      // Update pagination controls for empty state
+      if (logsPageInfo) logsPageInfo.textContent = 'Page 1 of 1';
+      if (logsPrevBtn) logsPrevBtn.disabled = true;
+      if (logsNextBtn) logsNextBtn.disabled = true;
       return;
     }
 
-    // Format all log details asynchronously
+    // Calculate pagination
+    const totalPages = Math.max(1, Math.ceil(filteredLogs.length / logsPageSize));
+    
+    // Ensure current page is within bounds
+    if (currentLogsPage > totalPages) currentLogsPage = totalPages;
+    if (currentLogsPage < 1) currentLogsPage = 1;
+    
+    // Get logs for current page
+    const startIndex = (currentLogsPage - 1) * logsPageSize;
+    const endIndex = startIndex + logsPageSize;
+    const pageLogs = filteredLogs.slice(startIndex, endIndex);
+
+    // Format log details asynchronously for current page only
     const formattedDetails = await Promise.all(
-      (filteredLogs as any[]).map(async (log: any) => {
+      (pageLogs as any[]).map(async (log: any) => {
         // Determine action override for visit_scheduled logs
         let displayAction = log.action;
         let parsedDetails: any = null;
@@ -2146,6 +2190,11 @@ async function renderLogs(): Promise<void> {
         `).join('')}
       </div>
     `;
+    
+    // Update pagination controls
+    if (logsPageInfo) logsPageInfo.textContent = `Page ${currentLogsPage} of ${totalPages}`;
+    if (logsPrevBtn) logsPrevBtn.disabled = currentLogsPage <= 1;
+    if (logsNextBtn) logsNextBtn.disabled = currentLogsPage >= totalPages;
   }
   
   // Set up history button event listeners after rendering
@@ -3561,6 +3610,29 @@ function setupDashboardEventListeners() {
     await applySearchAndFilterForLogs();
   });
 
+  // Logs pagination event listeners
+  const logsPrevBtn = document.getElementById('logsPrevBtn') as HTMLButtonElement;
+  const logsNextBtn = document.getElementById('logsNextBtn') as HTMLButtonElement;
+
+  if (logsPrevBtn) {
+    logsPrevBtn.addEventListener('click', () => {
+      if (currentLogsPage > 1) {
+        currentLogsPage--;
+        renderLogs();
+      }
+    });
+  }
+
+  if (logsNextBtn) {
+    logsNextBtn.addEventListener('click', () => {
+      const totalPages = Math.max(1, Math.ceil(filteredLogs.length / logsPageSize));
+      if (currentLogsPage < totalPages) {
+        currentLogsPage++;
+        renderLogs();
+      }
+    });
+  }
+
   // Logs filters dropdown toggle
   if (logsFiltersDropdownBtn && logsFiltersDropdown) {
     logsFiltersDropdownBtn.addEventListener('click', (e) => {
@@ -3892,6 +3964,11 @@ function setupDashboardEventListeners() {
 
   console.log('Dashboard event listeners setup complete');
   
+  // Ensure flagged visit modal exists at document.body level (outside dashboard)
+  if (!document.getElementById('flaggedVisitModal')) {
+    document.body.insertAdjacentHTML('beforeend', createFlaggedVisitModal());
+  }
+
   // Setup flagged visit modal event listeners
   setupFlaggedVisitModalListeners();
 
@@ -4268,6 +4345,9 @@ async function applySearchAndFilterForLogs() {
   const actionValue = actionFilter?.value || 'all';
   const startDate = startDateInput?.value || '';
   const endDate = endDateInput?.value || '';
+
+  // Reset pagination to first page when filters change
+  currentLogsPage = 1;
 
   // Update global date filter state
   currentLogsStartDate = startDate;
@@ -7822,8 +7902,13 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
               <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 Purpose: ${visit.purpose}${visit.other_purpose ? ` - ${visit.other_purpose}` : ''}
               </p>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono">
-                Visit ID: ${visit.id}
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono flex items-center space-x-2">
+                <span>Visit ID: ${visit.id}</span>
+                <button 
+                  class="px-2 py-0.5 bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  title="Copy Visit ID"
+                  onclick="copyVisitId('${visit.id}')"
+                >Copy</button>
               </p>
             </div>
             <div class="flex items-center space-x-2">
@@ -7863,7 +7948,7 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
                   <span>Details</span>
                 </button>
               ` : ''}
-              ${isToday && visit.status === 'pending' && !visit.gate_entrance_scanned && userRole === 'visitor' ? `
+              ${isToday && userRole === 'visitor' && ((visit.status === 'pending' && !visit.gate_entrance_scanned) || visit.status === 'temporary_exit') ? `
                 <button 
                   onclick="scanGateEntrance('${visit.id}')"
                   class="px-3 py-1 bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 rounded-full text-xs font-medium hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors duration-200 flex items-center space-x-1"
@@ -8135,8 +8220,13 @@ async function displayVisitorTodayVisits(visits: any[]): Promise<void> {
               <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 Purpose: ${visit.purpose}${visit.other_purpose ? ` - ${visit.other_purpose}` : ''}
               </p>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono">
-                Visit ID: ${visit.id}
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono flex items-center space-x-2">
+                <span>Visit ID: ${visit.id}</span>
+                <button 
+                  class="px-2 py-0.5 bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  title="Copy Visit ID"
+                  onclick="copyVisitId('${visit.id}')"
+                >Copy</button>
               </p>
             </div>
             <div class="flex items-center space-x-2">
@@ -8167,7 +8257,7 @@ async function displayVisitorTodayVisits(visits: any[]): Promise<void> {
                   <span>Print</span>
                 </button>
               ` : ''}
-              ${isToday && visit.status === 'pending' && !visit.gate_entrance_scanned && userRole === 'visitor' ? `
+              ${isToday && userRole === 'visitor' && ((visit.status === 'pending' && !visit.gate_entrance_scanned) || visit.status === 'temporary_exit') ? `
                 <button 
                   onclick="scanGateEntrance('${visit.id}')"
                   class="px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full text-xs font-medium hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors duration-200 flex items-center space-x-1"
@@ -8413,8 +8503,13 @@ async function displayVisitorFutureVisits(visits: any[]): Promise<void> {
               <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 Purpose: ${visit.purpose}${visit.other_purpose ? ` - ${visit.other_purpose}` : ''}
               </p>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono">
-                Visit ID: ${visit.id}
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono flex items-center space-x-2">
+                <span>Visit ID: ${visit.id}</span>
+                <button 
+                  class="px-2 py-0.5 bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  title="Copy Visit ID"
+                  onclick="copyVisitId('${visit.id}')"
+                >Copy</button>
               </p>
             </div>
             <div class="flex items-center space-x-2">
@@ -9097,8 +9192,8 @@ async function showFlaggedVisitDetails(visitId: string) {
       'System (End of day)';
     
     const modalHtml = `
-      <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" id="flaggedVisitModal">
-        <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white dark:bg-gray-800">
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60" id="flaggedVisitModal">
+        <div class="relative mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 max-h-[90vh] overflow-y-auto shadow-lg rounded-md bg-white dark:bg-gray-800">
           <div class="mt-3">
             <div class="flex items-center justify-between mb-4">
               <h3 class="text-lg font-medium text-gray-900 dark:text-white">Flagged Visit Details</h3>
@@ -9191,6 +9286,8 @@ async function showFlaggedVisitDetails(visitId: string) {
     
     // Add modal to body
     document.body.insertAdjacentHTML('beforeend', modalHtml);
+    // Lock body scroll while modal is open
+    document.body.classList.add('overflow-hidden');
     
     // Make close function available globally
     (window as any).closeFlaggedVisitModal = closeFlaggedVisitModal;
@@ -9207,6 +9304,8 @@ function closeFlaggedVisitModal() {
   if (modal) {
     modal.remove();
   }
+  // Restore body scroll
+  document.body.classList.remove('overflow-hidden');
 }
 
 // Function to set up history button event listeners (more reliable on mobile)
@@ -9303,8 +9402,8 @@ function ensureHistoryModalExists() {
 
     // Create modal content
     const modalContent = `
-      <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" id="flaggedVisitModal">
-        <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white dark:bg-gray-800">
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60" id="flaggedVisitModal">
+        <div class="relative mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 max-h-[90vh] overflow-y-auto shadow-lg rounded-md bg-white dark:bg-gray-800">
           <div class="mt-3">
             <div class="flex items-center justify-between mb-4">
               <h3 class="text-lg font-medium text-gray-900 dark:text-white">
@@ -9472,6 +9571,8 @@ function ensureHistoryModalExists() {
 
     // Add modal to page
     document.body.insertAdjacentHTML('beforeend', modalContent);
+    // Lock body scroll while modal is open
+    document.body.classList.add('overflow-hidden');
 
   } catch (error) {
     console.error('Error in showFlaggedVisitDetails:', error);
@@ -9485,6 +9586,8 @@ function ensureHistoryModalExists() {
   if (modal) {
     modal.remove();
   }
+  // Restore body scroll
+  document.body.classList.remove('overflow-hidden');
 };
 
 // Global function to scan gate entrance (accessible from onclick)
@@ -9612,6 +9715,24 @@ function ensureHistoryModalExists() {
         <span>Print</span>
       `;
     }
+  }
+};
+
+// Global function to copy visit ID to clipboard
+(window as any).copyVisitId = async function(visitId: string) {
+  try {
+    await navigator.clipboard.writeText(visitId);
+    const target = (event?.target as HTMLElement) || null;
+    const originalText = target?.textContent;
+    if (target) {
+      target.textContent = 'Copied!';
+      setTimeout(() => {
+        target.textContent = originalText || 'Copy';
+      }, 1200);
+    }
+  } catch (err) {
+    console.error('Failed to copy Visit ID:', err);
+    alert('Could not copy Visit ID.');
   }
 };
 

@@ -162,7 +162,7 @@ async function performNavigation() {
       return;
     }
     
-    if (path === '/track-schedule' && (role === 'log' || role === 'guard')) {
+    if (path === '/track-schedule' && (role === 'log' || role === 'guard' || role === 'personnel')) {
       window.location.hash = '/';
       hideLoadingOverlay();
       showNavbar();

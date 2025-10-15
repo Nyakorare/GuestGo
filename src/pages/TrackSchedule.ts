@@ -1,7 +1,7 @@
 import supabase from '../config/supabase';
 import { showNotification } from '../pages/dashboard/index';
 import { showLoadingOverlay, hideLoadingOverlay } from '../utils/loadingOverlay';
-import { generateSimpleVisitQRCode } from '../utils/qrCode';
+import { generateSimpleVisitQRCode, openPrintableVisitCard } from '../utils/qrCode';
 import type { VisitQRData } from '../utils/qrCode';
 import jsQR from 'jsqr';
 
@@ -546,10 +546,14 @@ async function updateScanButtons(visitData: any, scanEntranceBtn: HTMLButtonElem
       return;
     }
 
+    // Check if this is a guest visit (no user account) or visitor visit (has user account)
+    const isGuestVisit = visitData.visitor_user_id === null;
+    
     // Get current user and their role
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      // Not logged in - disable both buttons
+    
+    if (!isGuestVisit && !user) {
+      // This is a visitor visit but user is not logged in - require login
       if (scanEntranceBtn) {
         scanEntranceBtn.disabled = true;
         scanEntranceBtn.textContent = 'Login Required';
@@ -561,14 +565,29 @@ async function updateScanButtons(visitData: any, scanEntranceBtn: HTMLButtonElem
       return;
     }
 
-    // Get user role
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
+    let userRole = null;
+    if (user) {
+      // Get user role
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+      userRole = roleData?.role;
+    }
 
-    const userRole = roleData?.role;
+    // Enforce ownership for visitor-owned visits
+    if (!isGuestVisit && user && user.id !== visitData.visitor_user_id) {
+      if (scanEntranceBtn) {
+        scanEntranceBtn.disabled = true;
+        scanEntranceBtn.textContent = 'Login with the account used to create that scheduled visit';
+      }
+      if (scanExitBtn) {
+        scanExitBtn.disabled = true;
+        scanExitBtn.textContent = 'Login with the account used to create that scheduled visit';
+      }
+      return;
+    }
 
     // Check if visit is for today
     const visitDate = new Date(visitData.visit_date).toDateString();
@@ -577,7 +596,10 @@ async function updateScanButtons(visitData: any, scanEntranceBtn: HTMLButtonElem
 
     // Update entrance scan button
     if (scanEntranceBtn) {
-      if (userRole === 'visitor' && isToday && visitData.status === 'pending' && !visitData.gate_entrance_scanned) {
+      const canScanEntrance = isToday && visitData.status === 'pending' && !visitData.gate_entrance_scanned;
+      const isAuthorizedUser = isGuestVisit || (user && userRole === 'visitor' && user.id === visitData.visitor_user_id);
+      
+      if (canScanEntrance && isAuthorizedUser) {
         scanEntranceBtn.disabled = false;
         scanEntranceBtn.innerHTML = `
           <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -596,9 +618,9 @@ async function updateScanButtons(visitData: any, scanEntranceBtn: HTMLButtonElem
       } else if (!isToday) {
         scanEntranceBtn.disabled = true;
         scanEntranceBtn.textContent = 'Not Today';
-      } else if (userRole !== 'visitor') {
+      } else if (!isAuthorizedUser) {
         scanEntranceBtn.disabled = true;
-        scanEntranceBtn.textContent = 'Visitor Only';
+        scanEntranceBtn.textContent = isGuestVisit ? 'Guest Only' : 'Visitor Only';
       } else {
         scanEntranceBtn.disabled = true;
         scanEntranceBtn.textContent = 'Not Available';
@@ -607,7 +629,13 @@ async function updateScanButtons(visitData: any, scanEntranceBtn: HTMLButtonElem
 
     // Update exit scan button
     if (scanExitBtn) {
-      if (userRole === 'visitor' && isToday && visitData.status === 'pending' && visitData.gate_entrance_scanned && !visitData.gate_exit_scanned) {
+      const allPlacesCompleted = Array.isArray(visitData.scheduled_visit_places)
+        ? visitData.scheduled_visit_places.every((p: any) => p.status === 'completed')
+        : false;
+      const canScanExit = isToday && visitData.status === 'pending' && visitData.gate_entrance_scanned && !visitData.gate_exit_scanned && allPlacesCompleted;
+      const isAuthorizedUser = isGuestVisit || (user && userRole === 'visitor' && user.id === visitData.visitor_user_id);
+      
+      if (canScanExit && isAuthorizedUser) {
         scanExitBtn.disabled = false;
         scanExitBtn.innerHTML = `
           <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -626,12 +654,15 @@ async function updateScanButtons(visitData: any, scanEntranceBtn: HTMLButtonElem
       } else if (!visitData.gate_entrance_scanned) {
         scanExitBtn.disabled = true;
         scanExitBtn.textContent = 'Entrance First';
+      } else if (!allPlacesCompleted) {
+        scanExitBtn.disabled = true;
+        scanExitBtn.textContent = 'Complete all places first';
       } else if (!isToday) {
         scanExitBtn.disabled = true;
         scanExitBtn.textContent = 'Not Today';
-      } else if (userRole !== 'visitor') {
+      } else if (!isAuthorizedUser) {
         scanExitBtn.disabled = true;
-        scanExitBtn.textContent = 'Visitor Only';
+        scanExitBtn.textContent = isGuestVisit ? 'Guest Only' : 'Visitor Only';
       } else {
         scanExitBtn.disabled = true;
         scanExitBtn.textContent = 'Not Available';
@@ -731,58 +762,8 @@ async function printVisitCard(visitId: string) {
     // Generate QR code
     const qrCodeDataUrl = await generateSimpleVisitQRCode(visitData.id);
 
-    // Open printable card (reuse existing function from dashboard)
-    if ((window as any).openPrintableVisitCard) {
-      (window as any).openPrintableVisitCard(qrVisitData, qrCodeDataUrl);
-    } else {
-      // Fallback: open in new window
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        printWindow.document.write(`
-          <html>
-            <head>
-              <title>Visit Card - ${visitData.id}</title>
-              <style>
-                body { font-family: Arial, sans-serif; margin: 20px; }
-                .card { border: 1px solid #ccc; padding: 20px; max-width: 400px; margin: 0 auto; }
-                .header { text-align: center; margin-bottom: 20px; }
-                .qr-code { text-align: center; margin: 20px 0; }
-                .info { margin: 10px 0; }
-                .label { font-weight: bold; }
-              </style>
-            </head>
-            <body>
-              <div class="card">
-                <div class="header">
-                  <h2>GuestGo Visit Card</h2>
-                </div>
-                <div class="info">
-                  <div class="label">Visit ID:</div>
-                  <div>${visitData.id}</div>
-                </div>
-                <div class="info">
-                  <div class="label">Visitor:</div>
-                  <div>${visitData.visitor_first_name} ${visitData.visitor_last_name}</div>
-                </div>
-                <div class="info">
-                  <div class="label">Date:</div>
-                  <div>${new Date(visitData.visit_date).toLocaleDateString()}</div>
-                </div>
-                <div class="info">
-                  <div class="label">Purpose:</div>
-                  <div>${visitData.purpose}</div>
-                </div>
-                <div class="qr-code">
-                  <img src="${qrCodeDataUrl}" alt="QR Code" style="width: 200px; height: 200px;" />
-                </div>
-              </div>
-            </body>
-          </html>
-        `);
-        printWindow.document.close();
-        printWindow.print();
-      }
-    }
+    // Use the same design as visitor dashboard
+    openPrintableVisitCard(qrVisitData, qrCodeDataUrl);
 
     hideLoadingOverlay();
     showNotification('Visit card generated successfully!', 'success');
