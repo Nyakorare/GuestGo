@@ -101,6 +101,7 @@ export default function setupApp() {
             <a href="#/" class="nav-link">Home</a>
             <a href="#/about" class="nav-link">About</a>
             <a href="#/contact" class="nav-link">Contact Us</a>
+            <a href="#/track-schedule" class="nav-link">Track Schedule</a>
             <a href="#/dashboard" class="nav-link hidden" id="dashboard-link">Dashboard</a>
             <a href="#/guard-dashboard" class="nav-link hidden" id="guard-dashboard-link">Guard Dashboard</a>
             <a href="#/qr-scanner" class="nav-link hidden" id="qr-scanner-link">QR Scanner</a>
@@ -162,6 +163,7 @@ export default function setupApp() {
             <a href="#/" class="block px-3 py-2 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500">Home</a>
             <a href="#/about" class="block px-3 py-2 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500">About</a>
             <a href="#/contact" class="block px-3 py-2 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500">Contact Us</a>
+            <a href="#/track-schedule" class="block px-3 py-2 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500">Track Schedule</a>
             <a href="#/dashboard" class="block px-3 py-2 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500 hidden" id="mobile-dashboard-link">Dashboard</a>
             <a href="#/guard-dashboard" class="block px-3 py-2 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500 hidden" id="mobile-guard-dashboard-link">Guard Dashboard</a>
             <a href="#/qr-scanner" class="block px-3 py-2 text-gray-700 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500 hidden" id="mobile-qr-scanner-link">QR Scanner</a>

@@ -7822,6 +7822,9 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
               <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 Purpose: ${visit.purpose}${visit.other_purpose ? ` - ${visit.other_purpose}` : ''}
               </p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono">
+                Visit ID: ${visit.id}
+              </p>
             </div>
             <div class="flex items-center space-x-2">
               <span class="px-3 py-1 rounded-full text-xs font-medium ${
@@ -8132,6 +8135,9 @@ async function displayVisitorTodayVisits(visits: any[]): Promise<void> {
               <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 Purpose: ${visit.purpose}${visit.other_purpose ? ` - ${visit.other_purpose}` : ''}
               </p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono">
+                Visit ID: ${visit.id}
+              </p>
             </div>
             <div class="flex items-center space-x-2">
               <span class="px-3 py-1 rounded-full text-xs font-medium ${
@@ -8407,6 +8413,9 @@ async function displayVisitorFutureVisits(visits: any[]): Promise<void> {
               <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 Purpose: ${visit.purpose}${visit.other_purpose ? ` - ${visit.other_purpose}` : ''}
               </p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono">
+                Visit ID: ${visit.id}
+              </p>
             </div>
             <div class="flex items-center space-x-2">
               <span class="px-3 py-1 rounded-full text-xs font-medium ${
@@ -8638,6 +8647,9 @@ async function displayVisitorPastVisits(visits: any[]): Promise<void> {
               </h3>
               <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 Purpose: ${visit.purpose}${visit.other_purpose ? ` - ${visit.other_purpose}` : ''}
+              </p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono">
+                Visit ID: ${visit.id}
               </p>
             </div>
             <div class="flex items-center space-x-2">

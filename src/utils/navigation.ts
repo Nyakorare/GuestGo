@@ -5,6 +5,7 @@ import { DashboardPage } from '../pages/dashboard';
 import { QRScannerPage } from '../pages/QRScanner';
 import { GatePage, setupGatePage } from '../pages/GatePage';
 import { GuardDashboardPage } from '../pages/GuardDashboard';
+import { TrackSchedulePage, initTrackSchedulePage } from '../pages/TrackSchedule';
 import { setupAboutPageInteractivity } from './eventHandlers';
 import { performanceMonitor } from './performance';
 import { showLoadingOverlay, hideLoadingOverlay } from './loadingOverlay';
@@ -52,6 +53,8 @@ export function renderPage(path: string): string {
       return GuardDashboardPage();
     case '/qr-scanner':
       return QRScannerPage();
+    case '/track-schedule':
+      return TrackSchedulePage();
     default:
       return HomePage();
   }
@@ -273,6 +276,13 @@ async function setupPageFunctionality(path: string, user: any, role: string | nu
         initializeGuardDashboard();
       }, 100);
     });
+  }
+  
+  if (path === '/track-schedule') {
+    // Initialize track schedule page functionality
+    setTimeout(() => {
+      initTrackSchedulePage();
+    }, 100);
   }
 }
 

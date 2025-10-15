@@ -2055,6 +2055,12 @@ async function scheduleVisitFromConfirmation(data: VisitConfirmationData) {
       scheduleModal.classList.add('hidden');
     }
 
+    // Show visit ID and QR code modal
+    await showVisitIdAndQRModal(visitData);
+
+    // Hide loading overlay after showing the modal
+    hideLoadingOverlay();
+
     // Reset the schedule form
     const scheduleForm = document.getElementById('scheduleForm') as HTMLFormElement;
     if (scheduleForm) {
@@ -2092,9 +2098,6 @@ async function scheduleVisitFromConfirmation(data: VisitConfirmationData) {
     currentCode = null;
     // Use global-safe accessor to avoid reference errors when this function is out of scope
     (window as any).modalEnableVerificationInputs?.();
-
-    // Refresh the page after a brief delay to allow loading overlay to be seen
-    setTimeout(() => { window.location.reload(); }, 2000);
 
   } catch (error: any) {
     console.error('Error scheduling visit:', error);
@@ -2230,4 +2233,136 @@ export function setupConfirmationModalListeners() {
   
   showVisitConfirmationModal(testData);
   console.log('Confirmation modal should now be visible');
-}; 
+};
+
+// Function to show visit ID and QR code modal after successful scheduling
+async function showVisitIdAndQRModal(visitId: string) {
+  try {
+    // Import QR code generation function
+    const { generateSimpleVisitQRCode } = await import('../utils/qrCode');
+    
+    // Generate QR code
+    const qrCodeDataUrl = await generateSimpleVisitQRCode(visitId);
+    
+    // Create modal HTML
+    const modalHTML = `
+      <div id="visitIdQRModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+          <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
+            <div class="p-6">
+              <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">Visit Scheduled Successfully!</h3>
+                <button 
+                  id="closeVisitIdQRModalBtn"
+                  class="text-gray-400 hover:text-gray-500 focus:outline-none"
+                >
+                  <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div class="text-center">
+                <div class="mb-4">
+                  <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Your Visit ID:</p>
+                  <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-3">
+                    <p id="visitIdDisplay" class="font-mono text-sm text-gray-900 dark:text-white break-all">${visitId}</p>
+                  </div>
+                </div>
+                
+                <div class="mb-4">
+                  <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">QR Code:</p>
+                  <div class="inline-block p-4 bg-white dark:bg-gray-700 rounded-lg shadow-sm">
+                    <img src="${qrCodeDataUrl}" alt="Visit QR Code" class="w-48 h-48 mx-auto" />
+                  </div>
+                </div>
+                
+                <div class="mb-6">
+                  <p class="text-sm text-gray-600 dark:text-gray-400">
+                    Save your Visit ID or take a screenshot of this QR code. You can use either to track your visit progress.
+                  </p>
+                </div>
+                
+                <div class="flex gap-3">
+                  <button
+                    id="copyVisitIdBtn"
+                    class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  >
+                    Copy Visit ID
+                  </button>
+                  <button
+                    id="trackVisitBtn"
+                    class="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                  >
+                    Track Visit
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Add modal to DOM
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Set up event listeners
+    setupVisitIdQRModalEventListeners(visitId);
+    
+  } catch (error) {
+    console.error('Error showing visit ID and QR modal:', error);
+    showNotification('Error generating visit details. Please note your visit ID: ' + visitId, 'error');
+  }
+}
+
+// Set up event listeners for visit ID and QR modal
+function setupVisitIdQRModalEventListeners(visitId: string) {
+  const modal = document.getElementById('visitIdQRModal');
+  const closeBtn = document.getElementById('closeVisitIdQRModalBtn');
+  const copyBtn = document.getElementById('copyVisitIdBtn');
+  const trackBtn = document.getElementById('trackVisitBtn');
+  
+  // Close modal when clicking outside
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closeVisitIdQRModal();
+    }
+  });
+  
+  // Close button
+  closeBtn?.addEventListener('click', closeVisitIdQRModal);
+  
+  // Copy visit ID button
+  copyBtn?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(visitId);
+      showNotification('Visit ID copied to clipboard!', 'success');
+    } catch (error) {
+      console.error('Error copying to clipboard:', error);
+      showNotification('Failed to copy visit ID', 'error');
+    }
+  });
+  
+  // Track visit button
+  trackBtn?.addEventListener('click', () => {
+    closeVisitIdQRModal();
+    // Navigate to track schedule page
+    window.location.hash = '#/track-schedule';
+    // Set the visit ID in the input field after navigation
+    setTimeout(() => {
+      const visitIdInput = document.getElementById('visitIdInput') as HTMLInputElement;
+      if (visitIdInput) {
+        visitIdInput.value = visitId;
+      }
+    }, 100);
+  });
+}
+
+// Close visit ID and QR modal
+function closeVisitIdQRModal() {
+  const modal = document.getElementById('visitIdQRModal');
+  if (modal) {
+    modal.remove();
+  }
+} 
