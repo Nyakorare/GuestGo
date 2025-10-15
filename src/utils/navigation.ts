@@ -172,10 +172,17 @@ async function performNavigation() {
     // force a single re-fetch to avoid redirecting due to a race condition.
     const isProtectedRoute = path === '/qr-scanner' || path === '/guard-dashboard' || path === '/track-schedule' || path.startsWith('/gate/');
     if (isProtectedRoute && user && !role) {
-      clearUserCache();
-      const refreshed = await getUserData();
-      user = refreshed.user;
-      role = refreshed.role;
+      // Retry up to 3 times with small delays to account for production latency
+      const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
+      for (let attempt = 0; attempt < 3 && !role; attempt++) {
+        clearUserCache();
+        const refreshed = await getUserData();
+        user = refreshed.user;
+        role = refreshed.role;
+        if (!role) {
+          await sleep(200);
+        }
+      }
     }
     
     // Check access permissions
