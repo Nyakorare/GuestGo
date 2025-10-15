@@ -3,6 +3,7 @@ import { showNotification } from '../pages/dashboard/index';
 import { showLoadingOverlay, hideLoadingOverlay } from '../utils/loadingOverlay';
 import { generateSimpleVisitQRCode } from '../utils/qrCode';
 import type { VisitQRData } from '../utils/qrCode';
+import jsQR from 'jsqr';
 
 export function TrackSchedulePage() {
   return `
@@ -137,6 +138,18 @@ export function TrackSchedulePage() {
                     <span id="entranceScanStatus" class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"></span>
                   </div>
                   <p id="entranceScanTime" class="mt-1 text-xs text-gray-500 dark:text-gray-400"></p>
+                  <div class="mt-3">
+                    <button 
+                      id="scanEntranceBtn"
+                      class="w-full px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled
+                    >
+                      <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
+                      </svg>
+                      Scan Entrance
+                    </button>
+                  </div>
                 </div>
                 <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                   <div class="flex items-center justify-between">
@@ -144,6 +157,18 @@ export function TrackSchedulePage() {
                     <span id="exitScanStatus" class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"></span>
                   </div>
                   <p id="exitScanTime" class="mt-1 text-xs text-gray-500 dark:text-gray-400"></p>
+                  <div class="mt-3">
+                    <button 
+                      id="scanExitBtn"
+                      class="w-full px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled
+                    >
+                      <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                      </svg>
+                      Scan Exit
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -187,6 +212,8 @@ function setupTrackScheduleEventListeners() {
   const trackVisitBtn = document.getElementById('trackVisitBtn');
   const visitIdInput = document.getElementById('visitIdInput') as HTMLInputElement;
   const printVisitCardBtn = document.getElementById('printVisitCardBtn');
+  const scanEntranceBtn = document.getElementById('scanEntranceBtn');
+  const scanExitBtn = document.getElementById('scanExitBtn');
 
   // Track visit button click
   trackVisitBtn?.addEventListener('click', async () => {
@@ -221,6 +248,28 @@ function setupTrackScheduleEventListeners() {
     }
 
     await printVisitCard(visitId);
+  });
+
+  // Scan entrance button
+  scanEntranceBtn?.addEventListener('click', async () => {
+    const visitId = visitIdInput?.value.trim();
+    if (!visitId) {
+      showNotification('No visit ID available', 'error');
+      return;
+    }
+
+    showGateScanningModal(visitId);
+  });
+
+  // Scan exit button
+  scanExitBtn?.addEventListener('click', async () => {
+    const visitId = visitIdInput?.value.trim();
+    if (!visitId) {
+      showNotification('No visit ID available', 'error');
+      return;
+    }
+
+    showGateExitScanningModal(visitId);
   });
 }
 
@@ -262,10 +311,15 @@ async function trackVisit(visitId: string) {
     }
 
     // Display visit details
-    displayVisitDetails(visitData);
+    await displayVisitDetails(visitData);
 
-    // Generate QR code
-    await generateAndDisplayQRCode(visitData);
+    // Generate QR code only for valid visits
+    if (visitData.status !== 'unsuccessful' && visitData.status !== 'completed_flagged') {
+      await generateAndDisplayQRCode(visitData);
+    } else {
+      // For invalid visits, just show the invalid section
+      addInvalidStickerToQR();
+    }
 
     hideLoadingOverlay();
     showNotification('Visit details loaded successfully', 'success');
@@ -278,7 +332,7 @@ async function trackVisit(visitId: string) {
 }
 
 // Display visit details
-function displayVisitDetails(visitData: any) {
+async function displayVisitDetails(visitData: any) {
   // Show the visit details section
   const visitDetailsSection = document.getElementById('visitDetailsSection');
   const noVisitFound = document.getElementById('noVisitFound');
@@ -319,6 +373,9 @@ function displayVisitDetails(visitData: any) {
       case 'completed':
         displayStatus.classList.add('bg-green-100', 'text-green-800', 'dark:bg-green-900', 'dark:text-green-200');
         break;
+      case 'completed_flagged':
+        displayStatus.classList.add('bg-orange-100', 'text-orange-800', 'dark:bg-orange-900', 'dark:text-orange-200');
+        break;
       case 'unsuccessful':
         displayStatus.classList.add('bg-red-100', 'text-red-800', 'dark:bg-red-900', 'dark:text-red-200');
         break;
@@ -334,7 +391,12 @@ function displayVisitDetails(visitData: any) {
   displayProgress(visitData.scheduled_visit_places);
 
   // Display gate scanning status
-  displayGateScanningStatus(visitData);
+  await displayGateScanningStatus(visitData);
+
+  // Handle invalid statuses (unsuccessful or completed_flagged)
+  if (visitData.status === 'unsuccessful' || visitData.status === 'completed_flagged') {
+    disableAllButtons();
+  }
 }
 
 // Display places to visit
@@ -406,11 +468,13 @@ function displayProgress(places: any[]) {
 }
 
 // Display gate scanning status
-function displayGateScanningStatus(visitData: any) {
+async function displayGateScanningStatus(visitData: any) {
   const entranceScanStatus = document.getElementById('entranceScanStatus');
   const entranceScanTime = document.getElementById('entranceScanTime');
   const exitScanStatus = document.getElementById('exitScanStatus');
   const exitScanTime = document.getElementById('exitScanTime');
+  const scanEntranceBtn = document.getElementById('scanEntranceBtn') as HTMLButtonElement;
+  const scanExitBtn = document.getElementById('scanExitBtn') as HTMLButtonElement;
 
   // Entrance scan status
   if (entranceScanStatus) {
@@ -447,6 +511,142 @@ function displayGateScanningStatus(visitData: any) {
       exitScanTime.textContent = `Scanned at: ${new Date(visitData.gate_exit_scanned_at).toLocaleString()}`;
     } else {
       exitScanTime.textContent = 'Not scanned yet';
+    }
+  }
+
+  // Update scan buttons based on user role and visit status
+  await updateScanButtons(visitData, scanEntranceBtn, scanExitBtn);
+}
+
+// Update scan buttons based on user role and visit status
+async function updateScanButtons(visitData: any, scanEntranceBtn: HTMLButtonElement | null, scanExitBtn: HTMLButtonElement | null) {
+  try {
+    // Check for invalid statuses first
+    if (visitData.status === 'unsuccessful' || visitData.status === 'completed_flagged') {
+      if (scanEntranceBtn) {
+        scanEntranceBtn.disabled = true;
+        scanEntranceBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        scanEntranceBtn.innerHTML = `
+          <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+          Visit Invalid
+        `;
+      }
+      if (scanExitBtn) {
+        scanExitBtn.disabled = true;
+        scanExitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        scanExitBtn.innerHTML = `
+          <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+          Visit Invalid
+        `;
+      }
+      return;
+    }
+
+    // Get current user and their role
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      // Not logged in - disable both buttons
+      if (scanEntranceBtn) {
+        scanEntranceBtn.disabled = true;
+        scanEntranceBtn.textContent = 'Login Required';
+      }
+      if (scanExitBtn) {
+        scanExitBtn.disabled = true;
+        scanExitBtn.textContent = 'Login Required';
+      }
+      return;
+    }
+
+    // Get user role
+    const { data: roleData } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single();
+
+    const userRole = roleData?.role;
+
+    // Check if visit is for today
+    const visitDate = new Date(visitData.visit_date).toDateString();
+    const today = new Date().toDateString();
+    const isToday = visitDate === today;
+
+    // Update entrance scan button
+    if (scanEntranceBtn) {
+      if (userRole === 'visitor' && isToday && visitData.status === 'pending' && !visitData.gate_entrance_scanned) {
+        scanEntranceBtn.disabled = false;
+        scanEntranceBtn.innerHTML = `
+          <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
+          </svg>
+          Scan Entrance
+        `;
+      } else if (visitData.gate_entrance_scanned) {
+        scanEntranceBtn.disabled = true;
+        scanEntranceBtn.innerHTML = `
+          <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          Already Scanned
+        `;
+      } else if (!isToday) {
+        scanEntranceBtn.disabled = true;
+        scanEntranceBtn.textContent = 'Not Today';
+      } else if (userRole !== 'visitor') {
+        scanEntranceBtn.disabled = true;
+        scanEntranceBtn.textContent = 'Visitor Only';
+      } else {
+        scanEntranceBtn.disabled = true;
+        scanEntranceBtn.textContent = 'Not Available';
+      }
+    }
+
+    // Update exit scan button
+    if (scanExitBtn) {
+      if (userRole === 'visitor' && isToday && visitData.status === 'pending' && visitData.gate_entrance_scanned && !visitData.gate_exit_scanned) {
+        scanExitBtn.disabled = false;
+        scanExitBtn.innerHTML = `
+          <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+          </svg>
+          Scan Exit
+        `;
+      } else if (visitData.gate_exit_scanned) {
+        scanExitBtn.disabled = true;
+        scanExitBtn.innerHTML = `
+          <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          Already Scanned
+        `;
+      } else if (!visitData.gate_entrance_scanned) {
+        scanExitBtn.disabled = true;
+        scanExitBtn.textContent = 'Entrance First';
+      } else if (!isToday) {
+        scanExitBtn.disabled = true;
+        scanExitBtn.textContent = 'Not Today';
+      } else if (userRole !== 'visitor') {
+        scanExitBtn.disabled = true;
+        scanExitBtn.textContent = 'Visitor Only';
+      } else {
+        scanExitBtn.disabled = true;
+        scanExitBtn.textContent = 'Not Available';
+      }
+    }
+  } catch (error) {
+    console.error('Error updating scan buttons:', error);
+    // On error, disable both buttons
+    if (scanEntranceBtn) {
+      scanEntranceBtn.disabled = true;
+      scanEntranceBtn.textContent = 'Error';
+    }
+    if (scanExitBtn) {
+      scanExitBtn.disabled = true;
+      scanExitBtn.textContent = 'Error';
     }
   }
 }
@@ -591,5 +791,796 @@ async function printVisitCard(visitId: string) {
     console.error('Error printing visit card:', error);
     hideLoadingOverlay();
     showNotification('Error generating visit card: ' + error.message, 'error');
+  }
+}
+
+// Function to show gate scanning modal
+function showGateScanningModal(visitId: string) {
+  // Create modal HTML
+  const modalHTML = `
+    <div id="gateScanModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div class="relative top-10 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white dark:bg-gray-800">
+        <div class="mt-3">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Scan Gate Entrance</h3>
+            <button 
+              id="closeGateScanModalBtn"
+              class="text-gray-400 hover:text-gray-500 focus:outline-none"
+            >
+              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <div class="space-y-4">
+            <div class="text-center">
+              <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Scan a gate QR code to log your entrance for visit ID: ${visitId.substring(0, 8)}...
+              </p>
+              
+              <!-- Camera Scanner Section -->
+              <div id="cameraScannerSection" class="mb-4">
+                <div class="relative">
+                  <video 
+                    id="gateScannerVideo" 
+                    class="w-full h-64 bg-gray-900 rounded-lg"
+                    autoplay 
+                    playsinline
+                  ></video>
+                  <div id="gateScannerOverlay" class="absolute inset-0 flex items-center justify-center">
+                    <div class="border-2 border-white rounded-lg p-2">
+                      <div class="w-48 h-48 border-2 border-white rounded-lg"></div>
+                    </div>
+                  </div>
+                  <div id="gateScannerStatus" class="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
+                    Initializing camera...
+                  </div>
+                </div>
+                
+                <div class="mt-2 flex space-x-2">
+                  <button 
+                    id="startCameraBtn"
+                    class="flex-1 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm"
+                  >
+                    Start Camera
+                  </button>
+                  <button 
+                    id="stopCameraBtn"
+                    class="flex-1 px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 text-sm"
+                    style="display: none;"
+                  >
+                    Stop Camera
+                  </button>
+                </div>
+              </div>
+              
+              <!-- Manual Input Section -->
+              <div class="mb-4">
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Or manually enter gate ID:</p>
+                <div class="flex space-x-2">
+                  <input 
+                    type="text" 
+                    id="manualGateIdInput"
+                    placeholder="Enter gate ID..."
+                    class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                  >
+                  <button 
+                    id="submitManualGateBtn"
+                    class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-sm"
+                  >
+                    Submit
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div id="gateScanError" class="hidden text-red-600 text-sm text-center"></div>
+            <div id="gateScanSuccess" class="hidden text-green-600 text-sm text-center"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Add modal to page
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+  // Setup event listeners
+  const modal = document.getElementById('gateScanModal');
+  const closeBtn = document.getElementById('closeGateScanModalBtn');
+  const startCameraBtn = document.getElementById('startCameraBtn');
+  const stopCameraBtn = document.getElementById('stopCameraBtn');
+  const submitManualBtn = document.getElementById('submitManualGateBtn');
+  const manualInput = document.getElementById('manualGateIdInput') as HTMLInputElement;
+  const video = document.getElementById('gateScannerVideo') as HTMLVideoElement;
+  const statusDiv = document.getElementById('gateScannerStatus');
+
+  let stream: MediaStream | null = null;
+  let animationFrameId: number | null = null;
+  let isScanning = false;
+
+  // Close modal
+  closeBtn?.addEventListener('click', () => {
+    stopCamera();
+    modal?.remove();
+  });
+
+  // Close modal when clicking outside
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      stopCamera();
+      modal.remove();
+    }
+  });
+
+  // Close modal on escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal) {
+      stopCamera();
+      modal.remove();
+    }
+  });
+
+  // Start camera
+  startCameraBtn?.addEventListener('click', async () => {
+    await startCamera();
+  });
+
+  // Stop camera
+  stopCameraBtn?.addEventListener('click', () => {
+    stopCamera();
+  });
+
+  // Function to start camera
+  async function startCamera() {
+    try {
+      if (statusDiv) statusDiv.textContent = 'Starting camera...';
+      
+      // Check if camera is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera not available');
+      }
+      
+      stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: 'environment',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        } 
+      });
+      
+      if (video) {
+        video.srcObject = stream;
+        await video.play();
+      }
+      
+      if (startCameraBtn) startCameraBtn.style.display = 'none';
+      if (stopCameraBtn) stopCameraBtn.style.display = 'block';
+      if (statusDiv) statusDiv.textContent = 'Camera ready - scanning for QR codes...';
+      
+      isScanning = true;
+      scanFrame();
+    } catch (error) {
+      console.error('Error starting camera:', error);
+      if (statusDiv) statusDiv.textContent = 'Camera access denied';
+      showGateScanError('Camera access denied. Please allow camera permissions or use manual input.');
+    }
+  }
+
+  // Function to stop camera
+  function stopCamera() {
+    isScanning = false;
+    if (animationFrameId) {
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = null;
+    }
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      stream = null;
+    }
+    if (video) {
+      video.srcObject = null;
+    }
+    if (startCameraBtn) startCameraBtn.style.display = 'block';
+    if (stopCameraBtn) stopCameraBtn.style.display = 'none';
+    if (statusDiv) statusDiv.textContent = 'Camera stopped';
+  }
+
+  // Function to scan video frames for QR codes
+  function scanFrame() {
+    if (!isScanning || !video || video.readyState !== video.HAVE_ENOUGH_DATA) {
+      if (isScanning) {
+        animationFrameId = requestAnimationFrame(scanFrame);
+      }
+      return;
+    }
+
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    
+    if (!context) {
+      animationFrameId = requestAnimationFrame(scanFrame);
+      return;
+    }
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height);
+    
+    if (code) {
+      console.log('QR Code detected:', code.data);
+      if (statusDiv) statusDiv.textContent = 'QR Code detected! Processing...';
+      
+      // Process the QR code
+      processGateQRCode(code.data);
+      return;
+    }
+    
+    animationFrameId = requestAnimationFrame(scanFrame);
+  }
+
+  // Function to process gate QR code
+  async function processGateQRCode(qrData: string) {
+    try {
+      if (statusDiv) statusDiv.textContent = 'Processing QR code...';
+      
+      const parsed = JSON.parse(qrData);
+      
+      // Check if it's a gate QR code
+      if (parsed.type === 'gate' && parsed.id) {
+        stopCamera();
+        await processGateScan(visitId, parsed.id);
+      } else {
+        if (statusDiv) statusDiv.textContent = 'Invalid gate QR code. Please try again.';
+        showGateScanError('Invalid Gate QR Code', 'This QR code is not a valid gate code. Please scan a gate QR code.');
+      }
+    } catch (error) {
+      console.error('Error processing gate QR code:', error);
+      if (statusDiv) statusDiv.textContent = 'Invalid QR code. Please try again.';
+      showGateScanError('Invalid Gate QR Code', 'The gate QR code data could not be processed.');
+    }
+  }
+
+  // Submit manual gate ID
+  submitManualBtn?.addEventListener('click', async () => {
+    const gateId = manualInput?.value.trim();
+    if (!gateId) {
+      showGateScanError('Please enter a gate ID');
+      return;
+    }
+
+    try {
+      await processGateScan(visitId, gateId);
+    } catch (error) {
+      console.error('Error processing manual gate scan:', error);
+      showGateScanError('Error processing gate scan');
+    }
+  });
+
+  // Handle Enter key in manual input
+  manualInput?.addEventListener('keypress', async (e) => {
+    if (e.key === 'Enter') {
+      const gateId = manualInput.value.trim();
+      if (!gateId) {
+        showGateScanError('Please enter a gate ID');
+        return;
+      }
+
+      try {
+        await processGateScan(visitId, gateId);
+      } catch (error) {
+        console.error('Error processing manual gate scan:', error);
+        showGateScanError('Error processing gate scan');
+      }
+    }
+  });
+}
+
+// Function to show gate exit scanning modal
+function showGateExitScanningModal(visitId: string) {
+  // Create modal HTML
+  const modalHTML = `
+    <div id="gateExitScanModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div class="relative top-10 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white dark:bg-gray-800">
+        <div class="mt-3">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Scan Gate Exit</h3>
+            <button 
+              id="closeGateExitScanModalBtn"
+              class="text-gray-400 hover:text-gray-500 focus:outline-none"
+            >
+              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <div class="space-y-4">
+            <div class="text-center">
+              <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Scan a gate QR code to log the visitor's exit for visit ID: ${visitId.substring(0, 8)}...
+              </p>
+              
+              <!-- Camera Scanner Section -->
+              <div id="cameraExitScannerSection" class="mb-4">
+                <div class="relative">
+                  <video 
+                    id="gateExitScannerVideo" 
+                    class="w-full h-64 bg-gray-900 rounded-lg"
+                    autoplay 
+                    playsinline
+                  ></video>
+                  <div id="gateExitScannerOverlay" class="absolute inset-0 flex items-center justify-center">
+                    <div class="border-2 border-white rounded-lg p-2">
+                      <div class="w-48 h-48 border-2 border-white rounded-lg"></div>
+                    </div>
+                  </div>
+                  <div id="gateExitScannerStatus" class="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
+                    Initializing camera...
+                  </div>
+                </div>
+                
+                <div class="mt-2 flex space-x-2">
+                  <button 
+                    id="startExitCameraBtn"
+                    class="flex-1 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm"
+                  >
+                    Start Camera
+                  </button>
+                  <button 
+                    id="stopExitCameraBtn"
+                    class="flex-1 px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 text-sm"
+                    style="display: none;"
+                  >
+                    Stop Camera
+                  </button>
+                </div>
+              </div>
+              
+              <!-- Manual Input Section -->
+              <div class="mb-4">
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Or manually enter gate ID:</p>
+                <div class="flex space-x-2">
+                  <input 
+                    type="text" 
+                    id="manualExitGateIdInput"
+                    placeholder="Enter gate ID..."
+                    class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                  >
+                  <button 
+                    id="submitManualExitGateBtn"
+                    class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-sm"
+                  >
+                    Submit
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div id="gateExitScanError" class="hidden text-red-600 text-sm text-center"></div>
+            <div id="gateExitScanSuccess" class="hidden text-green-600 text-sm text-center"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Add modal to page
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+  // Setup event listeners
+  const modal = document.getElementById('gateExitScanModal');
+  const closeBtn = document.getElementById('closeGateExitScanModalBtn');
+  const startCameraBtn = document.getElementById('startExitCameraBtn');
+  const stopCameraBtn = document.getElementById('stopExitCameraBtn');
+  const submitManualBtn = document.getElementById('submitManualExitGateBtn');
+  const manualInput = document.getElementById('manualExitGateIdInput') as HTMLInputElement;
+  const video = document.getElementById('gateExitScannerVideo') as HTMLVideoElement;
+  const statusDiv = document.getElementById('gateExitScannerStatus');
+
+  let stream: MediaStream | null = null;
+  let animationFrameId: number | null = null;
+  let isScanning = false;
+
+  // Close modal
+  closeBtn?.addEventListener('click', () => {
+    stopCamera();
+    modal?.remove();
+  });
+
+  // Close modal when clicking outside
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      stopCamera();
+      modal.remove();
+    }
+  });
+
+  // Close modal on escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal) {
+      stopCamera();
+      modal.remove();
+    }
+  });
+
+  // Start camera
+  startCameraBtn?.addEventListener('click', async () => {
+    await startCamera();
+  });
+
+  // Stop camera
+  stopCameraBtn?.addEventListener('click', () => {
+    stopCamera();
+  });
+
+  // Function to start camera
+  async function startCamera() {
+    try {
+      if (statusDiv) statusDiv.textContent = 'Starting camera...';
+      
+      // Check if camera is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera not available');
+      }
+      
+      stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: 'environment',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        } 
+      });
+      
+      if (video) {
+        video.srcObject = stream;
+        await video.play();
+      }
+      
+      if (startCameraBtn) startCameraBtn.style.display = 'none';
+      if (stopCameraBtn) stopCameraBtn.style.display = 'block';
+      if (statusDiv) statusDiv.textContent = 'Camera ready - scanning for QR codes...';
+      
+      isScanning = true;
+      scanFrame();
+    } catch (error) {
+      console.error('Error starting camera:', error);
+      if (statusDiv) statusDiv.textContent = 'Camera access denied';
+      showGateExitScanError('Camera access denied. Please allow camera permissions or use manual input.');
+    }
+  }
+
+  // Function to stop camera
+  function stopCamera() {
+    isScanning = false;
+    if (animationFrameId) {
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = null;
+    }
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      stream = null;
+    }
+    if (video) {
+      video.srcObject = null;
+    }
+    if (startCameraBtn) startCameraBtn.style.display = 'block';
+    if (stopCameraBtn) stopCameraBtn.style.display = 'none';
+    if (statusDiv) statusDiv.textContent = 'Camera stopped';
+  }
+
+  // Function to scan video frames for QR codes
+  function scanFrame() {
+    if (!isScanning || !video || video.readyState !== video.HAVE_ENOUGH_DATA) {
+      if (isScanning) {
+        animationFrameId = requestAnimationFrame(scanFrame);
+      }
+      return;
+    }
+
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    
+    if (!context) {
+      animationFrameId = requestAnimationFrame(scanFrame);
+      return;
+    }
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height);
+    
+    if (code) {
+      console.log('QR Code detected:', code.data);
+      if (statusDiv) statusDiv.textContent = 'QR Code detected! Processing...';
+      
+      // Process the QR code
+      processGateExitQRCode(code.data);
+      return;
+    }
+    
+    animationFrameId = requestAnimationFrame(scanFrame);
+  }
+
+  // Function to process gate exit QR code
+  async function processGateExitQRCode(qrData: string) {
+    try {
+      if (statusDiv) statusDiv.textContent = 'Processing QR code...';
+      
+      const parsed = JSON.parse(qrData);
+      
+      // Check if it's a gate QR code
+      if (parsed.type === 'gate' && parsed.id) {
+        stopCamera();
+        await processGateExitScan(visitId, parsed.id);
+      } else {
+        if (statusDiv) statusDiv.textContent = 'Invalid gate QR code. Please try again.';
+        showGateExitScanError('Invalid Gate QR Code', 'This QR code is not a valid gate code. Please scan a gate QR code.');
+      }
+    } catch (error) {
+      console.error('Error processing gate exit QR code:', error);
+      if (statusDiv) statusDiv.textContent = 'Invalid QR code. Please try again.';
+      showGateExitScanError('Invalid Gate QR Code', 'The gate QR code data could not be processed.');
+    }
+  }
+
+  // Submit manual gate ID
+  submitManualBtn?.addEventListener('click', async () => {
+    const gateId = manualInput?.value.trim();
+    if (!gateId) {
+      showGateExitScanError('Please enter a gate ID');
+      return;
+    }
+
+    try {
+      await processGateExitScan(visitId, gateId);
+    } catch (error) {
+      console.error('Error processing manual gate exit scan:', error);
+      showGateExitScanError('Error processing gate exit scan');
+    }
+  });
+
+  // Handle Enter key in manual input
+  manualInput?.addEventListener('keypress', async (e) => {
+    if (e.key === 'Enter') {
+      const gateId = manualInput.value.trim();
+      if (!gateId) {
+        showGateExitScanError('Please enter a gate ID');
+        return;
+      }
+
+      try {
+        await processGateExitScan(visitId, gateId);
+      } catch (error) {
+        console.error('Error processing manual gate exit scan:', error);
+        showGateExitScanError('Error processing gate exit scan');
+      }
+    }
+  });
+}
+
+// Function to process gate scan
+async function processGateScan(visitId: string, gateId: string) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      showGateScanError('You must be logged in to scan gates');
+      return;
+    }
+
+    // Call the gate scanning function
+    const { error } = await supabase.rpc('scan_gate_entrance', {
+      p_visit_id: visitId,
+      p_gate_id: gateId,
+      p_scanned_by: user.id
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    // Show success message
+    showGateScanSuccess('Gate entrance scanned successfully!');
+    
+    // Close modal after a delay
+    setTimeout(() => {
+      const modal = document.getElementById('gateScanModal');
+      if (modal) {
+        modal.remove();
+      }
+      // Refresh the visit details to show updated status
+      const visitIdInput = document.getElementById('visitIdInput') as HTMLInputElement;
+      if (visitIdInput?.value.trim()) {
+        trackVisit(visitIdInput.value.trim());
+      }
+    }, 2000);
+
+  } catch (error: any) {
+    console.error('Error scanning gate entrance:', error);
+    showGateScanError('Error scanning gate entrance: ' + error.message);
+  }
+}
+
+// Function to process gate exit scan
+async function processGateExitScan(visitId: string, gateId: string) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      showGateExitScanError('You must be logged in to scan gates');
+      return;
+    }
+
+    // Call the gate exit scanning function
+    const { error } = await supabase.rpc('scan_gate_exit', {
+      p_visit_id: visitId,
+      p_gate_id: gateId,
+      p_scanned_by: user.id
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    // Show success message
+    showGateExitScanSuccess('Gate exit scanned successfully! Visit completed!');
+    
+    // Close modal after a delay
+    setTimeout(() => {
+      const modal = document.getElementById('gateExitScanModal');
+      if (modal) {
+        modal.remove();
+      }
+      // Refresh the visit details to show updated status
+      const visitIdInput = document.getElementById('visitIdInput') as HTMLInputElement;
+      if (visitIdInput?.value.trim()) {
+        trackVisit(visitIdInput.value.trim());
+      }
+    }, 2000);
+
+  } catch (error: any) {
+    console.error('Error scanning gate exit:', error);
+    showGateExitScanError('Error scanning gate exit: ' + error.message);
+  }
+}
+
+// Function to show gate scan error
+function showGateScanError(message: string, title?: string) {
+  const errorDiv = document.getElementById('gateScanError');
+  const successDiv = document.getElementById('gateScanSuccess');
+  
+  if (errorDiv) {
+    errorDiv.textContent = title ? `${title}: ${message}` : message;
+    errorDiv.classList.remove('hidden');
+  }
+  
+  if (successDiv) {
+    successDiv.classList.add('hidden');
+  }
+}
+
+// Function to show gate scan success
+function showGateScanSuccess(message: string) {
+  const errorDiv = document.getElementById('gateScanError');
+  const successDiv = document.getElementById('gateScanSuccess');
+  
+  if (successDiv) {
+    successDiv.textContent = message;
+    successDiv.classList.remove('hidden');
+  }
+  
+  if (errorDiv) {
+    errorDiv.classList.add('hidden');
+  }
+}
+
+// Function to show gate exit scan error
+function showGateExitScanError(message: string, title?: string) {
+  const errorDiv = document.getElementById('gateExitScanError');
+  const successDiv = document.getElementById('gateExitScanSuccess');
+  
+  if (errorDiv) {
+    errorDiv.textContent = title ? `${title}: ${message}` : message;
+    errorDiv.classList.remove('hidden');
+  }
+  
+  if (successDiv) {
+    successDiv.classList.add('hidden');
+  }
+}
+
+// Function to show gate exit scan success
+function showGateExitScanSuccess(message: string) {
+  const errorDiv = document.getElementById('gateExitScanError');
+  const successDiv = document.getElementById('gateExitScanSuccess');
+  
+  if (successDiv) {
+    successDiv.textContent = message;
+    successDiv.classList.remove('hidden');
+  }
+  
+  if (errorDiv) {
+    errorDiv.classList.add('hidden');
+  }
+}
+
+// Function to disable all buttons for invalid visit statuses
+function disableAllButtons() {
+  const printVisitCardBtn = document.getElementById('printVisitCardBtn') as HTMLButtonElement;
+  const scanEntranceBtn = document.getElementById('scanEntranceBtn') as HTMLButtonElement;
+  const scanExitBtn = document.getElementById('scanExitBtn') as HTMLButtonElement;
+
+  // Disable print visit card button
+  if (printVisitCardBtn) {
+    printVisitCardBtn.disabled = true;
+    printVisitCardBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    printVisitCardBtn.innerHTML = `
+      <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+      </svg>
+      Visit Invalid
+    `;
+  }
+
+  // Disable scan entrance button
+  if (scanEntranceBtn) {
+    scanEntranceBtn.disabled = true;
+    scanEntranceBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    scanEntranceBtn.innerHTML = `
+      <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+      </svg>
+      Visit Invalid
+    `;
+  }
+
+  // Disable scan exit button
+  if (scanExitBtn) {
+    scanExitBtn.disabled = true;
+    scanExitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    scanExitBtn.innerHTML = `
+      <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+      </svg>
+      Visit Invalid
+    `;
+  }
+}
+
+// Function to show INVALID section instead of QR code
+function addInvalidStickerToQR() {
+  const qrCodeContainer = document.getElementById('qrCodeContainer');
+  if (!qrCodeContainer) return;
+
+  // Check if already set to invalid
+  if (qrCodeContainer.querySelector('.invalid-text')) return;
+
+  // Find and update the QR code heading
+  const qrCodeHeading = qrCodeContainer.parentElement?.querySelector('h3');
+  if (qrCodeHeading) {
+    qrCodeHeading.textContent = 'INVALID';
+    qrCodeHeading.className = 'text-lg font-medium text-red-600 dark:text-red-400 mb-4';
+  }
+
+  // Set the container content to INVALID (no QR code generated)
+  qrCodeContainer.innerHTML = `
+    <div class="invalid-text w-48 h-48 bg-red-500 flex items-center justify-center rounded-lg">
+      <div class="text-white text-center">
+        <div class="text-4xl font-bold">INVALID</div>
+      </div>
+    </div>
+  `;
+
+  // Update the description text below
+  const descriptionText = qrCodeContainer.parentElement?.querySelector('p');
+  if (descriptionText) {
+    descriptionText.textContent = 'This visit is invalid and cannot be used';
+    descriptionText.className = 'mt-2 text-sm text-red-500 dark:text-red-400';
   }
 }

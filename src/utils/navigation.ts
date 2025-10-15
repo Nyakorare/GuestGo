@@ -162,6 +162,14 @@ async function performNavigation() {
       return;
     }
     
+    if (path === '/track-schedule' && (role === 'log' || role === 'guard')) {
+      window.location.hash = '/';
+      hideLoadingOverlay();
+      showNavbar();
+      performanceMonitor.endNavigation(path);
+      return;
+    }
+    
     if (path.startsWith('/gate/') && role !== 'admin') {
       window.location.hash = '/dashboard';
       hideLoadingOverlay();

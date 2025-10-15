@@ -575,6 +575,8 @@ async function updateNavigationBasedOnRole() {
         const mobileDashboardLink = document.getElementById('mobile-dashboard-link');
         const guardDashboardLink = document.getElementById('guard-dashboard-link');
         const mobileGuardDashboardLink = document.getElementById('mobile-guard-dashboard-link');
+        const trackScheduleLink = document.getElementById('track-schedule-link');
+        const mobileTrackScheduleLink = document.getElementById('mobile-track-schedule-link');
         
         // Show/hide QR Scanner links based on role
         if (userRole === 'personnel') {
@@ -594,6 +596,15 @@ async function updateNavigationBasedOnRole() {
           mobileGuardDashboardLink?.classList.add('hidden');
         }
         
+        // Show/hide Track Schedule links based on role (hide for logs and guards)
+        if (userRole === 'log' || userRole === 'guard') {
+          trackScheduleLink?.classList.add('hidden');
+          mobileTrackScheduleLink?.classList.add('hidden');
+        } else {
+          trackScheduleLink?.classList.remove('hidden');
+          mobileTrackScheduleLink?.classList.remove('hidden');
+        }
+        
         // Show dashboard link for all authenticated users
         dashboardLink?.classList.remove('hidden');
         mobileDashboardLink?.classList.remove('hidden');
@@ -606,6 +617,8 @@ async function updateNavigationBasedOnRole() {
       const mobileDashboardLink = document.getElementById('mobile-dashboard-link');
       const guardDashboardLink = document.getElementById('guard-dashboard-link');
       const mobileGuardDashboardLink = document.getElementById('mobile-guard-dashboard-link');
+      const trackScheduleLink = document.getElementById('track-schedule-link');
+      const mobileTrackScheduleLink = document.getElementById('mobile-track-schedule-link');
       
       qrScannerLink?.classList.add('hidden');
       mobileQrScannerLink?.classList.add('hidden');
@@ -613,6 +626,7 @@ async function updateNavigationBasedOnRole() {
       mobileDashboardLink?.classList.add('hidden');
       guardDashboardLink?.classList.add('hidden');
       mobileGuardDashboardLink?.classList.add('hidden');
+      // Track schedule links remain visible for non-authenticated users
     }
   } catch (error) {
     console.error('Error updating navigation based on role:', error);
