@@ -97,7 +97,10 @@ function setupAuthButtonListeners() {
   
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.href = '/';
+    window.location.hash = '/';
+    setTimeout(() => {
+      window.location.reload();
+    }, 50);
   };
 
   logoutButton?.addEventListener('click', handleLogout);
@@ -236,7 +239,10 @@ export function setupEventListeners() {
   // Profile logout button click handler
   profileLogoutBtn?.addEventListener('click', async () => {
     await supabase.auth.signOut();
-    window.location.href = '/';
+    window.location.hash = '/';
+    setTimeout(() => {
+      window.location.reload();
+    }, 50);
   });
 
   // Handle password change form
