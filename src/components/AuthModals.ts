@@ -107,8 +107,11 @@ export function setupAuthEventListeners() {
             throw new Error('Please verify your email before logging in.');
           }
 
-          // Redirect to home (hash route)
+          // Redirect to home (hash route) and refresh
           window.location.hash = '/';
+          setTimeout(() => {
+            window.location.reload();
+          }, 50);
         }
       } catch (err: any) {
         if (errorDiv) {
