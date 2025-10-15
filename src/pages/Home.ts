@@ -603,10 +603,7 @@ async function loadWeeklyVisitCount(_userEmail: string) {
       }
     }
     
-    // Re-setup event listeners to ensure the schedule button click handler is properly attached
-    if (typeof setupEventListeners === 'function') {
-      setupEventListeners();
-    }
+    // Avoid re-attaching modal listeners here; initial setup happens on page init
   } catch (error) {
     console.error('Error updating schedule button visibility:', error);
   }

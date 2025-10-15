@@ -35,7 +35,13 @@ function toPhilippineTime(date: Date): Date {
   return philippineTime;
 }
 
+// Ensure this initialization only runs once
+let modalEventListenersInitialized = false;
+
 export async function setupEventListeners() {
+  if (modalEventListenersInitialized) {
+    return;
+  }
   // Fetch places from database with personnel assignments
   const { data: places, error: placesError } = await supabase
     .from('places_to_visit')
@@ -46,6 +52,8 @@ export async function setupEventListeners() {
     console.error('Error fetching places:', placesError);
     return;
   }
+
+  modalEventListenersInitialized = true;
 
   // Get personnel assignments to determine availability
   let assignments: any[] = [];
