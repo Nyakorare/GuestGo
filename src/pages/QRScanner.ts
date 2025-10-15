@@ -1005,7 +1005,16 @@ async function fetchVisitDataFromDatabase(visitId: string, currentUserId?: strin
     const { data: visits, error } = await supabase
       .from('scheduled_visits')
       .select(`
-        *,
+        id,
+        visitor_first_name,
+        visitor_last_name,
+        visitor_email,
+        visit_date,
+        purpose,
+        status,
+        scheduled_at,
+        gate_entrance_scanned,
+        gate_exit_scanned,
         scheduled_visit_places (
           *,
           places_to_visit (
@@ -1064,7 +1073,9 @@ async function fetchVisitDataFromDatabase(visitId: string, currentUserId?: strin
       purpose: visits.purpose,
       places: places,
       status: visits.status,
-      scheduledAt: visits.scheduled_at
+      scheduledAt: visits.scheduled_at,
+      gate_entrance_scanned: Boolean(visits.gate_entrance_scanned),
+      gate_exit_scanned: Boolean(visits.gate_exit_scanned)
     };
   } catch (error) {
     console.error('Error fetching visit data:', error);

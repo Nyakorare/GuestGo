@@ -15,6 +15,9 @@ export interface VisitQRData {
   }>;
   status: string;
   scheduledAt: string;
+  // Gate scan flags to enable proper completion rules in scanner UI
+  gate_entrance_scanned?: boolean;
+  gate_exit_scanned?: boolean;
 }
 
 export interface GateQRData {
