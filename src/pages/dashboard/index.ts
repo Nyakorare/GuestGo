@@ -1370,7 +1370,7 @@ export function DashboardPage() {
       </div>
 
       <!-- Personnel Assignment Modal -->
-      <div id="personnelAssignmentModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
+      <div id="personnelAssignmentModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
         <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
           <div class="mt-3">
             <div class="flex justify-between items-center mb-4">
@@ -1410,7 +1410,7 @@ export function DashboardPage() {
       </div>
 
       <!-- Personnel Availability Modal -->
-      <div id="personnelAvailabilityModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
+      <div id="personnelAvailabilityModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
         <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
           <div class="mt-3">
             <div class="flex justify-between items-center mb-4">
@@ -2244,9 +2244,17 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
       return `User (${userId.substring(0, 8)}...)`;
     };
 
+    // Simple caches to avoid repeated network calls while rendering a page of logs
+    const userNameCache: Record<string, string> = {};
+    const placeNameCache: Record<string, string> = {};
+
+    // Helper: validate UUID v4-ish (36 chars with hyphens). We skip DB calls for non-UUIDs like 'system'
+    const isLikelyUuid = (id: string) => typeof id === 'string' && /^[0-9a-fA-F-]{36}$/.test(id);
+
     // Helper function to get place name
     const getPlaceName = async (placeId: string) => {
       if (!placeId) return 'Unknown place';
+      if (placeNameCache[placeId]) return placeNameCache[placeId];
       
       try {
         const { data: place, error } = await supabase
@@ -2256,18 +2264,29 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
           .single();
         
         if (error || !place) {
-          return `Place (${placeId.substring(0, 8)}...)`;
+          const fallback = `Place (${placeId.substring(0, 8)}...)`;
+          placeNameCache[placeId] = fallback;
+          return fallback;
         }
         
+        placeNameCache[placeId] = place.name;
         return place.name;
       } catch (error) {
-        return `Place (${placeId.substring(0, 8)}...)`;
+        const fallback = `Place (${placeId.substring(0, 8)}...)`;
+        placeNameCache[placeId] = fallback;
+        return fallback;
       }
     };
 
     // Helper function to get user name from user_roles
     const getUserName = async (userId: string) => {
       if (!userId) return 'Unknown user';
+      if (userNameCache[userId]) return userNameCache[userId];
+      if (!isLikelyUuid(userId)) {
+        const label = userId.toLowerCase() === 'system' ? 'System' : `User (${userId.substring(0, 8)}...)`;
+        userNameCache[userId] = label;
+        return label;
+      }
       
       try {
         const { data: user, error } = await supabase
@@ -2277,13 +2296,19 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
           .single();
         
         if (error || !user) {
-          return `User (${userId.substring(0, 8)}...)`;
+          const fallback = `User (${userId.substring(0, 8)}...)`;
+          userNameCache[userId] = fallback;
+          return fallback;
         }
         
         const name = `${user.first_name || ''} ${user.last_name || ''}`.trim();
-        return name || user.email || `User (${userId.substring(0, 8)}...)`;
+        const label = name || user.email || `User (${userId.substring(0, 8)}...)`;
+        userNameCache[userId] = label;
+        return label;
       } catch (error) {
-        return `User (${userId.substring(0, 8)}...)`;
+        const fallback = `User (${userId.substring(0, 8)}...)`;
+        userNameCache[userId] = fallback;
+        return fallback;
       }
     };
     
@@ -3093,7 +3118,6 @@ function updateClearDateButton() {
 
 // Setup dashboard-specific event listeners
 function setupDashboardEventListeners() {
-  console.log('Setting up dashboard event listeners...');
   
   // Close edit modal button
   const closeEditModalBtn = document.getElementById('closeEditModalBtn');
@@ -3497,7 +3521,6 @@ function setupDashboardEventListeners() {
 
   // Refresh logs button
   const refreshLogsBtn = document.getElementById('refreshLogsBtn');
-  console.log('Refresh logs button found:', !!refreshLogsBtn);
   if (refreshLogsBtn) {
     refreshLogsBtn.addEventListener('click', async () => {
       console.log('Refresh logs button clicked');
@@ -3520,12 +3543,9 @@ function setupDashboardEventListeners() {
         refreshLogsBtn.textContent = 'Refresh Logs';
       }
     });
-  } else {
-    console.warn('Refresh logs button not found');
   }
   // Cleanup visits button
   const cleanupVisitsBtn = document.getElementById('cleanupVisitsBtn');
-  console.log('Cleanup visits button found:', !!cleanupVisitsBtn);
   if (cleanupVisitsBtn) {
     cleanupVisitsBtn.addEventListener('click', async () => {
       console.log('Cleanup visits button clicked');
@@ -3562,8 +3582,6 @@ function setupDashboardEventListeners() {
         cleanupVisitsBtn.textContent = 'Cleanup Past Visits';
       }
     });
-  } else {
-    console.warn('Cleanup visits button not found');
   }
 
   // Search and filter event listeners
@@ -3962,7 +3980,7 @@ function setupDashboardEventListeners() {
   updateScheduleTypeTabs();
   updateFinishedScheduleTypeTabs();
 
-  console.log('Dashboard event listeners setup complete');
+  
   
   // Ensure flagged visit modal exists at document.body level (outside dashboard)
   if (!document.getElementById('flaggedVisitModal')) {
@@ -4457,6 +4475,10 @@ async function assignPersonnelToPlace(placeId: string) {
   const successDiv = document.getElementById('personnelAssignmentSuccess');
 
   if (modal && personnelSelect && assignBtn) {
+    // Ensure modal overlays the entire page by appending to body
+    if (modal.parentElement !== document.body) {
+      document.body.appendChild(modal);
+    }
     // Clear previous content
     personnelSelect.innerHTML = '<option value="">Select personnel...</option>';
     if (errorDiv) errorDiv.classList.add('hidden');
@@ -5372,12 +5394,12 @@ function stopVisitsAutoRefresh() {
 
 // Function to start automatic status updates
 function startAutomaticStatusUpdates() {
-  console.log('Starting automatic status updates...');
+  // Automatic status updates initialized
   
   // Update statuses every 2 minutes (120000 ms) for more responsive updates
   setInterval(async () => {
     try {
-      console.log('Running automatic status update...');
+      // Automatic status update tick
       const result = await updateVisitStatuses();
       console.log('Automatic status update completed:', result);
     } catch (error) {
@@ -5388,7 +5410,7 @@ function startAutomaticStatusUpdates() {
   // Also run an immediate update when starting
   setTimeout(async () => {
     try {
-      console.log('Running initial status update...');
+      // Initial status update tick
       await updateVisitStatuses();
     } catch (error) {
       console.error('Error in initial status update:', error);
@@ -5592,12 +5614,61 @@ async function loadFinishedSchedules() {
       return;
     }
 
-    // Get all visits for places this personnel is assigned to
-    const { data: visits, error: visitsError } = await supabase.rpc('get_personnel_scheduled_visits', {
-      p_personnel_id: user.id
-    });
+    // Direct query: join scheduled_visit_places with scheduled_visits and places_to_visit for assigned places
+    const assignedPlaceIds = (assignments as any[]).map((a: any) => a.place_id);
+    const { data: rows, error } = await supabase
+      .from('scheduled_visit_places')
+      .select(`
+        place_id,
+        place_status:status,
+        place_completed_at:completed_at,
+        place_completed_by:completed_by,
+        place:places_to_visit(name, description, location),
+        visit:scheduled_visits(
+          id,
+          visitor_first_name,
+          visitor_last_name,
+          visitor_email,
+          visitor_phone,
+          visitor_user_id,
+          visitor_role,
+          visit_date,
+          purpose,
+          other_purpose,
+          status,
+          scheduled_at,
+          completed_at,
+          completed_by
+        )
+      `)
+      .in('place_id', assignedPlaceIds);
 
-    if (visitsError) throw visitsError;
+    if (error) throw error;
+
+    // Normalize shape to match display expectations
+    const visits = (rows || []).map((r: any) => ({
+      visit_id: r.visit?.id,
+      visitor_first_name: r.visit?.visitor_first_name,
+      visitor_last_name: r.visit?.visitor_last_name,
+      visitor_email: r.visit?.visitor_email,
+      visitor_phone: r.visit?.visitor_phone,
+      visitor_user_id: r.visit?.visitor_user_id,
+      visitor_role: r.visit?.visitor_role,
+      visit_date: r.visit?.visit_date,
+      purpose: r.visit?.purpose,
+      other_purpose: r.visit?.other_purpose,
+      status: r.visit?.status,
+      scheduled_at: r.visit?.scheduled_at,
+      completed_at: r.visit?.completed_at,
+      completed_by: r.visit?.completed_by,
+      place_id: r.place_id,
+      place_name: r.place?.name,
+      place_description: r.place?.description,
+      place_location: r.place?.location,
+      place_status: r.place_status,
+      place_completed_at: r.place_completed_at,
+      place_completed_by: r.place_completed_by
+    }));
 
     // Filter for completed, completed_flagged, and unsuccessful visits
     const finishedVisits = (visits || []).filter(visit => 
@@ -7622,6 +7693,10 @@ async function togglePersonnelAvailability(placeId: string, currentAvailability:
     const form = document.getElementById('availabilityForm') as HTMLFormElement;
 
     if (modal && errorDiv && successDiv && reasonTextarea && submitBtn && availableRadio && unavailableRadio && reasonField && form) {
+      // Ensure modal overlays the entire page by appending to body
+      if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+      }
       // Clear previous messages and reset form
       errorDiv.classList.add('hidden');
       errorDiv.textContent = '';
@@ -8911,51 +8986,39 @@ function populateFinishedPlaceFilterOptions(finishedVisits: any[]): void {
 function applyFinishedFilters() {
   let filteredVisits = [...allFinishedVisits];
 
-  // Apply finished schedule type filter using Philippine time
-  const philippineToday = new Date();
-  // Convert to Philippine time (UTC+8)
-  philippineToday.setHours(philippineToday.getHours() + 8);
+  // Apply finished schedule type filter using real-time Philippine date
+  const todayPh = getPhilippineDate();
 
   switch (currentFinishedScheduleType) {
     case 'today':
-      // Show finished visits that were completed today
+      // Show finished visits that were completed today (Philippine date)
       filteredVisits = filteredVisits.filter(visit => {
-        const completedDate = visit.completed_at ? new Date(visit.completed_at) : new Date(visit.visit_date);
-        const visitDate = new Date(visit.visit_date);
-        const today = new Date(philippineToday);
-        today.setHours(0, 0, 0, 0);
-        
-        // Check if the visit was completed today or if it was scheduled for today and is finished
-        const completedToday = completedDate.toDateString() === today.toDateString();
-        const scheduledToday = visitDate.toDateString() === today.toDateString();
-        
-        return completedToday || scheduledToday;
+        if (!visit.completed_at) return false;
+        const completedAtPh = toPhilippineTime(new Date(visit.completed_at));
+        completedAtPh.setHours(0, 0, 0, 0);
+        const todayStart = new Date(todayPh);
+        // Date-only equality in PH timezone
+        return completedAtPh.getTime() === todayStart.getTime();
       });
       break;
     case 'past':
-      // Show finished visits from past dates
+      // Show finished visits from past dates (based on visit date in PH)
       filteredVisits = filteredVisits.filter(visit => {
-        const visitDate = new Date(visit.visit_date);
-        const today = new Date(philippineToday);
-        today.setHours(0, 0, 0, 0);
-        visitDate.setHours(0, 0, 0, 0);
-        
-        return visitDate.getTime() < today.getTime();
+        const visitDatePh = toPhilippineTime(new Date(visit.visit_date));
+        visitDatePh.setHours(0, 0, 0, 0);
+        const todayStart = new Date(todayPh);
+        return visitDatePh.getTime() < todayStart.getTime();
       });
       break;
     default:
       // Default to 'today' if no valid state
       currentFinishedScheduleType = 'today';
       filteredVisits = filteredVisits.filter(visit => {
-        const completedDate = visit.completed_at ? new Date(visit.completed_at) : new Date(visit.visit_date);
-        const visitDate = new Date(visit.visit_date);
-        const today = new Date(philippineToday);
-        today.setHours(0, 0, 0, 0);
-        
-        const completedToday = completedDate.toDateString() === today.toDateString();
-        const scheduledToday = visitDate.toDateString() === today.toDateString();
-        
-        return completedToday || scheduledToday;
+        if (!visit.completed_at) return false;
+        const completedAtPh = toPhilippineTime(new Date(visit.completed_at));
+        completedAtPh.setHours(0, 0, 0, 0);
+        const todayStart = new Date(todayPh);
+        return completedAtPh.getTime() === todayStart.getTime();
       });
       break;
   }
@@ -9099,9 +9162,9 @@ function displayFinishedVisits(visits: any[]): void {
     const visitorRole = visit.visitor_role || 'guest';
     const isLoggedIn = visit.visitor_user_id !== null;
     const visitorId = isLoggedIn ? visit.visitor_user_id : 'guest';
-    const visitDate = new Date(visit.visit_date).toLocaleDateString();
-    const completedDate = visit.completed_at ? new Date(visit.completed_at).toLocaleDateString() : 'N/A';
-    const completedTime = visit.completed_at ? new Date(visit.completed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A';
+    const visitDate = toPhilippineTime(new Date(visit.visit_date)).toLocaleDateString();
+    const completedDate = visit.completed_at ? toPhilippineTime(new Date(visit.completed_at)).toLocaleDateString() : 'N/A';
+    const completedTime = visit.completed_at ? toPhilippineTime(new Date(visit.completed_at)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A';
     
     const statusColors: { [key: string]: string } = {
       completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
@@ -9115,9 +9178,9 @@ function displayFinishedVisits(visits: any[]): void {
       guest: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
     };
 
-    const completedByInfo = visit.completed_by_info ? 
+    const completedByInfo = visit.completed_by_info && (visit.completed_by || visit.status === 'unsuccessful') ? 
       `${visit.completed_by_info.first_name} ${visit.completed_by_info.last_name}` : 
-      'Unknown';
+      (visit.completed_by ? 'Unknown' : 'N/A');
 
     return `
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 transition-all duration-300 ease-in-out hover:shadow-lg hover:shadow-blue-500/20 hover:scale-[1.02] hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-gray-700 cursor-pointer group">
@@ -9154,7 +9217,7 @@ function displayFinishedVisits(visits: any[]): void {
         
         <div class="border-t border-gray-200 dark:border-gray-700 pt-4 transition-colors duration-200 group-hover:border-blue-300 dark:group-hover:border-blue-600">
           <p class="text-xs text-gray-500 dark:text-gray-400 transition-colors duration-200 group-hover:text-gray-600 dark:group-hover:text-gray-300">
-            Scheduled: ${new Date(visit.scheduled_at).toLocaleDateString()} at ${new Date(visit.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            Scheduled: ${toPhilippineTime(new Date(visit.scheduled_at)).toLocaleDateString()} at ${toPhilippineTime(new Date(visit.scheduled_at)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </p>
         </div>
       </div>

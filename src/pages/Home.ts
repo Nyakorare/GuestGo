@@ -545,8 +545,6 @@ async function loadWeeklyVisitCount(_userEmail: string) {
     const emailVerificationSection = document.getElementById('emailVerificationSection');
     const weeklyVisitCountDiv = document.getElementById('weeklyVisitCount');
     
-    console.log('updateScheduleButtonVisibility called. User:', !!user, 'Button found:', !!scheduleNowBtn);
-    
     if (!scheduleNowBtn) return;
     
     if (user) {
@@ -558,15 +556,12 @@ async function loadWeeklyVisitCount(_userEmail: string) {
           .eq('user_id', user.id)
           .single();
         
-        console.log('User role:', roleData?.role);
         // Only show schedule button for visitor roles
         if (roleData?.role === 'visitor') {
-          console.log('Showing schedule button for visitor');
           scheduleNowBtn.classList.remove('hidden');
           // Load and display weekly visit count for visitor users
           await loadWeeklyVisitCount(user.email || '');
         } else {
-          console.log('Hiding schedule button for non-visitor role:', roleData?.role);
           // Hide schedule button for non-visitor roles (admin, personnel, etc.)
           scheduleNowBtn.classList.add('hidden');
           // Hide weekly visit count for non-visitor roles
@@ -810,7 +805,7 @@ async function loadWeeklyVisitCount(_userEmail: string) {
     // Optionally show a message here
     return;
   }
-  console.log('openScheduleModal called');
+  
   
   // Check if user is logged in and has visitor role
   const { data: { user } } = await supabase.auth.getUser();
@@ -836,7 +831,6 @@ async function loadWeeklyVisitCount(_userEmail: string) {
   }
   
   const modal = document.getElementById('scheduleModal');
-  console.log('Opening modal. Modal found:', !!modal);
   if (modal) {
     modal.classList.remove('hidden');
     // Initialize date validation when modal opens
@@ -1019,28 +1013,28 @@ export function HomePage() {
           if (heroSubtitle) heroSubtitle.textContent = 'Manage your visits, track status, and plan ahead.';
           if (scheduleNowBtn) {
             scheduleNowBtn.textContent = 'Schedule Another Visit';
-            scheduleNowBtn.onclick = () => window.openScheduleModal();
+            scheduleNowBtn.onclick = () => (window as any).openScheduleModal();
           }
         } else if (userRole === 'personnel') {
           if (heroTitle) heroTitle.textContent = firstName ? `Welcome, ${firstName}` : 'Welcome to GuestGo';
           if (heroSubtitle) heroSubtitle.textContent = 'Scan QR codes, manage visits, and track guest arrivals.';
           if (scheduleNowBtn) {
             scheduleNowBtn.textContent = 'Open QR Scanner';
-            scheduleNowBtn.onclick = () => window.navigateToPage('qr-scanner');
+            scheduleNowBtn.onclick = () => (window as any).navigateToPage('qr-scanner');
           }
         } else if (userRole === 'admin') {
           if (heroTitle) heroTitle.textContent = firstName ? `Welcome, ${firstName}` : 'Welcome to GuestGo';
           if (heroSubtitle) heroSubtitle.textContent = 'Manage the system, oversee visits, and configure settings.';
           if (scheduleNowBtn) {
             scheduleNowBtn.textContent = 'Open Dashboard';
-            scheduleNowBtn.onclick = () => window.navigateToPage('dashboard');
+            scheduleNowBtn.onclick = () => (window as any).navigateToPage('dashboard');
           }
         } else if (userRole === 'logs') {
           if (heroTitle) heroTitle.textContent = firstName ? `Welcome, ${firstName}` : 'Welcome to GuestGo';
           if (heroSubtitle) heroSubtitle.textContent = 'View system logs, monitor activities, and track system events.';
           if (scheduleNowBtn) {
             scheduleNowBtn.textContent = 'View Logs';
-            scheduleNowBtn.onclick = () => window.navigateToPage('logs');
+            scheduleNowBtn.onclick = () => (window as any).navigateToPage('logs');
           }
         }
       } else {

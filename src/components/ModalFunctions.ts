@@ -243,7 +243,6 @@ export async function setupEventListeners() {
 
   // Schedule modal open/close
   const scheduleNowBtn = document.getElementById('scheduleNowBtn');
-  console.log('Setting up schedule button event listener. Button found:', !!scheduleNowBtn);
   if (scheduleNowBtn) {
     // Remove any existing click listeners to prevent duplicates
     const newBtn = scheduleNowBtn.cloneNode(true);
@@ -251,7 +250,6 @@ export async function setupEventListeners() {
     
     // Add the click listener to the new button
     newBtn.addEventListener('click', async function() {
-      console.log('Schedule button clicked!');
       // Check if user is logged in and has visitor role
       const { data: { user } } = await supabase.auth.getUser();
       
@@ -276,11 +274,12 @@ export async function setupEventListeners() {
       }
       
       const modal = document.getElementById('scheduleModal');
-      console.log('Opening modal. Modal found:', !!modal);
       if (modal) {
         modal.classList.remove('hidden');
         // Initialize date validation when modal opens
-        initializeDateValidation();
+        if (typeof (window as any).initializeDateValidation === 'function') {
+          (window as any).initializeDateValidation();
+        }
       }
     });
   }
@@ -883,17 +882,7 @@ export async function setupEventListeners() {
         const philippineSelectedDate = toPhilippineTime(selectedDate);
         philippineSelectedDate.setHours(0, 0, 0, 0);
         
-        // Debug logging for form submission
-        console.log('Form Submission Date Validation Debug:', {
-          visitDate: visitDate,
-          selectedDate: selectedDate.toISOString(),
-          philippineSelectedDate: philippineSelectedDate.toISOString(),
-          philippineToday: philippineToday.toISOString(),
-          selectedTime: philippineSelectedDate.getTime(),
-          currentTime: philippineToday.getTime(),
-          isToday: philippineSelectedDate.getTime() === philippineToday.getTime(),
-          isPast: philippineSelectedDate.getTime() < philippineToday.getTime()
-        });
+      
         
         if (philippineSelectedDate.getTime() < philippineToday.getTime()) {
           throw new Error(`Cannot schedule visits for past dates. Current Philippine date is ${philippineToday.toLocaleDateString()}. Please select today or a future date.`);
@@ -1119,17 +1108,7 @@ export async function setupEventListeners() {
       // Normalize current date to start of day for comparison
       currentPhilippineDate.setHours(0, 0, 0, 0);
 
-      // Debug logging
-      console.log('Modal Date Validation Debug:', {
-        selectedDate: visitDateInput.value,
-        selectedDateObj: selectedDate.toISOString(),
-        philippineSelectedDate: philippineSelectedDate.toISOString(),
-        currentPhilippineDate: currentPhilippineDate.toISOString(),
-        selectedTime: philippineSelectedDate.getTime(),
-        currentTime: currentPhilippineDate.getTime(),
-        isToday: philippineSelectedDate.getTime() === currentPhilippineDate.getTime(),
-        isPast: philippineSelectedDate.getTime() < currentPhilippineDate.getTime()
-      });
+      
 
       // Clear previous validation
       visitDateInput.classList.remove('border-red-500', 'border-green-500', 'border-yellow-500', 'focus:border-red-500', 'focus:border-green-500', 'focus:border-yellow-500');
@@ -2004,17 +1983,32 @@ async function scheduleVisitFromConfirmation(data: VisitConfirmationData) {
     // Ensure visitorUserId is properly handled - convert empty string to null
     const visitorUserId = data.visitorUserId && data.visitorUserId.trim() !== '' ? data.visitorUserId : null;
     
-    console.log('Scheduling visit with data:', {
-      firstName: data.firstName,
-      lastName: data.lastName,
-      email: data.email,
-      phone: data.phone,
-      placeIds,
-      visitDate: data.visitDate,
-      purpose: data.purpose === 'other' ? data.otherPurpose : data.purpose,
-      otherPurpose: data.purpose === 'other' ? data.otherPurpose : null,
-      visitorUserId
-    });
+    // Prevent duplicate schedules for the same date
+    // Check by user_id if available; otherwise check by email
+    try {
+      const baseQuery = supabase
+        .from('scheduled_visits')
+        .select('id, status')
+        .eq('visit_date', data.visitDate)
+        .in('status', ['pending', 'completed', 'completed_flagged'])
+        .limit(1);
+
+      let existing;
+      if (visitorUserId) {
+        ({ data: existing } = await baseQuery.eq('visitor_user_id', visitorUserId));
+      } else {
+        ({ data: existing } = await baseQuery.eq('visitor_email', data.email));
+      }
+
+      if (existing && existing.length > 0) {
+        throw new Error('You already have a scheduled visit on this date with this account/email.');
+      }
+    } catch (checkErr: any) {
+      if (checkErr instanceof Error && checkErr.message.startsWith('You already have')) {
+        throw checkErr;
+      }
+      throw new Error('Error checking existing schedules. Please try again.');
+    }
 
     // Call the schedule_visit function
     const { data: visitData, error: scheduleError } = await supabase.rpc('schedule_visit', {
@@ -2123,11 +2117,10 @@ async function scheduleVisitFromConfirmation(data: VisitConfirmationData) {
 
 // Set up confirmation modal event listeners (called when modal is shown)
 function setupConfirmationModalEventListeners() {
-  console.log('Setting up confirmation modal event listeners...');
+  
   
   // Close confirmation modal when clicking outside
   const confirmationModal = document.getElementById('visitConfirmationModal');
-  console.log('Confirmation modal found:', !!confirmationModal);
   if (confirmationModal) {
     // Remove any existing listeners to prevent duplicates
     confirmationModal.removeEventListener('click', handleModalClick);
@@ -2136,7 +2129,6 @@ function setupConfirmationModalEventListeners() {
 
   // Close confirmation modal button
   const closeConfirmationBtn = document.getElementById('closeConfirmationModalBtn');
-  console.log('Close confirmation button found:', !!closeConfirmationBtn);
   if (closeConfirmationBtn) {
     closeConfirmationBtn.removeEventListener('click', handleCloseModal);
     closeConfirmationBtn.addEventListener('click', handleCloseModal);
@@ -2144,7 +2136,6 @@ function setupConfirmationModalEventListeners() {
 
   // Cancel confirmation button
   const cancelConfirmationBtn = document.getElementById('cancelConfirmationBtn');
-  console.log('Cancel confirmation button found:', !!cancelConfirmationBtn);
   if (cancelConfirmationBtn) {
     cancelConfirmationBtn.removeEventListener('click', handleCloseModal);
     cancelConfirmationBtn.addEventListener('click', handleCloseModal);
@@ -2154,8 +2145,7 @@ function setupConfirmationModalEventListeners() {
   const agreementCheckbox = document.getElementById('visitAgreement') as HTMLInputElement;
   const confirmBtn = document.getElementById('confirmScheduleBtn') as HTMLButtonElement;
   
-  console.log('Agreement checkbox found:', !!agreementCheckbox);
-  console.log('Confirm button found:', !!confirmBtn);
+  
   
   if (agreementCheckbox && confirmBtn) {
     agreementCheckbox.removeEventListener('change', handleAgreementChange);
@@ -2179,7 +2169,7 @@ function handleModalClick(e: Event) {
 }
 
 function handleCloseModal() {
-  console.log('Close/Cancel button clicked');
+  
   const modal = document.getElementById('visitConfirmationModal');
   if (modal) {
     modal.classList.add('hidden');
@@ -2196,7 +2186,7 @@ function handleAgreementChange(e: Event) {
 }
 
 async function handleConfirmSchedule() {
-  console.log('Confirm schedule button clicked');
+  
   
   // Get the stored data from the modal instead of reading from form fields
   const modal = document.getElementById('visitConfirmationModal');
@@ -2206,27 +2196,26 @@ async function handleConfirmSchedule() {
   }
 
   const visitData = (modal as any).visitData as VisitConfirmationData;
-  console.log('handleConfirmSchedule - Using stored visit data:', visitData);
+  
 
   // Ensure visitorUserId is properly handled - convert empty string to null
   if (visitData.visitorUserId && visitData.visitorUserId.trim() === '') {
     visitData.visitorUserId = null;
   }
 
-  console.log('handleConfirmSchedule - Final visit data:', visitData);
+  
 
   await scheduleVisitFromConfirmation(visitData);
 }
 
 // Set up confirmation modal event listeners (legacy function for initial setup)
 export function setupConfirmationModalListeners() {
-  console.log('Setting up confirmation modal listeners...');
   // This function is kept for compatibility but the real setup happens when modal is shown
 }
 
 // Test function to manually show confirmation modal (for debugging)
 (window as any).testConfirmationModal = () => {
-  console.log('Testing confirmation modal...');
+  
   const testData: VisitConfirmationData = {
     firstName: 'John',
     lastName: 'Doe',
@@ -2240,7 +2229,7 @@ export function setupConfirmationModalListeners() {
   };
   
   showVisitConfirmationModal(testData);
-  console.log('Confirmation modal should now be visible');
+  
 };
 
 // Function to show visit ID and QR code modal after successful scheduling

@@ -12,3 +12,13 @@ interface ImportMeta {
 	readonly env: ImportMetaEnv;
 }
 
+
+declare global {
+	interface Window {
+		openScheduleModal: () => void;
+		navigateToPage: (path: string) => void;
+	}
+}
+
+export {};
+

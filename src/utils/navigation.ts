@@ -82,7 +82,6 @@ async function getUserData(): Promise<{ user: any; role: string | null }> {
           .single());
         role = roleData?.role || null;
       } catch (error) {
-        console.log('Role not found for user');
       }
     }
 
@@ -115,7 +114,6 @@ async function getUserData(): Promise<{ user: any; role: string | null }> {
     
     return { user, role };
   } catch (error) {
-    console.log('User not authenticated');
     userDataCache = { user: null, role: null };
     userDataCacheTime = now;
     return { user: null, role: null };
@@ -223,13 +221,11 @@ async function performNavigation() {
     let pageContent: string;
     if (pageCache.has(path)) {
       pageContent = pageCache.get(path)!;
-      console.log(`📦 Using cached content for: ${path}`);
     } else {
       pageContent = renderPage(path);
       // Cache non-dynamic pages
       if (!path.startsWith('/gate/')) {
         pageCache.set(path, pageContent);
-        console.log(`💾 Cached new content for: ${path}`);
       }
     }
 

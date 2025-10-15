@@ -5,7 +5,6 @@ class PerformanceMonitor {
 
   startNavigation(path: string) {
     this.startTime = performance.now();
-    console.log(`🚀 Starting navigation to: ${path}`);
   }
 
   endNavigation(path: string) {
@@ -13,17 +12,11 @@ class PerformanceMonitor {
     const duration = endTime - this.startTime;
     this.navigationTimes.set(path, duration);
     
-    console.log(`✅ Navigation to ${path} completed in ${duration.toFixed(2)}ms`);
-    
-    // Log average time for this path
+    // Store timing for this path
     const times = Array.from(this.navigationTimes.entries())
       .filter(([p]) => p === path)
       .map(([, time]) => time);
-    
-    if (times.length > 1) {
-      const average = times.reduce((a, b) => a + b, 0) / times.length;
-      console.log(`📊 Average time for ${path}: ${average.toFixed(2)}ms`);
-    }
+    // Average accessible via getAverageTime()
   }
 
   getAverageTime(path: string): number {
@@ -52,10 +45,10 @@ export function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
-  let timeout: number | null = null;
+  let timeout: ReturnType<typeof setTimeout> | null = null;
   
   return (...args: Parameters<T>) => {
-    if (timeout) clearTimeout(timeout);
+    if (timeout) clearTimeout(timeout as any);
     timeout = setTimeout(() => func(...args), wait);
   };
 }
@@ -81,7 +74,6 @@ export function clearUnusedCache() {
   setTimeout(() => {
     const criticalPages = ['/', '/about', '/contact'];
     // This would be implemented in navigation.ts to clear non-critical cached pages
-    console.log('🧹 Clearing unused page cache');
   }, 300000); // 5 minutes
 }
 
