@@ -106,7 +106,7 @@ export function TrackSchedulePage() {
             <!-- Places to Visit -->
             <div class="mb-6">
               <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Places to Visit</h3>
-              <div id="placesList" class="space-y-3">
+              <div id="visitPlacesList" class="space-y-3">
                 <!-- Places will be populated here -->
               </div>
             </div>
@@ -401,7 +401,7 @@ async function displayVisitDetails(visitData: any) {
 
 // Display places to visit
 function displayPlaces(places: any[]) {
-  const placesList = document.getElementById('placesList');
+  const placesList = document.getElementById('visitPlacesList');
   if (!placesList) return;
 
   if (places.length === 0) {

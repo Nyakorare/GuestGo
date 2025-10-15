@@ -71,7 +71,7 @@ async function getUserData(): Promise<{ user: any; role: string | null }> {
 
   try {
     const { data: { user } } = await import('../config/supabase').then(m => m.default.auth.getUser());
-    let role = null;
+    let role: string | null = null;
     
     if (user) {
       try {
@@ -83,6 +83,29 @@ async function getUserData(): Promise<{ user: any; role: string | null }> {
         role = roleData?.role || null;
       } catch (error) {
         console.log('Role not found for user');
+      }
+    }
+
+    // Fallbacks: try metadata if DB role not found (e.g., deployment without user_roles seeded)
+    if (!role && user) {
+      const metaRole = (user as any)?.user_metadata?.role || (user as any)?.app_metadata?.role;
+      if (metaRole && typeof metaRole === 'string') {
+        role = metaRole;
+      }
+    }
+
+    // Normalize role value
+    if (role && typeof role === 'string') {
+      const normalized = role.toLowerCase();
+      // Map common variants
+      if (normalized === 'logs') {
+        role = 'log';
+      } else if (normalized === 'guards') {
+        role = 'guard';
+      } else if (normalized === 'personel') {
+        role = 'personnel';
+      } else {
+        role = normalized;
       }
     }
 
@@ -162,7 +185,8 @@ async function performNavigation() {
       return;
     }
     
-    if (path === '/track-schedule' && (role === 'log' || role === 'guard' || role === 'personnel')) {
+    // Deny track schedule to logs/log, guard, and personnel roles (accept both variants for logs)
+    if (path === '/track-schedule' && (role === 'log' || role === 'logs' || role === 'guard' || role === 'personnel')) {
       window.location.hash = '/';
       hideLoadingOverlay();
       showNavbar();
