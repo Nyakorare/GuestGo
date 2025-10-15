@@ -107,8 +107,8 @@ export function setupAuthEventListeners() {
             throw new Error('Please verify your email before logging in.');
           }
 
-          // Redirect to dashboard
-          window.location.href = '/dashboard';
+          // Redirect to home (hash route)
+          window.location.hash = '/';
         }
       } catch (err: any) {
         if (errorDiv) {
