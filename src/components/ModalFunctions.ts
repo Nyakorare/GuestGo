@@ -1954,6 +1954,8 @@ export function showVisitConfirmationModal(data: VisitConfirmationData) {
 
   // Show the modal
   modal.classList.remove('hidden');
+  // Reset face verification state for this modal instance
+  (modal as any).faceVerified = false;
   
   // Set up event listeners for this modal instance
   setupConfirmationModalEventListeners();
@@ -2141,15 +2143,15 @@ function setupConfirmationModalEventListeners() {
     cancelConfirmationBtn.addEventListener('click', handleCloseModal);
   }
 
-  // Agreement checkbox - enable/disable confirm button
+  // Agreement checkbox - requires successful face detection before enabling confirm
   const agreementCheckbox = document.getElementById('visitAgreement') as HTMLInputElement;
   const confirmBtn = document.getElementById('confirmScheduleBtn') as HTMLButtonElement;
   
   
   
   if (agreementCheckbox && confirmBtn) {
-    agreementCheckbox.removeEventListener('change', handleAgreementChange);
-    agreementCheckbox.addEventListener('change', handleAgreementChange);
+    agreementCheckbox.removeEventListener('change', handleAgreementChangeWithFace);
+    agreementCheckbox.addEventListener('change', handleAgreementChangeWithFace);
   }
 
   // Confirm schedule button
@@ -2176,12 +2178,35 @@ function handleCloseModal() {
   }
 }
 
-function handleAgreementChange(e: Event) {
+async function handleAgreementChangeWithFace(e: Event) {
   const checkbox = e.target as HTMLInputElement;
   const confirmBtn = document.getElementById('confirmScheduleBtn') as HTMLButtonElement;
+  const modal = document.getElementById('visitConfirmationModal') as HTMLElement | null;
+  if (!confirmBtn || !modal) return;
   console.log('Agreement checkbox changed:', checkbox.checked);
-  if (confirmBtn) {
-    confirmBtn.disabled = !checkbox.checked;
+
+  // Always disable confirm initially until both conditions are true
+  confirmBtn.disabled = true;
+
+  if (!checkbox.checked) {
+    (modal as any).faceVerified = false;
+    return;
+  }
+
+  try {
+    const { openFaceDetectionModal } = await import('../utils/AI-Face-Detection/blazefaceModal');
+    const result = await openFaceDetectionModal();
+    if (result.success) {
+      (modal as any).faceVerified = true;
+      confirmBtn.disabled = false;
+    } else {
+      (modal as any).faceVerified = false;
+      confirmBtn.disabled = true;
+    }
+  } catch (err) {
+    console.error('Face detection failed to start:', err);
+    (modal as any).faceVerified = false;
+    confirmBtn.disabled = true;
   }
 }
 

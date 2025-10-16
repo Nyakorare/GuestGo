@@ -151,10 +151,11 @@ export function DashboardPage() {
         const placesTab = document.getElementById('placesTab');
         const accountsTab = document.getElementById('accountsTab');
         const gatesTab = document.getElementById('gatesTab');
-        const placesContent = document.getElementById('placesContent');
-        const accountsContent = document.getElementById('accountsContent');
-        const logsContent = document.getElementById('logsContent');
-        const gatesContent = document.getElementById('gatesContent');
+    const placesContent = document.getElementById('placesContent');
+    const accountsContent = document.getElementById('accountsContent');
+    const logsContent = document.getElementById('logsContent');
+    const gatesContent = document.getElementById('gatesContent');
+    const feedbackContent = document.getElementById('feedbackContent');
 
         if (roleData.role === 'log') {
           // Only show logs tab and content
@@ -185,6 +186,7 @@ export function DashboardPage() {
           if (accountsContent) accountsContent.classList.add('hidden');
           if (logsContent) logsContent.classList.add('hidden');
           if (gatesContent) gatesContent.classList.add('hidden');
+          if (feedbackContent) feedbackContent.classList.add('hidden');
           
           // Hide visitor content
           const visitorContent = document.getElementById('visitorContent');
@@ -394,6 +396,12 @@ export function DashboardPage() {
                 class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
               >
                 Gates
+              </button>
+              <button 
+                id="feedbackTab"
+                class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+              >
+                Feedback
               </button>
             </div>
             <button 
@@ -687,6 +695,11 @@ export function DashboardPage() {
 
       <div id="gatesContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
         <!-- Gates Management Content will be loaded here -->
+      </div>
+
+      <!-- Feedback Content -->
+      <div id="feedbackContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
+        <!-- Feedback Management Content will be loaded here -->
       </div>
 
       <!-- Personnel Dashboard Content -->
@@ -4235,9 +4248,11 @@ function setupAdminTabEventListeners() {
   const placesTab = document.getElementById('placesTab');
   const accountsTab = document.getElementById('accountsTab');
   const gatesTab = document.getElementById('gatesTab');
+  const feedbackTab = document.getElementById('feedbackTab');
   const placesContent = document.getElementById('placesContent');
   const accountsContent = document.getElementById('accountsContent');
   const gatesContent = document.getElementById('gatesContent');
+  const feedbackContent = document.getElementById('feedbackContent');
 
   // Places tab event listener
   placesTab?.addEventListener('click', () => {
@@ -4247,12 +4262,19 @@ function setupAdminTabEventListeners() {
     accountsTab?.classList.add('bg-gray-100', 'text-gray-700');
     gatesTab?.classList.remove('bg-blue-600', 'text-white');
     gatesTab?.classList.add('bg-gray-100', 'text-gray-700');
+    feedbackTab?.classList.remove('bg-blue-600', 'text-white');
+    feedbackTab?.classList.add('bg-gray-100', 'text-gray-700');
     placesContent?.classList.remove('hidden');
     accountsContent?.classList.add('hidden');
     gatesContent?.classList.add('hidden');
+    feedbackContent?.classList.add('hidden');
     // Clear gates content when switching away
     if (gatesContent) {
       gatesContent.innerHTML = '';
+    }
+    // Clear feedback content when switching away
+    if (feedbackContent) {
+      feedbackContent.innerHTML = '';
     }
     loadPlaces();
   });
@@ -4265,12 +4287,19 @@ function setupAdminTabEventListeners() {
     placesTab?.classList.add('bg-gray-100', 'text-gray-700');
     gatesTab?.classList.remove('bg-blue-600', 'text-white');
     gatesTab?.classList.add('bg-gray-100', 'text-gray-700');
+    feedbackTab?.classList.remove('bg-blue-600', 'text-white');
+    feedbackTab?.classList.add('bg-gray-100', 'text-gray-700');
     accountsContent?.classList.remove('hidden');
     placesContent?.classList.add('hidden');
     gatesContent?.classList.add('hidden');
+    feedbackContent?.classList.add('hidden');
     // Clear gates content when switching away
     if (gatesContent) {
       gatesContent.innerHTML = '';
+    }
+    // Clear feedback content when switching away
+    if (feedbackContent) {
+      feedbackContent.innerHTML = '';
     }
     loadAccounts();
   });
@@ -4283,9 +4312,16 @@ function setupAdminTabEventListeners() {
     placesTab?.classList.add('bg-gray-100', 'text-gray-700');
     accountsTab?.classList.remove('bg-blue-600', 'text-white');
     accountsTab?.classList.add('bg-gray-100', 'text-gray-700');
+    feedbackTab?.classList.remove('bg-blue-600', 'text-white');
+    feedbackTab?.classList.add('bg-gray-100', 'text-gray-700');
     gatesContent?.classList.remove('hidden');
     placesContent?.classList.add('hidden');
     accountsContent?.classList.add('hidden');
+    feedbackContent?.classList.add('hidden');
+    // Clear feedback content when switching away
+    if (feedbackContent) {
+      feedbackContent.innerHTML = '';
+    }
     // Dynamically import and render the Gates tab content
     import('./Gates').then(module => {
       gatesContent.innerHTML = module.renderGates();
@@ -4294,6 +4330,31 @@ function setupAdminTabEventListeners() {
     });
   });
 
+  // Feedback tab event listener
+  feedbackTab?.addEventListener('click', () => {
+    feedbackTab.classList.add('bg-blue-600', 'text-white');
+    feedbackTab.classList.remove('bg-gray-100', 'text-gray-700');
+    placesTab?.classList.remove('bg-blue-600', 'text-white');
+    placesTab?.classList.add('bg-gray-100', 'text-gray-700');
+    accountsTab?.classList.remove('bg-blue-600', 'text-white');
+    accountsTab?.classList.add('bg-gray-100', 'text-gray-700');
+    gatesTab?.classList.remove('bg-blue-600', 'text-white');
+    gatesTab?.classList.add('bg-gray-100', 'text-gray-700');
+    feedbackContent?.classList.remove('hidden');
+    placesContent?.classList.add('hidden');
+    accountsContent?.classList.add('hidden');
+    gatesContent?.classList.add('hidden');
+    // Clear gates content when switching away
+    if (gatesContent) {
+      gatesContent.innerHTML = '';
+    }
+    // Dynamically import and render the Feedback tab content
+    import('./Feedback').then(module => {
+      feedbackContent.innerHTML = module.renderFeedback();
+      // Setup event listeners after rendering
+      module.setupFeedbackEventListeners();
+    });
+  });
 
 }
 // Make function available globally
@@ -9017,6 +9078,22 @@ async function displayVisitorPastVisits(visits: any[]): Promise<void> {
                 </div>
               ` : ''}
             </div>
+            
+            <!-- Feedback Button for Completed Visits -->
+            ${visit.status === 'completed' ? `
+              <div class="mt-4 flex justify-end">
+                <button 
+                  id="feedbackBtn_${visit.id}"
+                  class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onclick="openFeedbackSurvey('${visit.id}', '${visit.visitor_first_name} ${visit.visitor_last_name}', '${visit.visit_date}', ${JSON.stringify(places.map((p: any) => p.place_name)).replace(/"/g, '&quot;')})"
+                >
+                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                  </svg>
+                  Feedback Survey
+                </button>
+              </div>
+            ` : ''}
           </div>
         </div>
       </div>
@@ -9024,6 +9101,12 @@ async function displayVisitorPastVisits(visits: any[]): Promise<void> {
   }
 
   visitorPastVisitsList.innerHTML = visitsHtml;
+  
+  // Update feedback button states for completed visits
+  const completedVisits = visits.filter(visit => visit.status === 'completed');
+  for (const visit of completedVisits) {
+    updateFeedbackButtonState(visit.id);
+  }
 }
 
 // Function to populate place filter options for past visits
@@ -9983,5 +10066,75 @@ async function togglePlaceAvailability(placeId, currentAvailability) {
 }
 (window as any).togglePlaceAvailability = togglePlaceAvailability;
 (window as any).displayFlaggedVisitDetails = displayFlaggedVisitDetails;
+
+// Global function to open feedback survey modal
+(window as any).openFeedbackSurvey = async function(visitId: string, visitorName: string, visitDate: string, places: string[]) {
+  try {
+    // Import the feedback survey modal
+    const { showFeedbackSurveyModal, hasFeedbackForVisit } = await import('../../components/FeedbackSurveyModal');
+    
+    // Check if feedback already exists for this visit
+    const feedbackExists = await hasFeedbackForVisit(visitId);
+    
+    if (feedbackExists) {
+      showNotification('Feedback has already been submitted for this visit.', 'info');
+      return;
+    }
+    
+    // Show the feedback survey modal
+    showFeedbackSurveyModal({
+      visitId,
+      visitorName,
+      visitDate,
+      places
+    });
+    
+  } catch (error) {
+    console.error('Error opening feedback survey:', error);
+    showNotification('Error opening feedback survey. Please try again.', 'error');
+  }
+};
+
+// Function to refresh visitor past visits (for after feedback submission)
+(window as any).refreshVisitorPastVisits = async function() {
+  try {
+    await loadVisitorVisits();
+  } catch (error) {
+    console.error('Error refreshing visitor past visits:', error);
+  }
+};
+
+// Function to update feedback button state
+async function updateFeedbackButtonState(visitId: string) {
+  try {
+    const { hasFeedbackForVisit } = await import('../../components/FeedbackSurveyModal');
+    const feedbackExists = await hasFeedbackForVisit(visitId);
+    const button = document.getElementById(`feedbackBtn_${visitId}`) as HTMLButtonElement;
+    
+    if (button) {
+      if (feedbackExists) {
+        button.disabled = true;
+        button.innerHTML = `
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          Feedback Submitted
+        `;
+        button.className = button.className.replace('bg-blue-600 hover:bg-blue-700', 'bg-green-600');
+      } else {
+        button.disabled = false;
+        button.innerHTML = `
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+          </svg>
+          Feedback Survey
+        `;
+        button.className = button.className.replace('bg-green-600', 'bg-blue-600 hover:bg-blue-700');
+      }
+    }
+  } catch (error) {
+    console.error('Error updating feedback button state:', error);
+  }
+}
 
 export { showNotification };
