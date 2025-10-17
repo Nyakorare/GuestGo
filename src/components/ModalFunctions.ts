@@ -1946,16 +1946,16 @@ export function showVisitConfirmationModal(data: VisitConfirmationData) {
     agreementCheckbox.checked = false;
   }
 
-  // Disable the confirm button initially
+  // Enable confirm button initially (no face detection required here)
   const confirmBtn = document.getElementById('confirmScheduleBtn') as HTMLButtonElement;
   if (confirmBtn) {
-    confirmBtn.disabled = true;
+    confirmBtn.disabled = false;
   }
 
   // Show the modal
   modal.classList.remove('hidden');
-  // Reset face verification state for this modal instance
-  (modal as any).faceVerified = false;
+  // No face verification required in this flow
+  (modal as any).faceVerified = true;
   
   // Set up event listeners for this modal instance
   setupConfirmationModalEventListeners();
@@ -2143,15 +2143,17 @@ function setupConfirmationModalEventListeners() {
     cancelConfirmationBtn.addEventListener('click', handleCloseModal);
   }
 
-  // Agreement checkbox - requires successful face detection before enabling confirm
+  // Agreement checkbox - simply toggles confirm button (no face detection)
   const agreementCheckbox = document.getElementById('visitAgreement') as HTMLInputElement;
   const confirmBtn = document.getElementById('confirmScheduleBtn') as HTMLButtonElement;
-  
-  
-  
   if (agreementCheckbox && confirmBtn) {
-    agreementCheckbox.removeEventListener('change', handleAgreementChangeWithFace);
-    agreementCheckbox.addEventListener('change', handleAgreementChangeWithFace);
+    const onAgreementChange = () => {
+      confirmBtn.disabled = !agreementCheckbox.checked;
+    };
+    agreementCheckbox.removeEventListener('change', onAgreementChange as any);
+    agreementCheckbox.addEventListener('change', onAgreementChange);
+    // Initialize state based on current checkbox
+    confirmBtn.disabled = !agreementCheckbox.checked;
   }
 
   // Confirm schedule button

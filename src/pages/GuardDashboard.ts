@@ -784,9 +784,21 @@ function showGuardVisitConfirmationModal(visitData: VisitQRData) {
 
   closeBtn?.addEventListener('click', closeModal);
   cancelBtn?.addEventListener('click', closeModal);
-  entranceBtn?.addEventListener('click', () => {
-    // Do not close/reset before logging to preserve visit data
-    logGuardAction('entrance', visitData);
+  entranceBtn?.addEventListener('click', async () => {
+    try {
+      // Require face detection before logging entrance
+      const { openFaceDetectionModal } = await import('../utils/AI-Face-Detection/blazefaceModal');
+      const result = await openFaceDetectionModal();
+      if (result && result.success) {
+        // Proceed to log entrance only after successful face capture
+        await logGuardAction('entrance', visitData);
+      } else {
+        showGuardError('Face Required', 'Face detection was not completed. Entrance not logged.');
+      }
+    } catch (e) {
+      console.error('Error starting face detection for entrance:', e);
+      showGuardError('Error', 'Unable to start face detection. Please try again.');
+    }
   });
   tempExitBtn?.addEventListener('click', () => {
     logGuardAction('temporary_exit', visitData);
