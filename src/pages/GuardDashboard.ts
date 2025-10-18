@@ -1,5 +1,5 @@
 import supabase from '../config/supabase';
-import { parseQRCodeData, type VisitQRData } from '../utils/qrCode';
+import { type VisitQRData } from '../utils/qrCode';
 import jsQR from 'jsqr';
 
 export function GuardDashboardPage() {
@@ -118,6 +118,32 @@ export function GuardDashboardPage() {
           </div>
         </div>
 
+        <!-- Manual Visit ID Section -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-6 mb-6">
+          <div class="text-center mb-6">
+            <h2 class="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-2">Manual Visit ID Entry</h2>
+            <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">Enter a visit ID manually if QR scanning is not available</p>
+          </div>
+          
+          <div class="max-w-md mx-auto">
+            <div class="flex flex-col sm:flex-row gap-2">
+              <input 
+                type="text" 
+                id="manualVisitIdInput"
+                placeholder="Enter visit ID (e.g., 123e4567-e89b-12d3-a456-426614174000)"
+                class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white text-sm"
+              />
+              <button 
+                id="manualVisitIdBtn"
+                class="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 font-medium"
+              >
+                Lookup Visit
+              </button>
+            </div>
+            <div id="manualVisitIdError" class="mt-2 text-sm text-red-600 dark:text-red-400 hidden"></div>
+          </div>
+        </div>
+
         <!-- QR Data Preview Section -->
         <div id="guardQrPreviewSection" class="hidden bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-6 mb-6">
           <div class="flex flex-col sm:flex-row justify-between items-center mb-4 space-y-2 sm:space-y-0">
@@ -163,7 +189,6 @@ let guardLastScanTime = 0;
 let guardScanInterval = 100;
 let guardConsecutiveFailures = 0;
 let guardMaxConsecutiveFailures = 10;
-let guardCanvas: HTMLCanvasElement | null = null;
 let guardCtx: CanvasRenderingContext2D | null = null;
 let guardImageData: ImageData | null = null;
 let guardScanCount = 0;
@@ -180,6 +205,8 @@ export function initializeGuardDashboard() {
   const processQRBtn = document.getElementById('guardProcessQRBtn');
   const rescanBtn = document.getElementById('guardRescanBtn');
   const newScanBtn = document.getElementById('guardNewScanBtn');
+  const manualVisitIdBtn = document.getElementById('manualVisitIdBtn');
+  const manualVisitIdInput = document.getElementById('manualVisitIdInput') as HTMLInputElement;
 
   startScanBtn?.addEventListener('click', startGuardScanner);
   stopScanBtn?.addEventListener('click', stopGuardScanner);
@@ -188,11 +215,76 @@ export function initializeGuardDashboard() {
   processQRBtn?.addEventListener('click', processGuardDetectedQR);
   rescanBtn?.addEventListener('click', rescanGuardQR);
   newScanBtn?.addEventListener('click', resetGuardScanner);
+  manualVisitIdBtn?.addEventListener('click', () => handleManualVisitIdLookup());
+  
+  // Allow Enter key to trigger lookup
+  manualVisitIdInput?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      handleManualVisitIdLookup();
+    }
+  });
 
   // Auto-start scanner when page loads
   setTimeout(() => {
     startGuardScanner();
   }, 1000);
+}
+
+// Handle manual visit ID lookup
+async function handleManualVisitIdLookup() {
+  const input = document.getElementById('manualVisitIdInput') as HTMLInputElement;
+  const errorDiv = document.getElementById('manualVisitIdError');
+  const button = document.getElementById('manualVisitIdBtn') as HTMLButtonElement;
+  
+  if (!input || !errorDiv || !button) return;
+  
+  const visitId = input.value.trim();
+  
+  // Clear previous errors
+  errorDiv.classList.add('hidden');
+  errorDiv.textContent = '';
+  
+  // Validate input
+  if (!visitId) {
+    showManualVisitIdError('Please enter a visit ID');
+    return;
+  }
+  
+  // Basic UUID format validation
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(visitId)) {
+    showManualVisitIdError('Please enter a valid visit ID format (UUID)');
+    return;
+  }
+  
+  // Show loading state
+  button.disabled = true;
+  button.textContent = 'Looking up...';
+  
+  try {
+    // Fetch visit data using the same function as QR scanning
+    await fetchGuardVisitData(visitId);
+    
+    // Clear input on success
+    input.value = '';
+    
+  } catch (error) {
+    console.error('Error looking up manual visit ID:', error);
+    showManualVisitIdError('Visit not found or error occurred');
+  } finally {
+    // Reset button state
+    button.disabled = false;
+    button.textContent = 'Lookup Visit';
+  }
+}
+
+// Helper function to show manual visit ID errors
+function showManualVisitIdError(message: string) {
+  const errorDiv = document.getElementById('manualVisitIdError');
+  if (errorDiv) {
+    errorDiv.textContent = message;
+    errorDiv.classList.remove('hidden');
+  }
 }
 
 async function startGuardScanner() {
@@ -218,9 +310,6 @@ async function startGuardScanner() {
         width: { ideal: 1280, max: 1920 },
         height: { ideal: 720, max: 1080 },
         frameRate: { ideal: 30, max: 60 },
-        focusMode: 'continuous',
-        exposureMode: 'continuous',
-        whiteBalanceMode: 'continuous'
       }
     });
 
@@ -786,26 +875,120 @@ function showGuardVisitConfirmationModal(visitData: VisitQRData) {
   cancelBtn?.addEventListener('click', closeModal);
   entranceBtn?.addEventListener('click', async () => {
     try {
+      // Show loading state
+      if (entranceBtn) {
+        entranceBtn.disabled = true;
+        entranceBtn.innerHTML = `
+          <svg class="w-5 h-5 animate-spin mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          Starting Face Detection...
+        `;
+      }
+
       // Require face detection before logging entrance
       const { openFaceDetectionModal } = await import('../utils/AI-Face-Detection/blazefaceModal');
       const result = await openFaceDetectionModal();
-      if (result && result.success) {
-        // Proceed to log entrance only after successful face capture
-        await logGuardAction('entrance', visitData);
+      
+      // Reset button state
+      if (entranceBtn) {
+        entranceBtn.disabled = false;
+        entranceBtn.innerHTML = `
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+          </svg>
+          <span>Log Entrance</span>
+        `;
+      }
+      
+      if (result && result.success && result.croppedImageDataUrl) {
+        // Proceed to log entrance with face image data
+        console.log('Face detection successful, logging entrance with face data:', {
+          hasCroppedImage: !!result.croppedImageDataUrl,
+          confidence: result.confidence,
+          detectionsCount: result.detections?.length || 0
+        });
+        await logGuardActionWithFaceImage('entrance', visitData, result);
       } else {
+        console.log('Face detection failed or incomplete:', result);
         showGuardError('Face Required', 'Face detection was not completed. Entrance not logged.');
       }
     } catch (e) {
       console.error('Error starting face detection for entrance:', e);
+      
+      // Reset button state
+      if (entranceBtn) {
+        entranceBtn.disabled = false;
+        entranceBtn.innerHTML = `
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+          </svg>
+          <span>Log Entrance</span>
+        `;
+      }
+      
       showGuardError('Error', 'Unable to start face detection. Please try again.');
     }
   });
   tempExitBtn?.addEventListener('click', () => {
     logGuardAction('temporary_exit', visitData);
   });
-  exitBtn?.addEventListener('click', () => {
-    // Do not close/reset before logging to preserve visit data
-    logGuardAction('exit', visitData);
+  exitBtn?.addEventListener('click', async () => {
+    try {
+      // Show loading state
+      if (exitBtn) {
+        exitBtn.disabled = true;
+        exitBtn.innerHTML = `
+          <svg class="w-5 h-5 animate-spin mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          Starting Face Detection...
+        `;
+      }
+
+      // Require face detection before logging exit
+      const { openFaceDetectionModal } = await import('../utils/AI-Face-Detection/blazefaceModal');
+      const result = await openFaceDetectionModal();
+      
+      // Reset button state
+      if (exitBtn) {
+        exitBtn.disabled = false;
+        exitBtn.innerHTML = `
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path>
+          </svg>
+          <span>Log Exit</span>
+        `;
+      }
+      
+      if (result && result.success && result.croppedImageDataUrl) {
+        // Proceed to log exit with face image data
+        console.log('Face detection successful, logging exit with face data:', {
+          hasCroppedImage: !!result.croppedImageDataUrl,
+          confidence: result.confidence,
+          detectionsCount: result.detections?.length || 0
+        });
+        await logGuardActionWithFaceImage('exit', visitData, result);
+      } else {
+        console.log('Face detection failed or incomplete:', result);
+        showGuardError('Face Required', 'Face detection was not completed. Exit not logged.');
+      }
+    } catch (e) {
+      console.error('Error starting face detection for exit:', e);
+      
+      // Reset button state
+      if (exitBtn) {
+        exitBtn.disabled = false;
+        exitBtn.innerHTML = `
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path>
+          </svg>
+          <span>Log Exit</span>
+        `;
+      }
+      
+      showGuardError('Error', 'Unable to start face detection. Please try again.');
+    }
   });
   refreshBtn?.addEventListener('click', refreshModal);
 
@@ -954,6 +1137,114 @@ async function logGuardAction(action: 'entrance' | 'exit' | 'temporary_exit', vi
   }
 }
 
+// New function to log guard actions with face image data
+async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitData: VisitQRData, faceResult: any) {
+  try {
+    // Validate face result data
+    if (!faceResult || !faceResult.success) {
+      showGuardError('Invalid Face Data', 'Face detection data is invalid or missing.');
+      return;
+    }
+
+    if (!faceResult.croppedImageDataUrl) {
+      showGuardError('No Face Image', 'Cropped face image is missing. Please retry face detection.');
+      return;
+    }
+
+    console.log(`Logging ${action} with face data:`, {
+      visitId: visitData.visitId,
+      visitorName: visitData.visitorName,
+      hasCroppedImage: !!faceResult.croppedImageDataUrl,
+      confidence: faceResult.confidence,
+      detectionsCount: faceResult.detections?.length || 0
+    });
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      showGuardError('Authentication Required', 'You must be logged in to log actions.');
+      return;
+    }
+
+    // Get the default gate ID (you might want to make this configurable)
+    const { data: gates, error: gatesError } = await supabase
+      .from('gates')
+      .select('id')
+      .eq('gate_type', 'both')
+      .limit(1);
+
+    if (gatesError || !gates || gates.length === 0) {
+      showGuardError('Gate Error', 'No suitable gate found for scanning.');
+      return;
+    }
+
+    const gateId = gates[0].id;
+
+    // Prepare face detection metadata
+    const faceMetadata = {
+      boundingBox: faceResult.detections?.[0] ? {
+        topLeft: faceResult.detections[0].topLeft,
+        bottomRight: faceResult.detections[0].bottomRight
+      } : null,
+      landmarks: faceResult.detections?.[0]?.landmarks || null,
+      timestamp: new Date().toISOString()
+    };
+
+    if (action === 'entrance') {
+      console.log('Calling scan_gate_entrance with face data...');
+      const { error } = await supabase.rpc('scan_gate_entrance', {
+        p_visit_id: visitData.visitId,
+        p_gate_id: gateId,
+        p_scanned_by: user.id,
+        p_face_image_data: faceResult.croppedImageDataUrl,
+        p_face_detection_confidence: faceResult.confidence,
+        p_face_detection_metadata: faceMetadata
+      });
+
+      if (error) {
+        console.error('Error scanning gate entrance with face image:', error);
+        showGuardError('Scanning Error', `Error logging entrance: ${error.message}`);
+        return;
+      }
+      console.log('Entrance logged successfully with face image');
+    } else if (action === 'exit') {
+      console.log('Calling scan_gate_exit with face data...');
+      const { error } = await supabase.rpc('scan_gate_exit', {
+        p_visit_id: visitData.visitId,
+        p_gate_id: gateId,
+        p_scanned_by: user.id,
+        p_face_image_data: faceResult.croppedImageDataUrl,
+        p_face_detection_confidence: faceResult.confidence,
+        p_face_detection_metadata: faceMetadata
+      });
+
+      if (error) {
+        console.error('Error scanning gate exit with face image:', error);
+        showGuardError('Scanning Error', `Error logging exit: ${error.message}`);
+        return;
+      }
+      console.log('Exit logged successfully with face image');
+    }
+
+    // Close modal on successful entrance/exit
+    const openModal = document.getElementById('guardVisitModal');
+    if (openModal) {
+      openModal.remove();
+    }
+
+    // Show success message
+    showGuardSuccess(`${action.charAt(0).toUpperCase() + action.slice(1)} logged successfully for ${visitData.visitorName}!`);
+
+    // Reset scanner after successful logging
+    setTimeout(() => {
+      resetGuardScanner();
+    }, 2000);
+
+  } catch (error) {
+    console.error('Error in logGuardActionWithFaceImage:', error);
+    showGuardError('Error', `Error logging ${action} with face image.`);
+  }
+}
+
 // Helper function to refresh the guard modal with updated data
 async function refreshGuardModal(visitId: string) {
   try {
@@ -963,25 +1254,9 @@ async function refreshGuardModal(visitId: string) {
     await new Promise(resolve => setTimeout(resolve, 500));
     
     // Fetch fresh data from database
-    const updatedVisitData = await fetchGuardVisitData(visitId);
+    await fetchGuardVisitData(visitId);
     
-    if (updatedVisitData) {
-      console.log('Updated visit data:', updatedVisitData);
-      
-      // Remove old modal
-      const oldModal = document.getElementById('guardVisitModal');
-      if (oldModal) {
-        oldModal.remove();
-      }
-      
-      // Show new modal with updated data
-      showGuardVisitConfirmationModal(updatedVisitData);
-      
-      console.log('Guard modal refreshed successfully');
-    } else {
-      console.error('Failed to fetch updated visit data');
-      showGuardModalStatus('Error: Could not refresh visit data', 'error');
-    }
+    console.log('Guard modal refreshed successfully');
   } catch (error) {
     console.error('Error refreshing guard modal:', error);
     showGuardModalStatus('Error refreshing modal', 'error');
