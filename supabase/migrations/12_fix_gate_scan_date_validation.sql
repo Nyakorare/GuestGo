@@ -1,21 +1,8 @@
--- Add face image storage functionality to gate scans
--- This migration adds the ability to store cropped face images captured during entrance/exit scanning
+-- Fix date validation in gate scan functions to use Philippine timezone
+-- This migration fixes the "Visit is not scheduled for today" error by using
+-- the proper Philippine date function instead of CURRENT_DATE
 
--- Add image storage columns to gate_scans table
-ALTER TABLE gate_scans 
-ADD COLUMN IF NOT EXISTS face_image_data TEXT, -- Base64 encoded cropped face image
-ADD COLUMN IF NOT EXISTS face_detection_confidence DECIMAL(5,4), -- Confidence score from face detection
-ADD COLUMN IF NOT EXISTS face_detection_metadata JSONB; -- Additional metadata about the detection
-
--- Add index for face image queries
-CREATE INDEX IF NOT EXISTS idx_gate_scans_face_image ON gate_scans(face_image_data) WHERE face_image_data IS NOT NULL;
-
--- Add comment to document the new fields
-COMMENT ON COLUMN gate_scans.face_image_data IS 'Base64 encoded cropped face image captured during scanning';
-COMMENT ON COLUMN gate_scans.face_detection_confidence IS 'Confidence score from face detection algorithm (0.0 to 1.0)';
-COMMENT ON COLUMN gate_scans.face_detection_metadata IS 'Additional metadata about face detection (bounding box, landmarks, etc.)';
-
--- Update the gate entrance scan function to accept face image data
+-- Update the gate entrance scan function to use Philippine date
 CREATE OR REPLACE FUNCTION public.scan_gate_entrance(
     p_visit_id UUID,
     p_gate_id UUID,
@@ -108,7 +95,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Update the gate exit scan function to accept face image data
+-- Update the gate exit scan function to use Philippine date
 CREATE OR REPLACE FUNCTION public.scan_gate_exit(
     p_visit_id UUID,
     p_gate_id UUID,
@@ -208,63 +195,3 @@ BEGIN
     RETURN TRUE;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Create function to get gate scan with face image data
-CREATE OR REPLACE FUNCTION public.get_gate_scan_with_face_image(p_scan_id UUID)
-RETURNS TABLE (
-    id UUID,
-    visit_id UUID,
-    gate_id UUID,
-    scanned_by UUID,
-    scan_type VARCHAR(50),
-    scanned_at TIMESTAMP WITH TIME ZONE,
-    face_image_data TEXT,
-    face_detection_confidence DECIMAL(5,4),
-    face_detection_metadata JSONB,
-    visitor_name TEXT,
-    gate_name VARCHAR(255)
-) AS $$
-BEGIN
-    RETURN QUERY
-    SELECT 
-        gs.id,
-        gs.visit_id,
-        gs.gate_id,
-        gs.scanned_by,
-        gs.scan_type,
-        gs.scanned_at,
-        gs.face_image_data,
-        gs.face_detection_confidence,
-        gs.face_detection_metadata,
-        (sv.visitor_first_name || ' ' || sv.visitor_last_name)::TEXT as visitor_name,
-        g.name as gate_name
-    FROM gate_scans gs
-    JOIN scheduled_visits sv ON gs.visit_id = sv.id
-    JOIN gates g ON gs.gate_id = g.id
-    WHERE gs.id = p_scan_id;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Add RLS policies for face image data
-ALTER TABLE gate_scans ENABLE ROW LEVEL SECURITY;
-
--- Policy: Users can view gate scans with face images for visits they're involved in
-CREATE POLICY "Users can view gate scans with face images for their visits" ON gate_scans
-    FOR SELECT USING (
-        scanned_by = auth.uid() OR
-        visit_id IN (
-            SELECT id FROM scheduled_visits 
-            WHERE visitor_user_id = auth.uid()
-        )
-    );
-
--- Policy: Guards can insert gate scans with face images
-CREATE POLICY "Guards can insert gate scans with face images" ON gate_scans
-    FOR INSERT WITH CHECK (
-        scanned_by = auth.uid() AND
-        EXISTS (
-            SELECT 1 FROM user_roles 
-            WHERE user_id = auth.uid() 
-            AND role IN ('admin', 'log', 'personnel')
-        )
-    );

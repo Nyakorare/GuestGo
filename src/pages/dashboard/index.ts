@@ -8623,11 +8623,39 @@ async function displayVisitorTodayVisits(visits: any[]): Promise<void> {
                   ${new Date(visit.scheduled_at).toLocaleDateString()} at ${new Date(visit.scheduled_at).toLocaleTimeString()}
                 </span>
               </div>
-              <div>
-                <span class="font-medium text-gray-700 dark:text-gray-300">Duration:</span>
-                <span class="text-gray-600 dark:text-gray-400 ml-2">
-                  ${visit.estimated_duration || 'Not specified'}
-                </span>
+              <div class="flex items-center justify-between">
+                <div>
+                  <span class="font-medium text-gray-700 dark:text-gray-300">Duration:</span>
+                  <span class="text-gray-600 dark:text-gray-400 ml-2">
+                    ${visit.estimated_duration || 'Not specified'}
+                  </span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  ${visit.gate_entrance_scanned ? `
+                    <button 
+                      onclick="showFaceDataModal('${visit.id}', '${visit.visitor_first_name} ${visit.visitor_last_name}', 'entrance')"
+                      class="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full text-xs font-medium hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors duration-200 flex items-center space-x-1"
+                      title="View entrance face data"
+                    >
+                      <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      <span>Entrance</span>
+                    </button>
+                  ` : ''}
+                  ${visit.gate_exit_scanned ? `
+                    <button 
+                      onclick="showFaceDataModal('${visit.id}', '${visit.visitor_first_name} ${visit.visitor_last_name}', 'exit')"
+                      class="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-xs font-medium hover:bg-green-200 dark:hover:bg-green-800 transition-colors duration-200 flex items-center space-x-1"
+                      title="View exit face data"
+                    >
+                      <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      <span>Exit</span>
+                    </button>
+                  ` : ''}
+                </div>
               </div>
             </div>
           </div>
@@ -8904,11 +8932,39 @@ async function displayVisitorFutureVisits(visits: any[]): Promise<void> {
                   ${new Date(visit.scheduled_at).toLocaleDateString()} at ${new Date(visit.scheduled_at).toLocaleTimeString()}
                 </span>
               </div>
-              <div>
-                <span class="font-medium text-gray-700 dark:text-gray-300">Duration:</span>
-                <span class="text-gray-600 dark:text-gray-400 ml-2">
-                  ${visit.estimated_duration || 'Not specified'}
-                </span>
+              <div class="flex items-center justify-between">
+                <div>
+                  <span class="font-medium text-gray-700 dark:text-gray-300">Duration:</span>
+                  <span class="text-gray-600 dark:text-gray-400 ml-2">
+                    ${visit.estimated_duration || 'Not specified'}
+                  </span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  ${visit.gate_entrance_scanned ? `
+                    <button 
+                      onclick="showFaceDataModal('${visit.id}', '${visit.visitor_first_name} ${visit.visitor_last_name}', 'entrance')"
+                      class="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full text-xs font-medium hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors duration-200 flex items-center space-x-1"
+                      title="View entrance face data"
+                    >
+                      <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      <span>Entrance</span>
+                    </button>
+                  ` : ''}
+                  ${visit.gate_exit_scanned ? `
+                    <button 
+                      onclick="showFaceDataModal('${visit.id}', '${visit.visitor_first_name} ${visit.visitor_last_name}', 'exit')"
+                      class="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-xs font-medium hover:bg-green-200 dark:hover:bg-green-800 transition-colors duration-200 flex items-center space-x-1"
+                      title="View exit face data"
+                    >
+                      <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      <span>Exit</span>
+                    </button>
+                  ` : ''}
+                </div>
               </div>
             </div>
           </div>
@@ -9070,11 +9126,39 @@ async function displayVisitorPastVisits(visits: any[]): Promise<void> {
                 </span>
               </div>
               ${visit.completed_at ? `
-                <div>
-                  <span class="font-medium text-gray-700 dark:text-gray-300">Completed:</span>
-                  <span class="text-gray-600 dark:text-gray-400 ml-2">
-                    ${new Date(visit.completed_at).toLocaleDateString()} at ${new Date(visit.completed_at).toLocaleTimeString()}
-                  </span>
+                <div class="flex items-center justify-between">
+                  <div>
+                    <span class="font-medium text-gray-700 dark:text-gray-300">Completed:</span>
+                    <span class="text-gray-600 dark:text-gray-400 ml-2">
+                      ${new Date(visit.completed_at).toLocaleDateString()} at ${new Date(visit.completed_at).toLocaleTimeString()}
+                    </span>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    ${visit.gate_entrance_scanned ? `
+                      <button 
+                        onclick="showFaceDataModal('${visit.id}', '${visit.visitor_first_name} ${visit.visitor_last_name}', 'entrance')"
+                        class="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full text-xs font-medium hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors duration-200 flex items-center space-x-1"
+                        title="View entrance face data"
+                      >
+                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        <span>Entrance</span>
+                      </button>
+                    ` : ''}
+                    ${visit.gate_exit_scanned ? `
+                      <button 
+                        onclick="showFaceDataModal('${visit.id}', '${visit.visitor_first_name} ${visit.visitor_last_name}', 'exit')"
+                        class="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-xs font-medium hover:bg-green-200 dark:hover:bg-green-800 transition-colors duration-200 flex items-center space-x-1"
+                        title="View exit face data"
+                      >
+                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        <span>Exit</span>
+                      </button>
+                    ` : ''}
+                  </div>
                 </div>
               ` : ''}
             </div>
@@ -9745,19 +9829,47 @@ function ensureHistoryModalExists() {
                 <div class="space-y-2 text-sm">
                   <div class="flex items-center justify-between">
                     <span class="font-medium text-gray-700 dark:text-gray-300">Entrance Gate:</span>
-                    <span class="px-2 py-1 rounded-full text-xs font-medium ${
-                      visit.gate_entrance_scanned ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-                    }">
-                      ${visit.gate_entrance_scanned ? '✓ Scanned' : '⏳ Pending'}
-                    </span>
+                    <div class="flex items-center space-x-2">
+                      <span class="px-2 py-1 rounded-full text-xs font-medium ${
+                        visit.gate_entrance_scanned ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                      }">
+                        ${visit.gate_entrance_scanned ? '✓ Scanned' : '⏳ Pending'}
+                      </span>
+                      ${visit.gate_entrance_scanned ? `
+                        <button 
+                          onclick="showFaceDataModal('${visit.id}', '${visit.visitor_first_name} ${visit.visitor_last_name}', 'entrance')"
+                          class="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full text-xs font-medium hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors duration-200 flex items-center space-x-1"
+                          title="View face data from entrance scan"
+                        >
+                          <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                          <span>Face Data</span>
+                        </button>
+                      ` : ''}
+                    </div>
                   </div>
                   <div class="flex items-center justify-between">
                     <span class="font-medium text-gray-700 dark:text-gray-300">Exit Gate:</span>
-                    <span class="px-2 py-1 rounded-full text-xs font-medium ${
-                      visit.gate_exit_scanned ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                    }">
-                      ${visit.gate_exit_scanned ? '✓ Scanned' : '❌ Not Scanned'}
-                    </span>
+                    <div class="flex items-center space-x-2">
+                      <span class="px-2 py-1 rounded-full text-xs font-medium ${
+                        visit.gate_exit_scanned ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                      }">
+                        ${visit.gate_exit_scanned ? '✓ Scanned' : '❌ Not Scanned'}
+                      </span>
+                      ${visit.gate_exit_scanned ? `
+                        <button 
+                          onclick="showFaceDataModal('${visit.id}', '${visit.visitor_first_name} ${visit.visitor_last_name}', 'exit')"
+                          class="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full text-xs font-medium hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors duration-200 flex items-center space-x-1"
+                          title="View face data from exit scan"
+                        >
+                          <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                          <span>Face Data</span>
+                        </button>
+                      ` : ''}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -10136,5 +10248,30 @@ async function updateFeedbackButtonState(visitId: string) {
     console.error('Error updating feedback button state:', error);
   }
 }
+
+// Function to show face data modal
+(window as any).showFaceDataModal = async function(visitId: string, visitorName: string, scanType: 'entrance' | 'exit') {
+  try {
+    // Import the face data modal component
+    const { createFaceDataModal } = await import('../../components/FaceDataModal');
+    
+    // Create and show the modal
+    const modal = createFaceDataModal({
+      visitId,
+      visitorName,
+      scanType,
+      onClose: () => {
+        console.log('Face data modal closed');
+      }
+    });
+    
+    // Add modal to the page
+    document.body.appendChild(modal);
+    
+  } catch (error) {
+    console.error('Error opening face data modal:', error);
+    showNotification('Error opening face data. Please try again.', 'error');
+  }
+};
 
 export { showNotification };

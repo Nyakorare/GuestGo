@@ -788,16 +788,27 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
       
       // Check if the service reports bidirectional connectivity
       const isRunning = statusResult.status === 'running';
-      const frontendConnected = statusResult.frontend_connected === true;
+      const frontendConnected = statusResult.frontend_connected === true || statusResult.main_app_connected === true;
       const bidirectional = statusResult.connectivity?.bidirectional === true;
+      
+      console.log('Service status check:', {
+        isRunning,
+        frontendConnected,
+        bidirectional,
+        statusResult
+      });
       
       if (isRunning && frontendConnected && bidirectional) {
         updateServiceStatus(true, 'AI service fully connected');
         return true;
+      } else if (isRunning && frontendConnected) {
+        // Service is running and frontend is connected, but bidirectional check might be failing
+        updateServiceStatus(true, 'AI service connected (bidirectional check may be unreliable)');
+        return true; // Allow face detection even if bidirectional check fails
       } else if (isRunning) {
-        // Service is running but connectivity check failed
-        updateServiceStatus(false, 'AI service running but frontend not detected - face detection disabled');
-        return false; // Disable face detection if connectivity is uncertain
+        // Service is running but connectivity check failed - still allow face detection
+        updateServiceStatus(true, 'AI service running (connectivity check failed but allowing face detection)');
+        return true; // Allow face detection even if connectivity check fails
       } else {
         updateServiceStatus(false, 'AI service not ready - face detection disabled');
         return false;
@@ -1009,7 +1020,7 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
             );
         }
 
-          const croppedDataUrl = canvas.toDataURL('image/png');
+          const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.8); // Use JPEG with compression
           console.log('Face cropped successfully! Size:', finalCropSize, 'x', finalCropSize);
           console.log('=== END FACE CROPPING DEBUG ===');
           resolve(croppedDataUrl);

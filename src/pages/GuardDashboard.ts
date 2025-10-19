@@ -872,7 +872,10 @@ function showGuardVisitConfirmationModal(visitData: VisitQRData) {
   };
 
   closeBtn?.addEventListener('click', closeModal);
-  cancelBtn?.addEventListener('click', closeModal);
+  cancelBtn?.addEventListener('click', () => {
+    // Refresh the page when cancel is pressed
+    window.location.reload();
+  });
   entranceBtn?.addEventListener('click', async () => {
     try {
       // Show loading state
@@ -1179,6 +1182,10 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
 
     const gateId = gates[0].id;
 
+    // Process face image for storage (compress and encrypt)
+    const { processFaceImageForStorage } = await import('../utils/imageCompression');
+    const processedFaceImage = await processFaceImageForStorage(faceResult.croppedImageDataUrl);
+
     // Prepare face detection metadata
     const faceMetadata = {
       boundingBox: faceResult.detections?.[0] ? {
@@ -1186,7 +1193,9 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
         bottomRight: faceResult.detections[0].bottomRight
       } : null,
       landmarks: faceResult.detections?.[0]?.landmarks || null,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      originalSize: faceResult.croppedImageDataUrl.length,
+      compressedSize: processedFaceImage.length
     };
 
     if (action === 'entrance') {
@@ -1195,7 +1204,7 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
         p_visit_id: visitData.visitId,
         p_gate_id: gateId,
         p_scanned_by: user.id,
-        p_face_image_data: faceResult.croppedImageDataUrl,
+        p_face_image_data: processedFaceImage,
         p_face_detection_confidence: faceResult.confidence,
         p_face_detection_metadata: faceMetadata
       });
@@ -1212,7 +1221,7 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
         p_visit_id: visitData.visitId,
         p_gate_id: gateId,
         p_scanned_by: user.id,
-        p_face_image_data: faceResult.croppedImageDataUrl,
+        p_face_image_data: processedFaceImage,
         p_face_detection_confidence: faceResult.confidence,
         p_face_detection_metadata: faceMetadata
       });
