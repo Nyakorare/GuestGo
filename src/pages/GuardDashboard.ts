@@ -1215,6 +1215,18 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
         return;
       }
       console.log('Entrance logged successfully with face image');
+
+      // Also log the guard action for scan history
+      const { error: guardLogError } = await supabase.rpc('log_guard_action', {
+        p_visit_id: visitData.visitId,
+        p_action: 'entrance',
+        p_guard_id: user.id
+      });
+
+      if (guardLogError) {
+        console.error('Error logging guard action:', guardLogError);
+        // Non-fatal error, continue
+      }
     } else if (action === 'exit') {
       console.log('Calling scan_gate_exit with face data...');
       const { error } = await supabase.rpc('scan_gate_exit', {
@@ -1232,6 +1244,18 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
         return;
       }
       console.log('Exit logged successfully with face image');
+
+      // Also log the guard action for scan history
+      const { error: guardLogError } = await supabase.rpc('log_guard_action', {
+        p_visit_id: visitData.visitId,
+        p_action: 'exit',
+        p_guard_id: user.id
+      });
+
+      if (guardLogError) {
+        console.error('Error logging guard action:', guardLogError);
+        // Non-fatal error, continue
+      }
     }
 
     // Close modal on successful entrance/exit

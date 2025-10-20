@@ -1,6 +1,8 @@
--- Ensure temporary_exit -> completed_flagged at EOD also fails pending places
+-- Fix end of day marking logic to properly categorize visits
+-- Issue: Visits with entrance scanned but not all places completed were being marked as unsuccessful
+-- Fix: Only mark as unsuccessful if no entrance scan, mark as completed_flagged if entrance scanned but not completed
 
--- Recreate update_visit_statuses to include place updates for temporary_exit cases
+-- Recreate update_visit_statuses with corrected logic
 DROP FUNCTION IF EXISTS public.update_visit_statuses() CASCADE;
 
 CREATE OR REPLACE FUNCTION public.update_visit_statuses()
@@ -99,30 +101,7 @@ BEGIN
 	)
 	AND status = 'pending';
 
-	-- 3. Mark remaining past visits as unsuccessful
-	-- These are visits that:
-	-- 1. Are from past dates, OR
-	-- 2. Are from today but past end of day AND did not scan an entrance gate
-	UPDATE scheduled_visits 
-	SET 
-		status = 'unsuccessful',
-		completed_at = philippine_timestamp,
-		completed_by = NULL -- System action
-	WHERE status = 'pending' 
-	  AND (
-		  -- Past dates
-		  visit_date < philippine_date
-		  OR
-		  -- Today but past end of day AND did not scan entrance gate
-		  (visit_date = philippine_date 
-		   AND philippine_timestamp::TIME > end_of_day_time
-		   AND (gate_fields_exist AND gate_entrance_scanned = FALSE))
-	  );
-
-	GET DIAGNOSTICS additional_affected_rows = ROW_COUNT;
-	affected_rows := affected_rows + additional_affected_rows;
-
-	-- 3b. Mark visits with entrance scanned but not all places completed as completed_flagged
+	-- 3. Mark visits with entrance scanned but not all places completed as completed_flagged
 	-- These are visits that:
 	-- 1. Are from today but past end of day
 	-- 2. Have entrance scanned (process started)
@@ -159,7 +138,30 @@ BEGIN
 		affected_rows := affected_rows + additional_affected_rows;
 	END IF;
 
-	-- 4. Mark places as failed for visits that were just marked as unsuccessful or completed_flagged
+	-- 4. Mark remaining past visits as unsuccessful
+	-- These are visits that:
+	-- 1. Are from past dates, OR
+	-- 2. Are from today but past end of day AND did not scan an entrance gate
+	UPDATE scheduled_visits 
+	SET 
+		status = 'unsuccessful',
+		completed_at = philippine_timestamp,
+		completed_by = NULL -- System action
+	WHERE status = 'pending' 
+	  AND (
+		  -- Past dates
+		  visit_date < philippine_date
+		  OR
+		  -- Today but past end of day AND did not scan entrance gate
+		  (visit_date = philippine_date 
+		   AND philippine_timestamp::TIME > end_of_day_time
+		   AND (gate_fields_exist AND gate_entrance_scanned = FALSE))
+	  );
+
+	GET DIAGNOSTICS additional_affected_rows = ROW_COUNT;
+	affected_rows := affected_rows + additional_affected_rows;
+
+	-- 5. Mark places as failed for visits that were just marked as unsuccessful or completed_flagged
 	UPDATE scheduled_visit_places 
 	SET 
 		status = 'failed',
@@ -172,7 +174,7 @@ BEGIN
 	)
 	AND status = 'pending';
 
-	-- 5. Log completed_flagged visits
+	-- 6. Log completed_flagged visits
 	FOR visit_record IN 
 		SELECT id, visitor_user_id, visitor_role, visit_date, gate_entrance_scanned, gate_exit_scanned
 		FROM scheduled_visits 
@@ -250,7 +252,7 @@ BEGIN
 		END IF;
 	END LOOP;
 
-	-- 6. Log unsuccessful visits
+	-- 7. Log unsuccessful visits
 	FOR visit_record IN 
 		SELECT id, visitor_user_id, visitor_role, visit_date, gate_entrance_scanned, gate_exit_scanned
 		FROM scheduled_visits 
@@ -356,5 +358,3 @@ BEGIN
 	)::TEXT;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-
-
