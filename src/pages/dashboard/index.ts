@@ -753,26 +753,26 @@ export function DashboardPage() {
               >
                 <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="statusActionsDropdownBtn">
                   <button 
-                    id="updateStatusesBtn"
+                    id="manualStatusUpdateBtn"
                     class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
                     role="menuitem"
-                    title="Update visit statuses (auto-mark completed_flagged and unsuccessful)"
+                    title="Manually trigger status updates for past visits"
                   >
-                    <svg class="w-4 h-4 inline mr-2 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    <svg class="w-4 h-4 inline mr-2 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                     </svg>
                     Update Statuses
                   </button>
                   <button 
-                    id="forceUpdateStatusesBtn"
+                    id="debugVisitBtn"
                     class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
                     role="menuitem"
-                    title="Force update all visit statuses immediately (for testing)"
+                    title="Debug specific visit (geko_041702@yahoo.com)"
                   >
-                    <svg class="w-4 h-4 inline mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    <svg class="w-4 h-4 inline mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                     </svg>
-                    Force Update
+                    Debug Visit
                   </button>
                   <button 
                     id="checkStatusesBtn"
@@ -3238,21 +3238,22 @@ function setupDashboardEventListeners() {
     });
   }
 
-  // Update visit statuses button
-  const updateStatusesBtn = document.getElementById('updateStatusesBtn');
-  if (updateStatusesBtn) {
-    updateStatusesBtn.addEventListener('click', async () => {
+
+  // Manual status update button
+  const manualStatusUpdateBtn = document.getElementById('manualStatusUpdateBtn');
+  if (manualStatusUpdateBtn) {
+    manualStatusUpdateBtn.addEventListener('click', async () => {
       try {
         // Show loading state
-        (updateStatusesBtn as HTMLButtonElement).disabled = true;
-        updateStatusesBtn.innerHTML = `
-          <svg class="w-4 h-4 inline mr-2 text-orange-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        (manualStatusUpdateBtn as HTMLButtonElement).disabled = true;
+        manualStatusUpdateBtn.innerHTML = `
+          <svg class="w-4 h-4 inline mr-2 text-yellow-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
           </svg>
           Updating...`;
         
-        // Update visit statuses
-        await updateVisitStatuses();
+        // Force update visit statuses
+        await forceUpdateVisitStatuses();
         
         // Show success notification
         showNotification('Visit statuses updated successfully!', 'success');
@@ -3261,45 +3262,43 @@ function setupDashboardEventListeners() {
         showNotification('Error updating visit statuses. Please try again.', 'error');
       } finally {
         // Reset button state
-        (updateStatusesBtn as HTMLButtonElement).disabled = false;
-        updateStatusesBtn.innerHTML = `
-          <svg class="w-4 h-4 inline mr-2 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        (manualStatusUpdateBtn as HTMLButtonElement).disabled = false;
+        manualStatusUpdateBtn.innerHTML = `
+          <svg class="w-4 h-4 inline mr-2 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
           </svg>
           Update Statuses`;
       }
     });
   }
 
-  // Force update visit statuses button
-  const forceUpdateStatusesBtn = document.getElementById('forceUpdateStatusesBtn');
-  if (forceUpdateStatusesBtn) {
-    forceUpdateStatusesBtn.addEventListener('click', async () => {
+  // Debug visit button
+  const debugVisitBtn = document.getElementById('debugVisitBtn');
+  if (debugVisitBtn) {
+    debugVisitBtn.addEventListener('click', async () => {
       try {
         // Show loading state
-        (forceUpdateStatusesBtn as HTMLButtonElement).disabled = true;
-        forceUpdateStatusesBtn.innerHTML = `
-          <svg class="w-4 h-4 inline mr-2 text-red-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        (debugVisitBtn as HTMLButtonElement).disabled = true;
+        debugVisitBtn.innerHTML = `
+          <svg class="w-4 h-4 inline mr-2 text-blue-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
           </svg>
-          Force Updating...`;
+          Debugging...`;
         
-        // Force update visit statuses
-        await forceUpdateVisitStatuses();
+        // Debug specific visit
+        await debugSpecificVisit();
         
-        // Show success notification
-        showNotification('Visit statuses force updated successfully!', 'success');
       } catch (error) {
-        console.error('Error force updating visit statuses:', error);
-        showNotification('Error force updating visit statuses. Please try again.', 'error');
+        console.error('Error debugging visit:', error);
+        showNotification('Error debugging visit. Please try again.', 'error');
       } finally {
         // Reset button state
-        (forceUpdateStatusesBtn as HTMLButtonElement).disabled = false;
-        forceUpdateStatusesBtn.innerHTML = `
-          <svg class="w-4 h-4 inline mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+        (debugVisitBtn as HTMLButtonElement).disabled = false;
+        debugVisitBtn.innerHTML = `
+          <svg class="w-4 h-4 inline mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
           </svg>
-          Force Update`;
+          Debug Visit`;
       }
     });
   }
@@ -4238,9 +4237,14 @@ setTimeout(() => {
   setupDashboardEventListeners();
 }, 100);
 
+// Make functions available globally
+(window as any).forceUpdateVisitStatuses = forceUpdateVisitStatuses;
+(window as any).debugSpecificVisit = debugSpecificVisit;
+
 // Cleanup auto-refresh when page is unloaded
 window.addEventListener('beforeunload', () => {
   stopVisitsAutoRefresh();
+  stopAutomaticStatusUpdates();
 });
 
 // Add admin tab switching event listeners
@@ -5453,71 +5457,87 @@ function stopVisitsAutoRefresh() {
   }
 }
 
+// Global variable to track the status update interval
+let statusUpdateInterval: any = null;
+
 // Function to start automatic status updates
 function startAutomaticStatusUpdates() {
-  // Automatic status updates initialized
+  // Clear existing interval if any
+  if (statusUpdateInterval) {
+    clearInterval(statusUpdateInterval);
+  }
   
-  // Update statuses every 2 minutes (120000 ms) for more responsive updates
-  setInterval(async () => {
+  console.log('Starting automatic status updates...');
+  
+  // Update statuses every 1 minute for more responsive updates
+  statusUpdateInterval = setInterval(async () => {
     try {
-      // Automatic status update tick
+      console.log('Running automatic status update...');
       const result = await updateVisitStatuses();
       console.log('Automatic status update completed:', result);
     } catch (error) {
       console.error('Error in automatic status update:', error);
     }
-  }, 120000); // 2 minutes
+  }, 60000); // 1 minute
   
   // Also run an immediate update when starting
   setTimeout(async () => {
     try {
-      // Initial status update tick
+      console.log('Running initial status update...');
       await updateVisitStatuses();
     } catch (error) {
       console.error('Error in initial status update:', error);
     }
-  }, 5000); // 5 seconds after starting
+  }, 2000); // 2 seconds after starting
 }
+
+// Function to stop automatic status updates
+function stopAutomaticStatusUpdates() {
+  if (statusUpdateInterval) {
+    clearInterval(statusUpdateInterval);
+    statusUpdateInterval = null;
+    console.log('Stopped automatic status updates');
+  }
+}
+
 
 // Function to automatically update visit statuses (runs the consolidated status system)
 async function updateVisitStatuses() {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.error('No user found');
-      return;
-    }
-
-    // Check if the user has admin or personnel role
-    const { data: roleData, error: roleError } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
-
-    if (roleError) {
-      console.error('Error checking user role:', roleError);
-      return;
-    }
-
-    if (roleData?.role !== 'admin' && roleData?.role !== 'personnel') {
-      console.log('User does not have admin or personnel role:', roleData?.role);
-      return;
-    }
-
-    // Call the consolidated status update function directly
-    const { data, error } = await supabase.rpc('update_visit_statuses');
+    console.log('Calling status update function...');
     
-    if (error) {
-      console.error('Error updating visit statuses:', error);
-      return;
+    // Try the simple fix function first
+    const { data: fixData, error: fixError } = await supabase.rpc('fix_pending_past_visits');
+    
+    if (fixError) {
+      console.error('Error with fix_pending_past_visits:', fixError);
+      
+      // Fallback to the public status update function
+      const { data: publicData, error: publicError } = await supabase.rpc('update_visit_statuses_public');
+      
+      if (publicError) {
+        console.error('Error with update_visit_statuses_public:', publicError);
+        return;
+      }
+      
+      console.log('Visit statuses updated successfully (fallback):', publicData);
+    } else {
+      console.log('Visit statuses updated successfully (fix):', fixData);
     }
-
-    console.log('Visit statuses updated successfully:', data);
     
     // Reload the visits to reflect the changes
+    console.log('Reloading scheduled visits...');
     await loadScheduledVisits();
+    
+    console.log('Reloading finished schedules...');
     await loadFinishedSchedules();
+    
+    // Also refresh the current view if we're on the visits tab
+    const visitsContent = document.getElementById('visitsContent');
+    if (visitsContent && !visitsContent.classList.contains('hidden')) {
+      console.log('Refreshing visits view...');
+      await applyVisitsFilters();
+    }
     
   } catch (error) {
     console.error('Error in updateVisitStatuses:', error);
@@ -5527,31 +5547,10 @@ async function updateVisitStatuses() {
 // Function to force update all visit statuses immediately (for testing and immediate updates)
 async function forceUpdateVisitStatuses() {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.error('No user found');
-      return;
-    }
-
-    // Check if the user has admin or personnel role
-    const { data: roleData, error: roleError } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
-
-    if (roleError) {
-      console.error('Error checking user role:', roleError);
-      return;
-    }
-
-    if (roleData?.role !== 'admin' && roleData?.role !== 'personnel') {
-      console.log('User does not have admin or personnel role:', roleData?.role);
-      return;
-    }
-
-    // Call the force update function
-    const { data, error } = await supabase.rpc('force_update_all_visit_statuses');
+    console.log('Force updating visit statuses...');
+    
+    // Use the simple fix function
+    const { data, error } = await supabase.rpc('fix_pending_past_visits');
     
     if (error) {
       console.error('Error force updating visit statuses:', error);
@@ -5564,8 +5563,41 @@ async function forceUpdateVisitStatuses() {
     await loadScheduledVisits();
     await loadFinishedSchedules();
     
+    // Also refresh the current view if we're on the visits tab
+    const visitsContent = document.getElementById('visitsContent');
+    if (visitsContent && !visitsContent.classList.contains('hidden')) {
+      await applyVisitsFilters();
+    }
+    
   } catch (error) {
     console.error('Error in forceUpdateVisitStatuses:', error);
+  }
+}
+
+// Function to debug a specific visit
+async function debugSpecificVisit() {
+  try {
+    console.log('Debugging specific visit...');
+    
+    // Use the debug function from the migration
+    const { data, error } = await supabase.rpc('debug_visit', {
+      visit_email: 'geko_041702@yahoo.com'
+    });
+    
+    if (error) {
+      console.error('Error debugging visit:', error);
+      showNotification('Error debugging visit: ' + error.message, 'error');
+      return;
+    }
+
+    console.log('Visit debug info:', data);
+    
+    // Show the debug info in a modal or alert
+    alert('Visit Debug Info:\n\n' + data);
+    
+  } catch (error) {
+    console.error('Error in debugSpecificVisit:', error);
+    showNotification('Error debugging visit', 'error');
   }
 }
 
