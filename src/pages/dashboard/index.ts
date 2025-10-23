@@ -79,6 +79,7 @@ const LOGS_TAB_ACTIONS = {
     { value: 'gate_exit_scan', label: 'Gate Exit Scan' },
     { value: 'visit_flagged_no_exit', label: 'Visit Flagged (No Exit)' },
     { value: 'visit_temporary_exit', label: 'Visit Temporary Exit' },
+    { value: 'visit_feedback_submitted', label: 'Visit Feedback Submitted' },
     { value: 'role_change', label: 'Role Change' },
   ],
   gate: [
@@ -114,12 +115,17 @@ const LOGS_TAB_ACTIONS = {
     { value: 'gate_exit_scan', label: 'Gate Exit Scan' },
     { value: 'visit_flagged_no_exit', label: 'Visit Flagged (No Exit)' },
     { value: 'visit_temporary_exit', label: 'Visit Temporary Exit' },
+    { value: 'visit_feedback_submitted', label: 'Visit Feedback Submitted' },
   ],
   personnel: [
     { value: 'all', label: 'All Actions' },
     { value: 'personnel_assignment', label: 'Personnel Assignment' },
     { value: 'personnel_removal', label: 'Personnel Removal' },
     { value: 'personnel_availability_change', label: 'Personnel Availability Change' },
+  ],
+  feedback: [
+    { value: 'all', label: 'All Actions' },
+    { value: 'visit_feedback_submitted', label: 'Visit Feedback Submitted' },
   ],
 };
 
@@ -164,10 +170,12 @@ export function DashboardPage() {
           if (placesTab) placesTab.classList.add('hidden');
           if (accountsTab) accountsTab.classList.add('hidden');
           if (gatesTab) gatesTab.classList.add('hidden');
+          if (feedbackTab) feedbackTab.classList.add('hidden');
           if (placesContent) placesContent.classList.add('hidden');
           if (accountsContent) accountsContent.classList.add('hidden');
           if (logsContent) logsContent.classList.remove('hidden');
           if (gatesContent) gatesContent.classList.add('hidden');
+          if (feedbackContent) feedbackContent.classList.add('hidden');
           
           // Hide visitor content
           const visitorContent = document.getElementById('visitorContent');
@@ -546,6 +554,7 @@ export function DashboardPage() {
             <button id="logsTabPersonnel" class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm">Personnel</button>
             <button id="logsTabAccount" class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm">Account</button>
             <button id="logsTabSchedules" class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm">Schedules</button>
+            <button id="logsTabFeedback" class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm">Feedback</button>
           </div>
 
           <!-- Filters Section -->
@@ -2901,6 +2910,33 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
         
         return `<div><span class="font-medium">Visitor:</span> ${visitorName}</div><div><span class="font-medium">Visit ID:</span> ${visitId}</div><div><span class="font-medium">Temporary Exit Time:</span> <span class="text-blue-600 dark:text-blue-400 font-semibold">${timestamp}</span></div><div><span class="font-medium">Processed by Guard:</span> ${guardId}</div>`;
       }
+      case 'visit_feedback_submitted': {
+        const visitorName = parsedDetails.visitor_name || 'Unknown Visitor';
+        const visitorEmail = parsedDetails.visitor_email || 'Unknown Email';
+        const visitId = parsedDetails.visit_id ? parsedDetails.visit_id.substring(0, 8) + '...' : 'Unknown';
+        const feedbackId = parsedDetails.feedback_id ? parsedDetails.feedback_id.substring(0, 8) + '...' : 'Unknown';
+        const overallSatisfaction = parsedDetails.overall_satisfaction || 'Not rated';
+        const hasComments = parsedDetails.has_comments ? 'Yes' : 'No';
+        
+        // Create satisfaction rating display
+        let satisfactionDisplay = '';
+        if (typeof overallSatisfaction === 'number' && overallSatisfaction >= 1 && overallSatisfaction <= 5) {
+          const stars = '★'.repeat(overallSatisfaction) + '☆'.repeat(5 - overallSatisfaction);
+          const satisfactionClass = overallSatisfaction >= 4 ? 'text-green-600 dark:text-green-400' : 
+                                   overallSatisfaction >= 3 ? 'text-yellow-600 dark:text-yellow-400' : 
+                                   'text-red-600 dark:text-red-400';
+          satisfactionDisplay = `<span class="${satisfactionClass} font-semibold">${stars} (${overallSatisfaction}/5)</span>`;
+        } else {
+          satisfactionDisplay = `<span class="text-gray-600 dark:text-gray-400">${overallSatisfaction}</span>`;
+        }
+        
+        return `<div><span class="font-medium">Visitor:</span> <span class="font-semibold">${visitorName}</span></div>
+                <div><span class="font-medium">Email:</span> <span class="text-sm text-gray-600 dark:text-gray-400">${visitorEmail}</span></div>
+                <div><span class="font-medium">Visit ID:</span> ${visitId}</div>
+                <div><span class="font-medium">Feedback ID:</span> ${feedbackId}</div>
+                <div><span class="font-medium">Overall Satisfaction:</span> ${satisfactionDisplay}</div>
+                <div><span class="font-medium">Has Comments:</span> <span class="${hasComments === 'Yes' ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}">${hasComments}</span></div>`;
+      }
       default:
         return `<pre class="text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto">${JSON.stringify(parsedDetails, null, 2)}</pre>`;
     }
@@ -4009,7 +4045,8 @@ function setupDashboardEventListeners() {
   const logsTabPersonnel = document.getElementById('logsTabPersonnel');
   const logsTabAccount = document.getElementById('logsTabAccount');
   const logsTabSchedules = document.getElementById('logsTabSchedules');
-  const logsTabButtons = [logsTabAll, logsTabGate, logsTabPlace, logsTabPersonnel, logsTabAccount, logsTabSchedules];
+  const logsTabFeedback = document.getElementById('logsTabFeedback');
+  const logsTabButtons = [logsTabAll, logsTabGate, logsTabPlace, logsTabPersonnel, logsTabAccount, logsTabSchedules, logsTabFeedback];
 
   function setLogsTabActive(tab) {
     logsTabButtons.forEach(btn => {
@@ -4073,6 +4110,13 @@ function setupDashboardEventListeners() {
   if (logsTabSchedules) logsTabSchedules.addEventListener('click', () => {
     currentLogsTabFilter = 'schedules';
     setLogsTabActive(logsTabSchedules);
+    clearLogsDateFilter();
+    updateLogsActionFilterOptions();
+    applySearchAndFilterForLogs();
+  });
+  if (logsTabFeedback) logsTabFeedback.addEventListener('click', () => {
+    currentLogsTabFilter = 'feedback';
+    setLogsTabActive(logsTabFeedback);
     clearLogsDateFilter();
     updateLogsActionFilterOptions();
     applySearchAndFilterForLogs();
@@ -4504,6 +4548,8 @@ async function applySearchAndFilterForLogs() {
         return log.action && log.action === 'password_change';
       } else if (currentLogsTabFilter === 'schedules') {
         return log.action && (log.action.startsWith('visit_'));
+      } else if (currentLogsTabFilter === 'feedback') {
+        return log.action && log.action === 'visit_feedback_submitted';
       }
       return true;
     });
