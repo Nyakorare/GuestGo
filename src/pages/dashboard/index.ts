@@ -7460,15 +7460,90 @@ async function processGateScan(visitId: string, gateId: string) {
       return;
     }
 
-    // Call the gate scanning function
-    const { error } = await supabase.rpc('scan_gate_entrance', {
+    // Show face detection modal before processing gate scan
+    await showFaceDetectionForGateScan(visitId, gateId);
+  } catch (error) {
+    console.error('Error in processGateScan:', error);
+    showGateScanError('Error processing gate scan');
+  }
+}
+
+// Function to show face detection modal for gate scanning
+async function showFaceDetectionForGateScan(visitId: string, gateId: string) {
+  try {
+    // Show loading overlay
+    const loadingOverlay = document.createElement('div');
+    loadingOverlay.id = 'faceDetectionLoading';
+    loadingOverlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    loadingOverlay.innerHTML = `
+      <div class="bg-white dark:bg-gray-800 rounded-lg p-6 text-center">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p class="text-gray-600 dark:text-gray-400">Preparing face detection...</p>
+      </div>
+    `;
+    document.body.appendChild(loadingOverlay);
+
+    // Open face detection modal
+    const { openFaceDetectionModal } = await import('../../utils/AI-Face-Detection/blazefaceModal');
+    const faceResult = await openFaceDetectionModal();
+    
+    // Remove loading overlay
+    loadingOverlay.remove();
+
+    if (faceResult.success && faceResult.imageDataUrl) {
+      // Process the gate scan with face data
+      await processGateScanWithFaceData(visitId, gateId, faceResult);
+    } else {
+      // Face detection failed or was cancelled
+      showGateScanError('Face detection is required to scan the gate entrance. Please try again.');
+    }
+  } catch (error) {
+    console.error('Error in face detection for gate scan:', error);
+    showGateScanError('Error during face detection. Please try again.');
+  }
+}
+
+// Function to process gate scan with face data
+async function processGateScanWithFaceData(visitId: string, gateId: string, faceResult: any) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      showGateScanError('You must be logged in to scan gates');
+      return;
+    }
+
+    // Prepare face image data for storage
+    let faceImageData = null;
+    let faceDetectionMetadata = null;
+
+    if (faceResult.imageDataUrl) {
+      // Compress the face image for storage
+      const { compressImageDataUrl } = await import('../../utils/imageCompression');
+      const compressedImage = await compressImageDataUrl(faceResult.imageDataUrl, 0.8, 400, 400);
+      faceImageData = compressedImage;
+      
+      // Prepare metadata
+      faceDetectionMetadata = {
+        timestamp: new Date().toISOString(),
+        confidence: faceResult.confidence || 0,
+        boundingBox: faceResult.detections?.[0] || null,
+        originalSize: faceResult.imageDataUrl.length,
+        compressedSize: compressedImage.length
+      };
+    }
+
+    // Call the gate scanning function with face data
+    const { error } = await supabase.rpc('scan_gate_entrance_with_face', {
       p_visit_id: visitId,
       p_gate_id: gateId,
-      p_scanned_by: user.id
+      p_scanned_by: user.id,
+      p_face_image_data: faceImageData,
+      p_face_detection_confidence: faceResult.confidence || 0,
+      p_face_detection_metadata: faceDetectionMetadata
     });
 
     if (error) {
-      console.error('Error scanning gate:', error);
+      console.error('Error scanning gate with face data:', error);
       showGateScanError(`Error scanning gate: ${error.message}`);
       return;
     }
@@ -7485,8 +7560,8 @@ async function processGateScan(visitId: string, gateId: string) {
       loadVisitorVisits();
     }, 3000);
   } catch (error) {
-    console.error('Error in processGateScan:', error);
-    showGateScanError('Error processing gate scan');
+    console.error('Error in processGateScanWithFaceData:', error);
+    showGateScanError('Error processing gate scan with face data.');
   }
 }
 // Function to show gate exit scanning modal
