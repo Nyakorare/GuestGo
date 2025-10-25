@@ -135,6 +135,24 @@ export function encryptBase64(data: string, key: string = 'guestgo_face_2024'): 
  */
 export function decryptBase64(encryptedData: string, key: string = 'guestgo_face_2024'): string {
   try {
+    // Validate input
+    if (!encryptedData || typeof encryptedData !== 'string') {
+      console.warn('Invalid encrypted data provided to decryptBase64');
+      return encryptedData;
+    }
+
+    // Check if the data looks like it might be unencrypted (starts with data:)
+    if (encryptedData.startsWith('data:image/')) {
+      return encryptedData;
+    }
+
+    // Validate base64 format
+    const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+    if (!base64Regex.test(encryptedData)) {
+      console.warn('Data does not appear to be valid base64, returning as-is');
+      return encryptedData;
+    }
+
     // Convert from base64
     const encryptedBytes = new Uint8Array(
       atob(encryptedData).split('').map(char => char.charCodeAt(0))
@@ -148,7 +166,15 @@ export function decryptBase64(encryptedData: string, key: string = 'guestgo_face
     }
     
     // Convert back to string
-    return new TextDecoder().decode(decrypted);
+    const result = new TextDecoder().decode(decrypted);
+    
+    // Validate that the result looks like a data URL
+    if (!result.startsWith('data:image/')) {
+      console.warn('Decrypted data does not appear to be a valid image data URL');
+      return encryptedData; // Return original if decryption doesn't produce expected format
+    }
+    
+    return result;
   } catch (error) {
     console.error('Decryption failed:', error);
     return encryptedData; // Return original if decryption fails
@@ -178,14 +204,56 @@ export async function processFaceImageForStorage(dataUrl: string): Promise<strin
 }
 
 /**
+ * Check if data appears to be encrypted
+ * @param data - Data to check
+ * @returns True if data appears encrypted
+ */
+export function isDataEncrypted(data: string): boolean {
+  if (!data || typeof data !== 'string') {
+    return false;
+  }
+  
+  // If it starts with data:image/, it's likely unencrypted
+  if (data.startsWith('data:image/')) {
+    return false;
+  }
+  
+  // If it's valid base64 and doesn't start with data:, it might be encrypted
+  const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+  return base64Regex.test(data);
+}
+
+/**
  * Process face image data for display (decrypt + decompress)
  * @param storedData - Encrypted data from database
  * @returns Decrypted data URL ready for display
  */
 export function processFaceImageForDisplay(storedData: string): string {
   try {
+    // Validate input
+    if (!storedData || typeof storedData !== 'string') {
+      console.warn('Invalid stored data provided to processFaceImageForDisplay');
+      return storedData;
+    }
+
+    // Check if data is already unencrypted
+    if (!isDataEncrypted(storedData)) {
+      return storedData;
+    }
+
     // First decrypt
     const decrypted = decryptBase64(storedData);
+    
+    // Validate the decrypted result
+    if (!decrypted || decrypted === storedData) {
+      console.warn('Decryption returned original data, data may not be encrypted');
+      // If the data looks like it's already a data URL, return it
+      if (storedData.startsWith('data:image/')) {
+        return storedData;
+      }
+      // Otherwise, this might be corrupted data
+      throw new Error('Unable to decrypt face image data');
+    }
     
     // Return as data URL (already compressed)
     return decrypted;

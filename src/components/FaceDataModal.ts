@@ -131,7 +131,6 @@ async function loadFaceData(visitId: string, scanType: 'entrance' | 'exit') {
 
     // Check current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    console.log('Current user:', user?.id);
     if (userError) {
       console.error('User auth error:', userError);
     }
@@ -143,13 +142,11 @@ async function loadFaceData(visitId: string, scanType: 'entrance' | 'exit') {
       .eq('id', visitId)
       .single();
     
-    console.log('Visit data:', visitData);
     if (visitError) {
       console.error('Visit query error:', visitError);
     }
 
     // First, get the scan ID for the visit and scan type
-    console.log('Querying gate_scans for visit:', visitId, 'scan_type:', scanType);
     const { data: scanIds, error: scanIdError } = await supabase
       .from('gate_scans')
       .select('id')
@@ -168,7 +165,6 @@ async function loadFaceData(visitId: string, scanType: 'entrance' | 'exit') {
     }
 
     const scanId = scanIds[0].id;
-    console.log('Found scan ID:', scanId);
 
     // Now use the RPC function to get the full scan data with face image
     const { data: gateScans, error } = await supabase.rpc('get_gate_scan_with_face_image', {

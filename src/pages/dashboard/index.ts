@@ -6002,10 +6002,10 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
       pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
       completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
       completed_flagged: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+      temporary_exit: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
       cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
       unsuccessful: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-      failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-      temporary_exit: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+      failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
     };
 
     const roleColors: { [key: string]: string } = {
@@ -6063,6 +6063,8 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
       statusLabel = 'Completed';
     } else if (visit.status === 'pending') {
       statusLabel = 'Pending';
+    } else if (visit.status === 'temporary_exit') {
+      statusLabel = 'Temporary Exit';
     } else if (visit.status === 'unsuccessful' || visit.status === 'failed') {
       statusLabel = 'Unsuccessful';
     } else if (visit.status === 'cancelled') {
@@ -6200,7 +6202,6 @@ function setupVisitorDashboardEventListeners() {
         refreshVisitorBtn.textContent = 'Refresh';
       }
     });
-    console.log('Refresh button event listener added');
   } else {
     console.error('Refresh button not found');
   }
@@ -6412,7 +6413,6 @@ function setupVisitorDashboardEventListeners() {
     });
   }
 
-  console.log('Visitor dashboard event listeners setup complete');
 }
 
 // Function to apply filters for today visits
@@ -7539,7 +7539,10 @@ async function processGateScanWithFaceData(visitId: string, gateId: string, face
       p_scanned_by: user.id,
       p_face_image_data: faceImageData,
       p_face_detection_confidence: faceResult.confidence || 0,
-      p_face_detection_metadata: faceDetectionMetadata
+      p_face_detection_metadata: faceDetectionMetadata,
+      p_ip_address: null,
+      p_user_agent: navigator.userAgent,
+      p_location_data: null
     });
 
     if (error) {
@@ -8127,7 +8130,6 @@ async function loadVisitorDashboard() {
       setupVisitorDashboardEventListeners();
     }, 100);
     
-    console.log('Visitor dashboard loaded successfully');
   } catch (error) {
     console.error('Error in loadVisitorDashboard:', error);
   }
@@ -8180,11 +8182,6 @@ async function loadVisitorVisits() {
     // Populate place filter options for past visits
     populatePastPlaceFilterOptions(pastVisits);
     
-    console.log('Visitor visits loaded successfully:', {
-      total: allVisitorVisits.length,
-      current: currentVisits.length,
-      past: pastVisits.length
-    });
   } catch (error) {
     console.error('Error in loadVisitorVisits:', error);
     showNotification('Error loading visits', 'error');
@@ -8260,6 +8257,8 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
       statusLabel = 'In Progress';
     } else if (visit.status === 'pending') {
       statusLabel = 'Pending';
+    } else if (visit.status === 'temporary_exit') {
+      statusLabel = 'Temporary Exit';
     } else if (visit.status === 'unsuccessful' || visit.status === 'failed') {
       statusLabel = 'Unsuccessful';
     } else if (visit.status === 'cancelled') {
@@ -8578,6 +8577,8 @@ async function displayVisitorTodayVisits(visits: any[]): Promise<void> {
       statusLabel = 'In Progress';
     } else if (visit.status === 'pending') {
       statusLabel = 'Pending';
+    } else if (visit.status === 'temporary_exit') {
+      statusLabel = 'Temporary Exit';
     } else if (visit.status === 'unsuccessful' || visit.status === 'failed') {
       statusLabel = 'Unsuccessful';
     } else if (visit.status === 'cancelled') {
@@ -8889,6 +8890,8 @@ async function displayVisitorFutureVisits(visits: any[]): Promise<void> {
       statusLabel = 'In Progress';
     } else if (visit.status === 'pending') {
       statusLabel = 'Pending';
+    } else if (visit.status === 'temporary_exit') {
+      statusLabel = 'Temporary Exit';
     } else if (visit.status === 'unsuccessful' || visit.status === 'failed') {
       statusLabel = 'Unsuccessful';
     } else if (visit.status === 'cancelled') {
@@ -10414,7 +10417,6 @@ async function updateFeedbackButtonState(visitId: string) {
       visitorName,
       scanType,
       onClose: () => {
-        console.log('Face data modal closed');
       }
     });
     

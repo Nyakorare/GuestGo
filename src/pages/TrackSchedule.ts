@@ -1435,7 +1435,10 @@ async function processGateScanWithFaceData(visitId: string, gateId: string, face
       p_scanned_by: user.id,
       p_face_image_data: faceImageData,
       p_face_detection_confidence: faceResult.confidence || 0,
-      p_face_detection_metadata: faceDetectionMetadata
+      p_face_detection_metadata: faceDetectionMetadata,
+      p_ip_address: null,
+      p_user_agent: navigator.userAgent,
+      p_location_data: null
     });
 
     if (error) {

@@ -1199,63 +1199,115 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
     };
 
     if (action === 'entrance') {
-      console.log('Calling scan_gate_entrance with face data...');
-      const { error } = await supabase.rpc('scan_gate_entrance', {
-        p_visit_id: visitData.visitId,
-        p_gate_id: gateId,
-        p_scanned_by: user.id,
-        p_face_image_data: processedFaceImage,
-        p_face_detection_confidence: faceResult.confidence,
-        p_face_detection_metadata: faceMetadata
-      });
-
-      if (error) {
-        console.error('Error scanning gate entrance with face image:', error);
-        showGuardError('Scanning Error', `Error logging entrance: ${error.message}`);
-        return;
-      }
-      console.log('Entrance logged successfully with face image');
-
-      // Also log the guard action for scan history
-      const { error: guardLogError } = await supabase.rpc('log_guard_action', {
+      console.log('Logging guard entrance action with face data...');
+      
+      // For guards, we don't use the visitor gate scanning functions
+      // Instead, we log the guard action and manually update the visit
+      const { error: guardActionError } = await supabase.rpc('log_guard_action', {
         p_visit_id: visitData.visitId,
         p_action: 'entrance',
         p_guard_id: user.id
       });
 
-      if (guardLogError) {
-        console.error('Error logging guard action:', guardLogError);
-        // Non-fatal error, continue
-      }
-    } else if (action === 'exit') {
-      console.log('Calling scan_gate_exit with face data...');
-      const { error } = await supabase.rpc('scan_gate_exit', {
-        p_visit_id: visitData.visitId,
-        p_gate_id: gateId,
-        p_scanned_by: user.id,
-        p_face_image_data: processedFaceImage,
-        p_face_detection_confidence: faceResult.confidence,
-        p_face_detection_metadata: faceMetadata
-      });
-
-      if (error) {
-        console.error('Error scanning gate exit with face image:', error);
-        showGuardError('Scanning Error', `Error logging exit: ${error.message}`);
+      if (guardActionError) {
+        console.error('Error logging guard action:', guardActionError);
+        showGuardError('Logging Error', `Error logging entrance: ${guardActionError.message}`);
         return;
       }
-      console.log('Exit logged successfully with face image');
 
-      // Also log the guard action for scan history
-      const { error: guardLogError } = await supabase.rpc('log_guard_action', {
+      // Manually update the visit record to mark entrance as scanned
+      const { error: updateError } = await supabase
+        .from('scheduled_visits')
+        .update({
+          gate_entrance_scanned: true,
+          gate_entrance_scanned_at: new Date().toISOString(),
+          gate_entrance_scanned_by: user.id,
+          status: visitData.status === 'temporary_exit' ? 'pending' : 'in_progress'
+        })
+        .eq('id', visitData.visitId);
+
+      if (updateError) {
+        console.error('Error updating visit record:', updateError);
+        showGuardError('Update Error', `Error updating visit: ${updateError.message}`);
+        return;
+      }
+
+      // Store face data in gate_scans table using guard-specific function
+      const { error: faceDataError } = await supabase.rpc('insert_guard_gate_scan_with_face', {
+        p_visit_id: visitData.visitId,
+        p_gate_id: gateId,
+        p_guard_id: user.id,
+        p_scan_type: 'entrance',
+        p_face_image_data: processedFaceImage,
+        p_face_detection_confidence: faceResult.confidence || 0,
+        p_face_detection_metadata: faceMetadata,
+        p_ip_address: null,
+        p_user_agent: navigator.userAgent,
+        p_location_data: null
+      });
+
+      if (faceDataError) {
+        console.error('Error storing face data:', faceDataError);
+        // Non-fatal error, continue
+      }
+
+      console.log('Guard entrance logged successfully with face data');
+    } else if (action === 'exit') {
+      console.log('Logging guard exit action with face data...');
+      
+      // For guards, we don't use the visitor gate scanning functions
+      // Instead, we log the guard action and manually update the visit
+      const { error: guardActionError } = await supabase.rpc('log_guard_action', {
         p_visit_id: visitData.visitId,
         p_action: 'exit',
         p_guard_id: user.id
       });
 
-      if (guardLogError) {
-        console.error('Error logging guard action:', guardLogError);
+      if (guardActionError) {
+        console.error('Error logging guard action:', guardActionError);
+        showGuardError('Logging Error', `Error logging exit: ${guardActionError.message}`);
+        return;
+      }
+
+      // Manually update the visit record to mark exit as scanned and complete the visit
+      const { error: updateError } = await supabase
+        .from('scheduled_visits')
+        .update({
+          gate_exit_scanned: true,
+          gate_exit_scanned_at: new Date().toISOString(),
+          gate_exit_scanned_by: user.id,
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+          completed_by: user.id
+        })
+        .eq('id', visitData.visitId);
+
+      if (updateError) {
+        console.error('Error updating visit record:', updateError);
+        showGuardError('Update Error', `Error updating visit: ${updateError.message}`);
+        return;
+      }
+
+      // Store face data in gate_scans table using guard-specific function
+      const { error: faceDataError } = await supabase.rpc('insert_guard_gate_scan_with_face', {
+        p_visit_id: visitData.visitId,
+        p_gate_id: gateId,
+        p_guard_id: user.id,
+        p_scan_type: 'exit',
+        p_face_image_data: processedFaceImage,
+        p_face_detection_confidence: faceResult.confidence || 0,
+        p_face_detection_metadata: faceMetadata,
+        p_ip_address: null,
+        p_user_agent: navigator.userAgent,
+        p_location_data: null
+      });
+
+      if (faceDataError) {
+        console.error('Error storing face data:', faceDataError);
         // Non-fatal error, continue
       }
+
+      console.log('Guard exit logged successfully with face data');
     }
 
     // Close modal on successful entrance/exit
