@@ -183,21 +183,15 @@ async function performNavigation() {
       }
     }
     
-    // Check access permissions
-    if (path === '/qr-scanner' && role !== 'personnel') {
-      window.location.hash = '/';
-      hideLoadingOverlay();
-      showNavbar();
-      performanceMonitor.endNavigation(path);
-      return;
+    // Check access permissions - allow access but show appropriate content based on role
+    if (path === '/qr-scanner') {
+      // Allow access to QR scanner for all authenticated users
+      // The page will show appropriate content based on user role
     }
     
-    if (path === '/guard-dashboard' && role !== 'guard') {
-      window.location.hash = '/';
-      hideLoadingOverlay();
-      showNavbar();
-      performanceMonitor.endNavigation(path);
-      return;
+    if (path === '/guard-dashboard') {
+      // Allow access to guard dashboard for all authenticated users
+      // The page will show appropriate content based on user role
     }
     
     // Deny track schedule to logs/log, guard, and personnel roles (accept both variants for logs)
