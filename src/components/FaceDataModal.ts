@@ -130,20 +130,9 @@ async function loadFaceData(visitId: string, scanType: 'entrance' | 'exit') {
     );
 
     // Check current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { error: userError } = await supabase.auth.getUser();
     if (userError) {
       console.error('User auth error:', userError);
-    }
-
-    // Check if the visit belongs to the current user
-    const { data: visitData, error: visitError } = await supabase
-      .from('scheduled_visits')
-      .select('id, visitor_user_id')
-      .eq('id', visitId)
-      .single();
-    
-    if (visitError) {
-      console.error('Visit query error:', visitError);
     }
 
     // First, get the scan ID for the visit and scan type
@@ -161,6 +150,64 @@ async function loadFaceData(visitId: string, scanType: 'entrance' | 'exit') {
     }
 
     if (!scanIds || scanIds.length === 0) {
+      // Check if the visit has the scan flag set but no face data in gate_scans
+      const { data: visitData, error: visitError } = await supabase
+        .from('scheduled_visits')
+        .select('gate_entrance_scanned, gate_exit_scanned')
+        .eq('id', visitId)
+        .single();
+      
+      if (visitError) {
+        console.error('Visit query error:', visitError);
+        throw new Error('No face data found for this scan');
+      }
+      
+      // If the scan flag is set but no face data exists, show a message
+      const hasScanFlag = scanType === 'entrance' ? visitData.gate_entrance_scanned : visitData.gate_exit_scanned;
+      if (hasScanFlag) {
+        const faceImageContainer = document.getElementById('faceImageContainer');
+        const faceDetectionInfo = document.getElementById('faceDetectionInfo');
+        const detectionDetails = document.getElementById('detectionDetails');
+        
+        if (faceImageContainer) {
+          faceImageContainer.innerHTML = `
+            <div class="text-center py-8">
+              <div class="text-gray-500 dark:text-gray-400 mb-4">
+                <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No Face Data Available</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400">
+                  The ${scanType} scan was recorded but no face data was captured or stored.
+                </p>
+              </div>
+            </div>
+          `;
+        }
+        
+        if (faceDetectionInfo) {
+          faceDetectionInfo.innerHTML = `
+            <div class="text-center py-4">
+              <p class="text-sm text-gray-600 dark:text-gray-400">
+                Face detection data is not available for this scan.
+              </p>
+            </div>
+          `;
+        }
+        
+        if (detectionDetails) {
+          detectionDetails.innerHTML = `
+            <div class="text-center py-4">
+              <p class="text-sm text-gray-600 dark:text-gray-400">
+                No detection details are available.
+              </p>
+            </div>
+          `;
+        }
+        
+        return; // Exit early, don't throw error
+      }
+      
       throw new Error('No face data found for this scan');
     }
 

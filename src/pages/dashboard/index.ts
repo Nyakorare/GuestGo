@@ -2478,6 +2478,43 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
                   gateScanInfo += `<div class="text-xs text-gray-500">⏳ Exit: Not scanned</div>`;
                 }
                 
+                // Add entrance/exit buttons for face data if scans exist
+                if ((entranceScan || (visitData && visitData.gate_entrance_scanned)) || (exitScan || (visitData && visitData.gate_exit_scanned))) {
+                  gateScanInfo += '<div class="mt-2 flex items-center space-x-2">';
+                  
+                  if (entranceScan || (visitData && visitData.gate_entrance_scanned)) {
+                    gateScanInfo += `
+                      <button 
+                        onclick="showFaceDataModal('${parsedDetails.visit_id}', '${visitorName}', 'entrance')"
+                        class="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full text-xs font-medium hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors duration-200 flex items-center space-x-1"
+                        title="View entrance face data"
+                      >
+                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        <span>Entrance</span>
+                      </button>
+                    `;
+                  }
+                  
+                  if (exitScan || (visitData && visitData.gate_exit_scanned)) {
+                    gateScanInfo += `
+                      <button 
+                        onclick="showFaceDataModal('${parsedDetails.visit_id}', '${visitorName}', 'exit')"
+                        class="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-xs font-medium hover:bg-green-200 dark:hover:bg-green-800 transition-colors duration-200 flex items-center space-x-1"
+                        title="View exit face data"
+                      >
+                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        <span>Exit</span>
+                      </button>
+                    `;
+                  }
+                  
+                  gateScanInfo += '</div>';
+                }
+                
                 gateScanInfo += '</div>';
               } else if (visitData && (visitData.gate_entrance_scanned || visitData.gate_exit_scanned)) {
                 // Fallback: use scheduled_visits table data when gate_scans table is empty
@@ -2496,6 +2533,43 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
                   gateScanInfo += `<div class="text-xs text-green-600 dark:text-green-400">✅ Exit: Scanned at ${exitTime}</div>`;
                 } else {
                   gateScanInfo += `<div class="text-xs text-gray-500">⏳ Exit: Not scanned</div>`;
+                }
+                
+                // Add entrance/exit buttons for face data if scans exist
+                if (visitData.gate_entrance_scanned || visitData.gate_exit_scanned) {
+                  gateScanInfo += '<div class="mt-2 flex items-center space-x-2">';
+                  
+                  if (visitData.gate_entrance_scanned) {
+                    gateScanInfo += `
+                      <button 
+                        onclick="showFaceDataModal('${parsedDetails.visit_id}', '${visitorName}', 'entrance')"
+                        class="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full text-xs font-medium hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors duration-200 flex items-center space-x-1"
+                        title="View entrance face data"
+                      >
+                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        <span>Entrance</span>
+                      </button>
+                    `;
+                  }
+                  
+                  if (visitData.gate_exit_scanned) {
+                    gateScanInfo += `
+                      <button 
+                        onclick="showFaceDataModal('${parsedDetails.visit_id}', '${visitorName}', 'exit')"
+                        class="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-xs font-medium hover:bg-green-200 dark:hover:bg-green-800 transition-colors duration-200 flex items-center space-x-1"
+                        title="View exit face data"
+                      >
+                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        <span>Exit</span>
+                      </button>
+                    `;
+                  }
+                  
+                  gateScanInfo += '</div>';
                 }
                 
                 gateScanInfo += '</div>';

@@ -22,7 +22,7 @@ export function GatePage(gateId: string) {
   return `
     <div class="max-w-7xl mx-auto px-4 py-8">
       <div class="mb-6">
-        <a href="#/dashboard" onclick="window.location.hash='/dashboard'; return false;" class="inline-flex items-center text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 mb-4">
+        <a href="#/dashboard" onclick="window.location.hash='/dashboard'; window.location.reload(); return false;" class="inline-flex items-center text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 mb-4">
           <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
           </svg>

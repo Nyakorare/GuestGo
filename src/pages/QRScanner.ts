@@ -13,7 +13,7 @@ export function QRScannerPage() {
           <div class="flex flex-col sm:flex-row justify-between items-center py-4 space-y-2 sm:space-y-0">
             <div class="flex items-center w-full sm:w-auto justify-between sm:justify-start">
               <button 
-                onclick="window.history.back()"
+                onclick="window.location.hash = '/dashboard'; window.location.reload();"
                 class="mr-2 sm:mr-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200"
               >
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1078,6 +1078,7 @@ function showGateScanSuccess() {
     const backBtn = document.getElementById('backToDashboardBtn');
     backBtn?.addEventListener('click', () => {
       window.location.hash = '/dashboard';
+      window.location.reload();
     });
   }
 }
