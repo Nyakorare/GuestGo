@@ -1516,7 +1516,7 @@ let allLogs: any[] = [];
 let filteredLogs: any[] = [];
 
 export async function loadPlaces() {
-  // First, get all places
+  // First, get all places with visit limit information
   const { data: places, error: placesError } = await supabase
     .from('places_to_visit')
     .select('*')
@@ -1526,6 +1526,40 @@ export async function loadPlaces() {
     console.error('Error loading places:', placesError);
     return;
   }
+
+  // Get visit count data for all places using the get_place_visit_limit_info function
+  const placesWithVisitCounts = await Promise.all(
+    places.map(async (place) => {
+      try {
+        const { data: visitData, error: visitError } = await supabase.rpc('get_place_visit_limit_info', {
+          p_place_id: place.id
+        });
+
+        if (visitError) {
+          console.error(`Error loading visit data for place ${place.name}:`, visitError);
+          return {
+            ...place,
+            visits_this_week: 0,
+            visits_this_month: 0
+          };
+        }
+
+        const visitInfo = visitData?.[0];
+        return {
+          ...place,
+          visits_this_week: visitInfo?.visits_this_week || 0,
+          visits_this_month: visitInfo?.visits_this_month || 0
+        };
+      } catch (error) {
+        console.error(`Error processing visit data for place ${place.name}:`, error);
+        return {
+          ...place,
+          visits_this_week: 0,
+          visits_this_month: 0
+        };
+      }
+    })
+  );
 
   // Get all personnel assignments (with error handling)
   let assignments: any[] = [];
@@ -1576,7 +1610,7 @@ export async function loadPlaces() {
   const availablePlaceIds = new Set(assignments.map(a => a.place_id));
 
   // Combine places with their personnel assignments
-  const placesWithPersonnel = places?.map(place => {
+  const placesWithPersonnel = placesWithVisitCounts?.map(place => {
     const placeAssignments = assignments.filter(assignment => assignment.place_id === place.id);
     const assignedPersonnel = placeAssignments.map(assignment => {
       const personnelInfo = personnelMap.get(assignment.personnel_id) || {
@@ -1627,13 +1661,19 @@ function renderPlaces(): void {
           <h3 class="text-lg font-medium text-gray-900 dark:text-white">${place.name}</h3>
           <p class="text-sm text-gray-500 dark:text-gray-400">${place.description || 'No description'}</p>
           <p class="text-sm text-gray-500 dark:text-gray-400">Location: ${place.location}</p>
-          <div class="mt-2">
+          <div class="mt-2 flex flex-wrap gap-2">
             <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
               place.is_available 
                 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
                 : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
             }">
               ${place.is_available ? 'Available' : 'Unavailable'}
+            </span>
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+              Weekly: ${place.visits_this_week || 0}/${place.current_week_visit_limit || 50}
+            </span>
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+              Monthly: ${place.visits_this_month || 0}/${place.monthly_visit_limit || 200}
             </span>
           </div>
           ${place.assigned_personnel && place.assigned_personnel.length > 0 ? `
@@ -1669,6 +1709,15 @@ function renderPlaces(): void {
           `}
         </div>
         <div class="flex items-center space-x-4">
+          <button 
+            onclick="window.openVisitLimitModal('${place.id}', '${place.name}', ${place.current_week_visit_limit || 50}, ${place.monthly_visit_limit || 200}, ${place.visits_this_week || 0}, ${place.visits_this_month || 0})"
+            class="text-purple-600 hover:text-purple-800 dark:text-purple-500 dark:hover:text-purple-400 transition-colors duration-200 ease-in-out hover:scale-110 transform"
+            title="Edit visit limits"
+          >
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </button>
           <button 
             onclick="window.assignPersonnelToPlace('${place.id}')"
             class="text-blue-600 hover:text-blue-800 dark:text-blue-500 dark:hover:text-blue-400 transition-colors duration-200 ease-in-out hover:scale-110 transform"
@@ -3195,8 +3244,91 @@ document.addEventListener('DOMContentLoaded', () => {
   // This is now handled in setupModalEventListeners() which is called after the page loads
 });
 
+// Function to edit visit limit for a place
+// Function to open visit limit modal with usage statistics
+async function openVisitLimitModal(
+  placeId: string, 
+  placeName: string, 
+  currentWeeklyLimit: number, 
+  monthlyLimit: number,
+  visitsThisWeek: number,
+  visitsThisMonth: number
+) {
+  try {
+    // Import the modal component
+    const { visitLimitModal } = await import('../../components/VisitLimitModal');
+    
+    // Open modal and get result
+    const result = await visitLimitModal.openComprehensiveModal({
+      placeId,
+      placeName,
+      currentWeeklyLimit,
+      monthlyLimit,
+      visitsThisWeek,
+      visitsThisMonth
+    });
+    
+    if (!result) {
+      return; // User cancelled
+    }
+    
+    const { weeklyLimit, monthlyLimit: newMonthlyLimit } = result;
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      showNotification('You must be logged in to edit visit limits.', 'error');
+      return;
+    }
+    
+    // Update weekly limit if changed
+    if (weeklyLimit !== currentWeeklyLimit) {
+      const { error: weeklyError } = await supabase.rpc('update_place_weekly_visit_limit', {
+        p_place_id: placeId,
+        p_weekly_limit: weeklyLimit,
+        p_updated_by: user.id
+      });
+      
+      if (weeklyError) {
+        console.error('Error updating weekly visit limit:', weeklyError);
+        showNotification(`Error updating weekly visit limit: ${weeklyError.message}`, 'error');
+        return;
+      }
+    }
+    
+    // Update monthly limit if changed
+    if (newMonthlyLimit !== monthlyLimit) {
+      const { error: monthlyError } = await supabase.rpc('update_place_monthly_visit_limit', {
+        p_place_id: placeId,
+        p_monthly_limit: newMonthlyLimit,
+        p_updated_by: user.id
+      });
+      
+      if (monthlyError) {
+        console.error('Error updating monthly visit limit:', monthlyError);
+        showNotification(`Error updating monthly visit limit: ${monthlyError.message}`, 'error');
+        return;
+      }
+    }
+    
+    showNotification(`Visit limits updated successfully for "${placeName}".`, 'success');
+    await loadPlaces();
+    
+  } catch (error) {
+    console.error('Error updating visit limits:', error);
+    showNotification('An unexpected error occurred while updating the visit limits.', 'error');
+  }
+}
+
+// Legacy function for backward compatibility
+async function editVisitLimit(placeId: string, placeName: string, currentLimit: number) {
+  // Redirect to comprehensive modal for backward compatibility
+  await openVisitLimitModal(placeId, placeName, currentLimit, 200, 0, 0);
+}
+
 // Make functions globally available
 (window as any).editPlace = editPlace;
+(window as any).editVisitLimit = editVisitLimit;
+(window as any).openVisitLimitModal = openVisitLimitModal;
 (window as any).changeUserRole = changeUserRole;
 (window as any).assignPersonnelToPlace = assignPersonnelToPlace;
 (window as any).removePersonnelFromPlace = removePersonnelFromPlace;
@@ -4892,6 +5024,36 @@ async function removePersonnelFromPlace(placeId: string, personnelId: string) {
   }
 }
 
+// Helper function to safely format dates
+function formatDate(dateValue: any): string {
+  if (!dateValue) return 'N/A';
+  
+  try {
+    // Handle different date formats
+    let date: Date;
+    if (typeof dateValue === 'string') {
+      // If it's a string, try to parse it
+      date = new Date(dateValue);
+    } else if (dateValue instanceof Date) {
+      date = dateValue;
+    } else {
+      // If it's some other format, try to convert
+      date = new Date(dateValue);
+    }
+    
+    // Check if the date is valid
+    if (isNaN(date.getTime())) {
+      console.warn('Invalid date value:', dateValue, 'Type:', typeof dateValue);
+      return 'N/A';
+    }
+    
+    return date.toLocaleDateString();
+  } catch (error) {
+    console.error('Error formatting date:', error, 'Value:', dateValue, 'Type:', typeof dateValue);
+    return 'N/A';
+  }
+}
+
 // Function to load personnel dashboard
 async function loadPersonnelDashboard() {
   const { data: { user } } = await supabase.auth.getUser();
@@ -4947,6 +5109,27 @@ async function loadPersonnelDashboard() {
               <div>
                 <p class="text-sm text-gray-600 dark:text-gray-300"><strong>Assigned since:</strong> ${new Date(assignment.assigned_at).toLocaleDateString()}</p>
               </div>
+              
+              <!-- Visit Limit Information -->
+              <div class="bg-gray-50 dark:bg-gray-600 rounded-lg p-3 mt-4">
+                <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-2">Visit Limits</h4>
+                <div class="grid grid-cols-2 gap-3">
+                  <div class="text-center">
+                    <div class="text-lg font-bold text-blue-600 dark:text-blue-400">${assignment.visits_this_week || 0}</div>
+                    <div class="text-xs text-gray-600 dark:text-gray-300">This Week</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">Limit: ${assignment.current_month_visit_limit || 50}</div>
+                  </div>
+                  <div class="text-center">
+                    <div class="text-lg font-bold text-purple-600 dark:text-purple-400">${assignment.visits_this_month || 0}</div>
+                    <div class="text-xs text-gray-600 dark:text-gray-300">This Month</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">Weekly Limit: ${assignment.weekly_visit_limit || 50}</div>
+                  </div>
+                </div>
+                <div class="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
+                  Week: ${assignment.week_start ? formatDate(assignment.week_start) : 'N/A'} - ${assignment.week_end ? formatDate(assignment.week_end) : 'N/A'}
+                </div>
+              </div>
+              
               ${!assignment.is_available && assignment.unavailability_reason ? `
                 <div>
                   <p class="text-sm text-gray-600 dark:text-gray-300"><strong>Reason for unavailability:</strong></p>

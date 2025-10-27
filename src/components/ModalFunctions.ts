@@ -42,7 +42,7 @@ export async function setupEventListeners() {
   if (modalEventListenersInitialized) {
     return;
   }
-  // Fetch places from database with personnel assignments
+  // Fetch places from database with personnel assignments and visit limit information
   const { data: places, error: placesError } = await supabase
     .from('places_to_visit')
     .select('*')
@@ -76,11 +76,67 @@ export async function setupEventListeners() {
   // Create a set of places that have personnel assigned
   const availablePlaceIds = new Set(assignments.map(a => a.place_id));
 
-  // Add availability information to places
-  const placesWithAvailability = places?.map(place => ({
-    ...place,
-    is_available: availablePlaceIds.has(place.id)
-  })) || [];
+  // Check visit limits for each place
+  const placesWithAvailabilityAndLimits = await Promise.all(
+    places?.map(async (place) => {
+      const hasPersonnel = availablePlaceIds.has(place.id);
+      
+      // If no personnel assigned, mark as unavailable
+      if (!hasPersonnel) {
+        return {
+          ...place,
+          is_available: false,
+          unavailability_reason: 'No personnel assigned'
+        };
+      }
+
+      // Check visit limit for this place
+      try {
+        const { data: limitCheck, error: limitError } = await supabase.rpc('check_place_weekly_visit_limit', {
+          p_place_id: place.id,
+          p_visit_date: new Date().toISOString().split('T')[0] // Today's date
+        });
+
+        if (limitError) {
+          console.error('Error checking visit limit for place:', place.name, limitError);
+          // If we can't check the limit, assume it's available
+          return {
+            ...place,
+            is_available: true,
+            unavailability_reason: null
+          };
+        }
+
+        // If limit check returns false, place is at capacity
+        if (!limitCheck) {
+          return {
+            ...place,
+            is_available: false,
+            unavailability_reason: `Weekly visit limit reached (${place.current_month_visit_limit || 50} visits)`
+          };
+        }
+
+        return {
+          ...place,
+          is_available: true,
+          unavailability_reason: null
+        };
+      } catch (error) {
+        console.error('Error checking visit limit:', error);
+        // If there's an error, assume it's available
+        return {
+          ...place,
+          is_available: true,
+          unavailability_reason: null
+        };
+      }
+    }) || []
+  );
+
+  const placesWithAvailability = placesWithAvailabilityAndLimits;
+
+  // Store places data globally for reuse
+  (window as any).placesWithAvailability = placesWithAvailability;
 
   // Count available places
   const availablePlacesCount = placesWithAvailability.filter(place => place.is_available).length;
@@ -98,7 +154,7 @@ export async function setupEventListeners() {
       if (place.is_available) {
         option.textContent = place.name;
       } else {
-        option.textContent = `${place.name} (currently unavailable)`;
+        option.textContent = `${place.name} (${place.unavailability_reason || 'currently unavailable'})`;
         option.disabled = true;
       }
       placeToVisitSelect.appendChild(option);
@@ -153,7 +209,7 @@ export async function setupEventListeners() {
             checkboxDiv.className = 'flex items-center';
             checkboxDiv.innerHTML = `
               <input type="checkbox" id="place_${place.id}" name="places" value="${place.id}" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" ${!place.is_available ? 'disabled' : ''}>
-              <label for="place_${place.id}" class="ml-2 block text-sm ${place.is_available ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-500'}">${place.name}${!place.is_available ? ' (currently unavailable)' : ''}</label>
+              <label for="place_${place.id}" class="ml-2 block text-sm ${place.is_available ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-500'}">${place.name}${!place.is_available ? ` (${place.unavailability_reason || 'currently unavailable'})` : ''}</label>
             `;
             multiplePlacesContainer.appendChild(checkboxDiv);
           });
@@ -2403,5 +2459,113 @@ function closeVisitIdQRModal() {
   } catch (e) {
     // Non-fatal; ignore refresh errors
     console.error('Home refresh after modal close failed:', e);
+  }
+}
+
+// Function to update place availability based on selected visit date
+export async function updatePlaceAvailabilityForDate(visitDate: string) {
+  const placesWithAvailability = (window as any).placesWithAvailability;
+  if (!placesWithAvailability) {
+    console.error('Places data not available');
+    return;
+  }
+
+  // Recheck visit limits for the selected date
+  const updatedPlaces = await Promise.all(
+    placesWithAvailability.map(async (place: any) => {
+      // If no personnel assigned, keep as unavailable
+      if (!place.is_available && place.unavailability_reason === 'No personnel assigned') {
+        return place;
+      }
+
+      // Check visit limit for the selected date
+      try {
+        const { data: limitCheck, error: limitError } = await supabase.rpc('check_place_weekly_visit_limit', {
+          p_place_id: place.id,
+          p_visit_date: visitDate
+        });
+
+        if (limitError) {
+          console.error('Error checking visit limit for place:', place.name, limitError);
+          return place; // Keep current state
+        }
+
+        // Update availability based on limit check
+        if (!limitCheck) {
+          return {
+            ...place,
+            is_available: false,
+            unavailability_reason: `Weekly visit limit reached (${place.current_month_visit_limit || 50} visits)`
+          };
+        } else {
+          return {
+            ...place,
+            is_available: true,
+            unavailability_reason: null
+          };
+        }
+      } catch (error) {
+        console.error('Error checking visit limit:', error);
+        return place; // Keep current state
+      }
+    })
+  );
+
+  // Update global storage
+  (window as any).placesWithAvailability = updatedPlaces;
+
+  // Update the dropdown options
+  const placeToVisitSelect = document.getElementById('placeToVisit') as HTMLSelectElement;
+  if (placeToVisitSelect) {
+    // Clear existing options except the first one
+    placeToVisitSelect.innerHTML = '<option value="">Select a place</option>';
+    
+    // Add updated places
+    updatedPlaces.forEach(place => {
+      const option = document.createElement('option');
+      option.value = place.id;
+      if (place.is_available) {
+        option.textContent = place.name;
+      } else {
+        option.textContent = `${place.name} (${place.unavailability_reason || 'currently unavailable'})`;
+        option.disabled = true;
+      }
+      placeToVisitSelect.appendChild(option);
+    });
+
+    // Add "Multiple Places" option
+    const availablePlacesCount = updatedPlaces.filter(place => place.is_available).length;
+    const { data: { user } } = await supabase.auth.getUser();
+    const isLoggedIn = !!user;
+
+    const multipleOption = document.createElement('option');
+    multipleOption.value = 'multiple';
+    
+    if (!isLoggedIn) {
+      multipleOption.textContent = 'Multiple Places (login required)';
+      multipleOption.disabled = true;
+    } else if (availablePlacesCount < 2) {
+      multipleOption.textContent = 'Multiple Places (requires at least 2 available places)';
+      multipleOption.disabled = true;
+    } else {
+      multipleOption.textContent = 'Multiple Places';
+    }
+    placeToVisitSelect.appendChild(multipleOption);
+  }
+
+  // Update multiple places checkboxes if the container is visible
+  const multiplePlacesContainer = document.getElementById('multiplePlacesContainer');
+  if (multiplePlacesContainer && !multiplePlacesContainer.classList.contains('hidden')) {
+    multiplePlacesContainer.innerHTML = '';
+    
+    updatedPlaces.forEach(place => {
+      const checkboxDiv = document.createElement('div');
+      checkboxDiv.className = 'flex items-center';
+      checkboxDiv.innerHTML = `
+        <input type="checkbox" id="place_${place.id}" name="places" value="${place.id}" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" ${!place.is_available ? 'disabled' : ''}>
+        <label for="place_${place.id}" class="ml-2 block text-sm ${place.is_available ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-500'}">${place.name}${!place.is_available ? ` (${place.unavailability_reason || 'currently unavailable'})` : ''}</label>
+      `;
+      multiplePlacesContainer.appendChild(checkboxDiv);
+    });
   }
 } 

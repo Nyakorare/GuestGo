@@ -923,6 +923,14 @@ export function HomePage() {
           current: currentPhilippineDate.toISOString(),
           isToday: philippineSelectedDate.getTime() === currentPhilippineDate.getTime()
         });
+
+        // Update place availability based on the selected date
+        try {
+          const { updatePlaceAvailabilityForDate } = await import('../components/ModalFunctions');
+          await updatePlaceAvailabilityForDate(visitDateInput.value);
+        } catch (error) {
+          console.error('Error updating place availability for date:', error);
+        }
       });
     }
 
