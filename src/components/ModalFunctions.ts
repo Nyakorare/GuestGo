@@ -112,7 +112,7 @@ export async function setupEventListeners() {
           return {
             ...place,
             is_available: false,
-            unavailability_reason: `Weekly visit limit reached (${place.current_month_visit_limit || 50} visits)`
+            unavailability_reason: `Weekly visit limit reached`
           };
         }
 
@@ -2495,7 +2495,7 @@ export async function updatePlaceAvailabilityForDate(visitDate: string) {
           return {
             ...place,
             is_available: false,
-            unavailability_reason: `Weekly visit limit reached (${place.current_month_visit_limit || 50} visits)`
+            unavailability_reason: `Weekly visit limit reached`
           };
         } else {
           return {

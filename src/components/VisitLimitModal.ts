@@ -166,15 +166,15 @@ export class VisitLimitModal {
       this.handleSubmit();
     });
 
-    // Real-time validation
+    // Validation on blur (when user finishes typing)
     const weeklyInput = document.getElementById('weeklyLimit') as HTMLInputElement;
     const monthlyInput = document.getElementById('monthlyLimit') as HTMLInputElement;
 
-    weeklyInput?.addEventListener('input', () => {
+    weeklyInput?.addEventListener('blur', () => {
       this.validateInputs();
     });
 
-    monthlyInput?.addEventListener('input', () => {
+    monthlyInput?.addEventListener('blur', () => {
       this.validateInputs();
     });
   }
@@ -189,33 +189,34 @@ export class VisitLimitModal {
     const weeklyValue = parseInt(weeklyInput.value) || 0;
     const monthlyValue = parseInt(monthlyInput.value) || 0;
 
+    let isValid = true;
+    let errorMessage = 'Save Changes';
+
+    // Reset input borders
+    weeklyInput.classList.remove('border-red-500');
+    weeklyInput.classList.add('border-gray-300', 'dark:border-gray-600');
+    monthlyInput.classList.remove('border-red-500');
+    monthlyInput.classList.add('border-gray-300', 'dark:border-gray-600');
+
     // Validate weekly limit
     if (weeklyValue > monthlyValue && monthlyValue > 0) {
       weeklyInput.classList.add('border-red-500');
       weeklyInput.classList.remove('border-gray-300', 'dark:border-gray-600');
-      saveBtn.disabled = true;
-      saveBtn.textContent = 'Weekly limit exceeds monthly limit';
-    } else {
-      weeklyInput.classList.remove('border-red-500');
-      weeklyInput.classList.add('border-gray-300', 'dark:border-gray-600');
+      isValid = false;
+      errorMessage = 'Weekly limit exceeds monthly limit';
     }
 
     // Validate monthly limit
     if (monthlyValue < weeklyValue && weeklyValue > 0) {
       monthlyInput.classList.add('border-red-500');
       monthlyInput.classList.remove('border-gray-300', 'dark:border-gray-600');
-      saveBtn.disabled = true;
-      saveBtn.textContent = 'Monthly limit is less than weekly limit';
-    } else {
-      monthlyInput.classList.remove('border-red-500');
-      monthlyInput.classList.add('border-gray-300', 'dark:border-gray-600');
+      isValid = false;
+      errorMessage = 'Monthly limit is less than weekly limit';
     }
 
-    // Enable save button if validation passes
-    if (!saveBtn.disabled && weeklyValue >= 0 && monthlyValue >= 0 && weeklyValue <= monthlyValue) {
-      saveBtn.disabled = false;
-      saveBtn.textContent = 'Save Changes';
-    }
+    // Update button state
+    saveBtn.disabled = !isValid;
+    saveBtn.textContent = errorMessage;
   }
 
   public openWeeklyLimit(data: VisitLimitData): Promise<{weeklyLimit: number, monthlyLimit: number} | null> {
