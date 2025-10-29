@@ -112,7 +112,7 @@ export async function setupEventListeners() {
           return {
             ...place,
             is_available: false,
-            unavailability_reason: `Weekly visit limit reached`
+            unavailability_reason: `Visit limit reached`
           };
         }
 
@@ -2095,6 +2095,8 @@ async function scheduleVisitFromConfirmation(data: VisitConfirmationData) {
         throw new Error('Only visitors can schedule visits. Please contact an administrator if you need access.');
       } else if (scheduleError.message.includes('You already have a scheduled visit on this date.')) {
         throw new Error('You already have a scheduled visit on this date. Please choose a different date.');
+      } else if (scheduleError.message.includes('visit limit reached')) {
+        throw new Error('This place has reached its visit limit. Please choose a different place or date.');
       } else {
         throw new Error(`Scheduling failed: ${scheduleError.message}`);
       }
@@ -2495,7 +2497,7 @@ export async function updatePlaceAvailabilityForDate(visitDate: string) {
           return {
             ...place,
             is_available: false,
-            unavailability_reason: `Weekly visit limit reached`
+            unavailability_reason: `Visit limit reached`
           };
         } else {
           return {

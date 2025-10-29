@@ -1548,7 +1548,8 @@ export async function loadPlaces() {
         return {
           ...place,
           visits_this_week: visitInfo?.visits_this_week || 0,
-          visits_this_month: visitInfo?.visits_this_month || 0
+          visits_this_month: visitInfo?.visits_this_month || 0,
+          limit_type: visitInfo?.limit_type || 'weekly'
         };
       } catch (error) {
         console.error(`Error processing visit data for place ${place.name}:`, error);
@@ -1669,11 +1670,14 @@ function renderPlaces(): void {
             }">
               ${place.is_available ? 'Available' : 'Unavailable'}
             </span>
-            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${place.limit_type === 'weekly' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'}">
               Weekly: ${place.visits_this_week || 0}/${place.current_week_visit_limit || 50}
             </span>
-            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${place.limit_type === 'monthly' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'}">
               Monthly: ${place.visits_this_month || 0}/${place.monthly_visit_limit || 200}
+            </span>
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
+              Enforced: ${place.limit_type === 'weekly' ? 'Weekly' : 'Monthly'}
             </span>
           </div>
           ${place.assigned_personnel && place.assigned_personnel.length > 0 ? `
@@ -1710,7 +1714,7 @@ function renderPlaces(): void {
         </div>
         <div class="flex items-center space-x-4">
           <button 
-            onclick="window.openVisitLimitModal('${place.id}', '${place.name}', ${place.current_week_visit_limit || 50}, ${place.monthly_visit_limit || 200}, ${place.visits_this_week || 0}, ${place.visits_this_month || 0})"
+            onclick="window.openVisitLimitModal('${place.id}', '${place.name}', ${place.current_week_visit_limit || 50}, ${place.monthly_visit_limit || 200}, ${place.visits_this_week || 0}, ${place.visits_this_month || 0}, '${place.limit_type || 'weekly'}')"
             class="text-purple-600 hover:text-purple-800 dark:text-purple-500 dark:hover:text-purple-400 transition-colors duration-200 ease-in-out hover:scale-110 transform"
             title="Edit visit limits"
           >
@@ -3252,7 +3256,8 @@ async function openVisitLimitModal(
   currentWeeklyLimit: number, 
   monthlyLimit: number,
   visitsThisWeek: number,
-  visitsThisMonth: number
+  visitsThisMonth: number,
+  limitType: 'weekly' | 'monthly'
 ) {
   try {
     // Import the modal component
@@ -3265,14 +3270,15 @@ async function openVisitLimitModal(
       currentWeeklyLimit,
       monthlyLimit,
       visitsThisWeek,
-      visitsThisMonth
+      visitsThisMonth,
+      limitType
     });
     
     if (!result) {
       return; // User cancelled
     }
     
-    const { weeklyLimit, monthlyLimit: newMonthlyLimit } = result;
+    const { weeklyLimit, monthlyLimit: newMonthlyLimit, limitType: newLimitType } = result;
     
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -3280,34 +3286,18 @@ async function openVisitLimitModal(
       return;
     }
     
-    // Update weekly limit if changed
-    if (weeklyLimit !== currentWeeklyLimit) {
-      const { error: weeklyError } = await supabase.rpc('update_place_weekly_visit_limit', {
-        p_place_id: placeId,
-        p_weekly_limit: weeklyLimit,
-        p_updated_by: user.id
-      });
-      
-      if (weeklyError) {
-        console.error('Error updating weekly visit limit:', weeklyError);
-        showNotification(`Error updating weekly visit limit: ${weeklyError.message}`, 'error');
-        return;
-      }
-    }
-    
-    // Update monthly limit if changed
-    if (newMonthlyLimit !== monthlyLimit) {
-      const { error: monthlyError } = await supabase.rpc('update_place_monthly_visit_limit', {
-        p_place_id: placeId,
-        p_monthly_limit: newMonthlyLimit,
-        p_updated_by: user.id
-      });
-      
-      if (monthlyError) {
-        console.error('Error updating monthly visit limit:', monthlyError);
-        showNotification(`Error updating monthly visit limit: ${monthlyError.message}`, 'error');
-        return;
-      }
+    // Update settings atomically
+    const { error } = await supabase.rpc('update_place_limit_settings', {
+      p_place_id: placeId,
+      p_limit_type: newLimitType,
+      p_weekly_limit: weeklyLimit,
+      p_monthly_limit: newMonthlyLimit,
+      p_updated_by: user.id
+    });
+    if (error) {
+      console.error('Error updating place limit settings:', error);
+      showNotification(`Error updating place limit settings: ${error.message}`, 'error');
+      return;
     }
     
     showNotification(`Visit limits updated successfully for "${placeName}".`, 'success');
@@ -5115,15 +5105,20 @@ async function loadPersonnelDashboard() {
                 <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-2">Visit Limits</h4>
                 <div class="grid grid-cols-2 gap-3">
                   <div class="text-center">
-                    <div class="text-lg font-bold text-blue-600 dark:text-blue-400">${assignment.visits_this_week || 0}</div>
+                    <div class="text-lg font-bold ${assignment.limit_type === 'weekly' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}">${assignment.visits_this_week || 0}</div>
                     <div class="text-xs text-gray-600 dark:text-gray-300">This Week</div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400">Limit: ${assignment.current_month_visit_limit || 50}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">Limit: ${assignment.weekly_visit_limit || 50}</div>
                   </div>
                   <div class="text-center">
-                    <div class="text-lg font-bold text-purple-600 dark:text-purple-400">${assignment.visits_this_month || 0}</div>
+                    <div class="text-lg font-bold ${assignment.limit_type === 'monthly' ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400 dark:text-gray-500'}">${assignment.visits_this_month || 0}</div>
                     <div class="text-xs text-gray-600 dark:text-gray-300">This Month</div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400">Weekly Limit: ${assignment.weekly_visit_limit || 50}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">Limit: ${assignment.monthly_visit_limit || 200}</div>
                   </div>
+                </div>
+                <div class="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
+                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
+                    Enforced: ${assignment.limit_type === 'weekly' ? 'Weekly' : 'Monthly'}
+                  </span>
                 </div>
                 <div class="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
                   Week: ${assignment.week_start ? formatDate(assignment.week_start) : 'N/A'} - ${assignment.week_end ? formatDate(assignment.week_end) : 'N/A'}

@@ -22,6 +22,7 @@ export interface ComprehensiveLimitData {
   monthlyLimit: number;
   visitsThisWeek: number;
   visitsThisMonth: number;
+  limitType: 'weekly' | 'monthly';
 }
 
 export class VisitLimitModal {
@@ -76,6 +77,18 @@ export class VisitLimitModal {
 
             <!-- Form -->
             <form id="visitLimitForm">
+              <div class="mb-4">
+                <label for="limitType" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Enforced Limit Type
+                </label>
+                <select id="limitType" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white">
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1" id="limitTypeHelp">
+                  Only the selected limit type is enforced. The other is ignored.
+                </p>
+              </div>
               <div class="mb-4">
                 <label for="weeklyLimit" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Weekly Visit Limit
@@ -169,6 +182,7 @@ export class VisitLimitModal {
     // Validation on blur (when user finishes typing)
     const weeklyInput = document.getElementById('weeklyLimit') as HTMLInputElement;
     const monthlyInput = document.getElementById('monthlyLimit') as HTMLInputElement;
+    const limitTypeSelect = document.getElementById('limitType') as HTMLSelectElement;
 
     weeklyInput?.addEventListener('blur', () => {
       this.validateInputs();
@@ -177,17 +191,29 @@ export class VisitLimitModal {
     monthlyInput?.addEventListener('blur', () => {
       this.validateInputs();
     });
+
+    limitTypeSelect?.addEventListener('change', () => {
+      const type = (limitTypeSelect?.value as 'weekly' | 'monthly') || 'weekly';
+      // Toggle inputs based on selected type
+      if (weeklyInput && monthlyInput) {
+        weeklyInput.disabled = type !== 'weekly';
+        monthlyInput.disabled = type !== 'monthly';
+      }
+      this.validateInputs();
+    });
   }
 
   private validateInputs(): void {
     const weeklyInput = document.getElementById('weeklyLimit') as HTMLInputElement;
     const monthlyInput = document.getElementById('monthlyLimit') as HTMLInputElement;
     const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
+    const limitTypeSelect = document.getElementById('limitType') as HTMLSelectElement;
 
-    if (!weeklyInput || !monthlyInput || !saveBtn) return;
+    if (!weeklyInput || !monthlyInput || !saveBtn || !limitTypeSelect) return;
 
     const weeklyValue = parseInt(weeklyInput.value) || 0;
     const monthlyValue = parseInt(monthlyInput.value) || 0;
+    const type = (limitTypeSelect.value as 'weekly' | 'monthly') || 'weekly';
 
     let isValid = true;
     let errorMessage = 'Save Changes';
@@ -198,20 +224,21 @@ export class VisitLimitModal {
     monthlyInput.classList.remove('border-red-500');
     monthlyInput.classList.add('border-gray-300', 'dark:border-gray-600');
 
-    // Validate weekly limit
-    if (weeklyValue > monthlyValue && monthlyValue > 0) {
-      weeklyInput.classList.add('border-red-500');
-      weeklyInput.classList.remove('border-gray-300', 'dark:border-gray-600');
-      isValid = false;
-      errorMessage = 'Weekly limit exceeds monthly limit';
-    }
-
-    // Validate monthly limit
-    if (monthlyValue < weeklyValue && weeklyValue > 0) {
-      monthlyInput.classList.add('border-red-500');
-      monthlyInput.classList.remove('border-gray-300', 'dark:border-gray-600');
-      isValid = false;
-      errorMessage = 'Monthly limit is less than weekly limit';
+    // Validate only the selected type
+    if (type === 'weekly') {
+      if (weeklyValue < 0) {
+        weeklyInput.classList.add('border-red-500');
+        weeklyInput.classList.remove('border-gray-300', 'dark:border-gray-600');
+        isValid = false;
+        errorMessage = 'Weekly limit cannot be negative';
+      }
+    } else {
+      if (monthlyValue < 0) {
+        monthlyInput.classList.add('border-red-500');
+        monthlyInput.classList.remove('border-gray-300', 'dark:border-gray-600');
+        isValid = false;
+        errorMessage = 'Monthly limit cannot be negative';
+      }
     }
 
     // Update button state
@@ -239,7 +266,7 @@ export class VisitLimitModal {
     });
   }
 
-  public openComprehensiveModal(data: ComprehensiveLimitData): Promise<{weeklyLimit: number, monthlyLimit: number} | null> {
+  public openComprehensiveModal(data: ComprehensiveLimitData): Promise<{weeklyLimit: number, monthlyLimit: number, limitType: 'weekly' | 'monthly'} | null> {
     return new Promise((resolve) => {
       this.setupComprehensiveModal(data);
       this.open();
@@ -299,9 +326,10 @@ export class VisitLimitModal {
     const monthlyUsageEl = document.getElementById('monthlyUsage');
     const weeklyProgressEl = document.getElementById('weeklyProgress') as HTMLElement;
     const monthlyProgressEl = document.getElementById('monthlyProgress') as HTMLElement;
+    const limitTypeSelect = document.getElementById('limitType') as HTMLSelectElement;
 
     if (!placeNameEl || !placeInfoEl || !weeklyInput || !monthlyInput || !modalTitle || 
-        !weeklyUsageEl || !monthlyUsageEl || !weeklyProgressEl || !monthlyProgressEl) return;
+        !weeklyUsageEl || !monthlyUsageEl || !weeklyProgressEl || !monthlyProgressEl || !limitTypeSelect) return;
 
     // Set place name and title
     placeNameEl.textContent = data.placeName;
@@ -310,6 +338,7 @@ export class VisitLimitModal {
     // Set current values
     weeklyInput.value = data.currentWeeklyLimit.toString();
     monthlyInput.value = data.monthlyLimit.toString();
+    limitTypeSelect.value = data.limitType;
     
     // Set usage statistics
     weeklyUsageEl.textContent = `${data.visitsThisWeek}/${data.currentWeeklyLimit}`;
@@ -339,12 +368,10 @@ export class VisitLimitModal {
       monthlyProgressEl.className = 'bg-purple-600 h-2 rounded-full';
     }
 
-    // Set place info
-    placeInfoEl.textContent = `Edit both weekly and monthly visit limits for this place.`;
-
-    // Enable both inputs for comprehensive editing
-    weeklyInput.disabled = false;
-    monthlyInput.disabled = false;
+    // Set place info and enable only selected type
+    placeInfoEl.textContent = `Only ${data.limitType} limit will be enforced for this place.`;
+    weeklyInput.disabled = data.limitType !== 'weekly';
+    monthlyInput.disabled = data.limitType !== 'monthly';
 
     // Store mode for validation
     (this.modal as any).mode = 'comprehensive';
@@ -387,26 +414,27 @@ export class VisitLimitModal {
   private handleSubmit(): void {
     const weeklyInput = document.getElementById('weeklyLimit') as HTMLInputElement;
     const monthlyInput = document.getElementById('monthlyLimit') as HTMLInputElement;
+    const limitTypeSelect = document.getElementById('limitType') as HTMLSelectElement;
     const resolve = (this.modal as any).resolve;
 
-    if (!weeklyInput || !monthlyInput || !resolve) return;
+    if (!weeklyInput || !monthlyInput || !limitTypeSelect || !resolve) return;
 
     const weeklyLimit = parseInt(weeklyInput.value) || 0;
     const monthlyLimit = parseInt(monthlyInput.value) || 0;
+    const limitType = (limitTypeSelect.value as 'weekly' | 'monthly') || 'weekly';
 
-    // Final validation
-    if (weeklyLimit > monthlyLimit) {
-      alert('Weekly limit cannot exceed monthly limit.');
+    // Final validation based on type
+    if (limitType === 'weekly' && weeklyLimit < 0) {
+      alert('Weekly limit cannot be negative.');
       return;
     }
-
-    if (monthlyLimit < weeklyLimit) {
-      alert('Monthly limit cannot be less than weekly limit.');
+    if (limitType === 'monthly' && monthlyLimit < 0) {
+      alert('Monthly limit cannot be negative.');
       return;
     }
 
     // Resolve with the values
-    resolve({ weeklyLimit, monthlyLimit });
+    resolve({ weeklyLimit, monthlyLimit, limitType });
     this.close();
   }
 }
