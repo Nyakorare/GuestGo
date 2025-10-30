@@ -3301,7 +3301,8 @@ async function openVisitLimitModal(
     }
     
     showNotification(`Visit limits updated successfully for "${placeName}".`, 'success');
-    await loadPlaces();
+    // Refresh the page to show updated limits
+    window.location.reload();
     
   } catch (error) {
     console.error('Error updating visit limits:', error);
@@ -5135,12 +5136,19 @@ async function loadPersonnelDashboard() {
                 <p class="text-sm text-gray-600 dark:text-gray-300"><strong>Last updated:</strong> ${new Date(assignment.updated_at).toLocaleString()}</p>
               </div>
             </div>
-            <div class="mt-6">
+            <div class="mt-6 flex gap-3">
               <button 
                 onclick="window.togglePersonnelAvailability('${assignment.place_id}', ${assignment.is_available})"
                 class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 ease-in-out hover:scale-105 hover:shadow-lg"
               >
                 ${assignment.is_available ? 'Mark as Unavailable' : 'Mark as Available'}
+              </button>
+              <button 
+                onclick="window.openVisitLimitModal('${assignment.place_id}', '${assignment.place_name}', ${assignment.weekly_visit_limit || 50}, ${assignment.monthly_visit_limit || 200}, ${assignment.visits_this_week || 0}, ${assignment.visits_this_month || 0}, '${assignment.limit_type || 'weekly'}')"
+                class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all duration-200 ease-in-out hover:scale-105 hover:shadow-lg"
+                title="Edit visit limits"
+              >
+                Edit Limits
               </button>
             </div>
           </div>

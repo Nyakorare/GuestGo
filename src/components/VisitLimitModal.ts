@@ -96,12 +96,12 @@ export class VisitLimitModal {
                 <input
                   type="number"
                   id="weeklyLimit"
-                  min="0"
+                  min="1"
                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                   placeholder="Enter weekly limit"
                 />
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1" id="weeklyHelp">
-                  Cannot exceed monthly limit
+                  Minimum value is 1
                 </p>
               </div>
 
@@ -112,12 +112,12 @@ export class VisitLimitModal {
                 <input
                   type="number"
                   id="monthlyLimit"
-                  min="0"
+                  min="1"
                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                   placeholder="Enter monthly limit"
                 />
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1" id="monthlyHelp">
-                  Must be greater than or equal to weekly limit
+                  Minimum value is 1
                 </p>
               </div>
 
@@ -226,18 +226,18 @@ export class VisitLimitModal {
 
     // Validate only the selected type
     if (type === 'weekly') {
-      if (weeklyValue < 0) {
+      if (weeklyValue <= 0) {
         weeklyInput.classList.add('border-red-500');
         weeklyInput.classList.remove('border-gray-300', 'dark:border-gray-600');
         isValid = false;
-        errorMessage = 'Weekly limit cannot be negative';
+        errorMessage = 'Weekly limit must be at least 1';
       }
     } else {
-      if (monthlyValue < 0) {
+      if (monthlyValue <= 0) {
         monthlyInput.classList.add('border-red-500');
         monthlyInput.classList.remove('border-gray-300', 'dark:border-gray-600');
         isValid = false;
-        errorMessage = 'Monthly limit cannot be negative';
+        errorMessage = 'Monthly limit must be at least 1';
       }
     }
 
@@ -424,12 +424,12 @@ export class VisitLimitModal {
     const limitType = (limitTypeSelect.value as 'weekly' | 'monthly') || 'weekly';
 
     // Final validation based on type
-    if (limitType === 'weekly' && weeklyLimit < 0) {
-      alert('Weekly limit cannot be negative.');
+    if (limitType === 'weekly' && weeklyLimit <= 0) {
+      alert('Weekly limit must be at least 1.');
       return;
     }
-    if (limitType === 'monthly' && monthlyLimit < 0) {
-      alert('Monthly limit cannot be negative.');
+    if (limitType === 'monthly' && monthlyLimit <= 0) {
+      alert('Monthly limit must be at least 1.');
       return;
     }
 
