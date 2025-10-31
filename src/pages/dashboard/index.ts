@@ -1483,6 +1483,15 @@ export function DashboardPage() {
                   placeholder="Please provide a reason for your unavailability..."
                   required
                 ></textarea>
+                <div class="mt-3">
+                  <label for="unavailableFromDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Unavailable From</label>
+                  <input 
+                    type="date" 
+                    id="unavailableFromDate" 
+                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    required
+                  />
+                </div>
               </div>
               <div id="availabilityError" class="hidden text-red-600 text-sm"></div>
               <div id="availabilitySuccess" class="hidden text-green-600 text-sm"></div>
@@ -5075,6 +5084,34 @@ async function loadPersonnelDashboard() {
     const isAssigned = availabilityData && availabilityData.length > 0;
     updatePersonnelButtonStates(isAssigned);
 
+    // Show popup for places that are back to available after the chosen unavailable date
+    try {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const todayStr = `${yyyy}-${mm}-${dd}`;
+      (availabilityData || []).forEach((assignment: any) => {
+        if (assignment.unavailable_from) {
+          const d = new Date(assignment.unavailable_from);
+          const dy = d.getFullYear();
+          const dm = String(d.getMonth() + 1).padStart(2, '0');
+          const ddv = String(d.getDate()).padStart(2, '0');
+          const dateStr = `${dy}-${dm}-${ddv}`;
+          // If the unavailable date is in the past and computed availability is true, notify once per place/date
+          if (dateStr < todayStr && assignment.is_available === true) {
+            const key = `placeBackAvailable:${assignment.place_id}:${dateStr}`;
+            if (!localStorage.getItem(key)) {
+              showNotification(`${assignment.place_name} is back to available.`, 'success');
+              localStorage.setItem(key, 'shown');
+            }
+          }
+        }
+      });
+    } catch (e) {
+      console.error('Error checking back-available notifications:', e);
+    }
+
     if (personnelAssignmentInfo) {
       if (isAssigned) {
         // Show all assignments
@@ -8257,13 +8294,14 @@ async function togglePersonnelAvailability(placeId: string, currentAvailability:
     const errorDiv = document.getElementById('availabilityError');
     const successDiv = document.getElementById('availabilitySuccess');
     const reasonTextarea = document.getElementById('unavailabilityReason') as HTMLTextAreaElement;
+    const unavailableFromInput = document.getElementById('unavailableFromDate') as HTMLInputElement;
     const availableRadio = document.getElementById('availableRadio') as HTMLInputElement;
     const unavailableRadio = document.getElementById('unavailableRadio') as HTMLInputElement;
     const reasonField = document.getElementById('reasonField');
     const submitBtn = document.getElementById('updateAvailabilityBtn') as HTMLButtonElement;
     const form = document.getElementById('availabilityForm') as HTMLFormElement;
 
-    if (modal && errorDiv && successDiv && reasonTextarea && submitBtn && availableRadio && unavailableRadio && reasonField && form) {
+    if (modal && errorDiv && successDiv && reasonTextarea && submitBtn && availableRadio && unavailableRadio && reasonField && form && unavailableFromInput) {
       // Ensure modal overlays the entire page by appending to body
       if (modal.parentElement !== document.body) {
         document.body.appendChild(modal);
@@ -8277,16 +8315,93 @@ async function togglePersonnelAvailability(placeId: string, currentAvailability:
       availableRadio.checked = currentAvailability;
       unavailableRadio.checked = !currentAvailability;
       reasonField.classList.toggle('hidden', currentAvailability);
+      // Constrain picker to current month and disable dates with schedules
+      const today = new Date();
+      const year = today.getFullYear();
+      const monthIndex = today.getMonth(); // 0-based
+      const firstOfMonth = new Date(year, monthIndex, 1);
+      const lastOfMonth = new Date(year, monthIndex + 1, 0);
+      const yyyy = year;
+      const mm = String(monthIndex + 1).padStart(2, '0');
+      // Min = max(today, first day of month) to prevent past dates
+      const effectiveMinDate = new Date(Math.max(today.getTime(), firstOfMonth.getTime()));
+      const minStr = `${effectiveMinDate.getFullYear()}-${String(effectiveMinDate.getMonth() + 1).padStart(2, '0')}-${String(effectiveMinDate.getDate()).padStart(2, '0')}`;
+      const maxStr = `${yyyy}-${mm}-${String(lastOfMonth.getDate()).padStart(2, '0')}`;
+      unavailableFromInput.min = minStr;
+      unavailableFromInput.max = maxStr;
+
+      // Fetch scheduled dates for this place in the current month
+      const { data: scheduledDates, error: scheduledErr } = await supabase.rpc('get_place_scheduled_dates_in_month', {
+        p_place_id: placeId,
+        p_year: year,
+        p_month: monthIndex + 1
+      });
+      if (scheduledErr) {
+        console.error('Error loading scheduled dates:', scheduledErr);
+      }
+      const disabledSet = new Set<string>((scheduledDates || []).map((r: any) => {
+        const d = new Date(r.visit_date);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+      }));
+      // Helper: find first enabled date from today within month
+      const findFirstEnabled = (): string | null => {
+        let d = new Date(Math.max(today.getTime(), firstOfMonth.getTime()));
+        while (d <= lastOfMonth) {
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          const key = `${y}-${m}-${day}`;
+          if (!disabledSet.has(key)) return key;
+          d.setDate(d.getDate() + 1);
+        }
+        return null;
+      };
+      const initial = findFirstEnabled();
+      unavailableFromInput.value = initial || '';
+      // If no valid date left in month, disable submit and show error
+      if (!initial && !availableRadio.checked) {
+        errorDiv.textContent = 'No available dates left this month to mark as unavailable.';
+        errorDiv.classList.remove('hidden');
+        submitBtn.disabled = true;
+      }
+      // Guard against selecting disabled days
+      const handleDateChange = () => {
+        const v = unavailableFromInput.value;
+        if (!v) return;
+        if (v < unavailableFromInput.min) {
+          errorDiv.textContent = 'You cannot select a past date.';
+          errorDiv.classList.remove('hidden');
+          unavailableFromInput.value = '';
+          submitBtn.disabled = true;
+          return;
+        }
+        if (disabledSet.has(v)) {
+          errorDiv.textContent = 'That date already has scheduled visits and cannot be selected.';
+          errorDiv.classList.remove('hidden');
+          unavailableFromInput.value = '';
+          submitBtn.disabled = true;
+        } else {
+          errorDiv.classList.add('hidden');
+          if (!availableRadio.checked) submitBtn.disabled = false;
+        }
+      };
+      unavailableFromInput.removeEventListener('change', handleDateChange);
+      unavailableFromInput.addEventListener('change', handleDateChange);
 
       // Show/hide reason field based on radio selection
       const handleRadioChange = () => {
         if (unavailableRadio.checked) {
           reasonField.classList.remove('hidden');
           reasonTextarea.required = true;
+          unavailableFromInput.required = true;
         } else {
           reasonField.classList.add('hidden');
           reasonTextarea.required = false;
           reasonTextarea.value = '';
+          unavailableFromInput.required = false;
         }
       };
       availableRadio.removeEventListener('change', handleRadioChange);
@@ -8310,12 +8425,38 @@ async function togglePersonnelAvailability(placeId: string, currentAvailability:
             submitBtn.textContent = 'Update Availability';
             return;
           }
+          // Extra validation: date must be set, within month, and not disabled
+          if (!newAvailability) {
+            const v = unavailableFromInput.value;
+            if (!v) {
+              errorDiv.textContent = 'Please select a valid date within this month.';
+              errorDiv.classList.remove('hidden');
+              submitBtn.disabled = false;
+              submitBtn.textContent = 'Update Availability';
+              return;
+            }
+            if (v < unavailableFromInput.min || v > unavailableFromInput.max) {
+              errorDiv.textContent = 'Please select a valid date within this month.';
+              errorDiv.classList.remove('hidden');
+              submitBtn.disabled = false;
+              submitBtn.textContent = 'Update Availability';
+              return;
+            }
+            if (typeof disabledSet !== 'undefined' && disabledSet.has(v)) {
+              errorDiv.textContent = 'That date already has scheduled visits and cannot be selected.';
+              errorDiv.classList.remove('hidden');
+              submitBtn.disabled = false;
+              submitBtn.textContent = 'Update Availability';
+              return;
+            }
+          }
           const { data, error } = await supabase.rpc('update_personnel_availability', {
             p_personnel_id: user.id,
             p_place_id: placeId,
             p_is_available: newAvailability,
             p_unavailability_reason: newAvailability ? null : unavailabilityReason,
-            p_updated_by: user.id
+            p_updated_by: user.id,
+            p_unavailable_from: newAvailability ? null : unavailableFromInput.value
           });
           if (error) {
             console.error('Error updating availability:', error);
