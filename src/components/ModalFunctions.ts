@@ -194,7 +194,7 @@ export async function setupEventListeners() {
       }
     }
 
-    placeToVisitSelect.addEventListener('change', function(e: Event) {
+    placeToVisitSelect.addEventListener('change', async function(e: Event) {
       const target = e.target as HTMLSelectElement;
       const multiplePlacesContainer = document.getElementById('multiplePlacesContainer');
       if (multiplePlacesContainer) {
@@ -213,9 +213,29 @@ export async function setupEventListeners() {
             `;
             multiplePlacesContainer.appendChild(checkboxDiv);
           });
+          
+          // Add event listeners to checkboxes to update unavailable dates when selection changes
+          const checkboxes = multiplePlacesContainer.querySelectorAll('input[name="places"]');
+          checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', async () => {
+              await updateUnavailableDatesDisplay();
+              // Re-validate the date when place selection changes
+              if (typeof (window as any).validateVisitDate === 'function') {
+                await (window as any).validateVisitDate();
+              }
+            });
+          });
         } else {
           multiplePlacesContainer.classList.add('hidden');
         }
+      }
+      
+      // Update unavailable dates display when place selection changes
+      await updateUnavailableDatesDisplay();
+      
+      // Re-validate the date when place selection changes
+      if (typeof (window as any).validateVisitDate === 'function') {
+        await (window as any).validateVisitDate();
       }
     });
   }
@@ -475,7 +495,15 @@ export async function setupEventListeners() {
   function updateSubmitButtonState() {
     if (scheduleSubmitBtn) {
       const isLoggedIn = scheduleEmail.readOnly;
-      scheduleSubmitBtn.disabled = !(areAllFieldsFilled() && (isLoggedIn || isEmailVerified));
+      const allFieldsFilled = areAllFieldsFilled();
+      const emailValid = isLoggedIn || isEmailVerified;
+      
+      // Check if date validation blocks scheduling (unavailable date)
+      const dateValidationStatus = document.getElementById('dateValidationStatus');
+      const hasUnavailableDateError = dateValidationStatus && 
+        dateValidationStatus.textContent?.includes('Cannot schedule on this date');
+      
+      scheduleSubmitBtn.disabled = !(allFieldsFilled && emailValid && !hasUnavailableDateError);
     }
   }
 
@@ -1088,6 +1116,147 @@ export async function setupEventListeners() {
     });
   }
 
+  // Function to get unavailable dates for selected places
+  async function getUnavailableDatesForPlaces(placeIds: string[]): Promise<Array<{place_id: string, place_name: string, unavailable_from: string}>> {
+    if (!placeIds || placeIds.length === 0) return [];
+    
+    try {
+      const { data, error } = await supabase
+        .from('personnel_availability')
+        .select(`
+          place_id,
+          unavailable_from,
+          places_to_visit!inner(name)
+        `)
+        .in('place_id', placeIds)
+        .not('unavailable_from', 'is', null);
+      
+      if (error) {
+        console.error('Error fetching unavailable dates:', error);
+        return [];
+      }
+      
+      return (data || []).map((item: any) => ({
+        place_id: item.place_id,
+        place_name: item.places_to_visit?.name || 'Unknown Place',
+        unavailable_from: item.unavailable_from
+      }));
+    } catch (error) {
+      console.error('Exception fetching unavailable dates:', error);
+      return [];
+    }
+  }
+
+  // Function to update unavailable dates display
+  async function updateUnavailableDatesDisplay() {
+    const visitDateInput = document.getElementById('visitDate') as HTMLInputElement;
+    if (!visitDateInput) return;
+
+    // Get selected places
+    const placeToVisitSelect = document.getElementById('placeToVisit') as HTMLSelectElement;
+    let selectedPlaceIds: string[] = [];
+    
+    if (placeToVisitSelect?.value === 'multiple') {
+      // Get all checked places
+      const checkedPlaces = Array.from(document.querySelectorAll('input[name="places"]:checked'))
+        .map((checkbox) => (checkbox as HTMLInputElement).value);
+      selectedPlaceIds = checkedPlaces;
+    } else if (placeToVisitSelect?.value) {
+      selectedPlaceIds = [placeToVisitSelect.value];
+    }
+    
+    // Get or create unavailable dates display element
+    let unavailableDatesDisplay = document.getElementById('unavailableDatesDisplay');
+    if (!unavailableDatesDisplay && visitDateInput.parentNode) {
+      unavailableDatesDisplay = document.createElement('div');
+      unavailableDatesDisplay.id = 'unavailableDatesDisplay';
+      unavailableDatesDisplay.className = 'mt-2 text-sm';
+      // Insert after dateValidationStatus if it exists, otherwise after visitDateInput
+      const dateValidationStatus = document.getElementById('dateValidationStatus');
+      if (dateValidationStatus) {
+        dateValidationStatus.parentNode?.insertBefore(unavailableDatesDisplay, dateValidationStatus.nextSibling);
+      } else {
+        visitDateInput.parentNode.insertBefore(unavailableDatesDisplay, visitDateInput.nextSibling);
+      }
+    }
+    
+    if (!unavailableDatesDisplay || selectedPlaceIds.length === 0) {
+      if (unavailableDatesDisplay) {
+        unavailableDatesDisplay.innerHTML = '';
+      }
+      return;
+    }
+    
+    // Fetch unavailable dates
+    const unavailableDates = await getUnavailableDatesForPlaces(selectedPlaceIds);
+    
+    if (unavailableDates.length === 0) {
+      unavailableDatesDisplay.innerHTML = '';
+      return;
+    }
+    
+    // Get current Philippine date for comparison
+    let currentPhilippineDate: Date;
+    try {
+      const { data: currentDateData, error } = await supabase.rpc('get_philippine_date');
+      if (error) {
+        currentPhilippineDate = getPhilippineDate();
+      } else {
+        currentPhilippineDate = new Date(currentDateData);
+      }
+    } catch (error) {
+      currentPhilippineDate = getPhilippineDate();
+    }
+    currentPhilippineDate.setHours(0, 0, 0, 0);
+    
+    // Format unavailable dates
+    const formatDateStr = (dateStr: string) => {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    };
+    
+    // Separate current and upcoming unavailable dates
+    const currentUnavailable: typeof unavailableDates = [];
+    const upcomingUnavailable: typeof unavailableDates = [];
+    
+    unavailableDates.forEach((item) => {
+      const unavailableDate = new Date(item.unavailable_from);
+      unavailableDate.setHours(0, 0, 0, 0);
+      
+      if (unavailableDate <= currentPhilippineDate) {
+        currentUnavailable.push(item);
+      } else {
+        upcomingUnavailable.push(item);
+      }
+    });
+    
+    let html = '<div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3">';
+    html += '<p class="text-xs font-semibold text-orange-800 dark:text-orange-200 mb-2">⚠️ Personnel Unavailable Dates:</p>';
+    
+    if (currentUnavailable.length > 0) {
+      html += '<div class="mb-2">';
+      html += '<p class="text-xs font-medium text-red-700 dark:text-red-300 mb-1">Currently Unavailable:</p>';
+      html += '<ul class="text-xs text-red-600 dark:text-red-400 space-y-1 list-disc list-inside">';
+      currentUnavailable.forEach((item) => {
+        html += `<li>${item.place_name} - ${formatDateStr(item.unavailable_from)}</li>`;
+      });
+      html += '</ul></div>';
+    }
+    
+    if (upcomingUnavailable.length > 0) {
+      html += '<div>';
+      html += '<p class="text-xs font-medium text-orange-700 dark:text-orange-300 mb-1">Will be Unavailable:</p>';
+      html += '<ul class="text-xs text-orange-600 dark:text-orange-400 space-y-1 list-disc list-inside">';
+      upcomingUnavailable.forEach((item) => {
+        html += `<li>${item.place_name} - ${formatDateStr(item.unavailable_from)}</li>`;
+      });
+      html += '</ul></div>';
+    }
+    
+    html += '</div>';
+    unavailableDatesDisplay.innerHTML = html;
+  }
+
   // Function to initialize date validation for the scheduling modal
   (window as any).initializeDateValidation = async function initializeDateValidation() {
     const visitDateInput = document.getElementById('visitDate') as HTMLInputElement;
@@ -1138,6 +1307,11 @@ export async function setupEventListeners() {
       dateValidationStatus.className = 'mt-1 text-sm';
       visitDateInput.parentNode?.insertBefore(dateValidationStatus, visitDateInput.nextSibling);
     }
+
+    // Expose validateDate function globally so it can be called when place selection changes
+    (window as any).validateVisitDate = async function() {
+      await validateDate();
+    };
 
     // Function to validate date and update status
     async function validateDate() {
@@ -1224,20 +1398,71 @@ export async function setupEventListeners() {
             dateValidationStatus.textContent = `❌ You already have a scheduled visit on this date.`;
             dateValidationStatus.className = 'mt-1 text-sm text-red-600 font-medium';
           }
-          if (scheduleSubmitBtn) scheduleSubmitBtn.disabled = true;
+          const scheduleSubmitBtnCheck = document.getElementById('scheduleSubmitBtn') as HTMLButtonElement;
+          if (scheduleSubmitBtnCheck) scheduleSubmitBtnCheck.disabled = true;
           return false;
         } else {
           // If no error, re-enable the button (unless another validation disables it)
-          if (scheduleSubmitBtn) scheduleSubmitBtn.disabled = false;
+          const scheduleSubmitBtnCheck = document.getElementById('scheduleSubmitBtn') as HTMLButtonElement;
+          if (scheduleSubmitBtnCheck) scheduleSubmitBtnCheck.disabled = false;
+        }
+      }
+
+      // Get submit button reference
+      const scheduleSubmitBtnLocal = document.getElementById('scheduleSubmitBtn') as HTMLButtonElement;
+      
+      // Check if selected date matches any unavailable dates for selected places
+      const placeToVisitSelect = document.getElementById('placeToVisit') as HTMLSelectElement;
+      let selectedPlaceIds: string[] = [];
+      if (placeToVisitSelect?.value === 'multiple') {
+        selectedPlaceIds = Array.from(document.querySelectorAll('input[name="places"]:checked'))
+          .map((checkbox) => (checkbox as HTMLInputElement).value);
+      } else if (placeToVisitSelect?.value) {
+        selectedPlaceIds = [placeToVisitSelect.value];
+      }
+      
+      let hasUnavailableDate = false;
+      let unavailableWarning = '';
+      
+      // Only check unavailable dates if a place is selected and a date is chosen
+      if (selectedPlaceIds.length > 0 && visitDateInput.value) {
+        const unavailableDates = await getUnavailableDatesForPlaces(selectedPlaceIds);
+        const selectedDateStr = philippineSelectedDate.toISOString().split('T')[0];
+        const matchingUnavailable = unavailableDates.filter((item) => {
+          const unavailableDate = new Date(item.unavailable_from);
+          unavailableDate.setHours(0, 0, 0, 0);
+          return unavailableDate.toISOString().split('T')[0] === selectedDateStr;
+        });
+        
+        if (matchingUnavailable.length > 0) {
+          hasUnavailableDate = true;
+          const placeNames = matchingUnavailable.map(item => item.place_name).join(', ');
+          unavailableWarning = `⚠️ Personnel at ${placeNames} ${matchingUnavailable.length === 1 ? 'is' : 'are'} unavailable on this date. Cannot schedule on this date.`;
+        }
+      }
+      
+      // Disable submit button if date matches unavailable dates
+      if (hasUnavailableDate) {
+        if (scheduleSubmitBtnLocal) {
+          scheduleSubmitBtnLocal.disabled = true;
         }
       }
 
       // Check if date is today
       if (philippineSelectedDate.getTime() === currentPhilippineDate.getTime()) {
-        visitDateInput.classList.add('border-yellow-500', 'focus:border-yellow-500');
-        if (dateValidationStatus) {
-          dateValidationStatus.textContent = `⚠️ Scheduling for today (${currentPhilippineDate.toLocaleDateString()}). Please ensure you can visit today.`;
-          dateValidationStatus.className = 'mt-1 text-sm text-yellow-600 font-medium';
+        if (hasUnavailableDate) {
+          visitDateInput.classList.add('border-orange-500', 'focus:border-orange-500');
+          if (dateValidationStatus) {
+            dateValidationStatus.textContent = `${unavailableWarning} Cannot schedule on this date.`;
+            dateValidationStatus.className = 'mt-1 text-sm text-orange-600 font-medium';
+          }
+          return false; // Return false to prevent scheduling
+        } else {
+          visitDateInput.classList.add('border-yellow-500', 'focus:border-yellow-500');
+          if (dateValidationStatus) {
+            dateValidationStatus.textContent = `⚠️ Scheduling for today (${currentPhilippineDate.toLocaleDateString()}). Please ensure you can visit today.`;
+            dateValidationStatus.className = 'mt-1 text-sm text-yellow-600 font-medium';
+          }
         }
         return true;
       }
@@ -1246,30 +1471,74 @@ export async function setupEventListeners() {
       const philippineTomorrow = new Date(currentPhilippineDate);
       philippineTomorrow.setDate(philippineTomorrow.getDate() + 1);
       if (philippineSelectedDate.getTime() === philippineTomorrow.getTime()) {
-        visitDateInput.classList.add('border-green-500', 'focus:border-green-500');
-        if (dateValidationStatus) {
-          dateValidationStatus.textContent = `✅ Scheduling for tomorrow (${philippineTomorrow.toLocaleDateString()}).`;
-          dateValidationStatus.className = 'mt-1 text-sm text-green-600 font-medium';
+        if (hasUnavailableDate) {
+          visitDateInput.classList.add('border-orange-500', 'focus:border-orange-500');
+          if (dateValidationStatus) {
+            dateValidationStatus.textContent = `${unavailableWarning} Cannot schedule on this date.`;
+            dateValidationStatus.className = 'mt-1 text-sm text-orange-600 font-medium';
+          }
+          return false; // Return false to prevent scheduling
+        } else {
+          visitDateInput.classList.add('border-green-500', 'focus:border-green-500');
+          if (dateValidationStatus) {
+            dateValidationStatus.textContent = `✅ Scheduling for tomorrow (${philippineTomorrow.toLocaleDateString()}).`;
+            dateValidationStatus.className = 'mt-1 text-sm text-green-600 font-medium';
+          }
         }
         return true;
       }
 
       // Valid future date
-      visitDateInput.classList.add('border-green-500', 'focus:border-green-500');
-      if (dateValidationStatus) {
-        dateValidationStatus.textContent = `✅ Valid date selected: ${philippineSelectedDate.toLocaleDateString()}.`;
-        dateValidationStatus.className = 'mt-1 text-sm text-green-600 font-medium';
+      if (hasUnavailableDate) {
+        visitDateInput.classList.add('border-orange-500', 'focus:border-orange-500');
+        if (dateValidationStatus) {
+          dateValidationStatus.textContent = `${unavailableWarning} Cannot schedule on this date.`;
+          dateValidationStatus.className = 'mt-1 text-sm text-orange-600 font-medium';
+        }
+        return false; // Return false to prevent scheduling
+      } else {
+        visitDateInput.classList.add('border-green-500', 'focus:border-green-500');
+        if (dateValidationStatus) {
+          dateValidationStatus.textContent = `✅ Valid date selected: ${philippineSelectedDate.toLocaleDateString()}.`;
+          dateValidationStatus.className = 'mt-1 text-sm text-green-600 font-medium';
+        }
+      }
+      
+      // If no unavailable date and we passed all validations, update button state
+      // The updateSubmitButtonState function will handle final state based on form completion
+      if (!hasUnavailableDate && scheduleSubmitBtnLocal) {
+        // Update button state to consider form fields and email verification
+        // Don't force enable, let updateSubmitButtonState handle it based on all conditions
+        updateSubmitButtonState();
       }
       return true;
     }
 
     // Add event listeners for real-time validation
-    visitDateInput.addEventListener('change', validateDate);
-    visitDateInput.addEventListener('input', validateDate);
-    visitDateInput.addEventListener('blur', validateDate);
+    // Remove existing listeners to avoid duplicates
+    visitDateInput.removeEventListener('change', validateDate);
+    visitDateInput.removeEventListener('input', validateDate);
+    visitDateInput.removeEventListener('blur', validateDate);
+    
+    // Add fresh event listeners
+    visitDateInput.addEventListener('change', async () => {
+      await validateDate();
+      await updateUnavailableDatesDisplay();
+    });
+    visitDateInput.addEventListener('input', async () => {
+      await validateDate();
+      await updateUnavailableDatesDisplay();
+    });
+    visitDateInput.addEventListener('blur', async () => {
+      await validateDate();
+      await updateUnavailableDatesDisplay();
+    });
 
     // Initial validation
-    validateDate();
+    await validateDate();
+    
+    // Update unavailable dates display
+    await updateUnavailableDatesDisplay();
 
     // Add real-time clock display
     let clockDisplay = document.getElementById('philippineClock');
@@ -1351,9 +1620,10 @@ export async function setupEventListeners() {
     const dateValidationStatus = document.getElementById('dateValidationStatus');
     const clockDisplay = document.getElementById('philippineClock');
     const modalWeeklyVisitCount = document.getElementById('modalWeeklyVisitCount');
+    const unavailableDatesDisplay = document.getElementById('unavailableDatesDisplay');
     
     if (visitDateInput) {
-      visitDateInput.classList.remove('border-red-500', 'border-green-500', 'border-yellow-500', 'focus:border-red-500', 'focus:border-green-500', 'focus:border-yellow-500');
+      visitDateInput.classList.remove('border-red-500', 'border-green-500', 'border-yellow-500', 'border-orange-500', 'focus:border-red-500', 'focus:border-green-500', 'focus:border-yellow-500', 'focus:border-orange-500');
     }
     
     if (dateValidationStatus) {
@@ -1367,6 +1637,10 @@ export async function setupEventListeners() {
     
     if (modalWeeklyVisitCount) {
       modalWeeklyVisitCount.remove();
+    }
+    
+    if (unavailableDatesDisplay) {
+      unavailableDatesDisplay.innerHTML = '';
     }
   }
 

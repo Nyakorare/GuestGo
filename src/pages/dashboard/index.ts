@@ -5114,8 +5114,34 @@ async function loadPersonnelDashboard() {
 
     if (personnelAssignmentInfo) {
       if (isAssigned) {
+        // Get today's date string for comparison
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        
         // Show all assignments
-        personnelAssignmentInfo.innerHTML = availabilityData.map((assignment: any) => `
+        personnelAssignmentInfo.innerHTML = availabilityData.map((assignment: any) => {
+          // Compute unavailable date display
+          let unavailableDateDisplay = '';
+          if (assignment.unavailable_from) {
+            const unavailableDate = new Date(assignment.unavailable_from);
+            const unavailableDateStr = `${unavailableDate.getFullYear()}-${String(unavailableDate.getMonth() + 1).padStart(2, '0')}-${String(unavailableDate.getDate()).padStart(2, '0')}`;
+            const isFutureDate = unavailableDateStr > todayStr;
+            const isUpcoming = assignment.is_available && isFutureDate;
+            
+            unavailableDateDisplay = `
+              <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Unavailable Date:</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">
+                  ${isUpcoming
+                    ? `Will be unavailable from: <span class="font-medium text-orange-600 dark:text-orange-400">${formatDate(assignment.unavailable_from)}</span>`
+                    : `Unavailable from: <span class="font-medium text-red-600 dark:text-red-400">${formatDate(assignment.unavailable_from)}</span>`
+                  }
+                </p>
+              </div>
+            `;
+          }
+          
+          return `
           <div class="bg-white dark:bg-gray-700 rounded-lg shadow p-6 mb-4 transition-all duration-300 ease-in-out hover:shadow-xl hover:scale-[1.02] hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer border border-transparent hover:border-gray-200 dark:hover:border-gray-500">
             <div class="flex items-center justify-between mb-4">
               <h3 class="text-xl font-semibold text-gray-900 dark:text-white">${assignment.place_name}</h3>
@@ -5188,8 +5214,10 @@ async function loadPersonnelDashboard() {
                 Edit Limits
               </button>
             </div>
+            ${unavailableDateDisplay}
           </div>
-        `).join('');
+        `;
+        }).join('');
       } else {
         personnelAssignmentInfo.innerHTML = `
           <div class="bg-white dark:bg-gray-700 rounded-lg shadow p-6 transition-all duration-300 ease-in-out hover:shadow-xl hover:scale-[1.02] hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer border border-transparent hover:border-gray-200 dark:hover:border-gray-500">
