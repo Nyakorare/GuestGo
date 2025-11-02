@@ -1723,9 +1723,9 @@ function renderPlaces(): void {
         </div>
         <div class="flex items-center space-x-4">
           <button 
-            onclick="window.openVisitLimitModal('${place.id}', '${place.name}', ${place.current_week_visit_limit || 50}, ${place.monthly_visit_limit || 200}, ${place.visits_this_week || 0}, ${place.visits_this_month || 0}, '${place.limit_type || 'weekly'}')"
-            class="text-purple-600 hover:text-purple-800 dark:text-purple-500 dark:hover:text-purple-400 transition-colors duration-200 ease-in-out hover:scale-110 transform"
-            title="Edit visit limits"
+            ${!(place.assigned_personnel && place.assigned_personnel.length > 0) ? 'disabled' : `onclick="window.openVisitLimitModal('${place.id}', '${place.name}', ${place.current_week_visit_limit || 50}, ${place.monthly_visit_limit || 200}, ${place.visits_this_week || 0}, ${place.visits_this_month || 0}, '${place.limit_type || 'weekly'}')"`}
+            class="${!(place.assigned_personnel && place.assigned_personnel.length > 0) ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50' : 'text-purple-600 hover:text-purple-800 dark:text-purple-500 dark:hover:text-purple-400 transition-colors duration-200 ease-in-out hover:scale-110 transform'}"
+            title="${!(place.assigned_personnel && place.assigned_personnel.length > 0) ? 'Edit visit limits (disabled: no assigned personnel)' : 'Edit visit limits'}"
           >
             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
