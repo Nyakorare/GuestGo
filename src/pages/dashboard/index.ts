@@ -63,8 +63,10 @@ const LOGS_TAB_ACTIONS = {
     { value: 'all', label: 'All Actions' },
     { value: 'password_change', label: 'Password Change' },
     { value: 'place_update', label: 'Place Update' },
-    { value: 'place_availability_toggle', label: 'Place Availability Toggle' },
+    { value: 'personnel_availability_change', label: 'Personnel Availability Change' },
     { value: 'place_create', label: 'Place Create' },
+    { value: 'place_delete', label: 'Place Delete' },
+    { value: 'place_visit_limit_update', label: 'Place Visit Limit Update' },
     { value: 'personnel_assignment', label: 'Personnel Assignment' },
     { value: 'personnel_removal', label: 'Personnel Removal' },
     { value: 'personnel_availability_change', label: 'Personnel Availability Change' },
@@ -77,7 +79,6 @@ const LOGS_TAB_ACTIONS = {
     { value: 'gate_status_change', label: 'Gate Status Change' },
     { value: 'gate_entrance_scan', label: 'Gate Entrance Scan' },
     { value: 'gate_exit_scan', label: 'Gate Exit Scan' },
-    { value: 'visit_flagged_no_exit', label: 'Visit Flagged (No Exit)' },
     { value: 'visit_temporary_exit', label: 'Visit Temporary Exit' },
     { value: 'visit_feedback_submitted', label: 'Visit Feedback Submitted' },
     { value: 'role_change', label: 'Role Change' },
@@ -94,8 +95,10 @@ const LOGS_TAB_ACTIONS = {
   place: [
     { value: 'all', label: 'All Actions' },
     { value: 'place_update', label: 'Place Update' },
-    { value: 'place_availability_toggle', label: 'Place Availability Toggle' },
+    { value: 'personnel_availability_change', label: 'Personnel Availability Change' },
     { value: 'place_create', label: 'Place Create' },
+    { value: 'place_delete', label: 'Place Delete' },
+    { value: 'place_visit_limit_update', label: 'Place Visit Limit Update' },
     { value: 'personnel_assignment', label: 'Personnel Assignment' },
     { value: 'personnel_removal', label: 'Personnel Removal' },
     { value: 'personnel_availability_change', label: 'Personnel Availability Change' },
@@ -113,7 +116,6 @@ const LOGS_TAB_ACTIONS = {
     { value: 'visit_unsuccessful', label: 'Visit Unsuccessful' },
     { value: 'gate_entrance_scan', label: 'Gate Entrance Scan' },
     { value: 'gate_exit_scan', label: 'Gate Exit Scan' },
-    { value: 'visit_flagged_no_exit', label: 'Visit Flagged (No Exit)' },
     { value: 'visit_temporary_exit', label: 'Visit Temporary Exit' },
     { value: 'visit_feedback_submitted', label: 'Visit Feedback Submitted' },
   ],
@@ -610,8 +612,9 @@ export function DashboardPage() {
                     <option value="all">All Actions</option>
                     <option value="password_change">Password Change</option>
                     <option value="place_update">Place Update</option>
-                    <option value="place_availability_toggle">Place Availability Toggle</option>
+                    <option value="personnel_availability_change">Personnel Availability Change</option>
                     <option value="place_create">Place Create</option>
+                    <option value="place_delete">Place Delete</option>
                     <option value="personnel_assignment">Personnel Assignment</option>
                     <option value="personnel_removal">Personnel Removal</option>
                     <option value="personnel_availability_change">Personnel Availability Change</option>
@@ -624,7 +627,8 @@ export function DashboardPage() {
                     <option value="gate_status_change">Gate Status Change</option>
                     <option value="gate_entrance_scan">Gate Entrance Scan</option>
                     <option value="gate_exit_scan">Gate Exit Scan</option>
-                    <option value="visit_flagged_no_exit">Visit Flagged (No Exit)</option>
+                    <option value="visit_feedback_submitted">Visit Feedback Submitted</option>
+                    <option value="place_visit_limit_update">Place Visit Limit Update</option>
                     <option value="role_change">Role Change</option>
                   </select>
                 </div>
@@ -1391,6 +1395,62 @@ export function DashboardPage() {
         </div>
       </div>
 
+      <!-- Delete Place Modal -->
+      <div id="deletePlaceModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
+          <div class="mt-3">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white">Delete Place</h3>
+              <button 
+                id="closeDeletePlaceModalBtn"
+                class="text-gray-400 hover:text-gray-500 focus:outline-none"
+              >
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <form id="deletePlaceForm" class="space-y-4">
+              <input type="hidden" id="deletePlaceId">
+              <div>
+                <p class="text-sm text-gray-700 dark:text-gray-300">
+                  To confirm, type the place name:
+                </p>
+                <p id="deletePlaceNameDisplay" class="mt-1 text-sm font-semibold text-gray-900 dark:text-white"></p>
+              </div>
+              <div>
+                <label for="deletePlaceConfirmInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Place name</label>
+                <input 
+                  type="text" 
+                  id="deletePlaceConfirmInput" 
+                  class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-red-500 focus:ring-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="Enter place name to confirm"
+                  autocomplete="off"
+                  required
+                >
+              </div>
+              <div class="flex justify-end space-x-2">
+                <button 
+                  type="button"
+                  id="cancelDeletePlaceBtn"
+                  class="px-4 py-2 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  id="confirmDeletePlaceBtn"
+                  class="bg-red-600 text-white px-4 py-2 rounded-md opacity-50 cursor-not-allowed"
+                  disabled
+                >
+                  Delete
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
       <!-- Personnel Assignment Modal -->
       <div id="personnelAssignmentModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
         <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
@@ -1746,6 +1806,15 @@ function renderPlaces(): void {
           >
             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </button>
+          <button 
+            ${place.is_available ? 'disabled' : `onclick="window.openDeletePlaceModal('${place.id}', '${place.name.replace(/"/g, '&quot;')}')"`}
+            class="${place.is_available ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50' : 'text-red-600 hover:text-red-800 dark:text-red-500 dark:hover:text-red-400 transition-colors duration-200 ease-in-out hover:scale-110 transform'}"
+            title="${place.is_available ? 'Delete disabled: place is available' : 'Delete place'}"
+          >
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m-1-2a2 2 0 00-2-2h-2a2 2 0 00-2 2H4m16 0H4" />
             </svg>
           </button>
         </div>
@@ -2154,6 +2223,7 @@ async function renderLogs(): Promise<void> {
                       log.displayAction === 'place_update' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
                       log.displayAction === 'place_availability_toggle' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
                       log.displayAction === 'place_create' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                      log.displayAction === 'place_delete' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
                       log.displayAction === 'personnel_assignment' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
                       log.displayAction === 'personnel_removal' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
                       log.displayAction === 'personnel_availability_change' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' :
@@ -2229,6 +2299,7 @@ async function renderLogs(): Promise<void> {
                       log.displayAction === 'place_update' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
                       log.displayAction === 'place_availability_toggle' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
                       log.displayAction === 'place_create' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                      log.displayAction === 'place_delete' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
                       log.displayAction === 'personnel_assignment' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
                       log.displayAction === 'personnel_removal' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
                       log.displayAction === 'personnel_availability_change' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' :
@@ -2752,6 +2823,64 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
         return `<div><span class="font-medium">Place:</span> ${parsedDetails.name || 'Unknown place'}</div><div><span class="font-medium">Status:</span> <span class="${statusClass}">${statusText}</span></div>`;
       case 'place_create':
         return `<div><span class="font-medium">Name:</span> ${parsedDetails.place_name || 'Unknown place'}</div><div><span class="font-medium">Location:</span> ${parsedDetails.place_location || 'Unknown location'}</div>`;
+      case 'place_delete': {
+        const name = parsedDetails.place_name || (parsedDetails.place_id ? await getPlaceName(parsedDetails.place_id) : 'Unknown place');
+        const idShort = parsedDetails.place_id ? `${String(parsedDetails.place_id).substring(0, 8)}...` : 'Unknown';
+        const by = getUserDisplayName(log?.user_id || '');
+        return `<div><span class=\"font-medium\">Place:</span> ${name} <span class=\"text-gray-500\">(${idShort})</span></div><div><span class=\"font-medium\">Action:</span> <span class=\"text-red-600 dark:text-red-400 font-semibold\">Deleted</span></div><div><span class=\"font-medium\">By:</span> ${by}</div>`;
+      }
+      case 'place_weekly_visit_limit_update': {
+        const placeLabel = parsedDetails.place_name || (parsedDetails.place_id ? await getPlaceName(parsedDetails.place_id) : 'Unknown place');
+        const oldWeekly = parsedDetails.old_weekly_limit ?? '—';
+        const newWeekly = parsedDetails.new_weekly_limit ?? parsedDetails.weekly_limit ?? '—';
+        const oldType = (parsedDetails.old_limit_type || '').toString();
+        const newType = (parsedDetails.new_limit_type || '').toString();
+        const typeChanged = oldType && newType && oldType !== newType;
+        const monthlyInfo = parsedDetails.monthly_limit != null ? `<div><span class="font-medium">Monthly Limit (info):</span> ${parsedDetails.monthly_limit}</div>` : '';
+        const resetInfo = (parsedDetails.reset_week || parsedDetails.reset_year)
+          ? `<div><span class="font-medium">Reset Cycle:</span> Week ${parsedDetails.reset_week ?? '?'} of ${parsedDetails.reset_year ?? '?'}</div>`
+          : '';
+        const by = getUserDisplayName(log?.user_id || '');
+        const when = parsedDetails.updated_at ? new Date(parsedDetails.updated_at).toLocaleString() : '';
+        const typeBadge = typeChanged
+          ? `<div><span class="font-medium">Limit Type:</span> <span class="text-red-600 dark:text-red-400">${oldType || 'unknown'}</span> <span class="text-gray-500">→</span> <span class="text-green-600 dark:text-green-400">${newType || 'weekly'}</span></div>`
+          : `<div><span class="font-medium">Limit Type:</span> ${newType || oldType || 'weekly'}</div>`;
+        return `
+          <div><span class="font-medium">Place:</span> ${placeLabel}</div>
+          ${typeBadge}
+          <div><span class="font-medium">Weekly Limit:</span> <span class="text-red-600 dark:text-red-400">${oldWeekly}</span> <span class="text-gray-500">→</span> <span class="text-green-600 dark:text-green-400">${newWeekly}</span></div>
+          ${monthlyInfo}
+          ${resetInfo}
+          ${when ? `<div><span class="font-medium">Updated At:</span> ${when}</div>` : ''}
+          <div><span class="font-medium">Updated By:</span> ${by}</div>
+        `;
+      }
+      case 'place_monthly_visit_limit_update': {
+        const placeLabel = parsedDetails.place_name || (parsedDetails.place_id ? await getPlaceName(parsedDetails.place_id) : 'Unknown place');
+        const oldMonthly = parsedDetails.old_monthly_limit ?? '—';
+        const newMonthly = parsedDetails.new_monthly_limit ?? parsedDetails.monthly_limit ?? '—';
+        const oldType = (parsedDetails.old_limit_type || '').toString();
+        const newType = (parsedDetails.new_limit_type || '').toString();
+        const typeChanged = oldType && newType && oldType !== newType;
+        const weeklyInfo = parsedDetails.current_weekly_limit != null ? `<div><span class="font-medium">Weekly Limit (info):</span> ${parsedDetails.current_weekly_limit}</div>` : '';
+        const resetInfo = (parsedDetails.reset_month || parsedDetails.reset_year)
+          ? `<div><span class="font-medium">Reset Cycle:</span> Month ${parsedDetails.reset_month ?? '?'} of ${parsedDetails.reset_year ?? '?'}</div>`
+          : '';
+        const by = getUserDisplayName(log?.user_id || '');
+        const when = parsedDetails.updated_at ? new Date(parsedDetails.updated_at).toLocaleString() : '';
+        const typeBadge = typeChanged
+          ? `<div><span class="font-medium">Limit Type:</span> <span class="text-red-600 dark:text-red-400">${oldType || 'unknown'}</span> <span class="text-gray-500">→</span> <span class="text-green-600 dark:text-green-400">${newType || 'monthly'}</span></div>`
+          : `<div><span class="font-medium">Limit Type:</span> ${newType || oldType || 'monthly'}</div>`;
+        return `
+          <div><span class="font-medium">Place:</span> ${placeLabel}</div>
+          ${typeBadge}
+          <div><span class="font-medium">Monthly Limit:</span> <span class="text-red-600 dark:text-red-400">${oldMonthly}</span> <span class="text-gray-500">→</span> <span class="text-green-600 dark:text-green-400">${newMonthly}</span></div>
+          ${weeklyInfo}
+          ${resetInfo}
+          ${when ? `<div><span class="font-medium">Updated At:</span> ${when}</div>` : ''}
+          <div><span class="font-medium">Updated By:</span> ${by}</div>
+        `;
+      }
       case 'personnel_assignment':
         const personnelName = await getUserName(parsedDetails.personnel_id);
         const assignmentPlaceName = await getPlaceName(parsedDetails.place_id);
@@ -2763,9 +2892,26 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
       case 'personnel_availability_change':
         const status = parsedDetails.is_available ? 'Available' : 'Unavailable';
         const statusColor = parsedDetails.is_available ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
+        const formatMonthDayYear = (isoDate: string) => {
+          try {
+            const d = new Date(`${isoDate}T00:00:00`);
+            const month = d.toLocaleString(undefined, { month: 'long' });
+            const day = d.getDate();
+            const year = d.getFullYear();
+            return `${month}-${day}-${year}`;
+          } catch {
+            return isoDate;
+          }
+        };
+        const dateAffected = !parsedDetails.is_available && parsedDetails.unavailable_from
+          ? `<div><span class="font-medium">Date Affected:</span> ${formatMonthDayYear(parsedDetails.unavailable_from)}</div>`
+          : '';
         const reason = parsedDetails.unavailability_reason ? `<div><span class="font-medium">Reason:</span> ${parsedDetails.unavailability_reason}</div>` : '';
         const availabilityPlaceName = await getPlaceName(parsedDetails.place_id);
-        return `<div><span class="font-medium">Personnel:</span> ${await getUserName(parsedDetails.personnel_id)}</div><div><span class="font-medium">Place:</span> ${availabilityPlaceName}</div><div><span class="font-medium">Status:</span> <span class="${statusColor}">${status}</span></div>${reason}`;
+        const personnelDisplay = parsedDetails.personnel_id
+          ? await getUserName(parsedDetails.personnel_id)
+          : getUserDisplayName(log?.user_id || '');
+        return `<div><span class="font-medium">Personnel:</span> ${personnelDisplay}</div><div><span class="font-medium">Place:</span> ${availabilityPlaceName}</div><div><span class="font-medium">Status:</span> <span class="${statusColor}">${status}</span></div>${dateAffected}${reason}`;
       case 'gate_entrance_scan':
         const entranceGateName = parsedDetails.gate_name || 'Unknown Gate';
         const entranceVisitorName = parsedDetails.visitor_name || 'Unknown Visitor';
@@ -3229,6 +3375,83 @@ async function editPlace(placeId: string) {
     form.addEventListener('submit', safeHandleSubmit);
   }
 }
+
+// Delete place modal handlers
+function openDeletePlaceModal(placeId: string, placeName: string) {
+  const modal = document.getElementById('deletePlaceModal');
+  const idInput = document.getElementById('deletePlaceId') as HTMLInputElement;
+  const nameDisplay = document.getElementById('deletePlaceNameDisplay');
+  const confirmInput = document.getElementById('deletePlaceConfirmInput') as HTMLInputElement;
+  const confirmBtn = document.getElementById('confirmDeletePlaceBtn') as HTMLButtonElement;
+  const cancelBtn = document.getElementById('cancelDeletePlaceBtn');
+  const closeBtn = document.getElementById('closeDeletePlaceModalBtn');
+  const form = document.getElementById('deletePlaceForm') as HTMLFormElement;
+
+  if (!(modal && idInput && nameDisplay && confirmInput && confirmBtn && form)) return;
+
+  idInput.value = placeId;
+  nameDisplay.textContent = placeName;
+  confirmInput.value = '';
+  confirmBtn.disabled = true;
+  confirmBtn.classList.add('opacity-50', 'cursor-not-allowed');
+  modal.classList.remove('hidden');
+
+  const onInput = () => {
+    const matches = confirmInput.value.trim() === placeName;
+    confirmBtn.disabled = !matches;
+    if (matches) {
+      confirmBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    } else {
+      confirmBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+  };
+  confirmInput.removeEventListener('input', onInput);
+  confirmInput.addEventListener('input', onInput);
+
+  const cleanup = () => {
+    modal.classList.add('hidden');
+    form.removeEventListener('submit', onSubmit);
+    confirmInput.removeEventListener('input', onInput);
+    if (cancelBtn) cancelBtn.removeEventListener('click', onCancel);
+    if (closeBtn) closeBtn.removeEventListener('click', onCancel);
+  };
+
+  const onCancel = () => cleanup();
+
+  const onSubmit = async (e: Event) => {
+    e.preventDefault();
+    const typed = confirmInput.value.trim();
+    if (typed !== placeName) return;
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Deleting...';
+    try {
+      const { error } = await supabase
+        .from('places_to_visit')
+        .delete()
+        .eq('id', placeId);
+      if (error) {
+        showNotification('Error deleting place: ' + error.message, 'error');
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Delete';
+        return;
+      }
+      await logAction('place_delete', { place_id: placeId, place_name: placeName });
+      showNotification('Place deleted successfully!', 'success');
+      cleanup();
+      await loadPlaces();
+    } catch (err) {
+      console.error('Error deleting place:', err);
+      showNotification('Error deleting place', 'error');
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'Delete';
+    }
+  };
+
+  form.addEventListener('submit', onSubmit);
+  if (cancelBtn) cancelBtn.addEventListener('click', onCancel);
+  if (closeBtn) closeBtn.addEventListener('click', onCancel);
+}
+(window as any).openDeletePlaceModal = openDeletePlaceModal;
 
 // Function to show notifications
 function showNotification(message: string, type: 'success' | 'error') {
@@ -4615,10 +4838,18 @@ function setupAdminTabEventListeners() {
 (window as any).setupAdminTabEventListeners = setupAdminTabEventListeners;
 
 // Helper to compute effective display action for a log (used in filtering and rendering)
-function getEffectiveLogAction(log: any): string {
+async function getEffectiveLogAction(log: any): Promise<string> {
   try {
     if (!log) return '';
     let action = log.action;
+    // Prefer original_action from details if present (fallback logging scenario),
+    // but DO NOT use it for visit_scheduled because we need derived status for filtering.
+    try {
+      const parsed = log.details
+        ? (typeof log.details === 'string' ? JSON.parse(log.details) : log.details)
+        : null;
+      if (parsed && parsed.original_action && action !== 'visit_scheduled') return parsed.original_action;
+    } catch (_) {}
     if (action !== 'visit_scheduled') return action;
 
     const parsedDetails = log.details
@@ -4659,6 +4890,21 @@ function getEffectiveLogAction(log: any): string {
         return 'visit_completed';
       }
     }
+
+    // If we still think it's scheduled, verify against DB for latest status
+    try {
+      const visitId = parsedDetails.visit_id || parsedDetails.id;
+      if (visitId) {
+        const { data: visitRow } = await supabase
+          .from('scheduled_visits')
+          .select('status')
+          .eq('id', visitId)
+          .single();
+        if (visitRow?.status === 'completed') return 'visit_completed';
+        if (visitRow?.status === 'completed_flagged') return 'visit_completed_flagged';
+        if (visitRow?.status === 'unsuccessful' || visitRow?.status === 'failed') return 'visit_unsuccessful';
+      }
+    } catch (_) {}
 
     // Default to original action
     return action;
@@ -4714,10 +4960,36 @@ async function applySearchAndFilterForLogs() {
 
   // Apply action filter (use effective action to capture derived states)
   if (actionValue !== 'all') {
-    filtered = filtered.filter(log => {
-      const effective = getEffectiveLogAction(log);
-      return log.action === actionValue || effective === actionValue;
-    });
+    const evaluated = await Promise.all(filtered.map(async (log) => ({
+      log,
+      effective: await getEffectiveLogAction(log)
+    })));
+    filtered = evaluated.filter(({ log, effective }) => {
+      const selected = (actionValue || '').toLowerCase();
+      const actionRaw = (log.action || '').toLowerCase();
+      const effectiveRaw = (effective || '').toLowerCase();
+      // Special-case: Visit Scheduled should exclude completed/unsuccessful derived states
+      if (selected === 'visit_scheduled') {
+        return effectiveRaw === 'visit_scheduled';
+      }
+      // Special-case: Visit Completed (only non-flagged)
+      if (selected === 'visit_completed') {
+        return effectiveRaw === 'visit_completed' || actionRaw === 'visit_completed';
+      }
+      // Special-case: Visit Completed (Flagged) only
+      if (selected === 'visit_completed_flagged') {
+        return effectiveRaw === 'visit_completed_flagged';
+      }
+      // Special-case: Place Delete should only match exact delete actions
+      if (selected === 'place_delete') {
+        return actionRaw === 'place_delete';
+      }
+      // Combined option: Place Visit Limit Update (weekly or monthly)
+      if (selected === 'place_visit_limit_update') {
+        return actionRaw === 'place_weekly_visit_limit_update' || actionRaw === 'place_monthly_visit_limit_update';
+      }
+      return actionRaw === selected || effectiveRaw === selected;
+    }).map(({ log }) => log);
   }
 
   // Apply date filter
@@ -4741,8 +5013,8 @@ async function applySearchAndFilterForLogs() {
     });
   }
 
-  // Apply tab filter
-  if (currentLogsTabFilter !== 'all') {
+  // Apply tab filter only when no specific action is selected
+  if (currentLogsTabFilter !== 'all' && (actionValue === 'all' || !actionValue)) {
     filtered = filtered.filter(log => {
       if (currentLogsTabFilter === 'gate') {
         return log.action && log.action.startsWith('gate_');
@@ -8494,6 +8766,14 @@ async function togglePersonnelAvailability(placeId: string, currentAvailability:
             submitBtn.textContent = 'Update Availability';
             return;
           }
+          // Log personnel availability change
+          await logAction('personnel_availability_change', {
+            place_id: placeId,
+            personnel_id: user.id,
+            is_available: newAvailability,
+            unavailability_reason: newAvailability ? null : unavailabilityReason,
+            unavailable_from: newAvailability ? null : unavailableFromInput.value
+          });
           successDiv.textContent = `Successfully marked as ${newAvailability ? 'available' : 'unavailable'}.`;
           successDiv.classList.remove('hidden');
           setTimeout(() => {

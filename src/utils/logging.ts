@@ -1,6 +1,6 @@
 import supabase from '../config/supabase';
 
-export type LogAction = 'password_change' | 'place_update' | 'place_availability_toggle' | 'place_create' | 'personnel_assignment' | 'personnel_removal' | 'personnel_availability_change' | 'visit_scheduled' | 'visit_completed' | 'gate_create' | 'gate_update' | 'gate_status_change' | 'role_change';
+export type LogAction = 'password_change' | 'place_update' | 'place_availability_toggle' | 'place_create' | 'place_delete' | 'personnel_assignment' | 'personnel_removal' | 'personnel_availability_change' | 'visit_scheduled' | 'visit_completed' | 'gate_create' | 'gate_update' | 'gate_status_change' | 'role_change';
 
 export interface LogDetails {
   [key: string]: any;
@@ -34,10 +34,36 @@ export async function logAction(
     });
 
     if (error) {
-      console.error('Error logging action:', error);
+      const rawMsg = (error as any)?.message || (error as any)?.error_description || String(error);
+      const looksLikeEnumError = /invalid input value for enum|enum|violates|value is not present/i.test(rawMsg);
+      if (looksLikeEnumError) {
+        try {
+          const fallbackDetails = {
+            ...(details || {}),
+            original_action: action
+          } as LogDetails;
+          const retry = await supabase.rpc('log_action', {
+            p_user_id: user.id,
+            p_action: 'place_update',
+            p_details: fallbackDetails,
+            p_ip_address: null,
+            p_user_agent: userAgent
+          });
+          if (retry.error) {
+            const retryMsg = (retry.error as any)?.message || (retry.error as any)?.error_description || String(retry.error);
+            console.error('Error logging action (fallback failed):', retryMsg);
+          }
+        } catch (fallbackErr) {
+          const fbMsg = (fallbackErr as any)?.message || String(fallbackErr);
+          console.error('Error in logging fallback:', fbMsg);
+        }
+      } else {
+        console.error('Error logging action:', rawMsg);
+      }
     }
   } catch (error) {
-    console.error('Error in logAction:', error);
+    const msg = (error as any)?.message || String(error);
+    console.error('Error in logAction:', msg);
   }
 }
 
