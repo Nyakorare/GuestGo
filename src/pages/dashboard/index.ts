@@ -1341,7 +1341,7 @@ export function DashboardPage() {
 
       <!-- Edit Place Modal -->
       <div id="editPlaceModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
-        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
+        <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white dark:bg-gray-800">
           <div class="mt-3">
             <div class="flex justify-between items-center mb-4">
               <h3 class="text-lg font-medium text-gray-900 dark:text-white">Edit Place</h3>
@@ -1354,43 +1354,97 @@ export function DashboardPage() {
                 </svg>
               </button>
             </div>
-            <form id="editPlaceForm" class="space-y-4">
-              <input type="hidden" id="editPlaceId">
-              <div>
-                <label for="editPlaceName" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
-                <input 
-                  type="text" 
-                  id="editPlaceName" 
-                  class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  required
-                >
-              </div>
-              <div>
-                <label for="editPlaceDescription" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
-                <textarea 
-                  id="editPlaceDescription" 
-                  class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  rows="3"
-                ></textarea>
-              </div>
-              <div>
-                <label for="editPlaceLocation" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Location</label>
-                <input 
-                  type="text" 
-                  id="editPlaceLocation" 
-                  class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  required
-                >
-              </div>
-              <div class="flex justify-end">
+            
+            <!-- Tabs -->
+            <div class="border-b border-gray-200 dark:border-gray-700 mb-4">
+              <nav class="-mb-px flex space-x-8">
                 <button 
-                  type="submit"
-                  class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  id="editPlaceDetailsTab"
+                  class="tab-button py-4 px-1 border-b-2 font-medium text-sm text-blue-600 border-blue-600 dark:text-blue-400 dark:border-blue-400"
+                  onclick="switchEditPlaceTab('details')"
                 >
-                  Save Changes
+                  Details
                 </button>
+                <button 
+                  id="editPlacePurposeTab"
+                  class="tab-button py-4 px-1 border-b-2 font-medium text-sm text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
+                  onclick="switchEditPlaceTab('purpose')"
+                >
+                  Purpose
+                </button>
+              </nav>
+            </div>
+
+            <!-- Details Tab Content -->
+            <div id="editPlaceDetailsTabContent" class="tab-content">
+              <form id="editPlaceForm" class="space-y-4">
+                <input type="hidden" id="editPlaceId">
+                <div>
+                  <label for="editPlaceName" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
+                  <input 
+                    type="text" 
+                    id="editPlaceName" 
+                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    required
+                  >
+                </div>
+                <div>
+                  <label for="editPlaceDescription" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
+                  <textarea 
+                    id="editPlaceDescription" 
+                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    rows="3"
+                  ></textarea>
+                </div>
+                <div>
+                  <label for="editPlaceLocation" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Location</label>
+                  <input 
+                    type="text" 
+                    id="editPlaceLocation" 
+                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    required
+                  >
+                </div>
+                <div class="flex justify-end">
+                  <button 
+                    type="submit"
+                    class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Purpose Tab Content -->
+            <div id="editPlacePurposeTabContent" class="tab-content hidden">
+              <div class="space-y-4">
+                <div class="flex justify-between items-center mb-4">
+                  <h4 class="text-md font-medium text-gray-900 dark:text-white">Visit Purposes</h4>
+                  <button 
+                    type="button"
+                    id="addPurposeBtn"
+                    class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-sm"
+                    onclick="addPurposeRow()"
+                  >
+                    + Add Purpose
+                  </button>
+                </div>
+                <div id="purposeList" class="space-y-3">
+                  <!-- Purpose rows will be dynamically added here -->
+                </div>
+                <div class="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <button 
+                    type="button"
+                    id="savePurposesBtn"
+                    class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    onclick="savePlacePurposes()"
+                  >
+                    Save Purposes
+                  </button>
+                </div>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       </div>
@@ -1679,7 +1733,33 @@ export async function loadPlaces() {
   // Create a map of places that have personnel assigned
   const availablePlaceIds = new Set(assignments.map(a => a.place_id));
 
-  // Combine places with their personnel assignments
+  // Get all purposes for all places (with error handling)
+  let allPurposes: any[] = [];
+  try {
+    const { data: purposesData, error: purposesError } = await supabase
+      .from('place_purposes')
+      .select('*')
+      .order('purpose');
+
+    if (purposesError) {
+      console.error('Error loading place purposes:', purposesError);
+    } else {
+      allPurposes = purposesData || [];
+    }
+  } catch (error) {
+    console.error('Error accessing place_purposes table:', error);
+  }
+
+  // Create a map of purposes by place_id
+  const purposesByPlace = new Map();
+  allPurposes.forEach(purpose => {
+    if (!purposesByPlace.has(purpose.place_id)) {
+      purposesByPlace.set(purpose.place_id, []);
+    }
+    purposesByPlace.get(purpose.place_id).push(purpose);
+  });
+
+  // Combine places with their personnel assignments and purposes
   const placesWithPersonnel = placesWithVisitCounts?.map(place => {
     const placeAssignments = assignments.filter(assignment => assignment.place_id === place.id);
     const assignedPersonnel = placeAssignments.map(assignment => {
@@ -1700,10 +1780,13 @@ export async function loadPlaces() {
       };
     });
 
+    const placePurposes = purposesByPlace.get(place.id) || [];
+
     return {
       ...place,
       is_available: availablePlaceIds.has(place.id),
-      assigned_personnel: assignedPersonnel
+      assigned_personnel: assignedPersonnel,
+      purposes: placePurposes
     };
   }) || [];
 
@@ -1778,6 +1861,23 @@ function renderPlaces(): void {
           ` : `
             <div class="mt-2">
               <p class="text-sm text-gray-500 dark:text-gray-400">No personnel assigned</p>
+            </div>
+          `}
+          ${place.purposes && place.purposes.length > 0 ? `
+            <div class="mt-2">
+              <p class="text-sm text-gray-600 dark:text-gray-300 font-medium">Visit Purposes:</p>
+              <div class="mt-1 flex flex-wrap gap-2">
+                ${(place.purposes as any[]).map((purpose: any) => `
+                  <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-700" title="Required advance notice: ${purpose.required_days === 0 ? 'Same day allowed' : purpose.required_days + ' day' + (purpose.required_days > 1 ? 's' : '')}">
+                    <span>${purpose.purpose.replace(/"/g, '&quot;').replace(/'/g, '&#39;')}</span>
+                    <span class="ml-1 text-amber-600 dark:text-amber-400">(${purpose.required_days === 0 ? 'Same day' : purpose.required_days + 'd'})</span>
+                  </span>
+                `).join('')}
+              </div>
+            </div>
+          ` : `
+            <div class="mt-2">
+              <p class="text-sm text-gray-500 dark:text-gray-400">No purposes configured</p>
             </div>
           `}
         </div>
@@ -3299,6 +3399,12 @@ async function editPlace(placeId: string) {
       submitBtn.textContent = 'Save Changes';
     }
 
+    // Load purposes for this place
+    await loadPlacePurposes(place.id);
+
+    // Reset to Details tab
+    switchEditPlaceTab('details');
+
     modal.classList.remove('hidden');
 
     // Handle form submission for editing place
@@ -3548,6 +3654,348 @@ async function editVisitLimit(placeId: string, placeName: string, currentLimit: 
   await openVisitLimitModal(placeId, placeName, currentLimit, 200, 0, 0);
 }
 
+// Variable to store purposes for the current place being edited
+let currentPlacePurposes: Array<{ id?: string; purpose: string; required_days: number }> = [];
+
+// Function to switch between tabs in edit place modal
+function switchEditPlaceTab(tab: 'details' | 'purpose') {
+  const detailsTab = document.getElementById('editPlaceDetailsTab');
+  const purposeTab = document.getElementById('editPlacePurposeTab');
+  const detailsContent = document.getElementById('editPlaceDetailsTabContent');
+  const purposeContent = document.getElementById('editPlacePurposeTabContent');
+
+  if (tab === 'details') {
+    detailsTab?.classList.add('text-blue-600', 'border-blue-600', 'dark:text-blue-400', 'dark:border-blue-400');
+    detailsTab?.classList.remove('text-gray-500', 'border-transparent', 'dark:text-gray-400');
+    purposeTab?.classList.remove('text-blue-600', 'border-blue-600', 'dark:text-blue-400', 'dark:border-blue-400');
+    purposeTab?.classList.add('text-gray-500', 'border-transparent', 'dark:text-gray-400');
+    detailsContent?.classList.remove('hidden');
+    purposeContent?.classList.add('hidden');
+  } else {
+    purposeTab?.classList.add('text-blue-600', 'border-blue-600', 'dark:text-blue-400', 'dark:border-blue-400');
+    purposeTab?.classList.remove('text-gray-500', 'border-transparent', 'dark:text-gray-400');
+    detailsTab?.classList.remove('text-blue-600', 'border-blue-600', 'dark:text-blue-400', 'dark:border-blue-400');
+    detailsTab?.classList.add('text-gray-500', 'border-transparent', 'dark:text-gray-400');
+    purposeContent?.classList.remove('hidden');
+    detailsContent?.classList.add('hidden');
+  }
+}
+
+// Function to load purposes for a place
+async function loadPlacePurposes(placeId: string) {
+  const { data: purposes, error } = await supabase
+    .from('place_purposes')
+    .select('*')
+    .eq('place_id', placeId)
+    .order('purpose');
+
+  if (error) {
+    console.error('Error loading purposes:', error);
+    currentPlacePurposes = [];
+    return;
+  }
+
+  currentPlacePurposes = purposes || [];
+  renderPurposeList();
+}
+
+// Function to validate purpose names for duplicates
+function validatePurposeNames(): { isValid: boolean; duplicateNames: string[] } {
+  const purposeRows = document.querySelectorAll('.purpose-row');
+  const purposeNames = new Map<string, number>(); // name -> count
+  const duplicateNames: string[] = [];
+
+  purposeRows.forEach((row) => {
+    const purposeInput = row.querySelector('.purpose-name') as HTMLInputElement;
+    if (purposeInput && purposeInput.value.trim()) {
+      const name = purposeInput.value.trim().toLowerCase();
+      const count = purposeNames.get(name) || 0;
+      purposeNames.set(name, count + 1);
+    }
+  });
+
+  purposeNames.forEach((count, name) => {
+    if (count > 1) {
+      duplicateNames.push(name);
+    }
+  });
+
+  return {
+    isValid: duplicateNames.length === 0,
+    duplicateNames
+  };
+}
+
+// Function to update purpose input validation styling
+function updatePurposeValidation(index: number) {
+  const purposeRows = document.querySelectorAll('.purpose-row');
+  const currentRow = purposeRows[index] as HTMLElement;
+  if (!currentRow) return;
+
+  const purposeInput = currentRow.querySelector('.purpose-name') as HTMLInputElement;
+  if (!purposeInput) return;
+
+  const purposeName = purposeInput.value.trim().toLowerCase();
+  const validation = validatePurposeNames();
+
+  // Remove previous validation classes
+  purposeInput.classList.remove('border-red-500', 'border-green-500');
+  
+  if (purposeName === '') {
+    // Empty field - no validation
+    return;
+  }
+
+  // Check if this specific name is duplicated
+  const purposeRowsArray = Array.from(purposeRows);
+  const sameNameCount = purposeRowsArray.filter((row, idx) => {
+    const input = row.querySelector('.purpose-name') as HTMLInputElement;
+    return input && input.value.trim().toLowerCase() === purposeName;
+  }).length;
+
+  if (sameNameCount > 1) {
+    purposeInput.classList.add('border-red-500');
+    purposeInput.classList.remove('border-gray-300', 'dark:border-gray-600');
+  } else {
+    purposeInput.classList.add('border-green-500');
+    purposeInput.classList.remove('border-gray-300', 'dark:border-gray-600');
+  }
+}
+
+// Function to render the purpose list
+function renderPurposeList() {
+  const purposeList = document.getElementById('purposeList');
+  if (!purposeList) return;
+
+  if (currentPlacePurposes.length === 0) {
+    purposeList.innerHTML = `
+      <div class="text-center py-4 text-gray-500 dark:text-gray-400">
+        No purposes added yet. Click "+ Add Purpose" to add one.
+      </div>
+    `;
+    return;
+  }
+
+  purposeList.innerHTML = currentPlacePurposes.map((purpose, index) => `
+    <div class="purpose-row flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600" data-purpose-id="${purpose.id || ''}">
+      <div class="flex-1">
+        <input 
+          type="text" 
+          value="${purpose.purpose.replace(/"/g, '&quot;').replace(/'/g, '&#39;')}" 
+          placeholder="Purpose name"
+          class="purpose-name w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+          data-index="${index}"
+          oninput="window.updatePurposeValidation(${index})"
+        >
+        <p class="purpose-error text-xs text-red-600 dark:text-red-400 mt-1 hidden"></p>
+      </div>
+      <div class="w-32">
+        <select 
+          class="purpose-days w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+          data-index="${index}"
+        >
+          ${[0, 1, 2, 3, 4, 5, 6].map(days => `
+            <option value="${days}" ${purpose.required_days === days ? 'selected' : ''}>
+              ${days === 0 ? 'Same day' : `${days} day${days > 1 ? 's' : ''}`}
+            </option>
+          `).join('')}
+        </select>
+      </div>
+      <button 
+        type="button"
+        onclick="window.removePurposeRow(${index})"
+        class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+        title="Remove purpose"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m-1-2a2 2 0 00-2-2h-2a2 2 0 00-2 2H4m16 0H4" />
+        </svg>
+      </button>
+    </div>
+  `).join('');
+
+  // Attach validation to all inputs after rendering
+  setTimeout(() => {
+    const purposeInputs = purposeList.querySelectorAll('.purpose-name');
+    purposeInputs.forEach((input, idx) => {
+      const index = parseInt((input as HTMLElement).getAttribute('data-index') || '0', 10);
+      (input as HTMLInputElement).addEventListener('input', () => {
+        updatePurposeValidation(index);
+        // Also update all other inputs to check for duplicates
+        const allInputs = purposeList.querySelectorAll('.purpose-name');
+        allInputs.forEach((otherInput, otherIdx) => {
+          const otherIndex = parseInt((otherInput as HTMLElement).getAttribute('data-index') || '0', 10);
+          updatePurposeValidation(otherIndex);
+        });
+      });
+    });
+  }, 0);
+}
+
+// Function to add a new purpose row
+function addPurposeRow() {
+  currentPlacePurposes.push({
+    purpose: '',
+    required_days: 0
+  });
+  renderPurposeList();
+  
+  // Focus on the newly added input
+  const purposeList = document.getElementById('purposeList');
+  if (purposeList) {
+    const lastInput = purposeList.querySelector('.purpose-name:last-child') as HTMLInputElement;
+    if (lastInput) {
+      lastInput.focus();
+    }
+  }
+}
+
+// Function to remove a purpose row
+function removePurposeRow(index: number) {
+  currentPlacePurposes.splice(index, 1);
+  renderPurposeList();
+  
+  // Re-validate all remaining purposes after removal
+  setTimeout(() => {
+    const purposeRows = document.querySelectorAll('.purpose-row');
+    purposeRows.forEach((row, idx) => {
+      updatePurposeValidation(idx);
+    });
+  }, 0);
+}
+
+// Function to save place purposes
+async function savePlacePurposes() {
+  const placeIdInput = document.getElementById('editPlaceId') as HTMLInputElement;
+  if (!placeIdInput || !placeIdInput.value) {
+    showNotification('No place selected.', 'error');
+    return;
+  }
+
+  const placeId = placeIdInput.value;
+  const saveBtn = document.getElementById('savePurposesBtn') as HTMLButtonElement;
+
+  // Validate for duplicate purpose names
+  const validation = validatePurposeNames();
+  if (!validation.isValid) {
+    showNotification(`Cannot save: Duplicate purpose names found. Each purpose must have a unique name within this place.`, 'error');
+    
+    // Highlight duplicate inputs
+    const purposeRows = document.querySelectorAll('.purpose-row');
+    purposeRows.forEach((row) => {
+      const purposeInput = row.querySelector('.purpose-name') as HTMLInputElement;
+      const errorMsg = row.querySelector('.purpose-error') as HTMLElement;
+      if (purposeInput && purposeInput.value.trim()) {
+        const name = purposeInput.value.trim().toLowerCase();
+        if (validation.duplicateNames.includes(name)) {
+          purposeInput.classList.add('border-red-500');
+          if (errorMsg) {
+            errorMsg.textContent = 'This purpose name already exists';
+            errorMsg.classList.remove('hidden');
+          }
+        }
+      }
+    });
+    return;
+  }
+
+  // Collect purposes from the form, preserving IDs where available
+  const purposeRows = document.querySelectorAll('.purpose-row');
+  const purposesToSave: Array<{ id?: string; purpose: string; required_days: number }> = [];
+
+  purposeRows.forEach((row, index) => {
+    const purposeInput = row.querySelector('.purpose-name') as HTMLInputElement;
+    const daysSelect = row.querySelector('.purpose-days') as HTMLSelectElement;
+
+    if (purposeInput && daysSelect && purposeInput.value.trim()) {
+      // Preserve the ID from currentPlacePurposes if it exists
+      const existingPurpose = currentPlacePurposes[index];
+      purposesToSave.push({
+        id: existingPurpose?.id,
+        purpose: purposeInput.value.trim(),
+        required_days: parseInt(daysSelect.value, 10)
+      });
+    }
+  });
+
+  // Show loading state
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+  }
+
+  try {
+    // Get all existing purposes for this place
+    const { data: existingPurposes } = await supabase
+      .from('place_purposes')
+      .select('id, purpose, required_days')
+      .eq('place_id', placeId);
+
+    const existingIds = new Set((existingPurposes || []).map(p => p.id));
+    const purposesToInsert: Array<{ place_id: string; purpose: string; required_days: number }> = [];
+    const purposesToUpdate: Array<{ id: string; purpose: string; required_days: number }> = [];
+    const purposesToDelete: string[] = [];
+
+    // Track which existing IDs are being used
+    const usedIds = new Set<string>();
+
+    purposesToSave.forEach(p => {
+      if (p.id && existingIds.has(p.id)) {
+        // This is an update to an existing purpose
+        purposesToUpdate.push({ id: p.id, purpose: p.purpose, required_days: p.required_days });
+        usedIds.add(p.id);
+      } else {
+        // This is a new purpose
+        purposesToInsert.push({ place_id: placeId, purpose: p.purpose, required_days: p.required_days });
+      }
+    });
+
+    // Find IDs that should be deleted (exist in DB but not in the form)
+    (existingPurposes || []).forEach(p => {
+      if (!usedIds.has(p.id)) {
+        purposesToDelete.push(p.id);
+      }
+    });
+
+    // Perform operations
+    if (purposesToInsert.length > 0) {
+      const { error } = await supabase
+        .from('place_purposes')
+        .insert(purposesToInsert);
+      if (error) throw error;
+    }
+
+    for (const purpose of purposesToUpdate) {
+      const { error } = await supabase
+        .from('place_purposes')
+        .update({ purpose: purpose.purpose, required_days: purpose.required_days })
+        .eq('id', purpose.id);
+      if (error) throw error;
+    }
+
+    if (purposesToDelete.length > 0) {
+      const { error } = await supabase
+        .from('place_purposes')
+        .delete()
+        .in('id', purposesToDelete);
+      if (error) throw error;
+    }
+
+    // Reload purposes to get updated IDs for newly inserted ones
+    await loadPlacePurposes(placeId);
+
+    showNotification('Purposes saved successfully!', 'success');
+  } catch (error: any) {
+    console.error('Error saving purposes:', error);
+    showNotification(`Error saving purposes: ${error.message}`, 'error');
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save Purposes';
+    }
+  }
+}
+
 // Make functions globally available
 (window as any).editPlace = editPlace;
 (window as any).editVisitLimit = editVisitLimit;
@@ -3557,6 +4005,11 @@ async function editVisitLimit(placeId: string, placeName: string, currentLimit: 
 (window as any).removePersonnelFromPlace = removePersonnelFromPlace;
 (window as any).togglePersonnelAvailability = togglePersonnelAvailability;
 (window as any).completeVisit = completeVisit;
+(window as any).switchEditPlaceTab = switchEditPlaceTab;
+(window as any).addPurposeRow = addPurposeRow;
+(window as any).removePurposeRow = removePurposeRow;
+(window as any).savePlacePurposes = savePlacePurposes;
+(window as any).updatePurposeValidation = updatePurposeValidation;
 
 // Function to set max date for finished schedule date filters to prevent selecting future dates
 function setMaxDateForFinishedFilters() {
@@ -3904,6 +4357,10 @@ function setupDashboardEventListeners() {
         descriptionInput.value = '';
         locationInput.value = '';
 
+        // Clear purposes for new place
+        currentPlacePurposes = [];
+        renderPurposeList();
+
         // Update modal title and button text for add mode
         if (modalTitle) {
           modalTitle.textContent = 'Add New Place';
@@ -3911,6 +4368,9 @@ function setupDashboardEventListeners() {
         if (submitBtn) {
           submitBtn.textContent = 'Add Place';
         }
+
+        // Reset to Details tab
+        switchEditPlaceTab('details');
 
         modal.classList.remove('hidden');
 

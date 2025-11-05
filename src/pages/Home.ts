@@ -837,6 +837,13 @@ async function loadWeeklyVisitCount(_userEmail: string) {
     if ((window as any).initializeDateValidation) {
       (window as any).initializeDateValidation();
     }
+    // Ensure purpose field and visit date are disabled when modal opens
+    if ((window as any).updatePurposeFieldState) {
+      (window as any).updatePurposeFieldState();
+    }
+    if ((window as any).updateVisitDateFieldState) {
+      (window as any).updateVisitDateFieldState();
+    }
   }
 };
 
@@ -867,13 +874,15 @@ export function HomePage() {
     
     const visitDateInput = document.getElementById('visitDate') as HTMLInputElement;
     if (visitDateInput) {
-      // Set minimum date to today (Philippine time)
+      // Initialize as disabled until place is selected
+      visitDateInput.disabled = true;
+      visitDateInput.classList.add('disabled:bg-gray-100', 'dark:disabled:bg-gray-800', 'disabled:cursor-not-allowed', 'disabled:opacity-50');
+      // Set minimum date to today (Philippine time) - will be updated when purpose is selected
       visitDateInput.min = philippineToday.toISOString().split('T')[0];
       // Set maximum date to one month from today
       visitDateInput.max = philippineMaxDate.toISOString().split('T')[0];
       
-      // Set default value to today
-      visitDateInput.value = philippineToday.toISOString().split('T')[0];
+      // Don't set default value - wait for place selection
       
       // Single consolidated event listener for date validation
       visitDateInput.addEventListener('change', async () => {
@@ -1252,27 +1261,27 @@ export function HomePage() {
         
         if (user && userRole === 'visitor') {
           stepsHtml = `
-            <button class="rounded-lg px-3 py-2 text-sm bg-blue-600 text-white" data-workflow-step="1">1. Request</button>
+            <button class="rounded-lg px-3 py-2 text-sm bg-blue-600 text-white" data-workflow-step="1">1. Schedule</button>
             <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="2">2. Verify</button>
             <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="3">3. Approve</button>
             <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="4">4. Check-in</button>
           `;
           panelsHtml = `
             <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800" data-workflow-panel="1">
-              <p class="font-semibold mb-1">Request a Visit</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Fill out the form with your details, pick a date (PH time), and choose the place to visit. We enforce a maximum of 2 visits per week.</p>
+              <p class="font-semibold mb-1">Schedule an Appointment</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Fill out the appointment form with your details, select your preferred date and time (PH timezone), and choose the place you'd like to visit. The system enforces a maximum of 2 appointments per week per user.</p>
             </div>
             <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="2">
               <p class="font-semibold mb-1">Verify Your Email</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">We send a one-time code to your Gmail. Enter the code to proceed and reduce fraud.</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">We send a one-time verification code to your Gmail address. Enter the code to confirm your identity and proceed with your appointment booking.</p>
             </div>
             <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="3">
-              <p class="font-semibold mb-1">Approval & Scheduling</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Personnel review your request. You'll see the status in your weekly visit tracker.</p>
+              <p class="font-semibold mb-1">Approval & Confirmation</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Our personnel review your appointment booking. You'll receive updates and can track the status of your appointment in your weekly visit tracker dashboard.</p>
             </div>
             <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="4">
               <p class="font-semibold mb-1">On-site Check-in</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Arrive with a valid ID. Staff can scan your QR to confirm and log your visit.</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Arrive at your scheduled appointment time with a valid ID. Staff will scan your QR code to confirm your appointment and log your visit.</p>
             </div>
           `;
         } else if (user && userRole === 'personnel') {
@@ -1285,19 +1294,19 @@ export function HomePage() {
           panelsHtml = `
             <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800" data-workflow-panel="1">
               <p class="font-semibold mb-1">Scan QR Code</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Use the QR scanner to scan the visitor's QR code from their confirmation email or mobile device.</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Use the QR scanner to scan the visitor's QR code from their appointment confirmation email or mobile device.</p>
             </div>
             <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="2">
-              <p class="font-semibold mb-1">Verify Details</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Check the visitor's information, visit date, and approval status before allowing entry.</p>
+              <p class="font-semibold mb-1">Verify Appointment Details</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Check the visitor's information, appointment date and time, and approval status before allowing entry.</p>
             </div>
             <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="3">
               <p class="font-semibold mb-1">Check-in Visitor</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Confirm the visitor's arrival and update their visit status in the system.</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Confirm the visitor's arrival for their scheduled appointment and update their visit status in the system.</p>
             </div>
             <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="4">
-              <p class="font-semibold mb-1">Log Visit</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Record the visit details and any notes for tracking and reporting purposes.</p>
+              <p class="font-semibold mb-1">Log Appointment Visit</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Record the appointment visit details, arrival time, and any notes for tracking and reporting purposes.</p>
             </div>
           `;
         } else if (user && userRole === 'admin') {
@@ -1310,19 +1319,19 @@ export function HomePage() {
           panelsHtml = `
             <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800" data-workflow-panel="1">
               <p class="font-semibold mb-1">Monitor System</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Track all visits, user activities, and system performance in real-time through the dashboard.</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Track all appointments, visitor activities, and system performance in real-time through the dashboard.</p>
             </div>
             <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="2">
               <p class="font-semibold mb-1">Manage Users</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Oversee user roles, permissions, and access levels for visitors and personnel.</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Oversee user roles, permissions, and access levels for visitors and personnel in the appointment system.</p>
             </div>
             <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="3">
               <p class="font-semibold mb-1">Configure Settings</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Set up gates, places, visit limits, and other system parameters.</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Set up gates, places, appointment limits, scheduling rules, and other system parameters.</p>
             </div>
             <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="4">
               <p class="font-semibold mb-1">Generate Reports</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Create detailed reports on visit statistics, user activities, and system usage.</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Create detailed reports on appointment statistics, visitor activities, and system usage patterns.</p>
             </div>
           `;
         } else if (user && userRole === 'logs') {
@@ -1335,45 +1344,45 @@ export function HomePage() {
           panelsHtml = `
             <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800" data-workflow-panel="1">
               <p class="font-semibold mb-1">View System Logs</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Access comprehensive system logs including user activities, visit records, and system events in real-time.</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Access comprehensive system logs including user activities, appointment records, and system events in real-time.</p>
             </div>
             <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="2">
               <p class="font-semibold mb-1">Filter & Search</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Use advanced filters to search logs by date, user, action type, or specific events for detailed analysis.</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Use advanced filters to search logs by date, user, action type, appointment status, or specific events for detailed analysis.</p>
             </div>
             <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="3">
               <p class="font-semibold mb-1">Analyze Patterns</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Review log patterns to identify trends, anomalies, or potential issues in system usage and user behavior.</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Review log patterns to identify trends, anomalies, or potential issues in appointment scheduling, system usage, and user behavior.</p>
             </div>
             <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="4">
               <p class="font-semibold mb-1">Export Reports</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Generate and export detailed log reports for compliance, auditing, or further analysis purposes.</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Generate and export detailed log reports for compliance, auditing, appointment tracking, or further analysis purposes.</p>
             </div>
           `;
         } else {
           // Default workflow for non-logged in users
           stepsHtml = `
-            <button class="rounded-lg px-3 py-2 text-sm bg-blue-600 text-white" data-workflow-step="1">1. Request</button>
+            <button class="rounded-lg px-3 py-2 text-sm bg-blue-600 text-white" data-workflow-step="1">1. Schedule</button>
             <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="2">2. Verify</button>
             <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="3">3. Approve</button>
             <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="4">4. Check-in</button>
           `;
           panelsHtml = `
             <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800" data-workflow-panel="1">
-              <p class="font-semibold mb-1">Request a Visit</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Fill out the form with your details, pick a date (PH time), and choose the place to visit. We enforce a maximum of 2 visits per week.</p>
+              <p class="font-semibold mb-1">Schedule an Appointment</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Fill out the appointment form with your details, select your preferred date and time (PH timezone), and choose the place you'd like to visit. The system enforces a maximum of 2 appointments per week per user.</p>
             </div>
             <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="2">
               <p class="font-semibold mb-1">Verify Your Email</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">We send a one-time code to your Gmail. Enter the code to proceed and reduce fraud.</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">We send a one-time verification code to your Gmail address. Enter the code to confirm your identity and proceed with your appointment booking.</p>
             </div>
             <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="3">
-              <p class="font-semibold mb-1">Approval & Scheduling</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Personnel review your request. You'll see the status in your weekly visit tracker.</p>
+              <p class="font-semibold mb-1">Approval & Confirmation</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Our personnel review your appointment booking. You'll receive updates and can track the status of your appointment in your weekly visit tracker dashboard.</p>
             </div>
             <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="4">
               <p class="font-semibold mb-1">On-site Check-in</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Arrive with a valid ID. Staff can scan your QR to confirm and log your visit.</p>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Arrive at your scheduled appointment time with a valid ID. Staff will scan your QR code to confirm your appointment and log your visit.</p>
             </div>
           `;
         }
@@ -1596,19 +1605,6 @@ export function HomePage() {
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Enter 10-digit mobile number (e.g., 9123456789)</p>
               </div>
               <div>
-                <label for="visitDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Visit Date</label>
-                <input 
-                  type="date" 
-                  id="visitDate" 
-                  name="visitDate"
-                  class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  required
-                  min=""
-                  max=""
-                >
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Scheduling is available up to 1 month in advance. Maximum 2 visits per week per user account.</p>
-              </div>
-              <div>
                 <label for="placeToVisit" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Place to Visit</label>
                 <select 
                   id="placeToVisit" 
@@ -1623,35 +1619,51 @@ export function HomePage() {
               <div id="multiplePlacesContainer" class="hidden space-y-2">
                 <!-- Dynamic place checkboxes will be loaded here -->
               </div>
-              <div>
-                <label for="purpose" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Purpose of Visit</label>
-                <select 
-                  id="purpose" 
-                  name="purpose"
-                  class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  required
-                >
-                  <option value="">Select a purpose</option>
-                  <option value="meeting">Meeting</option>
-                  <option value="interview">Interview</option>
-                  <option value="delivery">Delivery</option>
-                  <option value="consultation">Consultation</option>
-                  <option value="other">Others</option>
-                </select>
-              </div>
-              <div id="otherPurposeContainer" class="hidden">
-                <label for="otherPurpose" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Please specify (max 10 words, 50 characters)</label>
-                <textarea 
-                  id="otherPurpose" 
-                  name="otherPurpose"
-                  rows="2"
-                  maxlength="50"
-                  class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                ></textarea>
-                <div class="mt-1 flex flex-col sm:flex-row justify-between text-sm text-gray-500 dark:text-gray-400 space-y-1 sm:space-y-0">
-                  <span>Word count: <span id="wordCount">0</span>/10</span>
-                  <span>Character count: <span id="charCount">0</span>/50</span>
+              <div id="singlePurposeContainer">
+                <div>
+                  <label for="purpose" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Purpose of Visit</label>
+                  <select 
+                    id="purpose" 
+                    name="purpose"
+                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    required
+                    disabled
+                  >
+                    <option value="">Select a place first</option>
+                  </select>
                 </div>
+                <div id="otherPurposeContainer" class="hidden">
+                  <label for="otherPurpose" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Please specify (max 10 words, 50 characters)</label>
+                  <textarea 
+                    id="otherPurpose" 
+                    name="otherPurpose"
+                    rows="2"
+                    maxlength="50"
+                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  ></textarea>
+                  <div class="mt-1 flex flex-col sm:flex-row justify-between text-sm text-gray-500 dark:text-gray-400 space-y-1 sm:space-y-0">
+                    <span>Word count: <span id="wordCount">0</span>/10</span>
+                    <span>Character count: <span id="charCount">0</span>/50</span>
+                  </div>
+                </div>
+              </div>
+              <div id="multiplePurposesContainer" class="hidden">
+                <!-- Dynamic purpose selectors for each place will be loaded here -->
+              </div>
+              <div>
+                <label for="visitDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Visit Date</label>
+                <input 
+                  type="date" 
+                  id="visitDate" 
+                  name="visitDate"
+                  class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  required
+                  disabled
+                  min=""
+                  max=""
+                >
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Scheduling is available up to 1 month in advance. Maximum 2 visits per week per user account.</p>
+                <p id="dateAdvanceNotice" class="mt-1 text-sm text-blue-600 dark:text-blue-400 hidden"></p>
               </div>
               <div class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
                 <button 

@@ -223,6 +223,25 @@ export async function setupEventListeners() {
               if (typeof (window as any).validateVisitDate === 'function') {
                 await (window as any).validateVisitDate();
               }
+              // Update purpose field state when checkbox selection changes
+              if (typeof (window as any).updatePurposeFieldState === 'function') {
+                await (window as any).updatePurposeFieldState();
+              }
+              // Update visit date field state
+              if (typeof (window as any).updateVisitDateFieldState === 'function') {
+                (window as any).updateVisitDateFieldState();
+              }
+              
+              // Re-validate the date if one is already selected
+              const visitDateInput = document.getElementById('visitDate') as HTMLInputElement;
+              if (visitDateInput && visitDateInput.value) {
+                if (typeof (window as any).validateVisitDate === 'function') {
+                  await (window as any).validateVisitDate();
+                }
+              }
+              
+              // Update submit button state
+              updateSubmitButtonState();
             });
           });
         } else {
@@ -230,34 +249,524 @@ export async function setupEventListeners() {
         }
       }
       
+      // Update purpose field state when place selection changes
+      if (typeof (window as any).updatePurposeFieldState === 'function') {
+        await (window as any).updatePurposeFieldState();
+      }
+      // Update visit date field state
+      if (typeof (window as any).updateVisitDateFieldState === 'function') {
+        (window as any).updateVisitDateFieldState();
+      }
+      
       // Update unavailable dates display when place selection changes
       await updateUnavailableDatesDisplay();
       
       // Re-validate the date when place selection changes
-      if (typeof (window as any).validateVisitDate === 'function') {
-        await (window as any).validateVisitDate();
+      const visitDateInput = document.getElementById('visitDate') as HTMLInputElement;
+      if (visitDateInput && visitDateInput.value) {
+        if (typeof (window as any).validateVisitDate === 'function') {
+          await (window as any).validateVisitDate();
+        }
       }
+      
+      // Update submit button state
+      updateSubmitButtonState();
     });
   }
 
-  // Function to toggle other purpose text box
+  // Function to load purposes for a place
+  async function loadPurposesForPlace(placeId: string): Promise<any[]> {
+    try {
+      const { data: purposes, error } = await supabase
+        .from('place_purposes')
+        .select('*')
+        .eq('place_id', placeId)
+        .order('purpose');
+
+      if (error) {
+        console.error('Error loading purposes for place:', error);
+        return [];
+      }
+
+      return purposes || [];
+    } catch (error) {
+      console.error('Error accessing place_purposes table:', error);
+      return [];
+    }
+  }
+
+  // Function to populate purpose dropdown with purposes for a place
+  async function populatePurposeDropdown(placeId: string) {
+    const purposeSelect = document.getElementById('purpose') as HTMLSelectElement;
+    if (!purposeSelect) return;
+
+    const purposes = await loadPurposesForPlace(placeId);
+    
+    // Clear existing options except the first one
+    purposeSelect.innerHTML = '<option value="">Select a purpose</option>';
+
+    if (purposes.length === 0) {
+      // If no purposes configured, show a message
+      const noPurposeOption = document.createElement('option');
+      noPurposeOption.value = '';
+      noPurposeOption.textContent = 'No purposes configured for this place';
+      noPurposeOption.disabled = true;
+      purposeSelect.appendChild(noPurposeOption);
+      return;
+    }
+
+    // Add purposes from database
+    purposes.forEach((purpose: any) => {
+      const option = document.createElement('option');
+      option.value = purpose.purpose;
+      option.textContent = `${purpose.purpose} (${purpose.required_days === 0 ? 'Same day' : purpose.required_days + ' day' + (purpose.required_days > 1 ? 's' : '')})`;
+      option.setAttribute('data-required-days', purpose.required_days.toString());
+      purposeSelect.appendChild(option);
+    });
+    
+    // Add "other" option if not already present
+    const hasOther = Array.from(purposeSelect.options).some(opt => opt.value === 'other');
+    if (!hasOther) {
+      const otherOption = document.createElement('option');
+      otherOption.value = 'other';
+      otherOption.textContent = 'Other';
+      purposeSelect.appendChild(otherOption);
+    }
+  }
+
+  // Function to create purpose selector for multiple places
+  async function createMultiplePlacePurposeSelectors() {
+    const multiplePlacesContainer = document.getElementById('multiplePlacesContainer');
+    const multiplePurposesContainer = document.getElementById('multiplePurposesContainer');
+    
+    if (!multiplePlacesContainer || !multiplePurposesContainer) return;
+
+    // Get all checked places
+    const checkedPlaces = Array.from(document.querySelectorAll('input[name="places"]:checked'))
+      .map(checkbox => {
+        const checkboxEl = checkbox as HTMLInputElement;
+        const label = document.querySelector(`label[for="${checkboxEl.id}"]`);
+        return {
+          id: checkboxEl.value,
+          name: label?.textContent?.trim() || checkboxEl.value
+        };
+      });
+
+    // Clear existing purpose selectors
+    multiplePurposesContainer.innerHTML = '';
+
+    if (checkedPlaces.length === 0) {
+      multiplePurposesContainer.classList.add('hidden');
+      return;
+    }
+
+    multiplePurposesContainer.classList.remove('hidden');
+
+    // Create purpose selector for each checked place
+    for (const place of checkedPlaces) {
+      const purposes = await loadPurposesForPlace(place.id);
+      
+      const purposeDiv = document.createElement('div');
+      purposeDiv.className = 'mb-4';
+      purposeDiv.innerHTML = `
+        <label for="purpose_${place.id}" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Purpose for <span class="font-semibold">${place.name}</span>
+        </label>
+        <select 
+          id="purpose_${place.id}" 
+          name="place_purposes" 
+          data-place-id="${place.id}"
+          class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+          required
+        >
+          <option value="">Select a purpose</option>
+        </select>
+        <div id="otherPurposeContainer_${place.id}" class="hidden mt-2">
+          <label for="otherPurpose_${place.id}" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Please specify (max 10 words, 50 characters)</label>
+          <textarea 
+            id="otherPurpose_${place.id}" 
+            name="otherPurpose_${place.id}"
+            rows="2"
+            maxlength="50"
+            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+          ></textarea>
+          <div class="mt-1 flex justify-between text-xs text-gray-500 dark:text-gray-400">
+            <span>Words: <span id="wordCount_${place.id}">0</span>/10</span>
+            <span>Characters: <span id="charCount_${place.id}">0</span>/50</span>
+          </div>
+        </div>
+      `;
+      
+      multiplePurposesContainer.appendChild(purposeDiv);
+
+      const purposeSelect = purposeDiv.querySelector(`#purpose_${place.id}`) as HTMLSelectElement;
+      
+      if (purposes.length === 0) {
+        const noPurposeOption = document.createElement('option');
+        noPurposeOption.value = '';
+        noPurposeOption.textContent = 'No purposes configured for this place';
+        noPurposeOption.disabled = true;
+        purposeSelect.appendChild(noPurposeOption);
+        purposeSelect.disabled = true;
+      } else {
+        purposes.forEach((purpose: any) => {
+          const option = document.createElement('option');
+          option.value = purpose.purpose;
+          option.textContent = `${purpose.purpose} (${purpose.required_days === 0 ? 'Same day' : purpose.required_days + ' day' + (purpose.required_days > 1 ? 's' : '')})`;
+          option.setAttribute('data-required-days', purpose.required_days.toString());
+          purposeSelect.appendChild(option);
+        });
+        
+        // Add "other" option if not already present
+        const hasOther = Array.from(purposeSelect.options).some(opt => opt.value === 'other');
+        if (!hasOther) {
+          const otherOption = document.createElement('option');
+          otherOption.value = 'other';
+          otherOption.textContent = 'Other';
+          purposeSelect.appendChild(otherOption);
+        }
+
+        // Add event listener for "other" purpose
+        purposeSelect.addEventListener('change', async function(e) {
+          const target = e.target as HTMLSelectElement;
+          const otherPurposeContainer = document.getElementById(`otherPurposeContainer_${place.id}`);
+          if (otherPurposeContainer) {
+            if (target.value === 'other') {
+              otherPurposeContainer.classList.remove('hidden');
+            } else {
+              otherPurposeContainer.classList.add('hidden');
+              const otherPurposeTextarea = document.getElementById(`otherPurpose_${place.id}`) as HTMLTextAreaElement;
+              if (otherPurposeTextarea) {
+                otherPurposeTextarea.value = '';
+              }
+            }
+          }
+          // Update visit date field state and min when purpose changes
+          updateVisitDateFieldState();
+          await updateVisitDateMin();
+          
+          // Validate date if a date is already selected
+          const visitDateInput = document.getElementById('visitDate') as HTMLInputElement;
+          if (visitDateInput && visitDateInput.value) {
+            if (typeof (window as any).validateVisitDate === 'function') {
+              await (window as any).validateVisitDate();
+            }
+          }
+          
+          // Update submit button state
+          updateSubmitButtonState();
+        });
+
+        // Add word/character count validation for other purpose textarea
+        const otherPurposeTextarea = purposeDiv.querySelector(`#otherPurpose_${place.id}`) as HTMLTextAreaElement;
+        const wordCountDisplay = purposeDiv.querySelector(`#wordCount_${place.id}`);
+        const charCountDisplay = purposeDiv.querySelector(`#charCount_${place.id}`);
+        
+        if (otherPurposeTextarea && wordCountDisplay && charCountDisplay) {
+          otherPurposeTextarea.addEventListener('input', function() {
+            const text = otherPurposeTextarea.value;
+            const segments = text.split(' ');
+            const wordCount = segments.length;
+            const charCount = text.length;
+            
+            wordCountDisplay.textContent = wordCount.toString();
+            charCountDisplay.textContent = charCount.toString();
+            
+            if (wordCount > 10 || charCount > 50) {
+              let truncatedText = text;
+              if (charCount > 50) {
+                truncatedText = text.substring(0, 50);
+              } else if (wordCount > 10) {
+                const words = text.split(' ');
+                truncatedText = words.slice(0, 10).join(' ');
+              }
+              otherPurposeTextarea.value = truncatedText;
+              wordCountDisplay.textContent = truncatedText.split(' ').length.toString();
+              charCountDisplay.textContent = truncatedText.length.toString();
+            }
+          });
+        }
+      }
+    }
+  }
+
+  // Function to toggle other purpose text box and manage purpose field state
   const purposeSelect = document.getElementById('purpose') as HTMLSelectElement;
+  const otherPurposeTextarea = document.getElementById('otherPurpose') as HTMLTextAreaElement;
+  const multiplePurposesContainer = document.getElementById('multiplePurposesContainer');
+  const scheduleSubmitBtn = document.getElementById('scheduleSubmitBtn') as HTMLButtonElement;
+  const scheduleForm = document.getElementById('scheduleForm') as HTMLFormElement;
+  const scheduleEmail = document.getElementById('scheduleEmail') as HTMLInputElement;
+  
+  // Function to update visit date minimum based on purpose required days
+  async function updateVisitDateMin() {
+    const visitDateInput = document.getElementById('visitDate') as HTMLInputElement;
+    if (!visitDateInput) return;
+
+    // Get current Philippine date
+    let currentPhilippineDate: Date;
+    try {
+      const { data: philippineDateData, error } = await supabase.rpc('get_philippine_date');
+      if (error) {
+        currentPhilippineDate = getPhilippineDate();
+      } else {
+        currentPhilippineDate = new Date(philippineDateData);
+      }
+    } catch {
+      currentPhilippineDate = getPhilippineDate();
+    }
+    currentPhilippineDate.setHours(0, 0, 0, 0);
+
+    const placeToVisitSelect = document.getElementById('placeToVisit') as HTMLSelectElement;
+    let maxRequiredDays = 0;
+
+    if (placeToVisitSelect?.value === 'multiple') {
+      // For multiple places, find the maximum required days across all selected purposes
+      const checkedPlaceIds = Array.from(document.querySelectorAll('input[name="places"]:checked'))
+        .map((checkbox) => (checkbox as HTMLInputElement).value);
+
+      for (const placeId of checkedPlaceIds) {
+        const purposeSelect = document.getElementById(`purpose_${placeId}`) as HTMLSelectElement;
+        if (purposeSelect && purposeSelect.value) {
+          const selectedOption = purposeSelect.options[purposeSelect.selectedIndex];
+          if (selectedOption && selectedOption.value !== 'other') {
+            const requiredDays = parseInt(selectedOption.getAttribute('data-required-days') || '0', 10);
+            maxRequiredDays = Math.max(maxRequiredDays, requiredDays);
+          }
+        }
+      }
+    } else if (placeToVisitSelect?.value && placeToVisitSelect.value !== '') {
+      // Single place - get required days from selected purpose
+      if (purposeSelect && purposeSelect.value) {
+        const selectedOption = purposeSelect.options[purposeSelect.selectedIndex];
+        if (selectedOption && selectedOption.value !== 'other') {
+          maxRequiredDays = parseInt(selectedOption.getAttribute('data-required-days') || '0', 10);
+        }
+      }
+    }
+
+    // Calculate minimum date: today + max required days
+    const minDate = new Date(currentPhilippineDate);
+    minDate.setDate(minDate.getDate() + maxRequiredDays);
+    
+    // Also get max date (1 month from today)
+    const endOfCurrentMonth = new Date(currentPhilippineDate.getFullYear(), currentPhilippineDate.getMonth() + 1, 0);
+    const isLastDayOfMonth = currentPhilippineDate.getDate() === endOfCurrentMonth.getDate();
+    const philippineMaxDate = isLastDayOfMonth
+      ? new Date(currentPhilippineDate.getFullYear(), currentPhilippineDate.getMonth() + 2, 0)
+      : endOfCurrentMonth;
+
+    // Update min and max dates
+    visitDateInput.min = minDate.toISOString().split('T')[0];
+    visitDateInput.max = philippineMaxDate.toISOString().split('T')[0];
+
+    // Update advance notice message
+    const dateAdvanceNotice = document.getElementById('dateAdvanceNotice');
+    if (dateAdvanceNotice) {
+      if (maxRequiredDays > 0) {
+        dateAdvanceNotice.textContent = `⚠️ This purpose requires ${maxRequiredDays} day${maxRequiredDays > 1 ? 's' : ''} advance notice. Earliest available date: ${minDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+        dateAdvanceNotice.classList.remove('hidden');
+      } else {
+        dateAdvanceNotice.classList.add('hidden');
+      }
+    }
+
+    // If current date value is before the new minimum, update it
+    if (visitDateInput.value) {
+      const currentValue = new Date(visitDateInput.value);
+      currentValue.setHours(0, 0, 0, 0);
+      if (currentValue < minDate) {
+        visitDateInput.value = minDate.toISOString().split('T')[0];
+      }
+    }
+  }
+
+  // Function to enable/disable visit date field based on purpose selection
+  function updateVisitDateFieldState() {
+    const visitDateInput = document.getElementById('visitDate') as HTMLInputElement;
+    const placeToVisitSelect = document.getElementById('placeToVisit') as HTMLSelectElement;
+    const dateAdvanceNotice = document.getElementById('dateAdvanceNotice');
+
+    if (!visitDateInput || !placeToVisitSelect) return;
+
+    let hasPurposeSelected = false;
+
+    if (placeToVisitSelect.value === 'multiple') {
+      // For multiple places, check if all checked places have a purpose selected
+      const checkedPlaces = document.querySelectorAll('input[name="places"]:checked');
+      if (checkedPlaces.length > 0) {
+        hasPurposeSelected = true;
+        // Check each checked place has a purpose
+        checkedPlaces.forEach((checkbox) => {
+          const placeId = (checkbox as HTMLInputElement).value;
+          const purposeSelect = document.getElementById(`purpose_${placeId}`) as HTMLSelectElement;
+          if (!purposeSelect || !purposeSelect.value) {
+            hasPurposeSelected = false;
+          }
+        });
+      }
+    } else if (placeToVisitSelect.value && placeToVisitSelect.value !== '') {
+      // Single place - check if purpose is selected
+      const purposeSelect = document.getElementById('purpose') as HTMLSelectElement;
+      if (purposeSelect && purposeSelect.value) {
+        hasPurposeSelected = true;
+      }
+    }
+
+    if (hasPurposeSelected) {
+      visitDateInput.disabled = false;
+      visitDateInput.classList.remove('disabled:bg-gray-100', 'dark:disabled:bg-gray-800', 'disabled:cursor-not-allowed', 'disabled:opacity-50');
+      // Update min date based on purpose
+      updateVisitDateMin();
+    } else {
+      visitDateInput.disabled = true;
+      visitDateInput.classList.add('disabled:bg-gray-100', 'dark:disabled:bg-gray-800', 'disabled:cursor-not-allowed', 'disabled:opacity-50');
+      visitDateInput.value = '';
+      if (dateAdvanceNotice) {
+        dateAdvanceNotice.classList.add('hidden');
+      }
+    }
+  }
+
+  // Function to enable/disable purpose field based on place selection
+  async function updatePurposeFieldState() {
+    const placeToVisitSelect = document.getElementById('placeToVisit') as HTMLSelectElement;
+    const singlePurposeContainer = document.getElementById('singlePurposeContainer');
+    
+    if (!placeToVisitSelect) return;
+    
+    if (placeToVisitSelect.value === 'multiple') {
+      // Hide single purpose container, show multiple purposes container
+      if (singlePurposeContainer) {
+        singlePurposeContainer.classList.add('hidden');
+      }
+      if (multiplePurposesContainer) {
+        await createMultiplePlacePurposeSelectors();
+      }
+      // Update visit date field state after purposes are created
+      setTimeout(() => {
+        updateVisitDateFieldState();
+        updateVisitDateMin();
+      }, 100);
+    } else if (placeToVisitSelect.value && placeToVisitSelect.value !== '') {
+      // Single place selected
+      if (singlePurposeContainer) {
+        singlePurposeContainer.classList.remove('hidden');
+      }
+      if (multiplePurposesContainer) {
+        multiplePurposesContainer.classList.add('hidden');
+      }
+      
+      if (purposeSelect) {
+        purposeSelect.disabled = false;
+        purposeSelect.classList.remove('disabled:bg-gray-100', 'dark:disabled:bg-gray-800', 'disabled:cursor-not-allowed', 'disabled:opacity-50');
+        await populatePurposeDropdown(placeToVisitSelect.value);
+        if (otherPurposeTextarea) {
+          otherPurposeTextarea.disabled = false;
+        }
+        // Update visit date field state (will remain disabled until purpose is selected)
+        updateVisitDateFieldState();
+      }
+    } else {
+      // No place selected
+      if (singlePurposeContainer) {
+        singlePurposeContainer.classList.add('hidden');
+      }
+      if (multiplePurposesContainer) {
+        multiplePurposesContainer.classList.add('hidden');
+      }
+      
+      if (purposeSelect) {
+        purposeSelect.disabled = true;
+        purposeSelect.classList.add('disabled:bg-gray-100', 'dark:disabled:bg-gray-800', 'disabled:cursor-not-allowed', 'disabled:opacity-50');
+        purposeSelect.innerHTML = '<option value="">Select a place first</option>';
+        const otherPurposeContainer = document.getElementById('otherPurposeContainer');
+        if (otherPurposeContainer) {
+          otherPurposeContainer.classList.add('hidden');
+        }
+        if (otherPurposeTextarea) {
+          otherPurposeTextarea.value = '';
+          otherPurposeTextarea.disabled = true;
+        }
+      }
+      // Disable visit date when no place is selected
+      updateVisitDateFieldState();
+    }
+    
+    // Update submit button state after place/purpose state changes
+    updateSubmitButtonState();
+  }
+  
   if (purposeSelect) {
-    purposeSelect.addEventListener('change', function(e: Event) {
+    // Initialize purpose field as disabled
+    updatePurposeFieldState();
+    
+    purposeSelect.addEventListener('change', async function(e: Event) {
       const target = e.target as HTMLSelectElement;
       const otherPurposeContainer = document.getElementById('otherPurposeContainer');
       if (otherPurposeContainer) {
         if (target.value === 'other') {
           otherPurposeContainer.classList.remove('hidden');
+          if (otherPurposeTextarea) {
+            otherPurposeTextarea.disabled = false;
+          }
         } else {
           otherPurposeContainer.classList.add('hidden');
+          if (otherPurposeTextarea) {
+            otherPurposeTextarea.value = '';
+            otherPurposeTextarea.disabled = true;
+          }
         }
       }
+      // Update visit date field state and min when purpose changes
+      updateVisitDateFieldState();
+      await updateVisitDateMin();
+      
+      // Validate date if a date is already selected
+      const visitDateInput = document.getElementById('visitDate') as HTMLInputElement;
+      if (visitDateInput && visitDateInput.value) {
+        if (typeof (window as any).validateVisitDate === 'function') {
+          await (window as any).validateVisitDate();
+        }
+      }
+      
+      // Update submit button state
+      updateSubmitButtonState();
     });
   }
 
+  // Add event listeners to multiple place purpose selectors for date min updates
+  // This will be called when multiple place purposes are created
+  function setupMultiplePlacePurposeDateUpdates() {
+    // Listen for changes on all purpose selects for multiple places
+    document.addEventListener('change', async function(e) {
+      const target = e.target as HTMLElement;
+      if (target && target.id && target.id.startsWith('purpose_') && target.tagName === 'SELECT') {
+        // Update visit date field state and min when any multiple place purpose changes
+        updateVisitDateFieldState();
+        await updateVisitDateMin();
+        
+        // Validate date if a date is already selected
+        const visitDateInput = document.getElementById('visitDate') as HTMLInputElement;
+        if (visitDateInput && visitDateInput.value) {
+          if (typeof (window as any).validateVisitDate === 'function') {
+            await (window as any).validateVisitDate();
+          }
+        }
+        
+        // Update submit button state
+        updateSubmitButtonState();
+      }
+    });
+  }
+  setupMultiplePlacePurposeDateUpdates();
+
+  // Expose functions globally
+  (window as any).updatePurposeFieldState = updatePurposeFieldState;
+  (window as any).updateVisitDateFieldState = updateVisitDateFieldState;
+  (window as any).updateVisitDateMin = updateVisitDateMin;
+
   // Function to validate word count and character limit
-  const otherPurposeTextarea = document.getElementById('otherPurpose') as HTMLTextAreaElement;
   const wordCountDisplay = document.getElementById('wordCount');
   const charCountDisplay = document.getElementById('charCount');
   
@@ -406,15 +915,13 @@ export async function setupEventListeners() {
   }
 
   // Email verification functionality
-  const scheduleEmail = document.getElementById('scheduleEmail') as HTMLInputElement;
   const sendVerificationCode = document.getElementById('sendVerificationCode') as HTMLButtonElement;
   const verificationCodeContainer = document.getElementById('verificationCodeContainer');
   const verificationCode = document.getElementById('verificationCode') as HTMLInputElement;
   const verifyCode = document.getElementById('verifyCode');
   const verificationStatus = document.getElementById('verificationStatus');
   const emailValidationStatus = document.getElementById('emailValidationStatus');
-  const scheduleSubmitBtn = document.getElementById('scheduleSubmitBtn') as HTMLButtonElement;
-  const scheduleForm = document.getElementById('scheduleForm') as HTMLFormElement;
+  // Note: scheduleSubmitBtn, scheduleForm, and scheduleEmail are declared earlier (above) to avoid initialization order issues
 
   // Set initial state of send code button
   if (sendVerificationCode) {
@@ -483,11 +990,58 @@ export async function setupEventListeners() {
   function areAllFieldsFilled(): boolean {
     const requiredInputs = scheduleForm.querySelectorAll('input[required], select[required]');
     let allFilled = true;
+    
+    // Check all required inputs
     requiredInputs.forEach(input => {
-      if (!(input as HTMLInputElement).value) {
+      const inputEl = input as HTMLInputElement | HTMLSelectElement;
+      // Skip disabled fields (they're not yet available)
+      if (inputEl.disabled) {
+        allFilled = false;
+        return;
+      }
+      if (!inputEl.value) {
         allFilled = false;
       }
     });
+    
+    // Special check for multiple places - ensure all selected places have purposes
+    const placeToVisitSelect = document.getElementById('placeToVisit') as HTMLSelectElement;
+    if (placeToVisitSelect?.value === 'multiple') {
+      const checkedPlaces = document.querySelectorAll('input[name="places"]:checked');
+      if (checkedPlaces.length === 0) {
+        allFilled = false;
+      } else {
+        // Check each checked place has a purpose selected
+        checkedPlaces.forEach((checkbox) => {
+          const placeId = (checkbox as HTMLInputElement).value;
+          const purposeSelect = document.getElementById(`purpose_${placeId}`) as HTMLSelectElement;
+          if (!purposeSelect || purposeSelect.disabled || !purposeSelect.value) {
+            allFilled = false;
+          } else if (purposeSelect.value === 'other') {
+            // If "other" is selected, check if textarea is filled
+            const otherPurposeTextarea = document.getElementById(`otherPurpose_${placeId}`) as HTMLTextAreaElement;
+            if (!otherPurposeTextarea || !otherPurposeTextarea.value.trim()) {
+              allFilled = false;
+            }
+          }
+        });
+      }
+    } else {
+      // Single place - check if purpose is selected and if "other", check textarea
+      const purposeSelect = document.getElementById('purpose') as HTMLSelectElement;
+      if (purposeSelect && !purposeSelect.disabled && purposeSelect.value) {
+        if (purposeSelect.value === 'other') {
+          const otherPurposeTextarea = document.getElementById('otherPurpose') as HTMLTextAreaElement;
+          if (!otherPurposeTextarea || !otherPurposeTextarea.value.trim()) {
+            allFilled = false;
+          }
+        }
+      } else if (purposeSelect && !purposeSelect.disabled && !purposeSelect.value) {
+        // Purpose field is enabled but no value selected
+        allFilled = false;
+      }
+    }
+    
     return allFilled;
   }
 
@@ -501,16 +1055,37 @@ export async function setupEventListeners() {
       // Check if date validation blocks scheduling (unavailable date)
       const dateValidationStatus = document.getElementById('dateValidationStatus');
       const hasUnavailableDateError = dateValidationStatus && 
-        dateValidationStatus.textContent?.includes('Cannot schedule on this date');
+        (dateValidationStatus.textContent?.includes('Cannot schedule on this date') ||
+         dateValidationStatus.textContent?.includes('❌') ||
+         dateValidationStatus.className.includes('text-red-600'));
       
-      scheduleSubmitBtn.disabled = !(allFieldsFilled && emailValid && !hasUnavailableDateError);
+      // Check if visit date is disabled (means no purpose selected yet)
+      const visitDateInput = document.getElementById('visitDate') as HTMLInputElement;
+      const visitDateDisabled = visitDateInput && visitDateInput.disabled;
+      
+      scheduleSubmitBtn.disabled = !(allFieldsFilled && emailValid && !hasUnavailableDateError && !visitDateDisabled);
     }
   }
 
   // Add input event listeners to all form fields
-  scheduleForm?.querySelectorAll('input, select').forEach(field => {
+  scheduleForm?.querySelectorAll('input, select, textarea').forEach(field => {
     field.addEventListener('input', updateSubmitButtonState);
+    field.addEventListener('change', updateSubmitButtonState);
   });
+  
+  // Use event delegation for dynamically created purpose selectors in multiple places
+  // This avoids needing to re-attach listeners when elements are added/removed
+  // Note: multiplePurposesContainer is already declared above, so we reuse it
+  if (multiplePurposesContainer) {
+    multiplePurposesContainer.addEventListener('input', updateSubmitButtonState);
+    multiplePurposesContainer.addEventListener('change', updateSubmitButtonState);
+  }
+  
+  // Also listen for checkbox changes in multiple places container
+  const multiplePlacesContainer = document.getElementById('multiplePlacesContainer');
+  if (multiplePlacesContainer) {
+    multiplePlacesContainer.addEventListener('change', updateSubmitButtonState);
+  }
 
   // Function to disable verification inputs
   function disableVerificationInputs() {
@@ -940,8 +1515,56 @@ export async function setupEventListeners() {
         const phone = phoneInput.value;
         const visitDate = (document.getElementById('visitDate') as HTMLInputElement).value;
         const placeToVisit = placeToVisitSelect.value;
-        const purpose = purposeSelect.value;
-        const otherPurpose = otherPurposeTextarea?.value || '';
+        
+        // Handle purposes - single place or multiple places
+        let purpose = '';
+        let otherPurpose = '';
+        let placePurposes: Array<{ placeId: string; purpose: string; otherPurpose?: string }> = [];
+        
+        if (placeToVisit === 'multiple') {
+          // Get purposes for each selected place
+          const checkedPlaceIds = Array.from(document.querySelectorAll('input[name="places"]:checked'))
+            .map((checkbox) => (checkbox as HTMLInputElement).value);
+          
+          for (const placeId of checkedPlaceIds) {
+            const purposeSelect = document.getElementById(`purpose_${placeId}`) as HTMLSelectElement;
+            if (!purposeSelect || !purposeSelect.value) {
+              throw new Error(`Please select a purpose for all selected places`);
+            }
+            
+            const selectedPurpose = purposeSelect.value;
+            const otherPurposeTextarea = document.getElementById(`otherPurpose_${placeId}`) as HTMLTextAreaElement;
+            const otherPurposeValue = (selectedPurpose === 'other' && otherPurposeTextarea) ? otherPurposeTextarea.value : '';
+            
+            if (selectedPurpose === 'other' && !otherPurposeValue.trim()) {
+              throw new Error(`Please specify the purpose for all selected places`);
+            }
+            
+            placePurposes.push({
+              placeId: placeId,
+              purpose: selectedPurpose === 'other' ? otherPurposeValue : selectedPurpose,
+              otherPurpose: selectedPurpose === 'other' ? otherPurposeValue : undefined
+            });
+          }
+          
+          // For multiple places, use the first place's purpose as the main purpose (for backward compatibility)
+          if (placePurposes.length > 0) {
+            purpose = placePurposes[0].purpose;
+            otherPurpose = placePurposes[0].otherPurpose || '';
+          }
+        } else {
+          // Single place
+          purpose = purposeSelect.value;
+          otherPurpose = otherPurposeTextarea?.value || '';
+          
+          if (!purpose) {
+            throw new Error('Please select a purpose for your visit');
+          }
+          
+          if (purpose === 'other' && !otherPurpose.trim()) {
+            throw new Error('Please specify the purpose of your visit');
+          }
+        }
 
         // Validate visit date using Philippine time from database
         let philippineToday: Date;
@@ -1057,7 +1680,8 @@ export async function setupEventListeners() {
           placeToVisit,
           purpose,
           otherPurpose,
-          visitorUserId
+          visitorUserId,
+          placePurposes: placeToVisit === 'multiple' ? placePurposes : undefined
         });
 
         // Reset scheduling flag since we're not actually scheduling yet
@@ -1073,15 +1697,15 @@ export async function setupEventListeners() {
         }
         scheduleForm.reset();
         resetDateValidation();
-        // Set visitDate input to current Philippine date after reset (on error)
-        const visitDateInput = document.getElementById('visitDate') as HTMLInputElement;
-        if (visitDateInput) {
-          const philippineToday = getPhilippineDate();
-          visitDateInput.value = philippineToday.toISOString().split('T')[0];
-          if (typeof (window as any).initializeDateValidation === 'function') {
-            (window as any).initializeDateValidation();
-          }
+        // Reset purpose field state and visit date state
+        if (typeof (window as any).updatePurposeFieldState === 'function') {
+          (window as any).updatePurposeFieldState();
         }
+        if (typeof (window as any).updateVisitDateFieldState === 'function') {
+          (window as any).updateVisitDateFieldState();
+        }
+        // Note: Visit date should remain disabled until place is selected
+        // Date validation will be re-initialized when place is selected
         isEmailVerified = false;
         verificationCodeSent = false;
         verificationCodeContainer?.classList.add('hidden');
@@ -1116,11 +1740,29 @@ export async function setupEventListeners() {
     });
   }
 
-  // Function to get unavailable dates for selected places
+  // Function to get unavailable dates for selected places (only current and upcoming dates)
   async function getUnavailableDatesForPlaces(placeIds: string[]): Promise<Array<{place_id: string, place_name: string, unavailable_from: string}>> {
     if (!placeIds || placeIds.length === 0) return [];
     
     try {
+      // Get current Philippine date for filtering
+      let currentPhilippineDate: Date;
+      try {
+        const { data: philippineDateData, error: dateError } = await supabase.rpc('get_philippine_date');
+        if (dateError) {
+          console.error('Error getting Philippine date:', dateError);
+          currentPhilippineDate = getPhilippineDate();
+        } else {
+          currentPhilippineDate = new Date(philippineDateData);
+        }
+      } catch {
+        currentPhilippineDate = getPhilippineDate();
+      }
+      currentPhilippineDate.setHours(0, 0, 0, 0);
+      
+      // Format date for query (YYYY-MM-DD)
+      const currentDateStr = currentPhilippineDate.toISOString().split('T')[0];
+      
       const { data, error } = await supabase
         .from('personnel_availability')
         .select(`
@@ -1129,7 +1771,8 @@ export async function setupEventListeners() {
           places_to_visit!inner(name)
         `)
         .in('place_id', placeIds)
-        .not('unavailable_from', 'is', null);
+        .not('unavailable_from', 'is', null)
+        .gte('unavailable_from', currentDateStr); // Only get dates >= today
       
       if (error) {
         console.error('Error fetching unavailable dates:', error);
@@ -1215,7 +1858,8 @@ export async function setupEventListeners() {
       return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     };
     
-    // Separate current and upcoming unavailable dates
+    // Separate current (today) and upcoming (future) unavailable dates
+    // Note: Past dates are already filtered in getUnavailableDatesForPlaces query
     const currentUnavailable: typeof unavailableDates = [];
     const upcomingUnavailable: typeof unavailableDates = [];
     
@@ -1223,11 +1867,15 @@ export async function setupEventListeners() {
       const unavailableDate = new Date(item.unavailable_from);
       unavailableDate.setHours(0, 0, 0, 0);
       
-      if (unavailableDate <= currentPhilippineDate) {
+      // Only process dates that are today or in the future (past dates already filtered)
+      if (unavailableDate.getTime() === currentPhilippineDate.getTime()) {
+        // Today - currently unavailable
         currentUnavailable.push(item);
-      } else {
+      } else if (unavailableDate > currentPhilippineDate) {
+        // Future dates - will be unavailable
         upcomingUnavailable.push(item);
       }
+      // Past dates are ignored (already filtered in query)
     });
     
     let html = '<div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3">';
@@ -1338,11 +1986,56 @@ export async function setupEventListeners() {
       // Normalize current date to start of day for comparison
       currentPhilippineDate.setHours(0, 0, 0, 0);
 
-      
+      // Check if date meets required days for selected purpose
+      const placeToVisitSelect = document.getElementById('placeToVisit') as HTMLSelectElement;
+      let maxRequiredDays = 0;
+
+      if (placeToVisitSelect?.value === 'multiple') {
+        // For multiple places, find the maximum required days across all selected purposes
+        const checkedPlaceIds = Array.from(document.querySelectorAll('input[name="places"]:checked'))
+          .map((checkbox) => (checkbox as HTMLInputElement).value);
+
+        for (const placeId of checkedPlaceIds) {
+          const purposeSelect = document.getElementById(`purpose_${placeId}`) as HTMLSelectElement;
+          if (purposeSelect && purposeSelect.value) {
+            const selectedOption = purposeSelect.options[purposeSelect.selectedIndex];
+            if (selectedOption && selectedOption.value !== 'other') {
+              const requiredDays = parseInt(selectedOption.getAttribute('data-required-days') || '0', 10);
+              maxRequiredDays = Math.max(maxRequiredDays, requiredDays);
+            }
+          }
+        }
+      } else if (placeToVisitSelect?.value && placeToVisitSelect.value !== '') {
+        // Single place - get required days from selected purpose
+        const purposeSelect = document.getElementById('purpose') as HTMLSelectElement;
+        if (purposeSelect && purposeSelect.value) {
+          const selectedOption = purposeSelect.options[purposeSelect.selectedIndex];
+          if (selectedOption && selectedOption.value !== 'other') {
+            maxRequiredDays = parseInt(selectedOption.getAttribute('data-required-days') || '0', 10);
+          }
+        }
+      }
+
+      // Calculate minimum allowed date based on required days
+      const minAllowedDate = new Date(currentPhilippineDate);
+      minAllowedDate.setDate(minAllowedDate.getDate() + maxRequiredDays);
 
       // Clear previous validation
       visitDateInput.classList.remove('border-red-500', 'border-green-500', 'border-yellow-500', 'focus:border-red-500', 'focus:border-green-500', 'focus:border-yellow-500');
       if (dateValidationStatus) dateValidationStatus.className = 'mt-1 text-sm';
+
+      // Check if date meets required advance notice
+      if (maxRequiredDays > 0 && philippineSelectedDate.getTime() < minAllowedDate.getTime()) {
+        visitDateInput.classList.add('border-red-500', 'focus:border-red-500');
+        if (dateValidationStatus) {
+          dateValidationStatus.textContent = `❌ This purpose requires ${maxRequiredDays} day${maxRequiredDays > 1 ? 's' : ''} advance notice. Earliest available date is ${minAllowedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.`;
+          dateValidationStatus.className = 'mt-1 text-sm text-red-600 font-medium';
+        }
+        // Disable submit button
+        const scheduleSubmitBtnCheck = document.getElementById('scheduleSubmitBtn') as HTMLButtonElement;
+        if (scheduleSubmitBtnCheck) scheduleSubmitBtnCheck.disabled = true;
+        return false;
+      }
 
       // Check if date is in the past
       if (philippineSelectedDate.getTime() < currentPhilippineDate.getTime()) {
@@ -1351,6 +2044,9 @@ export async function setupEventListeners() {
           dateValidationStatus.textContent = `❌ Cannot schedule for past dates. Current Philippine date is ${currentPhilippineDate.toLocaleDateString()}.`;
           dateValidationStatus.className = 'mt-1 text-sm text-red-600 font-medium';
         }
+        // Disable submit button
+        const scheduleSubmitBtnCheck = document.getElementById('scheduleSubmitBtn') as HTMLButtonElement;
+        if (scheduleSubmitBtnCheck) scheduleSubmitBtnCheck.disabled = true;
         return false;
       }
 
@@ -1362,6 +2058,9 @@ export async function setupEventListeners() {
           dateValidationStatus.textContent = `❌ Cannot schedule beyond ${maxRangeLabel}. Maximum allowed date is ${philippineMaxDate.toLocaleDateString()}.`;
           dateValidationStatus.className = 'mt-1 text-sm text-red-600 font-medium';
         }
+        // Disable submit button
+        const scheduleSubmitBtnCheck = document.getElementById('scheduleSubmitBtn') as HTMLButtonElement;
+        if (scheduleSubmitBtnCheck) scheduleSubmitBtnCheck.disabled = true;
         return false;
       }
 
@@ -1412,7 +2111,7 @@ export async function setupEventListeners() {
       const scheduleSubmitBtnLocal = document.getElementById('scheduleSubmitBtn') as HTMLButtonElement;
       
       // Check if selected date matches any unavailable dates for selected places
-      const placeToVisitSelect = document.getElementById('placeToVisit') as HTMLSelectElement;
+      // Reuse placeToVisitSelect already declared above
       let selectedPlaceIds: string[] = [];
       if (placeToVisitSelect?.value === 'multiple') {
         selectedPlaceIds = Array.from(document.querySelectorAll('input[name="places"]:checked'))
@@ -1506,11 +2205,8 @@ export async function setupEventListeners() {
       
       // If no unavailable date and we passed all validations, update button state
       // The updateSubmitButtonState function will handle final state based on form completion
-      if (!hasUnavailableDate && scheduleSubmitBtnLocal) {
-        // Update button state to consider form fields and email verification
-        // Don't force enable, let updateSubmitButtonState handle it based on all conditions
-        updateSubmitButtonState();
-      }
+      // Always update button state after date validation
+      updateSubmitButtonState();
       return true;
     }
 
@@ -2204,6 +2900,7 @@ interface VisitConfirmationData {
   purpose: string;
   otherPurpose: string;
   visitorUserId: string | null;
+  placePurposes?: Array<{ placeId: string; purpose: string; otherPurpose?: string }>;
 }
 
 // Function to show the visit confirmation modal
@@ -2253,7 +2950,18 @@ export function showVisitConfirmationModal(data: VisitConfirmationData) {
   });
 
   // Format the purpose for display
-  const purposeText = data.purpose === 'other' ? data.otherPurpose : data.purpose;
+  let purposeText = '';
+  if (data.placeToVisit === 'multiple' && data.placePurposes && data.placePurposes.length > 0) {
+    // For multiple places, show purposes for each place
+    const placeNames = placesText.split(', ');
+    purposeText = data.placePurposes.map((pp, index) => {
+      const placeName = placeNames[index] || `Place ${index + 1}`;
+      const purpose = pp.purpose;
+      return `${placeName}: ${purpose}`;
+    }).join('; ');
+  } else {
+    purposeText = data.purpose === 'other' ? data.otherPurpose : data.purpose;
+  }
 
   // Update the confirmation modal with the visit details
   const confirmationName = document.getElementById('confirmationName');
