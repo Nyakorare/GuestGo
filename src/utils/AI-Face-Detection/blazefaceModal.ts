@@ -1,4 +1,6 @@
 // Face detection using Python API only
+import { PYTHON_API_URL } from '../../config/python-api';
+
 type DetectionResult = {
   imageDataUrl: string;
   detections: any[];
@@ -773,7 +775,7 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
       updateServiceStatus(false, 'Checking AI service...');
       
       // First, check the status endpoint
-      const statusResponse = await fetch('http://localhost:5000/status', {
+      const statusResponse = await fetch(`${PYTHON_API_URL}/status`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -874,7 +876,7 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
       
       try {
-        const response = await fetch('http://localhost:5000/detect-face-base64', {
+        const response = await fetch(`${PYTHON_API_URL}/detect-face-base64`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

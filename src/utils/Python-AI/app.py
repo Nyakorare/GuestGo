@@ -565,7 +565,7 @@ def api_status():
             'api_connected': True,
             'main_app_connected': frontend_connected,
             'frontend_connected': frontend_connected,  # Add explicit field for frontend
-            'main_app_url': 'http://localhost:5173/',
+            'main_app_url': os.getenv('FRONTEND_URL', 'http://localhost:5173/'),
             'api_version': '1.0.0',
             'endpoints': [
                 '/status - Get API connectivity status',
@@ -592,7 +592,7 @@ def api_status():
             'error': str(e),
             'api_connected': False,
             'main_app_connected': False,
-            'main_app_url': 'http://localhost:5173/',
+            'main_app_url': os.getenv('FRONTEND_URL', 'http://localhost:5173/'),
             'connectivity': {
                 'python_service': True,
                 'main_application': False,
@@ -603,8 +603,8 @@ def api_status():
 def check_frontend_connectivity():
     """Check if the main application at localhost:5173 is accessible and can connect back"""
     try:
-        # Check the specific main application URL
-        main_app_url = "http://localhost:5173/"
+        # Check the specific main application URL (use environment variable if available)
+        main_app_url = os.getenv('FRONTEND_URL', 'http://localhost:5173/')
         
         try:
             print(f"🔍 Checking main application at {main_app_url}...")
@@ -652,7 +652,8 @@ def test_bidirectional_connection(frontend_port):
     try:
         # This simulates what the frontend would do - check our status endpoint
         # In a real scenario, the frontend would make this call
-        response = requests.get('http://localhost:5000/status', timeout=5)
+        api_url = os.getenv('API_URL', f'http://localhost:{os.getenv("PORT", 5000)}')
+        response = requests.get(f'{api_url}/status', timeout=5)
         if response.status_code == 200:
             data = response.json()
             print(f"✅ Frontend can reach AI service: {data.get('status')}")
@@ -1054,4 +1055,6 @@ def detect_face_base64():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    port = int(os.getenv('PORT', 5000))
+    debug = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
+    app.run(debug=debug, host='0.0.0.0', port=port)
