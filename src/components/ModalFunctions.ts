@@ -2024,17 +2024,32 @@ export async function setupEventListeners() {
       visitDateInput.classList.remove('border-red-500', 'border-green-500', 'border-yellow-500', 'focus:border-red-500', 'focus:border-green-500', 'focus:border-yellow-500');
       if (dateValidationStatus) dateValidationStatus.className = 'mt-1 text-sm';
 
-      // Check if date meets required advance notice
+      // Check if date meets required advance notice (must be at least the required days away)
+      // Allow dates that are >= minAllowedDate (i.e., on or after the required days)
       if (maxRequiredDays > 0 && philippineSelectedDate.getTime() < minAllowedDate.getTime()) {
         visitDateInput.classList.add('border-red-500', 'focus:border-red-500');
         if (dateValidationStatus) {
-          dateValidationStatus.textContent = `❌ This purpose requires ${maxRequiredDays} day${maxRequiredDays > 1 ? 's' : ''} advance notice. Earliest available date is ${minAllowedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.`;
+          dateValidationStatus.textContent = `❌ This purpose requires ${maxRequiredDays} day${maxRequiredDays > 1 ? 's' : ''} advance notice. You can schedule for ${minAllowedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} or any date after.`;
           dateValidationStatus.className = 'mt-1 text-sm text-red-600 font-medium';
         }
         // Disable submit button
         const scheduleSubmitBtnCheck = document.getElementById('scheduleSubmitBtn') as HTMLButtonElement;
         if (scheduleSubmitBtnCheck) scheduleSubmitBtnCheck.disabled = true;
         return false;
+      }
+      
+      // If date meets the minimum requirement (on or after required days), show success
+      if (maxRequiredDays > 0 && philippineSelectedDate.getTime() >= minAllowedDate.getTime()) {
+        visitDateInput.classList.add('border-green-500', 'focus:border-green-500');
+        if (dateValidationStatus) {
+          const daysFromToday = Math.floor((philippineSelectedDate.getTime() - currentPhilippineDate.getTime()) / (1000 * 60 * 60 * 24));
+          if (daysFromToday === maxRequiredDays) {
+            dateValidationStatus.textContent = `✅ Date meets the ${maxRequiredDays} day${maxRequiredDays > 1 ? 's' : ''} advance notice requirement.`;
+          } else {
+            dateValidationStatus.textContent = `✅ Date is ${daysFromToday} day${daysFromToday > 1 ? 's' : ''} away (${maxRequiredDays} day${maxRequiredDays > 1 ? 's' : ''} minimum required).`;
+          }
+          dateValidationStatus.className = 'mt-1 text-sm text-green-600 font-medium';
+        }
       }
 
       // Check if date is in the past

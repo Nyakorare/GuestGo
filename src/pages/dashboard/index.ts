@@ -3399,6 +3399,12 @@ async function editPlace(placeId: string) {
       submitBtn.textContent = 'Save Changes';
     }
 
+    // Show the Details tab for admins
+    const detailsTab = document.getElementById('editPlaceDetailsTab');
+    if (detailsTab) {
+      detailsTab.classList.remove('hidden');
+    }
+
     // Load purposes for this place
     await loadPlacePurposes(place.id);
 
@@ -3864,6 +3870,41 @@ function removePurposeRow(index: number) {
   }, 0);
 }
 
+// Function to edit place purposes (for personnel dashboard)
+async function editPlacePurposes(placeId: string, placeName: string) {
+  const modal = document.getElementById('editPlaceModal');
+  const idInput = document.getElementById('editPlaceId') as HTMLInputElement;
+  const modalTitle = modal?.querySelector('h3') as HTMLHeadingElement;
+  const detailsTab = document.getElementById('editPlaceDetailsTab');
+
+  if (!modal || !idInput) {
+    console.error('Edit place modal elements not found');
+    return;
+  }
+
+  // Set the place ID
+  idInput.value = placeId;
+
+  // Update modal title
+  if (modalTitle) {
+    modalTitle.textContent = `Edit Purposes - ${placeName}`;
+  }
+
+  // Hide the Details tab for personnel
+  if (detailsTab) {
+    detailsTab.classList.add('hidden');
+  }
+
+  // Load purposes for this place
+  await loadPlacePurposes(placeId);
+
+  // Switch directly to Purpose tab
+  switchEditPlaceTab('purpose');
+
+  // Show the modal
+  modal.classList.remove('hidden');
+}
+
 // Function to save place purposes
 async function savePlacePurposes() {
   const placeIdInput = document.getElementById('editPlaceId') as HTMLInputElement;
@@ -3985,6 +4026,34 @@ async function savePlacePurposes() {
     await loadPlacePurposes(placeId);
 
     showNotification('Purposes saved successfully!', 'success');
+    
+    // Close the modal
+    const modal = document.getElementById('editPlaceModal');
+    if (modal) {
+      modal.classList.add('hidden');
+      // Reset modal title
+      const modalTitle = modal.querySelector('h3') as HTMLHeadingElement;
+      if (modalTitle) {
+        modalTitle.textContent = 'Edit Place';
+      }
+      // Show the Details tab again (in case it was hidden for personnel)
+      const detailsTab = document.getElementById('editPlaceDetailsTab');
+      if (detailsTab) {
+        detailsTab.classList.remove('hidden');
+      }
+    }
+    
+    // Reload personnel dashboard if it's currently visible
+    const personnelContent = document.getElementById('personnelContent');
+    if (personnelContent && !personnelContent.classList.contains('hidden')) {
+      await loadPersonnelDashboard();
+    }
+    
+    // Reload places list if it's visible (for admin view)
+    const placesList = document.getElementById('placesList');
+    if (placesList) {
+      loadPlaces();
+    }
   } catch (error: any) {
     console.error('Error saving purposes:', error);
     showNotification(`Error saving purposes: ${error.message}`, 'error');
@@ -3998,6 +4067,7 @@ async function savePlacePurposes() {
 
 // Make functions globally available
 (window as any).editPlace = editPlace;
+(window as any).editPlacePurposes = editPlacePurposes;
 (window as any).editVisitLimit = editVisitLimit;
 (window as any).openVisitLimitModal = openVisitLimitModal;
 (window as any).changeUserRole = changeUserRole;
@@ -4069,6 +4139,12 @@ function setupDashboardEventListeners() {
         if (submitBtn) {
           submitBtn.textContent = 'Save Changes';
           submitBtn.disabled = false;
+        }
+        
+        // Show the Details tab again (in case it was hidden for personnel)
+        const detailsTab = document.getElementById('editPlaceDetailsTab');
+        if (detailsTab) {
+          detailsTab.classList.remove('hidden');
         }
         
         // Reset form
@@ -5850,28 +5926,70 @@ async function loadPersonnelDashboard() {
         const today = new Date();
         const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
         
+        // Fetch purposes for all assigned places
+        const placeIds = availabilityData.map((a: any) => a.place_id);
+        const { data: allPurposes } = await supabase
+          .from('place_purposes')
+          .select('*')
+          .in('place_id', placeIds)
+          .order('purpose');
+        
+        // Create a map of purposes by place_id
+        const purposesByPlace = new Map<string, any[]>();
+        (allPurposes || []).forEach((purpose: any) => {
+          if (!purposesByPlace.has(purpose.place_id)) {
+            purposesByPlace.set(purpose.place_id, []);
+          }
+          purposesByPlace.get(purpose.place_id)!.push(purpose);
+        });
+        
         // Show all assignments
         personnelAssignmentInfo.innerHTML = availabilityData.map((assignment: any) => {
-          // Compute unavailable date display
+          // Compute unavailable date display (only show if date is today or in the future)
           let unavailableDateDisplay = '';
           if (assignment.unavailable_from) {
             const unavailableDate = new Date(assignment.unavailable_from);
             const unavailableDateStr = `${unavailableDate.getFullYear()}-${String(unavailableDate.getMonth() + 1).padStart(2, '0')}-${String(unavailableDate.getDate()).padStart(2, '0')}`;
-            const isFutureDate = unavailableDateStr > todayStr;
-            const isUpcoming = assignment.is_available && isFutureDate;
+            // Only show if the date is today or in the future (not in the past)
+            const isTodayOrFuture = unavailableDateStr >= todayStr;
             
-            unavailableDateDisplay = `
-              <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
-                <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Unavailable Date:</p>
-                <p class="text-sm text-gray-600 dark:text-gray-400">
-                  ${isUpcoming
-                    ? `Will be unavailable from: <span class="font-medium text-orange-600 dark:text-orange-400">${formatDate(assignment.unavailable_from)}</span>`
-                    : `Unavailable from: <span class="font-medium text-red-600 dark:text-red-400">${formatDate(assignment.unavailable_from)}</span>`
-                  }
-                </p>
-              </div>
-            `;
+            if (isTodayOrFuture) {
+              const isFutureDate = unavailableDateStr > todayStr;
+              const isUpcoming = assignment.is_available && isFutureDate;
+              
+              unavailableDateDisplay = `
+                <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                  <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Unavailable Date:</p>
+                  <p class="text-sm text-gray-600 dark:text-gray-400">
+                    ${isUpcoming
+                      ? `Will be unavailable from: <span class="font-medium text-orange-600 dark:text-orange-400">${formatDate(assignment.unavailable_from)}</span>`
+                      : `Unavailable from: <span class="font-medium text-red-600 dark:text-red-400">${formatDate(assignment.unavailable_from)}</span>`
+                    }
+                  </p>
+                </div>
+              `;
+            }
           }
+          
+          // Get purposes for this place
+          const placePurposes = purposesByPlace.get(assignment.place_id) || [];
+          const purposesDisplay = placePurposes.length > 0 ? `
+            <div class="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 mt-4">
+              <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-2">Visit Purposes:</h4>
+              <div class="flex flex-wrap gap-2">
+                ${placePurposes.map((purpose: any) => `
+                  <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-700" title="Required advance notice: ${purpose.required_days === 0 ? 'Same day allowed' : purpose.required_days + ' day' + (purpose.required_days > 1 ? 's' : '')}">
+                    <span>${purpose.purpose.replace(/"/g, '&quot;').replace(/'/g, '&#39;')}</span>
+                    <span class="ml-1 text-amber-600 dark:text-amber-400">(${purpose.required_days === 0 ? 'Same day' : purpose.required_days + 'd'})</span>
+                  </span>
+                `).join('')}
+              </div>
+            </div>
+          ` : `
+            <div class="bg-gray-50 dark:bg-gray-600 rounded-lg p-3 mt-4">
+              <p class="text-sm text-gray-500 dark:text-gray-400">No purposes configured</p>
+            </div>
+          `;
           
           return `
           <div class="bg-white dark:bg-gray-700 rounded-lg shadow p-6 mb-4 transition-all duration-300 ease-in-out hover:shadow-xl hover:scale-[1.02] hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer border border-transparent hover:border-gray-200 dark:hover:border-gray-500">
@@ -5895,6 +6013,9 @@ async function loadPersonnelDashboard() {
               <div>
                 <p class="text-sm text-gray-600 dark:text-gray-300"><strong>Assigned since:</strong> ${new Date(assignment.assigned_at).toLocaleDateString()}</p>
               </div>
+              
+              <!-- Visit Purposes -->
+              ${purposesDisplay}
               
               <!-- Visit Limit Information -->
               <div class="bg-gray-50 dark:bg-gray-600 rounded-lg p-3 mt-4">
@@ -5944,6 +6065,13 @@ async function loadPersonnelDashboard() {
                 title="Edit visit limits"
               >
                 Edit Limits
+              </button>
+              <button 
+                onclick="window.editPlacePurposes('${assignment.place_id}', '${assignment.place_name}')"
+                class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 ease-in-out hover:scale-105 hover:shadow-lg"
+                title="Edit purposes"
+              >
+                Purpose
               </button>
             </div>
             ${unavailableDateDisplay}
