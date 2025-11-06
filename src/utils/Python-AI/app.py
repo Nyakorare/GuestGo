@@ -559,6 +559,12 @@ def api_status():
         print("🔍 Status endpoint called - checking frontend connectivity...")
         frontend_connected = check_frontend_connectivity()
         print(f"🔍 Frontend connected: {frontend_connected}")
+        # Determine environment (local vs deployed)
+        frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173/')
+        is_render_env = os.getenv('RENDER', '').lower() == 'true'
+        is_local = ('localhost' in frontend_url) or ('127.0.0.1' in frontend_url)
+        is_deployed = not is_local or is_render_env
+        environment = 'deployed' if is_deployed else 'local'
         
         return jsonify({
             'status': 'running',
@@ -583,6 +589,15 @@ def api_status():
                 'python_service': True,
                 'main_application': frontend_connected,
                 'bidirectional': frontend_connected
+            },
+            # Environment awareness for UI logic
+            'environment': environment,          # 'local' | 'deployed'
+            'is_local': bool(is_local),
+            'is_deployed': bool(is_deployed),
+            'visibility': {
+                # If local, show local status and hide deployed; if deployed, inverse
+                'show_local_status': bool(is_local and not is_deployed),
+                'show_deployed_status': bool(is_deployed)
             }
         })
     except Exception as e:
@@ -593,6 +608,13 @@ def api_status():
             'api_connected': False,
             'main_app_connected': False,
             'main_app_url': os.getenv('FRONTEND_URL', 'http://localhost:5173/'),
+            'environment': 'unknown',
+            'is_local': None,
+            'is_deployed': None,
+            'visibility': {
+                'show_local_status': False,
+                'show_deployed_status': False
+            },
             'connectivity': {
                 'python_service': True,
                 'main_application': False,
