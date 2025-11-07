@@ -6,8 +6,9 @@ Below is a concise, prioritized summary of the key algorithms and techniques use
 
 | Area | Algorithm Type | Library/Implementation |
 | --- | --- | --- |
-| Facial detection | CNN object detector (You Only Look Once) | YOLO |
-| Facial verification | Landmark/embedding-based face verification | MediaPipe |
+| Facial detection (primary) | YOLOv8 object detection + BlazeFace cropping via Python service | FastAPI (PyTorch YOLOv8, BlazeFace) |
+| Facial detection (fallback) | Browser-side BlazeFace | TensorFlow.js |
+| Face data storage | JPEG compression + XOR encryption pipeline | `imageCompression.ts` |
 | QR encoding | Reed–Solomon error-correcting codes (ECC L/M), bit-matrix encoding | `qrcode` |
 | QR decoding | Finder pattern detection → perspective transform → Reed–Solomon decoding | `jsQR` |
 | Adaptive scan scheduling | Heuristic feedback control loop (dynamic interval) | Custom |
@@ -19,20 +20,35 @@ Below is a concise, prioritized summary of the key algorithms and techniques use
 | RPC workflows | ACID transactional stored procedures | Supabase RPC |
 | Log enrichment | Client-side join/denormalization + JSON validation | Custom |
 | Printable composition | String templating for HTML generation | Custom |
+| Feedback scoring | ISO 25010 weighted survey capture + Supabase RPC | `submit_visit_feedback` |
 
-### 1) Facial Detection & Recognition (Primary)
-- Purpose: Fast, reliable identity checks during schedule enrollment, entrance gate, and exit gate.
+### 1) Python AI Face Detection & Capture (Primary)
+- Purpose: Enforce face capture for schedule enrollment and guard-controlled entrance/exit flows.
 - Components:
-  - Detection: YOLO (You Only Look Once).
-    - Type: CNN object detector for faces; single-pass detection with bounding boxes + confidence.
-  - Verification: MediaPipe-based verification.
-    - Type: Landmark/embedding-based comparison against an enrolled template with a similarity threshold.
+  - YOLOv8 detection (Python service) to localize faces with confidence + landmarks.
+  - BlazeFace post-processing to crop optimal squares and return metadata (bounding boxes, landmarks, timestamps).
 - Flow:
-  - Enrollment: Detect face → capture stable frame(s) → extract features → store template (encrypted, access-controlled).
-  - Gate Verify: Detect face → compare features to stored template → pass/fail by threshold → fallback to QR/manual on fail.
-- Notes: Liveness/spoofing checks and multi-face handling can be added later.
+  - Enrollment: Browser captures frame → sends to Python API → receives cropped face + metadata → stores encrypted template.
+  - Guard dashboard: QR detection pauses; face modal collects new capture → upon success, entrance/exit RPCs fire with face payload.
+- Notes: Automatic fallback to TensorFlow.js BlazeFace keeps detection online when the Python API is unreachable.
 
-### 2) QR Code Encoding (Visit/Gate)
+### 2) Face Image Compression & Encryption Pipeline
+- File: `src/utils/imageCompression.ts`
+- Approach:
+  - Compress captured face crops to small JPEGs (default 100×100, quality ~0.5).
+  - XOR-based lightweight encryption before Supabase insertion; metadata records original vs compressed size.
+  - Decryption utility restores images for `FaceDataModal` when access is permitted.
+- Purpose: Reduce storage costs while protecting sensitive biometric snapshots.
+
+### 3) ISO 25010 Feedback Scoring & Lockout
+- Files: `src/components/FeedbackSurveyModal.ts`, Supabase RPCs `submit_visit_feedback`, `has_feedback_for_visit`.
+- Approach:
+  - Collect 8 ISO 25010 dimensions + overall satisfaction, enforced as required radio groups (1-5).
+  - Supabase RPC validates one submission per visit and persists optional comments.
+  - Client refreshes visitor history to disable survey buttons post-submission.
+- Purpose: Capture qualitative system quality trends directly from visitors.
+
+### 4) QR Code Encoding (Visit/Gate)
 - File: `src/utils/qrCode.ts`
 - Library: `qrcode`
 - Approach:
@@ -41,7 +57,7 @@ Below is a concise, prioritized summary of the key algorithms and techniques use
 - Purpose: Trade off data richness vs. scan reliability depending on use case.
 - Type: QR generation with Reed–Solomon error correction codes (ECC levels L/M).
 
-### 3) QR Code Decoding (Camera Scanner)
+### 5) QR Code Decoding (Camera Scanner)
 - File: `src/pages/QRScanner.ts`
 - Library: `jsQR`
 - Approach:
@@ -50,7 +66,7 @@ Below is a concise, prioritized summary of the key algorithms and techniques use
 - Purpose: Fast QR reads on commodity devices with immediate UX feedback.
 - Type: QR decoding pipeline including finder pattern detection, perspective transform, and Reed–Solomon decoding.
 
-### 4) Adaptive Scan Scheduling (Real-time Tuning)
+### 6) Adaptive Scan Scheduling (Real-time Tuning)
 - File: `src/pages/QRScanner.ts`
 - Strategy:
   - Dynamic `scanInterval` adjusted by consecutive detection failures and detection hints.
@@ -58,7 +74,7 @@ Below is a concise, prioritized summary of the key algorithms and techniques use
 - Benefit: Better responsiveness while controlling resource usage.
 - Type: Heuristic control loop with feedback-based interval adjustment.
 
-### 5) Potential QR Pattern Heuristic (Pre-Detection Signal)
+### 7) Potential QR Pattern Heuristic (Pre-Detection Signal)
 - File: `src/pages/QRScanner.ts` → `checkForPotentialQRPattern`
 - Technique:
   - Sample luminance in a center window; count high-contrast neighbors (horizontal/vertical) with a threshold.
@@ -66,7 +82,7 @@ Below is a concise, prioritized summary of the key algorithms and techniques use
 - Purpose: Precursor signal to guide user and optimize scanning loop before full decode.
 - Type: Image processing heuristic (edge/contrast density estimation over sampled grid).
 
-### 6) Debounce and Throttle Utilities
+### 8) Debounce and Throttle Utilities
 - File: `src/utils/performance.ts`
 - Algorithms:
   - Debounce: Delay execution until no calls occur within `wait` ms.
@@ -74,35 +90,35 @@ Below is a concise, prioritized summary of the key algorithms and techniques use
 - Purpose: Stabilize UI/event handling and avoid excessive work.
 - Type: Time-based rate-limiting patterns.
 
-### 7) Performance Monitoring (Navigation Timing & Averages)
+### 9) Performance Monitoring (Navigation Timing & Averages)
 - File: `src/utils/performance.ts`
 - Technique:
   - Measure per-route navigation durations; compute running averages.
 - Purpose: Lightweight telemetry for perceived performance.
 - Type: Descriptive statistics (running average) over event timings.
 
-### 8) Status Evaluation Logic (Visit/Date Checks)
+### 10) Status Evaluation Logic (Visit/Date Checks)
 - File: `src/pages/QRScanner.ts` (personnel modal logic)
 - Technique:
   - Normalize dates to midnight; compute `isFuture`, `isPast`, `isToday` to gate actions.
 - Purpose: Enforce procedural rules (e.g., completion only on scheduled date).
 - Type: Deterministic date arithmetic and conditional logic.
 
-### 9) Supabase RPC Transactional Workflows
+### 11) Supabase RPC Transactional Workflows
 - Files: `src/pages/QRScanner.ts`, `src/pages/GatePage.ts`, `src/utils/logging.ts`
 - Procedures:
   - `scan_gate_entrance`, `complete_visit_place`, `complete_visit`, `update_gate_status`, `get_gate_by_id`, `log_action`.
 - Purpose: Atomically mutate state and record events server-side; not a single algorithm, but coordinated transactional patterns.
 - Type: Database stored procedures (transactional ACID operations) via RPC.
 
-### 10) Log Enrichment & Joining (Client-Side)
+### 12) Log Enrichment & Joining (Client-Side)
 - File: `src/utils/logging.ts`
 - Technique:
   - Fetch logs + join user metadata in one client flow; validate `details` payload shape, parse JSON where needed.
 - Purpose: Human-readable audit views with minimal round-trips.
 - Type: Client-side join/denormalization and schema validation.
 
-### 11) Printable Card Composition (Visit/Gate)
+### 13) Printable Card Composition (Visit/Gate)
 - File: `src/utils/qrCode.ts`
 - Technique:
   - Template-based HTML composition with embedded QR image, responsive styles, and zoom modal.
@@ -112,6 +128,7 @@ Below is a concise, prioritized summary of the key algorithms and techniques use
 ---
 
 Notes
-- Facial Detection & Recognition is the primary security-critical algorithmic component and sits above QR flows in importance for identity assurance.
-- Where performance is critical, the scanner applies adaptive intervals and a pre-detection heuristic to balance speed and device load.
+- Python AI face capture (with encrypted storage) is the primary security-critical component; guard flows block entrance/exit without a successful detection.
+- Feedback survey data provides continual quality signals that influence roadmap prioritization alongside operational metrics.
+- Adaptive scanning heuristics keep the camera loops responsive while limiting CPU usage across common guard devices.
 

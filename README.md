@@ -4,8 +4,10 @@ Visitor Management and Gate Access Control system with QR flows and AI-powered f
 
 ### Highlights
 
+- Guard dashboard with real-time QR scanning, manual visit lookup, and enforced face capture on entrance/exit
+- Python AI microservice (YOLOv8 detection + BlazeFace cropping) with encrypted face archives in Supabase
+- ISO 25010 feedback survey and analytics to track visit quality across releases
 - Fast QR generation/scan, gate entry/exit processing, dashboard and logs
-- AI verification at schedule enrollment, entrance, and exit (YOLO + MediaPipe)
 - Role-based access (admin, guards/personnel, staff, visitors)
 
 ### Quick Start
@@ -26,6 +28,16 @@ Visitor Management and Gate Access Control system with QR flows and AI-powered f
 
    - npm run preview
 
+> Face detection/verification requires the Python AI service. See **Python AI Microservice** below for setup instructions.
+
+### Python AI Microservice
+
+- Location: `src/utils/Python-AI`
+- Install dependencies: `pip install -r requirements.txt`
+- Run locally: `python app.py` (serves at `http://localhost:5000` by default)
+- Deploy: Render config provided (`render.yaml`, `Procfile`, `start.sh`)
+- Frontend reads `VITE_PYTHON_API_URL`; defaults to `http://localhost:5000` when unset.
+
 ### Environment
 
 Create a `.env` (or `.env.local`) with at least:
@@ -35,6 +47,7 @@ Create a `.env` (or `.env.local`) with at least:
 - VITE_EMAILJS_SERVICE_ID=...
 - VITE_EMAILJS_TEMPLATE_ID=...
 - VITE_EMAILJS_PUBLIC_KEY=...
+- VITE_PYTHON_API_URL=... *(Render deployment URL or local Flask server)*
 
 ### Tech Stack
 
@@ -42,7 +55,8 @@ Create a `.env` (or `.env.local`) with at least:
 - Tailwind CSS
 - Supabase (auth, database, RPC)
 - jsQR, qrcode (QR flows)
-- YOLO (detection), MediaPipe (verification) for face AI
+- Python FastAPI/Flask AI service (YOLOv8 detection + face embeddings)
+- TensorFlow.js BlazeFace fallback for in-browser detection
 
 ### Documentation
 
@@ -57,6 +71,10 @@ This section summarizes end-to-end features, steps, and expected results. It als
 - **Authentication & Access Control**
   - Sign-in/sign-out, session management via `supabase`.
   - Role-based access for admins, guards, and staff.
+
+- **Guard Operations Dashboard**
+  - Dedicated QR scanner with adaptive cadence, manual visit ID lookup, and scan telemetry.
+  - Enforces face capture (Python AI modal) before logging entrance/exit, including temporary exit workflow.
 
 - **Scheduling (Visitor Pre-Registration)**
   - Create/edit schedules for visits, with optional facial data enrollment.
@@ -86,16 +104,20 @@ This section summarizes end-to-end features, steps, and expected results. It als
   - Email notifications for schedule creation and status changes.
   - Optional alerts for flagged events.
 
+- **Feedback & Quality Analytics**
+  - Post-visit ISO 25010 survey covering functional suitability, security, maintainability, etc.
+  - Scores stored via Supabase RPCs (`submit_visit_feedback`, `has_feedback_for_visit`) with repeat-visit lockouts.
+
 - **Audit Logging**
   - Structured logs for schedule CRUD, gate scans, AI decisions, and overrides.
 
 - **Performance & Monitoring**
   - Basic metrics for scan latency, AI inference time, and error rates.
 
-- **Facial Detection & Recognition AI (Detection + Verification)**
-  - Detection: YOLO (face detection bounding boxes + confidence).
-  - Verification: MediaPipe-based face verification using landmarks/embeddings.
-  - Applied only during: Schedule creation (enrollment), Entrance gate, Exit gate.
+- **Facial Detection & Verification AI (Python service + client fallback)**
+  - Detection via YOLOv8 models hosted in the Python microservice with BlazeFace/TensorFlow.js fallback in-browser.
+  - Cropping, compression, and encryption handled before inserting face data into Supabase.
+  - Applied during schedule enrollment, guard entrance/exit flows, and dashboard face-data review.
 
 ## End-to-End Steps to Be Taken (User Flows)
 
@@ -106,18 +128,22 @@ This section summarizes end-to-end features, steps, and expected results. It als
    - Notification email with QR is sent to visitor (optional).
 
 2) **Entrance Gate (Guard)**
-   - Choose scan method: QR scan or Facial verification.
-   - System validates schedule, checks flags, and visit window.
-   - If allowed, marks visit as "entered" and logs the event; otherwise shows flagged modal.
+   - Guard dashboard scans visit QR or receives manual visit ID.
+   - Python AI modal captures face (with fallback) before calling entrance RPCs.
+   - System validates schedule, checks flags, and marks visit as "entered"; otherwise shows flagged modal.
 
 3) **Exit Gate (Guard)**
-   - Choose scan method: QR scan or Facial verification.
-   - System verifies active "entered" visit.
-   - Marks visit as "exited" and logs the event.
+   - Guard dashboard rescans QR/manual ID and repeats face capture.
+   - System verifies the active visit, enforces completion of scheduled places, and logs exit.
+   - Visit status transitions to `completed` (or `completed_flagged` when necessary).
 
 4) **Dashboard & Reporting (Admin/Staff)**
    - View active visits, historical entries/exits, and flagged incidents.
    - Export summaries (future enhancement).
+
+5) **Feedback Survey (Visitor/Guest)**
+   - Guests receive an ISO 25010 survey covering eight quality characteristics plus overall satisfaction.
+   - Responses are stored via Supabase RPCs and surfaced in dashboards/exports.
 
 ## Connected Modules, Steps, and Expected Results
 
@@ -133,61 +159,59 @@ This section summarizes end-to-end features, steps, and expected results. It als
 | QR Code Services | Generate/parse visit/gate codes | Scannable codes for flows | QR assets; parsed payloads | Generation/scan events logged |
 | Notifications | Trigger on schedule, flags, completion | Emails/alerts sent | Notification records (optional) | Delivery status logged |
 | Audit Logging | Perform CRUD/gate/AI actions | Immutable audit trail | Log records | Accessible in logs/reporting |
+| Guard Operations Dashboard | Scan visit QR, capture face, log entrance/exit | Visit status updated; face data stored | `gate_scans` + guard action logs | Guard action notifications; face metadata |
+| Feedback & Quality Analytics | Submit ISO 25010 survey | Scores stored per visit; repeat submissions blocked | `visit_feedback` entries | Success/error toast + dashboard metrics |
 
 ## Facial Detection & Verification AI Module
 
-Scope: Used only during Schedule creation (enrollment), Entrance gate, and Exit gate.
+Scope: Used during schedule enrollment, guard-controlled entrance/exit, and dashboard face-data review.
 
-- **Detection (YOLO)**
-  - Purpose: Real-time face detection providing bounding boxes and confidence.
-  - Output: Bounding box + confidence. If low confidence, request re-capture.
+- **Python Service (YOLOv8 + BlazeFace)**
+  - Purpose: Primary face detection, cropping, and metadata enrichment hosted on Render.
+  - Output: Bounding boxes, landmarks, confidence score, detection metadata for logging/compression.
 
-- **Verification (MediaPipe)**
-  - Purpose: Verify identity by comparing landmarks/embeddings to the enrollment template.
-  - Output: Similarity score vs threshold → Match/No-Match. If below threshold, fallback to QR or manual verification.
+- **Client Fallback (TensorFlow.js BlazeFace)**
+  - Purpose: Keep detection online when the Python service is unreachable.
+  - Output: Local detections that feed the same compression/encryption pipeline (reduced accuracy but resilient).
 
 - **Enrollment Flow (Schedule Creation)**
-  - Detect face (YOLO) → capture stable frame(s) → extract features/embedding → save enrollment template linked to visitor/visit.
+  - Detect face (service or fallback) → capture stable frame → crop, compress, encrypt → store template linked to visit.
 
 - **Entrance/Exit Verification Flow**
-  - Detect face (YOLO) → compare against enrollment template (MediaPipe) → if match within threshold, proceed as if QR validated.
+  - Guard dashboard demands successful face capture before calling Supabase RPCs for entrance/exit/temporary-exit actions.
+  - Encrypted face crops persisted via `insert_guard_gate_scan_with_face` alongside confidence + metadata.
 
 - **Privacy & Security**
-  - Store templates, not raw images, whenever possible.
-  - Encrypt templates at rest; restrict access by role.
-  - Provide opt-out and deletion on request.
+  - Store encrypted JPEG crops, never raw video; decrypt only within `FaceDataModal` when authorized users request it.
+  - Supabase RLS restricts access by role; images include compression metadata for auditing.
+  - Provide opt-out and deletion workflows on request.
 
 - **Performance Targets**
-  - Detection latency: < 100ms on typical hardware.
-  - Verification latency: < 300ms; total gate interaction < 1s.
+  - Python service detection latency < 150 ms; fallback detection < 250 ms.
+  - Total guard interaction (scan + face) < 3 s for smooth gate throughput.
 
 - **Fallbacks**
-  - If detection fails: prompt user to adjust lighting/position or use QR.
-  - If verification fails: fallback to QR; optionally escalate to manual ID check.
+  - If detection fails: prompt for better lighting/position or fall back to QR-only logging.
+  - If Python service offline: auto-switch to TensorFlow.js; still allow manual overrides when policy permits.
 
 ## Integration Points in Codebase
 
-- Scheduling UI and logic: `src/pages/GatePage.ts` and `src/pages/dashboard/index.ts` (overview), with shared utilities in `src/utils`.
-- Gate scanning pages: `src/pages/QRScanner.ts`, `src/pages/GatePage.ts`, and `src/pages/dashboard/Gates.ts`.
-- Modals for flagged visits and auth: `src/components/FlaggedVisitModal.ts`, `src/components/AuthModals.ts`.
-- Config & services: `src/config/supabase.ts`, `src/config/emailjs.ts`, and QR helpers in `src/utils/qrCode.ts`.
-
-Proposed additions for AI module (high-level):
-
-- `src/utils/face/`
-  - `detector.ts` (YOLO wrapper)
-  - `verifier.ts` (MediaPipe verification)
-  - `enrollment.ts` (create/update templates)
-- Gate pages call into `detector`/`verifier` for entrance/exit; schedule creation calls into `enrollment`.
+- Scheduling UI and logic: `src/pages/GatePage.ts`, `src/pages/dashboard/index.ts`, shared utilities in `src/utils`.
+- Visitor/guard scanners: `src/pages/QRScanner.ts`, `src/pages/GatePage.ts`, `src/pages/dashboard/Gates.ts`, `src/pages/GuardDashboard.ts`.
+- AI workflow: `src/utils/AI-Face-Detection/blazefaceModal.ts`, `src/utils/imageCompression.ts`, Python assets in `src/utils/Python-AI/`.
+- Feedback + face data modals: `src/components/FeedbackSurveyModal.ts`, `src/components/FaceDataModal.ts`, `src/components/FlaggedVisitModal.ts`.
+- Config & services: `src/config/supabase.ts`, `src/config/emailjs.ts`, `src/config/python-api.ts`, QR helpers in `src/utils/qrCode.ts`.
 
 ## Operational Notes
 
-- Logging: Use `src/utils/logging.ts` for AI decisions, thresholds, and overrides.
-- Notifications: Trigger via `src/config/emailjs.ts` on schedule creation and critical flags.
-- Performance: Track inference timings via `src/utils/performance.ts`.
+- Logging: `src/utils/logging.ts` handles AI decisions/thresholds; guard actions flow through `log_guard_action` + `insert_guard_gate_scan_with_face` RPCs.
+- Notifications: Trigger via `src/config/emailjs.ts` on schedule creation, flags, and survey nudges.
+- Performance: Track inference timings via `src/utils/performance.ts`; guard dashboard displays live FPS/interval metrics.
+- Face storage: `processFaceImageForStorage` compresses/encrypts crops before Supabase insert; `processFaceImageForDisplay` decrypts on demand.
 
 ## Future Enhancements
 
 - Multi-face handling and crowd detection at gates.
 - Liveness checks to mitigate spoofing.
 - Model quantization and GPU acceleration options.
+- Automated feedback analytics dashboards and scheduled exports.

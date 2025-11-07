@@ -1,73 +1,80 @@
 Ongoing:
- - Home/Landing Page Design Overhaul
- - GuestGo Visit Card Design and Detail Overhaul
- - AI Face Verification
- - Finalize Complete Documentation (Members section + Thesis Paper deliverables)
+- Production hardening for the Python AI service (Render uptime monitors, health-check fallbacks, env rotation)
+- Guard workflow polish (dashboard UX, manual visit ID validation, shift hand-off checklist)
+- Feedback survey analytics and reporting (ISO 25010 trends, export templates)
+- Finalize complete documentation (members section + thesis paper deliverables)
 
 Planned:
 
- - Email Notification for Scheduled Visits
- - AI Facial Recogtnition before completion of Scheduling Visits (Phase 1)
- - AI Facial Verfication on Entrance and Exit on given data on Scheduled visit (Phase 2)
- - Smooth Transition and Animation on all Pages, Popup Modals & Interactables
- - Code Refactoring (Spaghetti pa yung Dashboard System)
- - Storage Management
- - Logs Backup Mechanic (Plano kong i-ZIP file)
- - System Vulnerabilty Testing
- - Hanap Client for System????
- - Complete Documentation of System (Features, Members) *KASAMA NA THESIS PAPER
- - Hide API Keys once start of deployment (Propbably tapos na buong system)
+- Email notification improvements for scheduled visits (guard + visitor digests)
+- Smooth transition and animation on all pages, popup modals, and interactables
+- Dashboard / scheduler code refactoring (de-spaghetti the legacy components)
+- Storage management and quota alerts for face image archives
+- Logs backup mechanic (ZIP archive automation + off-site copy)
+- System vulnerability testing / pen-test prep
+- Client acquisition + pilot deployment strategy
+- Complete documentation of system (features, members) *kasama na thesis paper
+- Hide API keys before deployment (env vault + runtime secrets)
+- Liveness detection + anti-spoofing upgrades for face scans
+- Multi-face handling at gates (crowd detection roadmap)
 
 Completed:
- - Frontend Pages (Home, About, Contact, Dashboard, QR Scanner) *Improvement needed
- - Account System (Creation, Authentication, Password Update)
- - Role Access (Admin, Logs, Personnel, Visitor, Guest)
- - Database Setup (Supabase) *Free Tier XD
- - Visit Scheduling (Guest & Visitor)
- - Actions Logging (Password Change, Personnel Assign & Remove, Place Creation-Deletion & Update, Visit Scheduling)
- - Auto System Marking for Past Date Scheduled Visits
- - Account/Email Scheduling Limit *(Need ko pa i double check yung sa guest role [EMAIL])
- - Scheduled Visits Print Option
- - Screen Responsive Pages
- - Email OTP for Guests Scheduling (EmailJS)
- - Email Notifications: basic integration present (EmailJS)
- - Dark Mode Theme Toggle System
- - Real-time Notification System (Success/Error Messages)
- - Advanced Search and Filtering System (Dashboard, Logs, Visits, Places, Accounts)
- - Auto-refresh Dashboard System (30-second intervals for real-time updates)
- - Mobile Responsive Design (All pages and components)
- - Personnel Visit Completion System (Individual places and entire visits)
- - Visitor Dashboard with Current/Past Visits
- - Visit Progress Tracking and Status Management
- - History Tracking System for Visit Events
- - Philippine Time Zone Integration
- - Multi-place Visit Scheduling
- - Personnel Availability Management
- - Place Assignment and Management System
- - Account Role Management (Admin can change user roles)
- - Comprehensive Logging System with Detailed History
- - QR Code Generation and Scanning System
- - Manual QR Code Input System
- - Visit Card Printing System
- - Mobile-optimized Dashboard Views
- - Real-time Philippine Clock Display
- - Visit Status Progress Bars
- - Personnel Assignment Validation
- - Guest vs Logged-in User Differentiation
- - Email Verification System for Guest Scheduling
- - Weekly Visit Count Tracking
- - Visit Completion Confirmation System
- - Personnel Place Assignment Validation
- - Visit History Modal System (Mobile-friendly)
- - Auto-cleanup System for Past Visits
- - Real-time Dashboard Updates
- - Comprehensive Error Handling
- - User-friendly Mobile Navigation
- - Responsive Table/Card Views for Different Screen Sizes
- - QR Code Feature
- - Dashboard Loading Pagination
- - Page Navigation & Loading Pagination
- - Entrance and Exit before and after scheduling
- - Feature Modules, Steps, and Expected Results table (README)
- - Algorithms overview file (ALGORITHMS.md)
- - AI module documentation (BlazeFace detection + OpenCV Haar verification)
+- Guard dashboard with real-time QR scanning + enforced face detection on entrance/exit
+- Visit feedback survey (ISO 25010 quality scoring + Supabase RPC analytics)
+- Face data modal with encrypted image retrieval + metadata display
+- Python AI microservice (YOLOv8 + BlazeFace hybrid) integrated with front-end modal flow
+- AI face verification baseline (capture, compression, encrypted storage pipeline)
+- Home/landing page design overhaul
+- GuestGo visit card design and detail overhaul
+- Frontend pages (Home, About, Contact, Dashboard, QR Scanner) *improvement needed
+- Account system (creation, authentication, password update)
+- Role access (Admin, Logs, Personnel, Visitor, Guest)
+- Database setup (Supabase) *free tier XD
+- Visit scheduling (Guest & Visitor)
+- Actions logging (password change, personnel assign & remove, place creation-deletion & update, visit scheduling)
+- Auto system marking for past date scheduled visits
+- Account/email scheduling limit *(need ko pa i double check yung sa guest role [EMAIL])
+- Scheduled visits print option
+- Screen responsive pages
+- Email OTP for guests scheduling (EmailJS)
+- Email notifications: basic integration present (EmailJS)
+- Dark mode theme toggle system
+- Real-time notification system (success/error messages)
+- Advanced search and filtering system (dashboard, logs, visits, places, accounts)
+- Auto-refresh dashboard system (30-second intervals for real-time updates)
+- Mobile responsive design (all pages and components)
+- Personnel visit completion system (individual places and entire visits)
+- Visitor dashboard with current/past visits
+- Visit progress tracking and status management
+- History tracking system for visit events
+- Philippine time zone integration
+- Multi-place visit scheduling
+- Personnel availability management
+- Place assignment and management system
+- Account role management (Admin can change user roles)
+- Comprehensive logging system with detailed history
+- QR code generation and scanning system
+- Manual QR code input system
+- Visit card printing system
+- Mobile-optimized dashboard views
+- Real-time Philippine clock display
+- Visit status progress bars
+- Personnel assignment validation
+- Guest vs logged-in user differentiation
+- Email verification system for guest scheduling
+- Weekly visit count tracking
+- Visit completion confirmation system
+- Personnel place assignment validation
+- Visit history modal system (mobile-friendly)
+- Auto-cleanup system for past visits
+- Real-time dashboard updates
+- Comprehensive error handling
+- User-friendly mobile navigation
+- Responsive table/card views for different screen sizes
+- QR code feature
+- Dashboard loading pagination
+- Page navigation & loading pagination
+- Entrance and exit before and after scheduling
+- Feature modules, steps, and expected results table (README)
+- Algorithms overview file (ALGORITHMS.md)
+- AI module documentation (BlazeFace detection + OpenCV Haar verification)
