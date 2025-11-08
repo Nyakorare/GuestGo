@@ -159,11 +159,14 @@ export function DashboardPage() {
         const placesTab = document.getElementById('placesTab');
         const accountsTab = document.getElementById('accountsTab');
         const gatesTab = document.getElementById('gatesTab');
+        const feedbackTab = document.getElementById('feedbackTab');
+        const aiStatusTab = document.getElementById('aiStatusTab');
     const placesContent = document.getElementById('placesContent');
     const accountsContent = document.getElementById('accountsContent');
     const logsContent = document.getElementById('logsContent');
     const gatesContent = document.getElementById('gatesContent');
     const feedbackContent = document.getElementById('feedbackContent');
+    const aiStatusContent = document.getElementById('aiStatusContent');
 
         if (roleData.role === 'log') {
           // Only show logs tab and content
@@ -173,11 +176,13 @@ export function DashboardPage() {
           if (accountsTab) accountsTab.classList.add('hidden');
           if (gatesTab) gatesTab.classList.add('hidden');
           if (feedbackTab) feedbackTab.classList.add('hidden');
+          if (aiStatusTab) aiStatusTab.classList.add('hidden');
           if (placesContent) placesContent.classList.add('hidden');
           if (accountsContent) accountsContent.classList.add('hidden');
           if (logsContent) logsContent.classList.remove('hidden');
           if (gatesContent) gatesContent.classList.add('hidden');
           if (feedbackContent) feedbackContent.classList.add('hidden');
+          if (aiStatusContent) aiStatusContent.classList.add('hidden');
           
           // Hide visitor content
           const visitorContent = document.getElementById('visitorContent');
@@ -192,11 +197,14 @@ export function DashboardPage() {
           if (placesTab) placesTab.classList.remove('bg-blue-600', 'text-white');
           if (accountsTab) accountsTab.classList.remove('bg-gray-100', 'text-gray-700');
           if (gatesTab) gatesTab.classList.remove('hidden');
+          if (feedbackTab) feedbackTab.classList.remove('hidden');
+          if (aiStatusTab) aiStatusTab.classList.remove('hidden');
           if (placesContent) placesContent.classList.remove('hidden');
           if (accountsContent) accountsContent.classList.add('hidden');
           if (logsContent) logsContent.classList.add('hidden');
           if (gatesContent) gatesContent.classList.add('hidden');
           if (feedbackContent) feedbackContent.classList.add('hidden');
+          if (aiStatusContent) aiStatusContent.classList.add('hidden');
           
           // Hide visitor content
           const visitorContent = document.getElementById('visitorContent');
@@ -212,6 +220,9 @@ export function DashboardPage() {
           if (logsTab) logsTab.classList.add('hidden');
           if (placesTab) placesTab.classList.add('hidden');
           if (accountsTab) accountsTab.classList.add('hidden');
+          if (gatesTab) gatesTab.classList.add('hidden');
+          if (feedbackTab) feedbackTab.classList.add('hidden');
+          if (aiStatusTab) aiStatusTab.classList.add('hidden');
           if (placesContent) placesContent.classList.add('hidden');
           if (accountsContent) accountsContent.classList.add('hidden');
           if (logsContent) logsContent.classList.add('hidden');
@@ -222,6 +233,9 @@ export function DashboardPage() {
           if (logsTab) logsTab.classList.add('hidden');
           if (placesTab) placesTab.classList.add('hidden');
           if (accountsTab) accountsTab.classList.add('hidden');
+          if (gatesTab) gatesTab.classList.add('hidden');
+          if (feedbackTab) feedbackTab.classList.add('hidden');
+          if (aiStatusTab) aiStatusTab.classList.add('hidden');
           if (placesContent) placesContent.classList.add('hidden');
           if (accountsContent) accountsContent.classList.add('hidden');
           if (logsContent) logsContent.classList.add('hidden');
@@ -237,6 +251,9 @@ export function DashboardPage() {
           if (logsTab) logsTab.classList.add('hidden');
           if (placesTab) placesTab.classList.add('hidden');
           if (accountsTab) accountsTab.classList.add('hidden');
+          if (gatesTab) gatesTab.classList.add('hidden');
+          if (feedbackTab) feedbackTab.classList.add('hidden');
+          if (aiStatusTab) aiStatusTab.classList.add('hidden');
           if (placesContent) placesContent.classList.add('hidden');
           if (accountsContent) accountsContent.classList.add('hidden');
           if (logsContent) logsContent.classList.add('hidden');
@@ -252,6 +269,9 @@ export function DashboardPage() {
           if (logsTab) logsTab.classList.add('hidden');
           if (placesTab) placesTab.classList.add('hidden');
           if (accountsTab) accountsTab.classList.add('hidden');
+          if (gatesTab) gatesTab.classList.add('hidden');
+          if (feedbackTab) feedbackTab.classList.add('hidden');
+          if (aiStatusTab) aiStatusTab.classList.add('hidden');
           if (placesContent) placesContent.classList.add('hidden');
           if (accountsContent) accountsContent.classList.add('hidden');
           if (logsContent) logsContent.classList.add('hidden');
@@ -412,6 +432,12 @@ export function DashboardPage() {
                 class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
               >
                 Feedback
+              </button>
+              <button 
+                id="aiStatusTab"
+                class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+              >
+                AI Status
               </button>
             </div>
             <button 
@@ -713,6 +739,11 @@ export function DashboardPage() {
       <!-- Feedback Content -->
       <div id="feedbackContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
         <!-- Feedback Management Content will be loaded here -->
+      </div>
+
+      <!-- AI Status Content -->
+      <div id="aiStatusContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
+        <!-- AI Status Content will be loaded here -->
       </div>
 
       <!-- Personnel Dashboard Content -->
@@ -5262,10 +5293,12 @@ function setupAdminTabEventListeners() {
   const accountsTab = document.getElementById('accountsTab');
   const gatesTab = document.getElementById('gatesTab');
   const feedbackTab = document.getElementById('feedbackTab');
+  const aiStatusTab = document.getElementById('aiStatusTab');
   const placesContent = document.getElementById('placesContent');
   const accountsContent = document.getElementById('accountsContent');
   const gatesContent = document.getElementById('gatesContent');
   const feedbackContent = document.getElementById('feedbackContent');
+  const aiStatusContent = document.getElementById('aiStatusContent');
 
   // Places tab event listener
   placesTab?.addEventListener('click', () => {
@@ -5277,10 +5310,13 @@ function setupAdminTabEventListeners() {
     gatesTab?.classList.add('bg-gray-100', 'text-gray-700');
     feedbackTab?.classList.remove('bg-blue-600', 'text-white');
     feedbackTab?.classList.add('bg-gray-100', 'text-gray-700');
+    aiStatusTab?.classList.remove('bg-blue-600', 'text-white');
+    aiStatusTab?.classList.add('bg-gray-100', 'text-gray-700');
     placesContent?.classList.remove('hidden');
     accountsContent?.classList.add('hidden');
     gatesContent?.classList.add('hidden');
     feedbackContent?.classList.add('hidden');
+    aiStatusContent?.classList.add('hidden');
     // Clear gates content when switching away
     if (gatesContent) {
       gatesContent.innerHTML = '';
@@ -5288,6 +5324,10 @@ function setupAdminTabEventListeners() {
     // Clear feedback content when switching away
     if (feedbackContent) {
       feedbackContent.innerHTML = '';
+    }
+    // Clear AI status content when switching away
+    if (aiStatusContent) {
+      aiStatusContent.innerHTML = '';
     }
     loadPlaces();
   });
@@ -5302,10 +5342,13 @@ function setupAdminTabEventListeners() {
     gatesTab?.classList.add('bg-gray-100', 'text-gray-700');
     feedbackTab?.classList.remove('bg-blue-600', 'text-white');
     feedbackTab?.classList.add('bg-gray-100', 'text-gray-700');
+    aiStatusTab?.classList.remove('bg-blue-600', 'text-white');
+    aiStatusTab?.classList.add('bg-gray-100', 'text-gray-700');
     accountsContent?.classList.remove('hidden');
     placesContent?.classList.add('hidden');
     gatesContent?.classList.add('hidden');
     feedbackContent?.classList.add('hidden');
+    aiStatusContent?.classList.add('hidden');
     // Clear gates content when switching away
     if (gatesContent) {
       gatesContent.innerHTML = '';
@@ -5313,6 +5356,10 @@ function setupAdminTabEventListeners() {
     // Clear feedback content when switching away
     if (feedbackContent) {
       feedbackContent.innerHTML = '';
+    }
+    // Clear AI status content when switching away
+    if (aiStatusContent) {
+      aiStatusContent.innerHTML = '';
     }
     loadAccounts();
   });
@@ -5327,13 +5374,20 @@ function setupAdminTabEventListeners() {
     accountsTab?.classList.add('bg-gray-100', 'text-gray-700');
     feedbackTab?.classList.remove('bg-blue-600', 'text-white');
     feedbackTab?.classList.add('bg-gray-100', 'text-gray-700');
+    aiStatusTab?.classList.remove('bg-blue-600', 'text-white');
+    aiStatusTab?.classList.add('bg-gray-100', 'text-gray-700');
     gatesContent?.classList.remove('hidden');
     placesContent?.classList.add('hidden');
     accountsContent?.classList.add('hidden');
     feedbackContent?.classList.add('hidden');
+    aiStatusContent?.classList.add('hidden');
     // Clear feedback content when switching away
     if (feedbackContent) {
       feedbackContent.innerHTML = '';
+    }
+    // Clear AI status content when switching away
+    if (aiStatusContent) {
+      aiStatusContent.innerHTML = '';
     }
     // Dynamically import and render the Gates tab content
     import('./Gates').then(module => {
@@ -5353,19 +5407,59 @@ function setupAdminTabEventListeners() {
     accountsTab?.classList.add('bg-gray-100', 'text-gray-700');
     gatesTab?.classList.remove('bg-blue-600', 'text-white');
     gatesTab?.classList.add('bg-gray-100', 'text-gray-700');
+    aiStatusTab?.classList.remove('bg-blue-600', 'text-white');
+    aiStatusTab?.classList.add('bg-gray-100', 'text-gray-700');
     feedbackContent?.classList.remove('hidden');
     placesContent?.classList.add('hidden');
     accountsContent?.classList.add('hidden');
     gatesContent?.classList.add('hidden');
+    aiStatusContent?.classList.add('hidden');
     // Clear gates content when switching away
     if (gatesContent) {
       gatesContent.innerHTML = '';
+    }
+    // Clear AI status content when switching away
+    if (aiStatusContent) {
+      aiStatusContent.innerHTML = '';
     }
     // Dynamically import and render the Feedback tab content
     import('./Feedback').then(module => {
       feedbackContent.innerHTML = module.renderFeedback();
       // Setup event listeners after rendering
       module.setupFeedbackEventListeners();
+    });
+  });
+
+  // AI Status tab event listener
+  aiStatusTab?.addEventListener('click', () => {
+    aiStatusTab.classList.add('bg-blue-600', 'text-white');
+    aiStatusTab.classList.remove('bg-gray-100', 'text-gray-700');
+    placesTab?.classList.remove('bg-blue-600', 'text-white');
+    placesTab?.classList.add('bg-gray-100', 'text-gray-700');
+    accountsTab?.classList.remove('bg-blue-600', 'text-white');
+    accountsTab?.classList.add('bg-gray-100', 'text-gray-700');
+    gatesTab?.classList.remove('bg-blue-600', 'text-white');
+    gatesTab?.classList.add('bg-gray-100', 'text-gray-700');
+    feedbackTab?.classList.remove('bg-blue-600', 'text-white');
+    feedbackTab?.classList.add('bg-gray-100', 'text-gray-700');
+    aiStatusContent?.classList.remove('hidden');
+    placesContent?.classList.add('hidden');
+    accountsContent?.classList.add('hidden');
+    gatesContent?.classList.add('hidden');
+    feedbackContent?.classList.add('hidden');
+    // Clear gates content when switching away
+    if (gatesContent) {
+      gatesContent.innerHTML = '';
+    }
+    // Clear feedback content when switching away
+    if (feedbackContent) {
+      feedbackContent.innerHTML = '';
+    }
+    // Dynamically import and render the AI Status tab content
+    import('./AIStatus').then(module => {
+      aiStatusContent.innerHTML = module.renderAIStatus();
+      // Setup event listeners after rendering
+      module.setupAIStatusEventListeners();
     });
   });
 
