@@ -170,12 +170,14 @@ export function DashboardPage() {
 
         if (roleData.role === 'log') {
           // Only show logs tab and content
+          const guardDashboardTab = document.getElementById('guardDashboardTab');
           if (adminTabs) adminTabs.classList.remove('hidden');
           if (logsTab) logsTab.classList.remove('hidden');
           if (placesTab) placesTab.classList.add('hidden');
           if (accountsTab) accountsTab.classList.add('hidden');
           if (gatesTab) gatesTab.classList.add('hidden');
           if (feedbackTab) feedbackTab.classList.add('hidden');
+          if (guardDashboardTab) guardDashboardTab.classList.add('hidden');
           if (aiStatusTab) aiStatusTab.classList.add('hidden');
           if (placesContent) placesContent.classList.add('hidden');
           if (accountsContent) accountsContent.classList.add('hidden');
@@ -192,12 +194,14 @@ export function DashboardPage() {
           loadLogs();
         } else if (roleData.role === 'admin') {
           // Admin: show admin tabs including gates, hide logs
+          const guardDashboardTab = document.getElementById('guardDashboardTab');
           if (adminTabs) adminTabs.classList.remove('hidden');
           if (logsTab) logsTab.classList.add('hidden');
           if (placesTab) placesTab.classList.remove('bg-blue-600', 'text-white');
           if (accountsTab) accountsTab.classList.remove('bg-gray-100', 'text-gray-700');
           if (gatesTab) gatesTab.classList.remove('hidden');
           if (feedbackTab) feedbackTab.classList.remove('hidden');
+          if (guardDashboardTab) guardDashboardTab.classList.add('hidden');
           if (aiStatusTab) aiStatusTab.classList.remove('hidden');
           if (placesContent) placesContent.classList.remove('hidden');
           if (accountsContent) accountsContent.classList.add('hidden');
@@ -216,43 +220,65 @@ export function DashboardPage() {
           // Do NOT call loadLogs() here; logs will load when logs tab is clicked
         } else if (roleData.role === 'personnel') {
           // Personnel: show personnel content, hide admin tabs
+          const guardDashboardTab = document.getElementById('guardDashboardTab');
           if (adminTabs) adminTabs.classList.add('hidden');
           if (logsTab) logsTab.classList.add('hidden');
           if (placesTab) placesTab.classList.add('hidden');
           if (accountsTab) accountsTab.classList.add('hidden');
           if (gatesTab) gatesTab.classList.add('hidden');
           if (feedbackTab) feedbackTab.classList.add('hidden');
+          if (guardDashboardTab) guardDashboardTab.classList.add('hidden');
           if (aiStatusTab) aiStatusTab.classList.add('hidden');
           if (placesContent) placesContent.classList.add('hidden');
           if (accountsContent) accountsContent.classList.add('hidden');
           if (logsContent) logsContent.classList.add('hidden');
           loadPersonnelDashboard();
         } else if (roleData.role === 'guard') {
-          // Guard: show guard content, hide admin tabs
-          if (adminTabs) adminTabs.classList.add('hidden');
+          // Guard: show guard content and AI Status tab, hide other admin tabs
+          const guardDashboardTab = document.getElementById('guardDashboardTab');
+          if (adminTabs) adminTabs.classList.remove('hidden');
           if (logsTab) logsTab.classList.add('hidden');
           if (placesTab) placesTab.classList.add('hidden');
           if (accountsTab) accountsTab.classList.add('hidden');
           if (gatesTab) gatesTab.classList.add('hidden');
           if (feedbackTab) feedbackTab.classList.add('hidden');
-          if (aiStatusTab) aiStatusTab.classList.add('hidden');
+          if (guardDashboardTab) guardDashboardTab.classList.remove('hidden');
+          if (aiStatusTab) aiStatusTab.classList.remove('hidden');
           if (placesContent) placesContent.classList.add('hidden');
           if (accountsContent) accountsContent.classList.add('hidden');
           if (logsContent) logsContent.classList.add('hidden');
+          if (gatesContent) gatesContent.classList.add('hidden');
+          if (feedbackContent) feedbackContent.classList.add('hidden');
+          if (aiStatusContent) aiStatusContent.classList.add('hidden');
           
           // Show guard content
           const guardContent = document.getElementById('guardContent');
           if (guardContent) guardContent.classList.remove('hidden');
           
+          // Set Guard Dashboard tab as active by default
+          if (guardDashboardTab) {
+            guardDashboardTab.classList.add('bg-blue-600', 'text-white');
+            guardDashboardTab.classList.remove('bg-gray-100', 'text-gray-700');
+          }
+          if (aiStatusTab) {
+            aiStatusTab.classList.remove('bg-blue-600', 'text-white');
+            aiStatusTab.classList.add('bg-gray-100', 'text-gray-700');
+          }
+          
+          // Setup admin tab event listeners (needed for AI Status tab)
+          setupAdminTabEventListeners();
+          
           loadGuardDashboard();
         } else if (roleData.role === 'visitor') {
           // Visitor: show visitor content, hide admin tabs
+          const guardDashboardTab = document.getElementById('guardDashboardTab');
           if (adminTabs) adminTabs.classList.add('hidden');
           if (logsTab) logsTab.classList.add('hidden');
           if (placesTab) placesTab.classList.add('hidden');
           if (accountsTab) accountsTab.classList.add('hidden');
           if (gatesTab) gatesTab.classList.add('hidden');
           if (feedbackTab) feedbackTab.classList.add('hidden');
+          if (guardDashboardTab) guardDashboardTab.classList.add('hidden');
           if (aiStatusTab) aiStatusTab.classList.add('hidden');
           if (placesContent) placesContent.classList.add('hidden');
           if (accountsContent) accountsContent.classList.add('hidden');
@@ -265,12 +291,14 @@ export function DashboardPage() {
           loadVisitorDashboard();
         } else {
           // Other roles (guest): hide all admin/logs tabs
+          const guardDashboardTab = document.getElementById('guardDashboardTab');
           if (adminTabs) adminTabs.classList.add('hidden');
           if (logsTab) logsTab.classList.add('hidden');
           if (placesTab) placesTab.classList.add('hidden');
           if (accountsTab) accountsTab.classList.add('hidden');
           if (gatesTab) gatesTab.classList.add('hidden');
           if (feedbackTab) feedbackTab.classList.add('hidden');
+          if (guardDashboardTab) guardDashboardTab.classList.add('hidden');
           if (aiStatusTab) aiStatusTab.classList.add('hidden');
           if (placesContent) placesContent.classList.add('hidden');
           if (accountsContent) accountsContent.classList.add('hidden');
@@ -432,6 +460,12 @@ export function DashboardPage() {
                 class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
               >
                 Feedback
+              </button>
+              <button 
+                id="guardDashboardTab"
+                class="hidden w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+              >
+                Guard Dashboard
               </button>
               <button 
                 id="aiStatusTab"
@@ -5430,6 +5464,23 @@ function setupAdminTabEventListeners() {
     });
   });
 
+  // Guard Dashboard tab event listener
+  const guardDashboardTab = document.getElementById('guardDashboardTab');
+  guardDashboardTab?.addEventListener('click', () => {
+    guardDashboardTab.classList.add('bg-blue-600', 'text-white');
+    guardDashboardTab.classList.remove('bg-gray-100', 'text-gray-700');
+    aiStatusTab?.classList.remove('bg-blue-600', 'text-white');
+    aiStatusTab?.classList.add('bg-gray-100', 'text-gray-700');
+    // Show guard content and hide AI Status content
+    const guardContent = document.getElementById('guardContent');
+    if (guardContent) guardContent.classList.remove('hidden');
+    if (aiStatusContent) aiStatusContent.classList.add('hidden');
+    // Clear AI Status content when switching away
+    if (aiStatusContent) {
+      aiStatusContent.innerHTML = '';
+    }
+  });
+
   // AI Status tab event listener
   aiStatusTab?.addEventListener('click', () => {
     aiStatusTab.classList.add('bg-blue-600', 'text-white');
@@ -5442,11 +5493,16 @@ function setupAdminTabEventListeners() {
     gatesTab?.classList.add('bg-gray-100', 'text-gray-700');
     feedbackTab?.classList.remove('bg-blue-600', 'text-white');
     feedbackTab?.classList.add('bg-gray-100', 'text-gray-700');
+    guardDashboardTab?.classList.remove('bg-blue-600', 'text-white');
+    guardDashboardTab?.classList.add('bg-gray-100', 'text-gray-700');
     aiStatusContent?.classList.remove('hidden');
     placesContent?.classList.add('hidden');
     accountsContent?.classList.add('hidden');
     gatesContent?.classList.add('hidden');
     feedbackContent?.classList.add('hidden');
+    // Hide guard content when switching to AI Status
+    const guardContent = document.getElementById('guardContent');
+    if (guardContent) guardContent.classList.add('hidden');
     // Clear gates content when switching away
     if (gatesContent) {
       gatesContent.innerHTML = '';

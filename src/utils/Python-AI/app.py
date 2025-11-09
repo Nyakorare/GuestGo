@@ -134,7 +134,32 @@ def _get_yolo_model():
 
 
 app = Flask(__name__, static_folder='.', static_url_path='')
-CORS(app)
+
+# Configure CORS to allow requests from Vercel frontend and local development
+frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+# Normalize frontend URL (remove trailing slash)
+frontend_url = frontend_url.rstrip('/')
+
+# Always include localhost for local development, even if FRONTEND_URL is set to deployed URL
+default_origins = [
+    'https://guest-go.vercel.app',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    frontend_url  # Include the FRONTEND_URL as well
+]
+
+# Get allowed origins from environment or use defaults
+cors_origins_env = os.getenv('CORS_ORIGINS', ','.join(default_origins))
+# Parse and combine with defaults to ensure localhost is always included
+env_origins = [origin.strip() for origin in cors_origins_env.split(',') if origin.strip()]
+# Merge and deduplicate
+allowed_origins = list(set(env_origins + default_origins))
+
+CORS(app, 
+     origins=allowed_origins,
+     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+     allow_headers=['Content-Type', 'Authorization'],
+     supports_credentials=True)
 
 # Global variable to store the uploaded face features
 uploaded_face_features = None
@@ -549,6 +574,22 @@ def compare_face_features(features1, features2, threshold=0.75):
 @app.route('/')
 def index():
     return send_file('index.html')
+
+@app.route('/favicon.ico')
+def favicon():
+    # Serve the guestgo logo as favicon
+    # Path is relative to project root: public/guestgo-logo.png
+    # Get the project root (go up from src/utils/Python-AI to project root)
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.join(current_dir, '..', '..', '..')
+    logo_path = os.path.join(project_root, 'public', 'guestgo-logo.png')
+    # Normalize the path
+    logo_path = os.path.normpath(logo_path)
+    if os.path.exists(logo_path):
+        return send_file(logo_path, mimetype='image/png')
+    else:
+        # Fallback: return 404 or a default response
+        return '', 404
 
 
 @app.route('/status')

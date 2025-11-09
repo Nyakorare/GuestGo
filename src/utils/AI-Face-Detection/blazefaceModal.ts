@@ -1,6 +1,18 @@
 // Face detection using Python API only
 import { PYTHON_API_URL } from '../../config/python-api';
 
+// API URLs
+const LOCAL_API_URL = 'http://localhost:5000';
+const DEPLOYED_API_URL = 'https://guestgo-ai.onrender.com';
+
+// Helper to check if we're in local development
+function isLocalDevelopment(): boolean {
+  return typeof window !== 'undefined' && 
+         (window.location.hostname === 'localhost' || 
+          window.location.hostname === '127.0.0.1' ||
+          window.location.hostname.includes('localhost'));
+}
+
 type DetectionResult = {
   imageDataUrl: string;
   detections: any[];
@@ -33,6 +45,21 @@ function createModal(): HTMLElement {
          <div id="faceServiceStatus" class="text-xs text-gray-500 dark:text-gray-400 mb-2 hidden">
            <span id="serviceStatusIcon" class="inline-block w-2 h-2 rounded-full mr-2"></span>
            <span id="serviceStatusText">Checking AI service...</span>
+         </div>
+         <!-- API Selection (only shown in local development) -->
+         <div id="apiSelectionSection" class="hidden mb-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-md border border-gray-200 dark:border-gray-600">
+           <div class="flex items-center justify-between">
+             <div class="flex-1">
+               <div class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">AI Service</div>
+               <div class="text-xs text-gray-600 dark:text-gray-400">
+                 <span id="currentApiLabel">Local</span>
+                 <span id="apiStatusBadge" class="ml-2 px-2 py-0.5 rounded text-xs"></span>
+               </div>
+             </div>
+             <button id="switchApiBtn" class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+               Switch to Deployed
+             </button>
+           </div>
          </div>
          <div id="faceLegend" class="text-xs text-gray-500 dark:text-gray-400 mb-2 hidden">
            <span class="inline-flex items-center mr-4"><span class="w-3 h-3 bg-green-500 rounded mr-1"></span>Perfect face</span>
@@ -170,6 +197,10 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
   const faceServiceStatus = wrapper.querySelector('#faceServiceStatus') as HTMLElement;
   const serviceStatusIcon = wrapper.querySelector('#serviceStatusIcon') as HTMLElement;
   const serviceStatusText = wrapper.querySelector('#serviceStatusText') as HTMLElement;
+  const apiSelectionSection = wrapper.querySelector('#apiSelectionSection') as HTMLElement;
+  const currentApiLabel = wrapper.querySelector('#currentApiLabel') as HTMLElement;
+  const apiStatusBadge = wrapper.querySelector('#apiStatusBadge') as HTMLElement;
+  const switchApiBtn = wrapper.querySelector('#switchApiBtn') as HTMLButtonElement;
 
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas 2D context unavailable');
@@ -189,6 +220,19 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
   let isLiveDetectionActive = false; // Start with detection disabled
   let animationFrameId: number | null = null;
   let hasAutoPreview: boolean = false; // ensure we only auto-open preview once per session
+  
+  // API state management (for local development)
+  const isLocalDev = isLocalDevelopment();
+  let currentApiUrl: string = isLocalDev ? LOCAL_API_URL : PYTHON_API_URL;
+  let localApiAvailable: boolean = false;
+  let deployedApiAvailable: boolean = false;
+  
+  // Show API selection section only in local development
+  if (isLocalDev && apiSelectionSection) {
+    apiSelectionSection.classList.remove('hidden');
+    // Initialize API selection UI (will be updated after health checks)
+    updateApiSelectionUI();
+  }
 
   // Auto-start detection with fallback
   setTimeout(() => {
@@ -769,15 +813,168 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
     }
   }
 
-  // Check if Python AI service is available and can communicate bidirectionally
-  async function checkPythonServiceHealth(): Promise<boolean> {
+  // Update API selection UI
+  function updateApiSelectionUI() {
+    if (!isLocalDev || !apiSelectionSection) return;
+    
+    const isLocal = currentApiUrl === LOCAL_API_URL;
+    if (currentApiLabel) {
+      currentApiLabel.textContent = isLocal ? 'Local' : 'Deployed';
+    }
+    
+    if (apiStatusBadge) {
+      const isAvailable = isLocal ? localApiAvailable : deployedApiAvailable;
+      apiStatusBadge.textContent = isAvailable ? '✓ Available' : '✗ Unavailable';
+      apiStatusBadge.className = `ml-2 px-2 py-0.5 rounded text-xs ${isAvailable ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'}`;
+    }
+    
+    if (switchApiBtn) {
+      const targetAvailable = isLocal ? deployedApiAvailable : localApiAvailable;
+      switchApiBtn.textContent = isLocal ? 'Switch to Deployed' : 'Switch to Local';
+      switchApiBtn.disabled = !targetAvailable;
+    }
+  }
+
+  // Check if a specific API is available
+  async function checkApiHealth(apiUrl: string, suppressErrors: boolean = false): Promise<boolean> {
     try {
+      // Use longer timeout for deployed API (Render can have cold starts up to 30 seconds)
+      // For health checks, we use a shorter timeout but don't fail the whole process if it times out
+      const timeout = apiUrl.includes('localhost') ? 2000 : 15000; // 15 seconds for deployed
+      const statusResponse = await fetch(`${apiUrl}/status`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(timeout)
+      });
+      
+      if (!statusResponse.ok) {
+        return false;
+      }
+      
+      const statusResult = await statusResponse.json();
+      const isRunning = statusResult.status === 'running';
+      return isRunning;
+    } catch (error) {
+      // For deployed APIs, timeout doesn't necessarily mean it's unavailable
+      // Render services can have slow cold starts, but the API might still work
+      // We'll mark it as "unknown" rather than "unavailable" on timeout
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isTimeout = errorMessage.includes('timeout') || errorMessage.includes('signal timed out');
+      const isConnectionRefused = errorMessage.includes('ERR_CONNECTION_REFUSED') || errorMessage.includes('Failed to fetch');
+      
+      // Suppress error logging if requested (e.g., for local API when not in use)
+      // or for expected errors (connection refused for local, timeout for deployed)
+      const shouldSuppress = suppressErrors || 
+                           (apiUrl.includes('localhost') && isConnectionRefused) ||
+                           (!apiUrl.includes('localhost') && isTimeout);
+      
+      if (!shouldSuppress && !apiUrl.includes('localhost') && !isTimeout) {
+        console.log(`API health check failed for ${apiUrl}:`, error);
+      }
+      
+      // For timeouts on deployed API, return true (assume it might be available, just slow)
+      // This allows the user to try using it even if health check times out
+      if (!apiUrl.includes('localhost') && isTimeout) {
+        return true; // Assume available but slow (cold start)
+      }
+      
+      return false;
+    }
+  }
+
+  // Track if we've already checked both APIs to avoid repeated checks
+  let hasCheckedBothApis = false;
+  
+  // Check both APIs in local development
+  async function checkBothApis(force: boolean = false): Promise<void> {
+    if (!isLocalDev) return;
+    
+    // Only check once unless forced (to avoid repeated checks during face detection)
+    if (hasCheckedBothApis && !force) return;
+    
+    // Check APIs with individual error handling to prevent one failure from blocking the other
+    // Suppress errors for local API if we're already using deployed (to reduce console noise)
+    const suppressLocalErrors = currentApiUrl === DEPLOYED_API_URL;
+    const checkLocal = checkApiHealth(LOCAL_API_URL, suppressLocalErrors).catch(() => false);
+    const checkDeployed = checkApiHealth(DEPLOYED_API_URL, false).catch(() => false);
+    
+    const [localAvailable, deployedAvailable] = await Promise.allSettled([
+      checkLocal,
+      checkDeployed
+    ]).then(results => [
+      results[0].status === 'fulfilled' ? results[0].value : false,
+      results[1].status === 'fulfilled' ? results[1].value : false
+    ]);
+    
+    localApiAvailable = localAvailable;
+    deployedApiAvailable = deployedAvailable;
+    hasCheckedBothApis = true;
+    
+    // If local is not available but deployed is, switch to deployed
+    if (!localApiAvailable && deployedApiAvailable && currentApiUrl === LOCAL_API_URL) {
+      currentApiUrl = DEPLOYED_API_URL;
+      updateServiceStatus(true, 'Using deployed AI service (local unavailable)');
+    } else if (localApiAvailable && currentApiUrl === DEPLOYED_API_URL) {
+      // Optionally switch back to local if it becomes available
+      // For now, we'll keep the current selection
+    }
+    
+    updateApiSelectionUI();
+  }
+
+  // Switch between local and deployed APIs
+  async function switchApi(): Promise<void> {
+    if (!isLocalDev) return;
+    
+    const targetApi = currentApiUrl === LOCAL_API_URL ? DEPLOYED_API_URL : LOCAL_API_URL;
+    const targetAvailable = currentApiUrl === LOCAL_API_URL ? deployedApiAvailable : localApiAvailable;
+    
+    if (!targetAvailable) {
+      console.log('Target API is not available');
+      return;
+    }
+    
+    currentApiUrl = targetApi;
+    updateApiSelectionUI();
+    
+    // Re-check both APIs to update availability status
+    hasCheckedBothApis = false;
+    await checkBothApis(true); // Force re-check
+    
+    // Re-check service health with new API (reset the guard)
+    isCheckingServiceHealth = false;
+    await checkPythonServiceHealth();
+  }
+
+  // Check if Python AI service is available and can communicate bidirectionally
+  let isCheckingServiceHealth = false; // Guard to prevent concurrent checks
+  async function checkPythonServiceHealth(retryWithOtherApi: boolean = false): Promise<boolean> {
+    // Prevent concurrent health checks
+    if (isCheckingServiceHealth && !retryWithOtherApi) {
+      return false;
+    }
+    
+    try {
+      isCheckingServiceHealth = true;
       updateServiceStatus(false, 'Checking AI service...');
       
-      // First, check the status endpoint
-      const statusResponse = await fetch(`${PYTHON_API_URL}/status`, {
+      // In local development, check both APIs first (only on initial check)
+      if (isLocalDev && !retryWithOtherApi) {
+        await checkBothApis(false); // Don't force, use cached result if available
+      }
+      
+      // If no API is available, show appropriate message
+      if (isLocalDev && !localApiAvailable && !deployedApiAvailable) {
+        updateServiceStatus(false, 'No AI service available (local and deployed both unavailable)');
+        return false;
+      }
+      
+      // Use timeout for the status check (longer for deployed due to potential cold starts)
+      const timeout = currentApiUrl.includes('localhost') ? 3000 : 20000; // 20 seconds for deployed
+      const statusResponse = await fetch(`${currentApiUrl}/status`, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(timeout)
       });
       
       if (!statusResponse.ok) {
@@ -797,7 +994,8 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
         isRunning,
         frontendConnected,
         bidirectional,
-        statusResult
+        statusResult,
+        currentApiUrl
       });
       
       if (isRunning && frontendConnected && bidirectional) {
@@ -817,9 +1015,35 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
       }
       
     } catch (error) {
-      console.log('Python AI service not available:', error);
+      // Only log errors if it's not a timeout or connection refused (expected errors)
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isExpectedError = errorMessage.includes('timeout') || 
+                             errorMessage.includes('ERR_CONNECTION_REFUSED') ||
+                             errorMessage.includes('Failed to fetch') ||
+                             errorMessage.includes('signal timed out');
+      
+      if (!isExpectedError) {
+        console.log('Python AI service not available:', error);
+      }
+      
+      // In local dev, if current API fails and we haven't retried, try the other one if available
+      if (isLocalDev && !retryWithOtherApi) {
+        const otherApi = currentApiUrl === LOCAL_API_URL ? DEPLOYED_API_URL : LOCAL_API_URL;
+        const otherAvailable = currentApiUrl === LOCAL_API_URL ? deployedApiAvailable : localApiAvailable;
+        
+        if (otherAvailable) {
+          currentApiUrl = otherApi;
+          updateApiSelectionUI();
+          updateServiceStatus(true, `Switched to ${otherApi === DEPLOYED_API_URL ? 'deployed' : 'local'} AI service`);
+          // Retry with the other API
+          return await checkPythonServiceHealth(true);
+        }
+      }
+      
       updateServiceStatus(false, 'AI service unavailable - face detection disabled');
       return false;
+    } finally {
+      isCheckingServiceHealth = false;
     }
   }
 
@@ -871,12 +1095,13 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
       
       const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
       
-      // Call Python API with timeout
+      // Call Python API with timeout (longer for deployed due to potential cold starts)
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      const timeout = currentApiUrl.includes('localhost') ? 10000 : 30000; // 30 seconds for deployed
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
       
       try {
-        const response = await fetch(`${PYTHON_API_URL}/detect-face-base64`, {
+        const response = await fetch(`${currentApiUrl}/detect-face-base64`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -888,7 +1113,14 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
         clearTimeout(timeoutId);
         
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          // Handle specific HTTP error codes
+          if (response.status === 502) {
+            throw new Error('API service temporarily unavailable (502 Bad Gateway). The service may be starting up. Please try again in a moment.');
+          } else if (response.status === 503) {
+            throw new Error('API service temporarily unavailable (503 Service Unavailable). Please try again in a moment.');
+          } else {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
         }
         
         const result = await response.json();
@@ -905,8 +1137,26 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
         throw fetchError;
       }
     } catch (error) {
-      console.error('Error calling Python face detection API:', error);
-      console.log('AI service error - no face detection available');
+      // Handle different types of errors with specific messages
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isAbortError = errorMessage.includes('abort') || errorMessage.includes('AbortError');
+      const isCorsError = errorMessage.includes('CORS') || errorMessage.includes('Access-Control-Allow-Origin');
+      const isNetworkError = errorMessage.includes('Failed to fetch') || errorMessage.includes('ERR_FAILED');
+      const is502Error = errorMessage.includes('502') || errorMessage.includes('Bad Gateway');
+      
+      if (isCorsError) {
+        console.error('CORS error: The API is not allowing requests from this origin. Please check CORS configuration on the server.');
+        updateServiceStatus(false, 'CORS error - API not allowing requests from this origin');
+      } else if (is502Error || (isNetworkError && currentApiUrl.includes('onrender.com'))) {
+        // 502 errors are common with Render during cold starts
+        console.log('API service may be starting up (502/network error). This is normal for Render services after inactivity.');
+        updateServiceStatus(false, 'API service starting up - please wait a moment and try again');
+      } else if (isAbortError) {
+        // Timeout occurred - this is expected for slow APIs, don't log as error
+        console.log('Face detection request timed out (API may be slow to respond)');
+      } else {
+        console.error('Error calling Python face detection API:', error);
+      }
       return [];
     }
   }
@@ -1087,6 +1337,11 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
     retakeFromPreviewBtn.onclick = () => {
       resetForRetake();
     };
+    if (switchApiBtn) {
+      switchApiBtn.onclick = async () => {
+        await switchApi();
+      };
+    }
     confirmBtn.onclick = async () => {
       const result = lastDetection;
       hideModal();

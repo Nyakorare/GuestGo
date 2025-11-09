@@ -19,23 +19,15 @@ interface ServiceStatus {
 const LOCAL_API_URL = 'http://localhost:5000';
 const DEPLOYED_API_URL = 'https://guestgo-ai.onrender.com';
 
-export function renderAIStatus(): string {
-  return `
-    <div>
-      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-        <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">AI Service Status</h2>
-        <button 
-          id="refreshAIStatusBtn"
-          class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 w-full sm:w-auto flex items-center justify-center gap-2"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-          </svg>
-          Refresh Status
-        </button>
-      </div>
+function isDeployedSite(): boolean {
+  return typeof window !== 'undefined' && window.location.hostname.includes('vercel.app');
+}
 
-      <div class="grid gap-6 md:grid-cols-2">
+export function renderAIStatus(): string {
+  const isDeployed = isDeployedSite();
+  const gridCols = isDeployed ? 'md:grid-cols-1' : 'md:grid-cols-2';
+  
+  const localServiceSection = isDeployed ? '' : `
         <!-- Local Service Status -->
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
           <div class="flex items-center gap-3 mb-4">
@@ -80,7 +72,25 @@ export function renderAIStatus(): string {
             </div>
           </div>
         </div>
+  `;
 
+  return `
+    <div>
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+        <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">AI Service Status</h2>
+        <button 
+          id="refreshAIStatusBtn"
+          class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 w-full sm:w-auto flex items-center justify-center gap-2"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          Refresh Status
+        </button>
+      </div>
+
+      <div class="grid gap-6 ${gridCols}">
+        ${localServiceSection}
         <!-- Deployed Service Status -->
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-blue-200 dark:border-blue-700">
           <div class="flex items-center gap-3 mb-4">
@@ -245,14 +255,22 @@ export async function loadAIStatus(): Promise<void> {
     lastChecked.textContent = new Date().toLocaleTimeString();
   }
 
-  // Check both services in parallel
-  const [localStatus, deployedStatus] = await Promise.all([
-    checkServiceStatus(LOCAL_API_URL),
-    checkServiceStatus(DEPLOYED_API_URL)
-  ]);
+  const isDeployed = isDeployedSite();
 
-  updateStatusCard('localStatusCard', 'localStatusDetails', localStatus, 'local');
-  updateStatusCard('deployedStatusCard', 'deployedStatusDetails', deployedStatus, 'deployed');
+  if (isDeployed) {
+    // Only check deployed service on deployed site
+    const deployedStatus = await checkServiceStatus(DEPLOYED_API_URL);
+    updateStatusCard('deployedStatusCard', 'deployedStatusDetails', deployedStatus, 'deployed');
+  } else {
+    // Check both services in parallel on local development
+    const [localStatus, deployedStatus] = await Promise.all([
+      checkServiceStatus(LOCAL_API_URL),
+      checkServiceStatus(DEPLOYED_API_URL)
+    ]);
+
+    updateStatusCard('localStatusCard', 'localStatusDetails', localStatus, 'local');
+    updateStatusCard('deployedStatusCard', 'deployedStatusDetails', deployedStatus, 'deployed');
+  }
 }
 
 export function setupAIStatusEventListeners(): void {
