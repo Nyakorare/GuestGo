@@ -1,3 +1,5 @@
+import { safeJsonParse } from '../../utils/safe-json-parse';
+
 interface ServiceStatus {
   status: 'running' | 'error' | 'checking';
   api_connected: boolean;
@@ -152,12 +154,8 @@ async function checkServiceStatus(apiUrl: string): Promise<ServiceStatus | null>
       signal: AbortSignal.timeout(5000) // 5 second timeout
     });
 
-    if (!response.ok) {
-      return null;
-    }
-
-    const data = await response.json();
-    return data as ServiceStatus;
+    const data = await safeJsonParse<ServiceStatus>(response, apiUrl);
+    return data;
   } catch (error) {
     console.error(`Error checking service at ${apiUrl}:`, error);
     return null;

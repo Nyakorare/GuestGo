@@ -6,9 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GuestGo AI Service · Face Detection & Recognition</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      // Configure Tailwind for dark mode
+      tailwind.config = {
+        darkMode: 'class'
+      };
+    </script>
     <style>
       :root {
-        color-scheme: light;
+        color-scheme: light dark;
         }
 
         body {
@@ -34,27 +40,42 @@
         backdrop-filter: blur(14px);
         background-color: rgba(255, 255, 255, 0.92);
         }
+      
+      .dark .glass-card {
+        background-color: rgba(30, 41, 59, 0.92);
+      }
     </style>
 </head>
-  <body class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-200 text-slate-900">
+  <body class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-200 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 text-slate-900 dark:text-white transition-colors duration-200">
     <div class="min-h-screen flex flex-col">
-      <header class="border-b border-slate-200 bg-white/90 backdrop-blur">
+      <header class="border-b border-slate-200 dark:border-gray-700 bg-white/90 dark:bg-gray-800/90 backdrop-blur">
         <nav class="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5">
           <div class="flex items-center gap-3">
-            <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-lg font-semibold text-white shadow-lg shadow-blue-500/30">
+            <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 dark:bg-blue-500 text-lg font-semibold text-white shadow-lg shadow-blue-500/30">
               GG
             </div>
             <div>
-              <p class="text-lg font-semibold text-slate-900">GuestGo AI Service</p>
-              <p class="text-sm text-slate-500">Face Detection &amp; Verification API</p>
+              <p class="text-lg font-semibold text-slate-900 dark:text-white">GuestGo AI Service</p>
+              <p class="text-sm text-slate-500 dark:text-gray-400">Face Detection &amp; Verification API</p>
                         </div>
                     </div>
           <div class="flex items-center gap-3 text-sm font-medium">
+            <!-- Dark mode toggle button -->
+            <button id="theme-toggle" class="p-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-500 transition-colors duration-200" aria-label="Toggle dark mode">
+              <!-- Sun icon (shown in dark mode) -->
+              <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"/>
+              </svg>
+              <!-- Moon icon (shown in light mode) -->
+              <svg id="theme-toggle-dark-icon" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/>
+              </svg>
+            </button>
             <a
               href="https://guest-go.vercel.app/"
               target="_blank"
               rel="noreferrer"
-              class="inline-flex items-center gap-2 rounded-full border border-transparent px-4 py-2 text-blue-600 transition hover:border-blue-200 hover:bg-blue-50"
+              class="inline-flex items-center gap-2 rounded-full border border-transparent px-4 py-2 text-blue-600 dark:text-blue-400 transition hover:border-blue-200 dark:hover:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30"
             >
               Back to main app
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -63,7 +84,7 @@
             </a>
             <a
               href="/status"
-              class="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+              class="inline-flex items-center gap-2 rounded-full border border-slate-200 dark:border-gray-700 px-4 py-2 text-slate-600 dark:text-gray-300 transition hover:border-slate-300 dark:hover:border-gray-600 hover:bg-slate-50 dark:hover:bg-gray-700"
             >
               Raw status JSON
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -76,84 +97,84 @@
 
       <main class="flex-1 py-12">
         <div class="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6">
-          <section class="glass-card relative rounded-3xl border border-slate-200/60 shadow-xl shadow-slate-900/5">
-            <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200/70 px-8 py-6">
+          <section class="glass-card relative rounded-3xl border border-slate-200/60 dark:border-gray-700/60 shadow-xl shadow-slate-900/5 dark:shadow-gray-900/20">
+            <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200/70 dark:border-gray-700/70 px-8 py-6">
               <div>
-                <p class="text-xs font-semibold uppercase tracking-[0.25em] text-blue-600">Connectivity</p>
-                <h1 class="mt-2 text-2xl font-semibold text-slate-900">GuestGo ↔️ AI service status</h1>
-                <p id="statusSubheading" class="mt-1 text-sm text-slate-500">Live status between the main GuestGo app and this Render deployment.</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.25em] text-blue-600 dark:text-blue-400">Connectivity</p>
+                <h1 class="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">GuestGo ↔️ AI service status</h1>
+                <p id="statusSubheading" class="mt-1 text-sm text-slate-500 dark:text-gray-400">Live status between the main GuestGo app and this Render deployment.</p>
                         </div>
-              <div class="flex flex-col items-end gap-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                <div id="environmentBadge" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-[0.7rem] text-slate-600">
+              <div class="flex flex-col items-end gap-3 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-gray-500">
+                <div id="environmentBadge" class="inline-flex items-center gap-2 rounded-full border border-slate-200 dark:border-gray-700 bg-slate-100 dark:bg-gray-800 px-3 py-1 text-[0.7rem] text-slate-600 dark:text-gray-300">
                   Environment: Detecting…
                         </div>
-                <div class="inline-flex items-center gap-1 text-[0.65rem] text-slate-400">
+                <div class="inline-flex items-center gap-1 text-[0.65rem] text-slate-400 dark:text-gray-500">
                   Last checked:
-                  <span id="statusLastChecked" class="font-medium text-slate-500">—</span>
+                  <span id="statusLastChecked" class="font-medium text-slate-500 dark:text-gray-400">—</span>
                         </div>
                         </div>
                         </div>
             <div class="px-8 py-7">
-              <div id="statusCard" class="flex items-center gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+              <div id="statusCard" class="flex items-center gap-4 rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-5 py-4 shadow-sm">
                 <span class="spinner"></span>
-                <div class="text-sm font-medium text-slate-600">Checking connectivity…</div>
+                <div class="text-sm font-medium text-slate-600 dark:text-gray-300">Checking connectivity…</div>
                         </div>
 
               <div class="mt-5 grid gap-4 md:grid-cols-2" id="environmentPanels">
-                <div id="localStatusSection" class="hidden rounded-2xl border border-slate-200 bg-slate-50/90 px-5 py-4 shadow-sm">
+                <div id="localStatusSection" class="hidden rounded-2xl border border-slate-200 dark:border-gray-700 bg-slate-50/90 dark:bg-gray-800/90 px-5 py-4 shadow-sm">
                   <div class="flex items-start gap-3">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold uppercase tracking-wide text-white">Local</div>
+                    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 dark:bg-gray-700 text-xs font-semibold uppercase tracking-wide text-white">Local</div>
                     <div>
-                      <p class="text-sm font-semibold text-slate-800">Local development mode</p>
-                      <p class="mt-1 text-xs text-slate-500">Main app expected at <span id="localMainAppUrl" class="font-semibold text-slate-700">http://localhost:5173/</span></p>
-                      <p class="mt-1 text-xs text-slate-500">Keep Vite running to confirm bidirectional callbacks.</p>
+                      <p class="text-sm font-semibold text-slate-800 dark:text-gray-200">Local development mode</p>
+                      <p class="mt-1 text-xs text-slate-500 dark:text-gray-400">Main app expected at <span id="localMainAppUrl" class="font-semibold text-slate-700 dark:text-gray-300">http://localhost:5173/</span></p>
+                      <p class="mt-1 text-xs text-slate-500 dark:text-gray-400">Keep Vite running to confirm bidirectional callbacks.</p>
                     </div>
                   </div>
                 </div>
-                <div id="deployedStatusSection" class="hidden rounded-2xl border border-blue-200 bg-blue-50/90 px-5 py-4 shadow-sm">
+                <div id="deployedStatusSection" class="hidden rounded-2xl border border-blue-200 dark:border-blue-800 bg-blue-50/90 dark:bg-blue-900/30 px-5 py-4 shadow-sm">
                   <div class="flex items-start gap-3">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold uppercase tracking-wide text-white">Live</div>
+                    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 dark:bg-blue-500 text-xs font-semibold uppercase tracking-wide text-white">Live</div>
                     <div>
-                      <p class="text-sm font-semibold text-blue-700">Render deployment</p>
-                      <p class="mt-1 text-xs text-blue-600">Connected to <span id="deployedMainAppUrl" class="font-semibold">https://guest-go.vercel.app/</span></p>
-                      <p class="mt-1 text-xs text-blue-500">The AI service is serving production traffic.</p>
+                      <p class="text-sm font-semibold text-blue-700 dark:text-blue-300">Render deployment</p>
+                      <p class="mt-1 text-xs text-blue-600 dark:text-blue-400">Connected to <span id="deployedMainAppUrl" class="font-semibold">https://guest-go.vercel.app/</span></p>
+                      <p class="mt-1 text-xs text-blue-500 dark:text-blue-400">The AI service is serving production traffic.</p>
                     </div>
                   </div>
                 </div>
               </div>
 
               <div id="modelInfo" class="mt-6 hidden grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <div class="rounded-2xl border border-slate-200 bg-slate-50/80 px-5 py-4 shadow-sm">
-                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">API status</p>
-                  <p id="apiStatusValue" class="mt-2 text-lg font-semibold text-slate-900">-</p>
+                <div class="rounded-2xl border border-slate-200 dark:border-gray-700 bg-slate-50/80 dark:bg-gray-800/80 px-5 py-4 shadow-sm">
+                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-gray-400">API status</p>
+                  <p id="apiStatusValue" class="mt-2 text-lg font-semibold text-slate-900 dark:text-white">-</p>
                 </div>
-                <div class="rounded-2xl border border-slate-200 bg-slate-50/80 px-5 py-4 shadow-sm">
-                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Main app connected</p>
-                  <p id="mainAppValue" class="mt-2 text-lg font-semibold text-slate-900">-</p>
+                <div class="rounded-2xl border border-slate-200 dark:border-gray-700 bg-slate-50/80 dark:bg-gray-800/80 px-5 py-4 shadow-sm">
+                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-gray-400">Main app connected</p>
+                  <p id="mainAppValue" class="mt-2 text-lg font-semibold text-slate-900 dark:text-white">-</p>
                 </div>
-                <div class="rounded-2xl border border-slate-200 bg-slate-50/80 px-5 py-4 shadow-sm">
-                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Main app URL</p>
-                  <p id="mainAppUrlValue" class="mt-2 text-sm font-semibold text-blue-600 break-words">-</p>
+                <div class="rounded-2xl border border-slate-200 dark:border-gray-700 bg-slate-50/80 dark:bg-gray-800/80 px-5 py-4 shadow-sm">
+                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-gray-400">Main app URL</p>
+                  <p id="mainAppUrlValue" class="mt-2 text-sm font-semibold text-blue-600 dark:text-blue-400 break-words">-</p>
                 </div>
-                <div class="rounded-2xl border border-slate-200 bg-slate-50/80 px-5 py-4 shadow-sm">
-                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">API version</p>
-                  <p id="apiVersionValue" class="mt-2 text-lg font-semibold text-slate-900">-</p>
+                <div class="rounded-2xl border border-slate-200 dark:border-gray-700 bg-slate-50/80 dark:bg-gray-800/80 px-5 py-4 shadow-sm">
+                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-gray-400">API version</p>
+                  <p id="apiVersionValue" class="mt-2 text-lg font-semibold text-slate-900 dark:text-white">-</p>
                 </div>
-                <div class="rounded-2xl border border-slate-200 bg-slate-50/80 px-5 py-4 shadow-sm">
-                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Endpoints</p>
-                  <p id="endpointsValue" class="mt-2 text-lg font-semibold text-slate-900">-</p>
+                <div class="rounded-2xl border border-slate-200 dark:border-gray-700 bg-slate-50/80 dark:bg-gray-800/80 px-5 py-4 shadow-sm">
+                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-gray-400">Endpoints</p>
+                  <p id="endpointsValue" class="mt-2 text-lg font-semibold text-slate-900 dark:text-white">-</p>
                 </div>
-                <div class="rounded-2xl border border-slate-200 bg-slate-50/80 px-5 py-4 shadow-sm">
-                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Bidirectional</p>
-                  <p id="bidirectionalValue" class="mt-2 text-lg font-semibold text-slate-900">-</p>
+                <div class="rounded-2xl border border-slate-200 dark:border-gray-700 bg-slate-50/80 dark:bg-gray-800/80 px-5 py-4 shadow-sm">
+                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-gray-400">Bidirectional</p>
+                  <p id="bidirectionalValue" class="mt-2 text-lg font-semibold text-slate-900 dark:text-white">-</p>
                 </div>
               </div>
 
               <div class="mt-6 flex flex-wrap justify-between gap-3">
-                <p class="text-xs text-slate-500">Need help? Check logs in Render or contact the GuestGo platform team.</p>
+                <p class="text-xs text-slate-500 dark:text-gray-400">Need help? Check logs in Render or contact the GuestGo platform team.</p>
                 <button
                   id="refreshStatus"
-                  class="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"
+                  class="inline-flex items-center gap-2 rounded-full border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/30 px-4 py-2 text-sm font-semibold text-blue-700 dark:text-blue-300 transition hover:border-blue-300 dark:hover:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900/50"
                   type="button"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -165,53 +186,53 @@
             </div>
           </section>
 
-          <section class="glass-card rounded-3xl border border-slate-200/60 shadow-xl shadow-slate-900/5">
-            <div class="border-b border-slate-200/70 px-8 py-6">
-              <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-blue-600">
+          <section class="glass-card rounded-3xl border border-slate-200/60 dark:border-gray-700/60 shadow-xl shadow-slate-900/5 dark:shadow-gray-900/20">
+            <div class="border-b border-slate-200/70 dark:border-gray-700/70 px-8 py-6">
+              <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-blue-600 dark:text-blue-400">
                 <span>Step 1</span>
-                <span class="h-px w-8 bg-blue-200"></span>
+                <span class="h-px w-8 bg-blue-200 dark:bg-blue-700"></span>
                 <span>Enrollment</span>
               </div>
               <div class="mt-3 flex flex-col gap-2">
-                <h2 class="text-2xl font-semibold text-slate-900">Enroll a face with YOLOv8 detection</h2>
-                <p class="text-sm text-slate-500">Upload a clear photo or use your webcam to create a high-quality template before verification.</p>
+                <h2 class="text-2xl font-semibold text-slate-900 dark:text-white">Enroll a face with YOLOv8 detection</h2>
+                <p class="text-sm text-slate-500 dark:text-gray-400">Upload a clear photo or use your webcam to create a high-quality template before verification.</p>
               </div>
             </div>
             <div class="px-8 py-7">
               <div class="grid gap-6 md:grid-cols-2">
                 <div
                   id="uploadArea"
-                  class="group relative flex cursor-pointer flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-blue-300 bg-white/80 px-8 py-12 text-center shadow-sm transition hover:border-blue-500 hover:bg-blue-50"
+                  class="group relative flex cursor-pointer flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-blue-300 dark:border-blue-700 bg-white/80 dark:bg-gray-800/80 px-8 py-12 text-center shadow-sm transition hover:border-blue-500 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30"
                 >
-                  <div class="flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-3xl text-blue-600 shadow-inner shadow-blue-200">📁</div>
+                  <div class="flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/50 text-3xl text-blue-600 dark:text-blue-400 shadow-inner shadow-blue-200 dark:shadow-blue-900/50">📁</div>
                   <div class="space-y-1">
-                    <h3 class="text-lg font-semibold text-slate-900">Upload a reference image</h3>
-                    <p class="text-sm text-slate-500">Supported formats: JPG, PNG, GIF • Ideal size ≥ 640px</p>
+                    <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Upload a reference image</h3>
+                    <p class="text-sm text-slate-500 dark:text-gray-400">Supported formats: JPG, PNG, GIF • Ideal size ≥ 640px</p>
                         </div>
-                  <div class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">Click or drag &amp; drop</div>
+                  <div class="rounded-full bg-slate-100 dark:bg-gray-700 px-3 py-1 text-xs font-semibold text-slate-500 dark:text-gray-300">Click or drag &amp; drop</div>
                   <input type="file" id="fileInput" accept="image/*" class="hidden" />
                             </div>
-                <div class="flex flex-col gap-4 rounded-2xl border border-blue-300 bg-white/85 px-6 py-7 shadow-sm">
+                <div class="flex flex-col gap-4 rounded-2xl border border-blue-300 dark:border-blue-800 bg-white/85 dark:bg-gray-800/85 px-6 py-7 shadow-sm">
                   <div class="flex items-center gap-3">
-                    <div class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-3xl text-white">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 dark:bg-blue-500 text-3xl text-white">
                       🎥
                         </div>
                     <div>
-                      <h3 class="text-lg font-semibold text-slate-900">Capture from webcam</h3>
-                      <p class="text-sm text-slate-500">Live capture leverages YOLOv8 face detection and keeps sampling until we get a full-face image.</p>
+                      <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Capture from webcam</h3>
+                      <p class="text-sm text-slate-500 dark:text-gray-400">Live capture leverages YOLOv8 face detection and keeps sampling until we get a full-face image.</p>
                     </div>
                   </div>
                   <div class="flex flex-wrap gap-2">
                     <button
                       id="startEnroll"
-                      class="inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:bg-blue-700"
+                      class="inline-flex items-center gap-2 rounded-full bg-blue-600 dark:bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:bg-blue-700 dark:hover:bg-blue-600"
                       type="button"
                     >
                       Start enrollment camera
                     </button>
                     <button
                       id="stopEnroll"
-                      class="inline-flex items-center gap-2 rounded-full bg-rose-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-400/30 transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:bg-rose-300"
+                      class="inline-flex items-center gap-2 rounded-full bg-rose-500 dark:bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-400/30 transition hover:bg-rose-600 dark:hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-rose-300 dark:disabled:bg-rose-800"
                       type="button"
                       disabled
                     >
@@ -219,10 +240,10 @@
                     </button>
                   </div>
                   <div class="relative flex justify-center">
-                    <video id="enrollVideo" autoplay muted class="hidden w-full max-w-md rounded-2xl border border-slate-200 shadow-lg"></video>
+                    <video id="enrollVideo" autoplay muted class="hidden w-full max-w-md rounded-2xl border border-slate-200 dark:border-gray-700 shadow-lg"></video>
                     <canvas id="enrollOverlay" class="absolute top-0 left-0 hidden pointer-events-none"></canvas>
                   </div>
-                  <div id="enrollStatus" class="text-sm" aria-live="polite"></div>
+                  <div id="enrollStatus" class="text-sm dark:text-gray-300" aria-live="polite"></div>
                 </div>
               </div>
               <div id="uploadStatus" class="mt-5" aria-live="polite"></div>
@@ -230,22 +251,22 @@
             </div>
           </section>
 
-          <section class="glass-card rounded-3xl border border-slate-200/60 shadow-xl shadow-slate-900/5">
-            <div class="border-b border-slate-200/70 px-8 py-6">
-              <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-blue-600">
+          <section class="glass-card rounded-3xl border border-slate-200/60 dark:border-gray-700/60 shadow-xl shadow-slate-900/5 dark:shadow-gray-900/20">
+            <div class="border-b border-slate-200/70 dark:border-gray-700/70 px-8 py-6">
+              <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-blue-600 dark:text-blue-400">
                 <span>Step 2</span>
-                <span class="h-px w-8 bg-blue-200"></span>
+                <span class="h-px w-8 bg-blue-200 dark:bg-blue-700"></span>
                 <span>Live verification</span>
               </div>
               <div class="mt-3 flex flex-col gap-2">
-                <h2 class="text-2xl font-semibold text-slate-900">Verify with MediaPipe + correlation</h2>
-                <p class="text-sm text-slate-500">Match the live camera feed against the enrolled template. Keep your face in the guide circle for best results.</p>
+                <h2 class="text-2xl font-semibold text-slate-900 dark:text-white">Verify with MediaPipe + correlation</h2>
+                <p class="text-sm text-slate-500 dark:text-gray-400">Match the live camera feed against the enrolled template. Keep your face in the guide circle for best results.</p>
               </div>
             </div>
             <div class="px-8 py-7">
               <div class="flex flex-col gap-6 md:flex-row md:items-start">
                 <div class="relative flex-1">
-                  <div class="aspect-video w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-900/90 shadow-xl">
+                  <div class="aspect-video w-full overflow-hidden rounded-2xl border border-slate-200 dark:border-gray-700 bg-slate-900/90 dark:bg-gray-900 shadow-xl">
                     <video id="cameraVideo" autoplay muted class="h-full w-full rounded-2xl object-cover"></video>
                     <canvas id="cameraOverlay" class="absolute inset-0 pointer-events-none"></canvas>
                   </div>
@@ -255,22 +276,22 @@
                   <div class="flex flex-wrap gap-3">
                     <button
                       id="startCamera"
-                      class="inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                      class="inline-flex items-center gap-2 rounded-full bg-blue-600 dark:bg-blue-500 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:bg-blue-700 dark:hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-gray-600"
                       type="button"
                     >
                       Start camera
                     </button>
                     <button
                       id="stopCamera"
-                      class="inline-flex items-center gap-2 rounded-full bg-rose-500 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-400/30 transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:bg-rose-300"
+                      class="inline-flex items-center gap-2 rounded-full bg-rose-500 dark:bg-rose-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-400/30 transition hover:bg-rose-600 dark:hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-rose-300 dark:disabled:bg-rose-800"
                       type="button"
                       disabled
                     >
                       Stop camera
                     </button>
                         </div>
-                  <div id="cameraStatus" class="text-sm" aria-live="polite"></div>
-                  <div id="recognitionResult" class="text-sm" aria-live="assertive"></div>
+                  <div id="cameraStatus" class="text-sm dark:text-gray-300" aria-live="polite"></div>
+                  <div id="recognitionResult" class="text-sm dark:text-gray-300" aria-live="assertive"></div>
                 </div>
                 </div>
             </div>
@@ -278,8 +299,8 @@
         </div>
       </main>
 
-      <footer class="border-t border-slate-200 bg-white/80">
-        <div class="mx-auto flex w-full max-w-6xl flex-col gap-2 px-6 py-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+      <footer class="border-t border-slate-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80">
+        <div class="mx-auto flex w-full max-w-6xl flex-col gap-2 px-6 py-5 text-xs text-slate-500 dark:text-gray-400 sm:flex-row sm:items-center sm:justify-between">
           <p>GuestGo © <span id="currentYear"></span>. Face detection AI service powered by Flask, YOLOv8, and MediaPipe.</p>
           <p>Need help? Reach out to the GuestGo platform team.</p>
         </div>
@@ -310,20 +331,61 @@
         if (el) el.textContent = value;
       }
 
+      // Theme management functions
+      function getThemePreference() {
+        if (typeof localStorage !== 'undefined' && localStorage.getItem('theme')) {
+          return localStorage.getItem('theme');
+        }
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+
+      function updateTheme(theme) {
+        if (theme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+        localStorage.setItem('theme', theme);
+        updateThemeIcons(theme);
+      }
+
+      function updateThemeIcons(theme) {
+        const darkIcon = document.getElementById('theme-toggle-dark-icon');
+        const lightIcon = document.getElementById('theme-toggle-light-icon');
+        
+        if (theme === 'dark') {
+          darkIcon?.classList.add('hidden');
+          lightIcon?.classList.remove('hidden');
+        } else {
+          lightIcon?.classList.add('hidden');
+          darkIcon?.classList.remove('hidden');
+        }
+      }
+
       function setStatusLoading(message = 'Checking connectivity…') {
-        statusCard.className = 'flex items-center gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm';
+        const isDark = document.documentElement.classList.contains('dark');
+        statusCard.className = `flex items-center gap-4 rounded-xl border ${isDark ? 'border-gray-700 bg-gray-800' : 'border-slate-200 bg-white'} px-5 py-4 shadow-sm`;
         statusCard.innerHTML = `
           <span class="spinner"></span>
-          <div class="text-sm font-medium text-slate-600">${message}</div>
+          <div class="text-sm font-medium ${isDark ? 'text-gray-300' : 'text-slate-600'}">${message}</div>
         `;
       }
 
       function setStatusCard(type, title, description) {
+        const isDark = document.documentElement.classList.contains('dark');
         const styles = {
-          success: 'border-emerald-200 bg-emerald-50/90 text-emerald-700 shadow-[0_20px_45px_-20px_rgba(16,185,129,0.45)]',
-          warning: 'border-amber-200 bg-amber-50/90 text-amber-700 shadow-[0_20px_45px_-20px_rgba(251,191,36,0.45)]',
-          error: 'border-rose-200 bg-rose-50/90 text-rose-700 shadow-[0_20px_45px_-20px_rgba(244,63,94,0.45)]',
-          info: 'border-slate-200 bg-white text-slate-700 shadow-sm'
+          success: isDark 
+            ? 'border-emerald-700 bg-emerald-900/30 text-emerald-300 shadow-[0_20px_45px_-20px_rgba(16,185,129,0.25)]'
+            : 'border-emerald-200 bg-emerald-50/90 text-emerald-700 shadow-[0_20px_45px_-20px_rgba(16,185,129,0.45)]',
+          warning: isDark
+            ? 'border-amber-700 bg-amber-900/30 text-amber-300 shadow-[0_20px_45px_-20px_rgba(251,191,36,0.25)]'
+            : 'border-amber-200 bg-amber-50/90 text-amber-700 shadow-[0_20px_45px_-20px_rgba(251,191,36,0.45)]',
+          error: isDark
+            ? 'border-rose-700 bg-rose-900/30 text-rose-300 shadow-[0_20px_45px_-20px_rgba(244,63,94,0.25)]'
+            : 'border-rose-200 bg-rose-50/90 text-rose-700 shadow-[0_20px_45px_-20px_rgba(244,63,94,0.45)]',
+          info: isDark
+            ? 'border-gray-700 bg-gray-800 text-gray-300 shadow-sm'
+            : 'border-slate-200 bg-white text-slate-700 shadow-sm'
         };
         const emoji = type === 'success' ? '✅' : type === 'warning' ? '⚠️' : type === 'error' ? '❌' : 'ℹ️';
         statusCard.className = `flex items-start gap-3 rounded-xl border px-5 py-4 ${styles[type] || styles.info}`;
@@ -392,6 +454,20 @@
         setStatusLoading();
             try {
                 const response = await fetch('/status');
+                
+                // Check if response is OK
+                if (!response.ok) {
+                    const errorText = await response.text().catch(() => 'Unknown error');
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}. ${errorText.substring(0, 100)}`);
+                }
+                
+                // Check Content-Type to ensure it's JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    throw new Error(`Expected JSON but received ${contentType || 'unknown content type'}. Response: ${text.substring(0, 100)}`);
+                }
+                
                 const data = await response.json();
                 
           if (statusLastChecked) {
@@ -435,7 +511,20 @@
             }
                 }
             } catch (error) {
-          setStatusCard('error', 'Connection failed', `Unable to reach the AI service: ${error.message}`);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          // Provide a more user-friendly message for common errors
+          let displayMessage = errorMessage;
+          if (errorMessage.includes('Unexpected token')) {
+            displayMessage = 'Server returned an invalid response (not JSON). The service may be starting up or experiencing issues.';
+          } else if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
+            displayMessage = 'Unable to connect to the AI service. Please check your network connection and ensure the service is running.';
+          } else if (errorMessage.includes('HTTP 404')) {
+            displayMessage = 'Status endpoint not found. The service may be misconfigured.';
+          } else if (errorMessage.includes('HTTP 502') || errorMessage.includes('HTTP 503')) {
+            displayMessage = 'Service temporarily unavailable. The service may be starting up. Please try again in a moment.';
+          }
+          
+          setStatusCard('error', 'Connection failed', `Unable to reach the AI service: ${displayMessage}`);
           updateEnvironmentUI({});
           setText(apiStatusValue, 'Error');
           setText(mainAppValue, 'No');
@@ -450,6 +539,19 @@
       }
 
       document.addEventListener('DOMContentLoaded', () => {
+        // Initialize theme
+        const theme = getThemePreference();
+        updateTheme(theme);
+
+        // Theme toggle functionality
+        const themeToggleButton = document.getElementById('theme-toggle');
+        if (themeToggleButton) {
+          themeToggleButton.addEventListener('click', () => {
+            const isDark = document.documentElement.classList.contains('dark');
+            updateTheme(isDark ? 'light' : 'dark');
+          });
+        }
+
         const refreshBtn = document.getElementById('refreshStatus');
         if (refreshBtn) {
           refreshBtn.addEventListener('click', () => {

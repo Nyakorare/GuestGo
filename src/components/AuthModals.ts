@@ -3,24 +3,24 @@ import supabase from '../config/supabase';
 export function createLoginModal() {
   return `
     <div id="login-modal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center hidden z-50">
-      <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+      <div class="bg-white dark:bg-gray-800 rounded-lg p-8 max-w-md w-full mx-4">
         <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold text-gray-900">Login</h2>
-          <button class="text-gray-400 hover:text-gray-500 close-modal">
+          <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Login</h2>
+          <button class="text-gray-400 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200 close-modal">
             <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
           </button>
         </div>
-        <div id="login-error" class="hidden mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded"></div>
+        <div id="login-error" class="hidden mb-4 p-3 bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 rounded"></div>
         <form id="login-form" class="space-y-6">
           <div>
-            <label for="login-email" class="block text-sm font-medium text-gray-700">Email</label>
-            <input type="email" id="login-email" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            <label for="login-email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+            <input type="email" id="login-email" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2">
           </div>
           <div>
-            <label for="login-password" class="block text-sm font-medium text-gray-700">Password</label>
-            <input type="password" id="login-password" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            <label for="login-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+            <input type="password" id="login-password" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2">
           </div>
           <div>
             <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
@@ -36,35 +36,35 @@ export function createLoginModal() {
 export function createSignupModal() {
   return `
     <div id="signup-modal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center hidden z-50">
-      <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+      <div class="bg-white dark:bg-gray-800 rounded-lg p-8 max-w-md w-full mx-4">
         <div class="flex justify-between items-center mb-6">
-          <h2 class="text-2xl font-bold text-gray-900">Sign Up</h2>
-          <button class="text-gray-400 hover:text-gray-500 close-modal">
+          <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Sign Up</h2>
+          <button class="text-gray-400 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200 close-modal">
             <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
           </button>
         </div>
-        <div id="signup-error" class="hidden mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded"></div>
-        <div id="signup-success" class="hidden mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded"></div>
+        <div id="signup-error" class="hidden mb-4 p-3 bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 rounded"></div>
+        <div id="signup-success" class="hidden mb-4 p-3 bg-green-100 dark:bg-green-900 border border-green-400 dark:border-green-700 text-green-700 dark:text-green-200 rounded"></div>
         <form id="signup-form" class="space-y-6">
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label for="signup-firstname" class="block text-sm font-medium text-gray-700">First Name</label>
-              <input type="text" id="signup-firstname" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+              <label for="signup-firstname" class="block text-sm font-medium text-gray-700 dark:text-gray-300">First Name</label>
+              <input type="text" id="signup-firstname" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2">
             </div>
             <div>
-              <label for="signup-lastname" class="block text-sm font-medium text-gray-700">Last Name</label>
-              <input type="text" id="signup-lastname" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+              <label for="signup-lastname" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Last Name</label>
+              <input type="text" id="signup-lastname" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2">
             </div>
           </div>
           <div>
-            <label for="signup-email" class="block text-sm font-medium text-gray-700">Email</label>
-            <input type="email" id="signup-email" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            <label for="signup-email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+            <input type="email" id="signup-email" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2">
           </div>
           <div>
-            <label for="signup-password" class="block text-sm font-medium text-gray-700">Password</label>
-            <input type="password" id="signup-password" required minlength="6" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            <label for="signup-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+            <input type="password" id="signup-password" required minlength="6" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2">
           </div>
           <div>
             <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">

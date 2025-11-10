@@ -1,5 +1,6 @@
 // Face detection using Python API only
 import { PYTHON_API_URL } from '../../config/python-api';
+import { safeJsonParse } from '../safe-json-parse';
 
 // API URLs
 const LOCAL_API_URL = 'http://localhost:5000';
@@ -847,11 +848,10 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
         signal: AbortSignal.timeout(timeout)
       });
       
-      if (!statusResponse.ok) {
+      const statusResult = await safeJsonParse<{ status: string }>(statusResponse, apiUrl);
+      if (!statusResult) {
         return false;
       }
-      
-      const statusResult = await statusResponse.json();
       const isRunning = statusResult.status === 'running';
       return isRunning;
     } catch (error) {
@@ -948,15 +948,33 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
 
   // Check if Python AI service is available and can communicate bidirectionally
   let isCheckingServiceHealth = false; // Guard to prevent concurrent checks
+  let healthCheckCache: { result: boolean; timestamp: number; apiUrl: string } | null = null;
+  const HEALTH_CHECK_CACHE_TTL = 10000; // Cache for 10 seconds
+  let lastCorsErrorLog = 0;
+  const CORS_ERROR_LOG_INTERVAL = 30000; // Only log CORS errors once every 30 seconds
+  
   async function checkPythonServiceHealth(retryWithOtherApi: boolean = false): Promise<boolean> {
     // Prevent concurrent health checks
     if (isCheckingServiceHealth && !retryWithOtherApi) {
+      // Return cached result if available and not expired
+      if (healthCheckCache && 
+          Date.now() - healthCheckCache.timestamp < HEALTH_CHECK_CACHE_TTL &&
+          healthCheckCache.apiUrl === currentApiUrl) {
+        return healthCheckCache.result;
+      }
       return false;
+    }
+    
+    // Check cache first (unless retrying with other API)
+    if (!retryWithOtherApi && healthCheckCache) {
+      const cacheAge = Date.now() - healthCheckCache.timestamp;
+      if (cacheAge < HEALTH_CHECK_CACHE_TTL && healthCheckCache.apiUrl === currentApiUrl) {
+        return healthCheckCache.result;
+      }
     }
     
     try {
       isCheckingServiceHealth = true;
-      updateServiceStatus(false, 'Checking AI service...');
       
       // In local development, check both APIs first (only on initial check)
       if (isLocalDev && !retryWithOtherApi) {
@@ -966,6 +984,7 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
       // If no API is available, show appropriate message
       if (isLocalDev && !localApiAvailable && !deployedApiAvailable) {
         updateServiceStatus(false, 'No AI service available (local and deployed both unavailable)');
+        healthCheckCache = { result: false, timestamp: Date.now(), apiUrl: currentApiUrl };
         return false;
       }
       
@@ -977,53 +996,64 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
         signal: AbortSignal.timeout(timeout)
       });
       
-      if (!statusResponse.ok) {
+      const statusResult = await safeJsonParse<{
+        status: string;
+        frontend_connected?: boolean;
+        main_app_connected?: boolean;
+        connectivity?: { bidirectional?: boolean };
+      }>(statusResponse, currentApiUrl);
+      
+      if (!statusResult) {
         updateServiceStatus(false, 'AI service not responding');
+        healthCheckCache = { result: false, timestamp: Date.now(), apiUrl: currentApiUrl };
         return false;
       }
-      
-      const statusResult = await statusResponse.json();
-      console.log('Python AI service status:', statusResult);
       
       // Check if the service reports bidirectional connectivity
       const isRunning = statusResult.status === 'running';
       const frontendConnected = statusResult.frontend_connected === true || statusResult.main_app_connected === true;
       const bidirectional = statusResult.connectivity?.bidirectional === true;
       
-      console.log('Service status check:', {
-        isRunning,
-        frontendConnected,
-        bidirectional,
-        statusResult,
-        currentApiUrl
-      });
-      
+      let result = false;
       if (isRunning && frontendConnected && bidirectional) {
         updateServiceStatus(true, 'AI service fully connected');
-        return true;
+        result = true;
       } else if (isRunning && frontendConnected) {
         // Service is running and frontend is connected, but bidirectional check might be failing
         updateServiceStatus(true, 'AI service connected (bidirectional check may be unreliable)');
-        return true; // Allow face detection even if bidirectional check fails
+        result = true; // Allow face detection even if bidirectional check fails
       } else if (isRunning) {
         // Service is running but connectivity check failed - still allow face detection
         updateServiceStatus(true, 'AI service running (connectivity check failed but allowing face detection)');
-        return true; // Allow face detection even if connectivity check fails
+        result = true; // Allow face detection even if connectivity check fails
       } else {
         updateServiceStatus(false, 'AI service not ready - face detection disabled');
-        return false;
+        result = false;
       }
       
+      // Cache the result
+      healthCheckCache = { result, timestamp: Date.now(), apiUrl: currentApiUrl };
+      return result;
+      
     } catch (error) {
-      // Only log errors if it's not a timeout or connection refused (expected errors)
+      // Suppress CORS and network errors - only log occasionally
       const errorMessage = error instanceof Error ? error.message : String(error);
-      const isExpectedError = errorMessage.includes('timeout') || 
+      const isCorsError = errorMessage.includes('CORS') || errorMessage.includes('Access-Control-Allow-Origin');
+      const isNetworkError = errorMessage.includes('timeout') || 
                              errorMessage.includes('ERR_CONNECTION_REFUSED') ||
                              errorMessage.includes('Failed to fetch') ||
-                             errorMessage.includes('signal timed out');
+                             errorMessage.includes('signal timed out') ||
+                             errorMessage.includes('ERR_FAILED');
       
-      if (!isExpectedError) {
+      const now = Date.now();
+      const shouldLogError = !isCorsError && !isNetworkError;
+      const shouldLogCorsError = isCorsError && (now - lastCorsErrorLog > CORS_ERROR_LOG_INTERVAL);
+      
+      if (shouldLogError) {
         console.log('Python AI service not available:', error);
+      } else if (shouldLogCorsError) {
+        console.log('CORS error accessing AI service (suppressing repeated logs):', errorMessage);
+        lastCorsErrorLog = now;
       }
       
       // In local dev, if current API fails and we haven't retried, try the other one if available
@@ -1041,6 +1071,8 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
       }
       
       updateServiceStatus(false, 'AI service unavailable - face detection disabled');
+      // Cache the failure result to prevent repeated checks
+      healthCheckCache = { result: false, timestamp: Date.now(), apiUrl: currentApiUrl };
       return false;
     } finally {
       isCheckingServiceHealth = false;
@@ -1068,12 +1100,20 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
   // }
 
   // Function to detect faces using Python API with fallback
+  let lastServiceUnavailableLog = 0;
+  const SERVICE_UNAVAILABLE_LOG_INTERVAL = 10000; // Only log once every 10 seconds
+  
   async function detectFaces(imageElement: HTMLVideoElement | HTMLCanvasElement): Promise<any[]> {
     try {
       // Check service health first
       const isServiceAvailable = await checkPythonServiceHealth();
       if (!isServiceAvailable) {
-        console.log('Python AI service not available, disabling face detection');
+        // Only log occasionally to prevent spam
+        const now = Date.now();
+        if (now - lastServiceUnavailableLog > SERVICE_UNAVAILABLE_LOG_INTERVAL) {
+          console.log('Python AI service not available, disabling face detection');
+          lastServiceUnavailableLog = now;
+        }
         // Don't use fallback detection - it's too unreliable
         return [];
       }
@@ -1112,8 +1152,8 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
         
         clearTimeout(timeoutId);
         
+        // Handle specific HTTP error codes before parsing
         if (!response.ok) {
-          // Handle specific HTTP error codes
           if (response.status === 502) {
             throw new Error('API service temporarily unavailable (502 Bad Gateway). The service may be starting up. Please try again in a moment.');
           } else if (response.status === 503) {
@@ -1123,7 +1163,11 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
           }
         }
         
-        const result = await response.json();
+        const result = await safeJsonParse<{ success: boolean; faces?: any[] }>(response, currentApiUrl);
+        if (!result) {
+          throw new Error('Failed to parse API response');
+        }
+        
         console.log('Python API face detection result:', result);
         
         if (result.success && result.faces) {
