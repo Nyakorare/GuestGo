@@ -5,6 +5,7 @@ services:
     pythonVersion: 3.11.9
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt && chmod +x start.sh
     startCommand: ./start.sh
+    healthCheckPath: /health
     envVars:
       - key: PORT
         value: 10000
@@ -14,4 +15,12 @@ services:
         value: false
       - key: PYTHON_VERSION
         value: 3.11.9
+      - key: CORS_ORIGINS
+        value: https://guest-go.vercel.app,http://localhost:5173,http://127.0.0.1:5173
+      - key: DISABLE_YOLO
+        value: false
+      - key: ENABLE_YOLO_ON_STARTUP
+        value: false
+      - key: YOLO_IMGSZ
+        value: 640
 

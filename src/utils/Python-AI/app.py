@@ -9,6 +9,7 @@ import io
 import os
 import time
 import requests
+import gc  # Garbage collection for memory management
 from typing import Dict
 
 # Cache YOLO model to avoid reloading on each request
@@ -46,17 +47,18 @@ def _get_yolo_model():
             print(f"Using environment model: {env_model}")
         
         # Try local models first to avoid API calls
+        # Prefer smaller models (nano) to save memory
         local_models = [
-            os.path.join('models', 'yolo11s-face.pt'),
-            os.path.join('models', 'yolo11n-face.pt'),
-            os.path.join('models', 'yolov8s-face.pt'),
-            os.path.join('models', 'yolov8n-face.pt'),
+            os.path.join('models', 'yolov8n-face.pt'),  # Nano model first (smallest)
+            os.path.join('models', 'yolo11n-face.pt'),  # YOLO11 nano
+            os.path.join('models', 'yolov8s-face.pt'),  # Small model
+            os.path.join('models', 'yolo11s-face.pt'),   # YOLO11 small
             os.path.join('models', 'yolov5s-face.pt'),
-            'yolov8n-face.pt',
-            'yolov8s-face.pt',
-            'yolov5s-face.pt',
-            'yolo11n-face.pt',
-            'yolo11s-face.pt'
+            'yolov8n-face.pt',  # Nano model first (smallest)
+            'yolo11n-face.pt',  # YOLO11 nano
+            'yolov8s-face.pt',  # Small model
+            'yolo11s-face.pt',  # YOLO11 small
+            'yolov5s-face.pt'
         ]
         
         # Add local models that exist
@@ -67,10 +69,10 @@ def _get_yolo_model():
         # Only try downloading models if no local models found
         if not any(os.path.isfile(c) for c in local_models):
             print("No local models found, trying to download...")
-            # Try general YOLO models (these are more likely to work)
+            # Try general YOLO models (prefer nano to save memory)
             candidates.extend([
-                'yolov8n.pt',  # General YOLOv8 nano model
-                'yolov8s.pt',  # General YOLOv8 small model
+                'yolov8n.pt',  # General YOLOv8 nano model (smallest, ~6MB)
+                # Don't add larger models to save memory
             ])
         
         print(f"Trying {len(candidates)} model candidates...")
@@ -159,7 +161,56 @@ CORS(app,
      origins=allowed_origins,
      methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
      allow_headers=['Content-Type', 'Authorization'],
-     supports_credentials=True)
+     supports_credentials=True,
+     expose_headers=['Content-Type'])
+
+# Add after_request handler to ensure CORS headers are always sent, even on errors
+@app.after_request
+def after_request(response):
+    """Ensure CORS headers are always present, even on error responses"""
+    origin = request.headers.get('Origin')
+    if origin and origin in allowed_origins:
+        response.headers.add('Access-Control-Allow-Origin', origin)
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    elif not origin and request.method == 'OPTIONS':
+        # Handle preflight requests - allow from any origin for OPTIONS
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    return response
+
+# Error handlers to ensure CORS headers are sent on exceptions
+@app.errorhandler(500)
+def internal_error(error):
+    """Handle 500 errors with CORS headers"""
+    origin = request.headers.get('Origin')
+    response = jsonify({'error': 'Internal server error', 'message': str(error)})
+    if origin and origin in allowed_origins:
+        response.headers.add('Access-Control-Allow-Origin', origin)
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response, 500
+
+@app.errorhandler(404)
+def not_found(error):
+    """Handle 404 errors with CORS headers"""
+    origin = request.headers.get('Origin')
+    response = jsonify({'error': 'Not found', 'message': str(error)})
+    if origin and origin in allowed_origins:
+        response.headers.add('Access-Control-Allow-Origin', origin)
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response, 404
+
+@app.errorhandler(400)
+def bad_request(error):
+    """Handle 400 errors with CORS headers"""
+    origin = request.headers.get('Origin')
+    response = jsonify({'error': 'Bad request', 'message': str(error)})
+    if origin and origin in allowed_origins:
+        response.headers.add('Access-Control-Allow-Origin', origin)
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response, 400
 
 # Global variable to store the uploaded face features
 uploaded_face_features = None
@@ -170,20 +221,28 @@ if not os.path.exists(models_dir):
     os.makedirs(models_dir)
     print(f"📁 Created models directory: {models_dir}")
 
-# Initialize model on startup
-print("Initializing face detection model...")
-try:
-    _get_yolo_model()
-    if _YOLO_MODEL is not None:
-        print(f"✅ YOLO model loaded successfully: {_YOLO_MODEL_NAME}")
-    else:
-        print("⚠️  YOLO model failed to load, will use MediaPipe fallback")
-except Exception as e:
-    print(f"❌ Error initializing model: {e}")
-    print("⚠️  Will use MediaPipe fallback for face detection")
+# Initialize model on startup - DISABLED to save memory
+# Models will be loaded lazily on first use
+# Set ENABLE_YOLO_ON_STARTUP=true to load on startup (uses more memory)
+enable_yolo_on_startup = os.getenv('ENABLE_YOLO_ON_STARTUP', 'false').lower() == 'true'
 
-def process_image(image_data):
-    """Process image data from base64 string"""
+if enable_yolo_on_startup:
+    print("Initializing face detection model on startup...")
+    try:
+        _get_yolo_model()
+        if _YOLO_MODEL is not None:
+            print(f"✅ YOLO model loaded successfully: {_YOLO_MODEL_NAME}")
+        else:
+            print("⚠️  YOLO model failed to load, will use MediaPipe fallback")
+    except Exception as e:
+        print(f"❌ Error initializing model: {e}")
+        print("⚠️  Will use MediaPipe fallback for face detection")
+else:
+    print("⚠️  YOLO model loading deferred (lazy loading) to save memory")
+    print("    Models will be loaded on first use. Set ENABLE_YOLO_ON_STARTUP=true to load on startup.")
+
+def process_image(image_data, max_size=1280):
+    """Process image data from base64 string with memory optimization"""
     # Remove data URL prefix if present
     if ',' in image_data:
         image_data = image_data.split(',')[1]
@@ -196,8 +255,24 @@ def process_image(image_data):
     if image.mode != 'RGB':
         image = image.convert('RGB')
     
+    # Resize image if too large to save memory (face detection doesn't need full resolution)
+    width, height = image.size
+    if max(width, height) > max_size:
+        # Calculate new size maintaining aspect ratio
+        if width > height:
+            new_width = max_size
+            new_height = int(height * (max_size / width))
+        else:
+            new_height = max_size
+            new_width = int(width * (max_size / height))
+        image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        print(f"  📐 Resized image from {width}x{height} to {new_width}x{new_height} to save memory")
+    
     # Convert to numpy array
     image_array = np.array(image)
+    
+    # Explicitly delete the PIL image to free memory
+    del image
     
     return image_array
 
@@ -208,17 +283,26 @@ def detect_faces_yolo(image: np.ndarray) -> Dict[str, dict]:
     keys: 'score' and 'facial_area' [x1,y1,x2,y2].
     """
     try:
+        # Check if YOLO is disabled via environment variable
+        if os.getenv('DISABLE_YOLO', 'false').lower() == 'true':
+            print("  ⚠️  YOLO disabled via DISABLE_YOLO environment variable")
+            return {}
+        
         model = _get_yolo_model()
         if model is None:
             return {}
 
-        # Inference settings tuned for faces
+        # Inference settings tuned for faces - use smaller image size to save memory
+        # Default to 640 instead of larger sizes
         infer_imgsz = int(os.getenv('YOLO_IMGSZ', os.getenv('YOLO_FACE_IMGSZ', '640')))
+        # Cap at 640 to save memory
+        infer_imgsz = min(infer_imgsz, 640)
         conf_thr = float(os.getenv('YOLO_CONF', os.getenv('YOLO_FACE_CONF', '0.25')))
         iou_thr = float(os.getenv('YOLO_IOU', os.getenv('YOLO_FACE_IOU', '0.5')))
 
         # Run inference (Ultralytics accepts numpy arrays in RGB)
-        results = model.predict(image, imgsz=infer_imgsz, conf=conf_thr, iou=iou_thr, agnostic_nms=False, verbose=False)
+        # Use device='cpu' explicitly to avoid GPU memory issues
+        results = model.predict(image, imgsz=infer_imgsz, conf=conf_thr, iou=iou_thr, agnostic_nms=False, verbose=False, device='cpu')
         if not results:
             return {}
 
@@ -229,10 +313,10 @@ def detect_faces_yolo(image: np.ndarray) -> Dict[str, dict]:
         if boxes is None or len(boxes) == 0:
             try:
                 retry_imgsz = max(640, int(infer_imgsz * 1.5))
-                retry_imgsz = min(1280, retry_imgsz)
+                retry_imgsz = min(640, retry_imgsz)  # Cap at 640 to save memory
                 retry_conf = min(0.20, conf_thr * 0.7)
                 retry_iou = max(0.45, iou_thr * 0.9)
-                results = model.predict(image, imgsz=retry_imgsz, conf=retry_conf, iou=retry_iou, agnostic_nms=False, verbose=False)
+                results = model.predict(image, imgsz=retry_imgsz, conf=retry_conf, iou=retry_iou, agnostic_nms=False, verbose=False, device='cpu')
                 if not results:
                     return {}
                 res = results[0]
@@ -774,6 +858,15 @@ def ping():
         'message': 'Python AI service is responding'
     })
 
+@app.route('/health', methods=['GET'])
+def health():
+    """Lightweight health check endpoint for load balancers"""
+    return jsonify({
+        'status': 'healthy',
+        'service': 'python-ai-face-detection',
+        'timestamp': time.time()
+    }), 200
+
 @app.route('/test-connection', methods=['GET', 'POST'])
 def test_connection():
     """Test endpoint for guard dashboard to verify API connection"""
@@ -886,12 +979,18 @@ def upload_image():
                         'confidence': float(face_data.get('score', 0.0)),
                         'bbox': [int(x) for x in face_data.get('facial_area', [])]
                     })
-            return jsonify({
+            result = jsonify({
                 'success': False,
                 'faces_detected': len(partial_faces),
                 'faces': partial_faces,
                 'message': 'Face not full. Please center your face fully within the frame.'
             }), 200
+            
+            # Clean up memory before returning
+            del image
+            gc.collect()
+            
+            return result
         
         # Extract features from the first (and only) detected face
         first_face = list(faces.values())[0]
@@ -919,14 +1018,22 @@ def upload_image():
         # Get confidence for message
         confidence = face_data['score']
         
-        return jsonify({
+        result = jsonify({
             'success': True,
             'faces_detected': len(faces),
             'faces': face_results,
             'message': f'Image uploaded and best face detected successfully (confidence: {confidence:.1%})'
         })
         
+        # Clean up memory after processing
+        del image
+        gc.collect()
+        
+        return result
+        
     except Exception as e:
+        # Clean up memory even on error
+        gc.collect()
         return jsonify({'error': f'Error processing image: {str(e)}'}), 500
 
 @app.route('/compare', methods=['POST'])
@@ -976,7 +1083,7 @@ def compare_faces():
         # Compare faces
         is_match, similarity = compare_face_features(uploaded_face_features, camera_face_features)
         
-        return jsonify({
+        result = jsonify({
             'match': bool(is_match),
             'confidence': float(similarity),
             'distance': float(1 - similarity),
@@ -984,7 +1091,15 @@ def compare_faces():
             'face_confidence': float(first_face.get('score', 0.0))
         })
         
+        # Clean up memory after processing
+        del image
+        gc.collect()
+        
+        return result
+        
     except Exception as e:
+        # Clean up memory even on error
+        gc.collect()
         return jsonify({'error': f'Error comparing faces: {str(e)}'}), 500
 
 @app.route('/metrics/analyze-image', methods=['POST'])
@@ -998,8 +1113,16 @@ def metrics_analyze_image():
         # Lazy import to avoid circulars
         from metrics import analyze_image_with_both_algorithms
         results = analyze_image_with_both_algorithms(image)
-        return jsonify(results)
+        result = jsonify(results)
+        
+        # Clean up memory after processing
+        del image
+        gc.collect()
+        
+        return result
     except Exception as e:
+        # Clean up memory even on error
+        gc.collect()
         return jsonify({'error': f'Error analyzing image: {str(e)}'}), 500
 
 @app.route('/metrics/verify-images', methods=['POST'])
@@ -1053,14 +1176,23 @@ def metrics_verify_images():
             is_match, similarity = compare_face_features(base_feat, probe_feat)
             distance = float(1.0 - float(similarity))
 
-        return jsonify({
+        result = jsonify({
             'base': base_info,
             'probe': probe_info,
             'match': bool(is_match),
             'similarity': float(similarity),
             'distance': float(distance)
         })
+        
+        # Clean up memory after processing
+        del base_img
+        del probe_img
+        gc.collect()
+        
+        return result
     except Exception as e:
+        # Clean up memory even on error
+        gc.collect()
         return jsonify({'error': f'Error verifying images: {str(e)}'}), 500
 
 @app.route('/detect-face-base64', methods=['POST'])
@@ -1109,12 +1241,20 @@ def detect_face_base64():
                 
                 blazeface_faces.append(blazeface_face)
         
-        return jsonify({
+        result = jsonify({
             'success': True,
             'faces': blazeface_faces
         }), 200
         
+        # Clean up memory after processing
+        del image
+        gc.collect()
+        
+        return result
+        
     except Exception as e:
+        # Clean up memory even on error
+        gc.collect()
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':

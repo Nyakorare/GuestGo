@@ -1167,6 +1167,11 @@ export async function setupEventListeners() {
     currentCode = null;
     (window as any).modalEnableVerificationInputs?.();
     updateSubmitButtonState();
+    
+    // Re-validate date to check weekly visit limits with new email
+    if (typeof (window as any).validateVisitDate === 'function') {
+      await (window as any).validateVisitDate();
+    }
 
     // Clear previous status messages
     if (emailValidationStatus) {
@@ -1367,6 +1372,11 @@ export async function setupEventListeners() {
           emailValidationStatus.className = 'mt-1 text-sm text-green-600';
         }
       }
+    }
+    
+    // Re-validate date to check weekly visit limits with new email
+    if (typeof (window as any).validateVisitDate === 'function') {
+      await (window as any).validateVisitDate();
     }
   });
 
@@ -2125,7 +2135,7 @@ export async function setupEventListeners() {
       // Get submit button reference
       const scheduleSubmitBtnLocal = document.getElementById('scheduleSubmitBtn') as HTMLButtonElement;
       
-      // Check if selected date matches any unavailable dates for selected places
+      // Get selected places for validation
       // Reuse placeToVisitSelect already declared above
       let selectedPlaceIds: string[] = [];
       if (placeToVisitSelect?.value === 'multiple') {
@@ -2134,6 +2144,134 @@ export async function setupEventListeners() {
       } else if (placeToVisitSelect?.value) {
         selectedPlaceIds = [placeToVisitSelect.value];
       }
+      
+      // Check place visit limits for selected places and date
+      if (selectedPlaceIds.length > 0 && visitDateInput.value) {
+        const selectedDateStr = philippineSelectedDate.toISOString().split('T')[0];
+        let placeLimitError = '';
+        let hasPlaceLimitError = false;
+        
+        for (const placeId of selectedPlaceIds) {
+          try {
+            const { data: limitCheck, error: limitError } = await supabase.rpc('check_place_weekly_visit_limit', {
+              p_place_id: placeId,
+              p_visit_date: selectedDateStr
+            });
+            
+            if (limitError) {
+              console.error('Error checking visit limit for place:', placeId, limitError);
+              // Continue checking other places even if one fails
+            } else if (!limitCheck) {
+              // Get place name for error message
+              const placesWithAvailability = (window as any).placesWithAvailability;
+              const place = placesWithAvailability?.find((p: any) => p.id === placeId);
+              const placeName = place?.name || 'this place';
+              
+              hasPlaceLimitError = true;
+              placeLimitError = `❌ ${placeName} has reached its visit limit for this date. Please choose a different place or date.`;
+              break; // Stop checking once we find a limit issue
+            }
+          } catch (error) {
+            console.error('Exception checking place visit limit:', error);
+          }
+        }
+        
+        if (hasPlaceLimitError) {
+          visitDateInput.classList.add('border-red-500', 'focus:border-red-500');
+          if (dateValidationStatus) {
+            dateValidationStatus.textContent = placeLimitError;
+            dateValidationStatus.className = 'mt-1 text-sm text-red-600 font-medium';
+          }
+          if (scheduleSubmitBtnLocal) {
+            scheduleSubmitBtnLocal.disabled = true;
+          }
+          return false;
+        }
+      }
+      
+      // Check weekly visit limit (2 visits per week per user/email)
+      if (visitDateInput.value && (userId || userEmail)) {
+        try {
+          // Calculate week start and end for the selected date
+          const selectedDateForWeek = new Date(philippineSelectedDate);
+          const dayOfWeek = selectedDateForWeek.getDay(); // 0 = Sunday, 6 = Saturday
+          const weekStart = new Date(selectedDateForWeek);
+          weekStart.setDate(weekStart.getDate() - dayOfWeek);
+          weekStart.setHours(0, 0, 0, 0);
+          
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekEnd.getDate() + 6);
+          weekEnd.setHours(23, 59, 59, 999);
+          
+          // Only check visits from today onwards (not past visits)
+          const weekStartForQuery = weekStart.getTime() < currentPhilippineDate.getTime() 
+            ? currentPhilippineDate 
+            : weekStart;
+          
+          const weekStartStr = weekStartForQuery.toISOString().split('T')[0];
+          const weekEndStr = weekEnd.toISOString().split('T')[0];
+          
+          let weeklyVisitCount = 0;
+          
+          if (userId) {
+            // Check by user_id
+            const { data: visits, error: visitError } = await supabase
+              .from('scheduled_visits')
+              .select('id')
+              .eq('visitor_user_id', userId)
+              .gte('visit_date', weekStartStr)
+              .lte('visit_date', weekEndStr)
+              .in('status', ['pending', 'completed', 'completed_flagged']);
+            
+            if (visitError) {
+              console.error('Error checking weekly visit limit:', visitError);
+            } else {
+              weeklyVisitCount = visits?.length || 0;
+            }
+          } else if (userEmail) {
+            // Check by email
+            const { data: visits, error: visitError } = await supabase
+              .from('scheduled_visits')
+              .select('id')
+              .eq('visitor_email', userEmail)
+              .gte('visit_date', weekStartStr)
+              .lte('visit_date', weekEndStr)
+              .in('status', ['pending', 'completed', 'completed_flagged']);
+            
+            if (visitError) {
+              console.error('Error checking weekly visit limit:', visitError);
+            } else {
+              weeklyVisitCount = visits?.length || 0;
+            }
+          }
+          
+          if (weeklyVisitCount >= 2) {
+            visitDateInput.classList.add('border-red-500', 'focus:border-red-500');
+            if (dateValidationStatus) {
+              dateValidationStatus.textContent = `❌ You have reached your weekly visit limit (2 visits per week). You already have ${weeklyVisitCount} visit(s) scheduled for this week. Please choose a different week.`;
+              dateValidationStatus.className = 'mt-1 text-sm text-red-600 font-medium';
+            }
+            if (scheduleSubmitBtnLocal) {
+              scheduleSubmitBtnLocal.disabled = true;
+            }
+            return false;
+          } else if (weeklyVisitCount === 1) {
+            // Warning: one more visit allowed
+            if (dateValidationStatus && !dateValidationStatus.textContent.includes('❌')) {
+              const existingText = dateValidationStatus.textContent || '';
+              if (!existingText.includes('weekly visit limit')) {
+                visitDateInput.classList.add('border-yellow-500', 'focus:border-yellow-500');
+                dateValidationStatus.textContent = `${existingText ? existingText + ' ' : ''}⚠️ You have 1 visit scheduled this week. You can schedule 1 more visit.`;
+                dateValidationStatus.className = 'mt-1 text-sm text-yellow-600 font-medium';
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Exception checking weekly visit limit:', error);
+        }
+      }
+      
+      // Check if selected date matches any unavailable dates for selected places
       
       let hasUnavailableDate = false;
       let unavailableWarning = '';
@@ -2202,19 +2340,39 @@ export async function setupEventListeners() {
         return true;
       }
 
-      // Valid future date
+      // Valid future date - only show success if no errors or warnings
       if (hasUnavailableDate) {
         visitDateInput.classList.add('border-orange-500', 'focus:border-orange-500');
         if (dateValidationStatus) {
-          dateValidationStatus.textContent = `${unavailableWarning} Cannot schedule on this date.`;
-          dateValidationStatus.className = 'mt-1 text-sm text-orange-600 font-medium';
+          // Only overwrite if there's no critical error message already
+          if (!dateValidationStatus.textContent.includes('❌')) {
+            dateValidationStatus.textContent = `${unavailableWarning} Cannot schedule on this date.`;
+            dateValidationStatus.className = 'mt-1 text-sm text-orange-600 font-medium';
+          }
         }
         return false; // Return false to prevent scheduling
       } else {
-        visitDateInput.classList.add('border-green-500', 'focus:border-green-500');
-        if (dateValidationStatus) {
-          dateValidationStatus.textContent = `✅ Valid date selected: ${philippineSelectedDate.toLocaleDateString()}.`;
-          dateValidationStatus.className = 'mt-1 text-sm text-green-600 font-medium';
+        // Only show success message if there are no error messages
+        if (dateValidationStatus && !dateValidationStatus.textContent.includes('❌')) {
+          // Check if we already have a warning message (weekly limit at 1)
+          if (!dateValidationStatus.textContent.includes('⚠️') || dateValidationStatus.textContent.includes('weekly visit limit')) {
+            visitDateInput.classList.add('border-green-500', 'focus:border-green-500');
+            // Only show generic success if we don't have a specific message already
+            if (!dateValidationStatus.textContent || dateValidationStatus.textContent.includes('Valid date selected')) {
+              dateValidationStatus.textContent = `✅ Valid date selected: ${philippineSelectedDate.toLocaleDateString()}.`;
+              dateValidationStatus.className = 'mt-1 text-sm text-green-600 font-medium';
+            }
+          } else {
+            // Keep the warning message but ensure border is appropriate
+            visitDateInput.classList.add('border-yellow-500', 'focus:border-yellow-500');
+          }
+        } else if (!dateValidationStatus || !dateValidationStatus.textContent.includes('❌')) {
+          // No status element or no error, show success
+          visitDateInput.classList.add('border-green-500', 'focus:border-green-500');
+          if (dateValidationStatus) {
+            dateValidationStatus.textContent = `✅ Valid date selected: ${philippineSelectedDate.toLocaleDateString()}.`;
+            dateValidationStatus.className = 'mt-1 text-sm text-green-600 font-medium';
+          }
         }
       }
       
@@ -3516,6 +3674,9 @@ export async function updatePlaceAvailabilityForDate(visitDate: string) {
   // Update the dropdown options
   const placeToVisitSelect = document.getElementById('placeToVisit') as HTMLSelectElement;
   if (placeToVisitSelect) {
+    // Save the currently selected value before clearing
+    const previouslySelectedValue = placeToVisitSelect.value;
+    
     // Clear existing options except the first one
     placeToVisitSelect.innerHTML = '<option value="">Select a place</option>';
     
@@ -3550,21 +3711,100 @@ export async function updatePlaceAvailabilityForDate(visitDate: string) {
       multipleOption.textContent = 'Multiple Places';
     }
     placeToVisitSelect.appendChild(multipleOption);
+    
+    // Restore the previously selected value if it's still valid and available
+    if (previouslySelectedValue) {
+      if (previouslySelectedValue === 'multiple') {
+        // For multiple places, check if the option is still enabled
+        if (!multipleOption.disabled) {
+          placeToVisitSelect.value = 'multiple';
+          // Ensure multiple places container is visible (already updated above)
+          const multiplePlacesContainer = document.getElementById('multiplePlacesContainer');
+          if (multiplePlacesContainer) {
+            multiplePlacesContainer.classList.remove('hidden');
+          }
+          // Manually update dependent fields without triggering full change event
+          // (to avoid rebuilding the container we just updated)
+          if (typeof (window as any).updatePurposeFieldState === 'function') {
+            await (window as any).updatePurposeFieldState();
+          }
+          if (typeof (window as any).updateVisitDateFieldState === 'function') {
+            (window as any).updateVisitDateFieldState();
+          }
+          await updateUnavailableDatesDisplay();
+          updateSubmitButtonState();
+        }
+      } else {
+        // For single place, check if it still exists and is available
+        const selectedPlace = updatedPlaces.find(p => p.id === previouslySelectedValue);
+        if (selectedPlace && selectedPlace.is_available) {
+          placeToVisitSelect.value = previouslySelectedValue;
+          // Trigger change event to update dependent fields for single place
+          const changeEvent = new Event('change', { bubbles: true });
+          placeToVisitSelect.dispatchEvent(changeEvent);
+        }
+      }
+    }
   }
 
   // Update multiple places checkboxes if the container is visible
   const multiplePlacesContainer = document.getElementById('multiplePlacesContainer');
   if (multiplePlacesContainer && !multiplePlacesContainer.classList.contains('hidden')) {
+    // Save currently checked place IDs before clearing
+    const previouslyCheckedPlaceIds = Array.from(
+      multiplePlacesContainer.querySelectorAll('input[name="places"]:checked')
+    ).map((checkbox) => (checkbox as HTMLInputElement).value);
+    
     multiplePlacesContainer.innerHTML = '';
     
     updatedPlaces.forEach(place => {
       const checkboxDiv = document.createElement('div');
       checkboxDiv.className = 'flex items-center';
+      const isChecked = previouslyCheckedPlaceIds.includes(place.id) && place.is_available;
       checkboxDiv.innerHTML = `
-        <input type="checkbox" id="place_${place.id}" name="places" value="${place.id}" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" ${!place.is_available ? 'disabled' : ''}>
+        <input type="checkbox" id="place_${place.id}" name="places" value="${place.id}" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" ${!place.is_available ? 'disabled' : ''} ${isChecked ? 'checked' : ''}>
         <label for="place_${place.id}" class="ml-2 block text-sm ${place.is_available ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-500'}">${place.name}${!place.is_available ? ` (${place.unavailability_reason || 'currently unavailable'})` : ''}</label>
       `;
       multiplePlacesContainer.appendChild(checkboxDiv);
     });
+    
+    // Re-attach event listeners for the checkboxes if needed
+    const checkboxes = multiplePlacesContainer.querySelectorAll('input[name="places"]');
+    checkboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', async () => {
+        await updateUnavailableDatesDisplay();
+        // Re-validate the date when place selection changes
+        if (typeof (window as any).validateVisitDate === 'function') {
+          await (window as any).validateVisitDate();
+        }
+        // Update purpose field state when checkbox selection changes
+        if (typeof (window as any).updatePurposeFieldState === 'function') {
+          await (window as any).updatePurposeFieldState();
+        }
+        // Update visit date field state
+        if (typeof (window as any).updateVisitDateFieldState === 'function') {
+          (window as any).updateVisitDateFieldState();
+        }
+        
+        // Re-validate the date if one is already selected
+        const visitDateInput = document.getElementById('visitDate') as HTMLInputElement;
+        if (visitDateInput && visitDateInput.value) {
+          if (typeof (window as any).validateVisitDate === 'function') {
+            await (window as any).validateVisitDate();
+          }
+        }
+        
+        // Update submit button state
+        updateSubmitButtonState();
+      });
+    });
+  }
+  
+  // Re-validate date after updating place availability to check place limits
+  const visitDateInput = document.getElementById('visitDate') as HTMLInputElement;
+  if (visitDateInput && visitDateInput.value) {
+    if (typeof (window as any).validateVisitDate === 'function') {
+      await (window as any).validateVisitDate();
+    }
   }
 } 

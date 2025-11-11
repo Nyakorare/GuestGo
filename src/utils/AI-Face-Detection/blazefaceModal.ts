@@ -949,18 +949,21 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
   // Check if Python AI service is available and can communicate bidirectionally
   let isCheckingServiceHealth = false; // Guard to prevent concurrent checks
   let healthCheckCache: { result: boolean; timestamp: number; apiUrl: string } | null = null;
-  const HEALTH_CHECK_CACHE_TTL = 10000; // Cache for 10 seconds
+  const HEALTH_CHECK_CACHE_TTL = 10000; // Cache for 10 seconds when service is available
+  const HEALTH_CHECK_FAILURE_CACHE_TTL = 60000; // Cache for 60 seconds when service is unavailable (to prevent spam)
   let lastCorsErrorLog = 0;
   const CORS_ERROR_LOG_INTERVAL = 30000; // Only log CORS errors once every 30 seconds
   
   async function checkPythonServiceHealth(retryWithOtherApi: boolean = false): Promise<boolean> {
-    // Prevent concurrent health checks
+      // Prevent concurrent health checks
     if (isCheckingServiceHealth && !retryWithOtherApi) {
       // Return cached result if available and not expired
-      if (healthCheckCache && 
-          Date.now() - healthCheckCache.timestamp < HEALTH_CHECK_CACHE_TTL &&
-          healthCheckCache.apiUrl === currentApiUrl) {
-        return healthCheckCache.result;
+      if (healthCheckCache) {
+        const cacheAge = Date.now() - healthCheckCache.timestamp;
+        const cacheTTL = healthCheckCache.result ? HEALTH_CHECK_CACHE_TTL : HEALTH_CHECK_FAILURE_CACHE_TTL;
+        if (cacheAge < cacheTTL && healthCheckCache.apiUrl === currentApiUrl) {
+          return healthCheckCache.result;
+        }
       }
       return false;
     }
@@ -968,7 +971,9 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
     // Check cache first (unless retrying with other API)
     if (!retryWithOtherApi && healthCheckCache) {
       const cacheAge = Date.now() - healthCheckCache.timestamp;
-      if (cacheAge < HEALTH_CHECK_CACHE_TTL && healthCheckCache.apiUrl === currentApiUrl) {
+      // Use longer cache TTL for failures to prevent spam
+      const cacheTTL = healthCheckCache.result ? HEALTH_CHECK_CACHE_TTL : HEALTH_CHECK_FAILURE_CACHE_TTL;
+      if (cacheAge < cacheTTL && healthCheckCache.apiUrl === currentApiUrl) {
         return healthCheckCache.result;
       }
     }
@@ -1005,7 +1010,16 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
       
       if (!statusResult) {
         updateServiceStatus(false, 'AI service not responding');
+        // Cache failure for longer to prevent spam
         healthCheckCache = { result: false, timestamp: Date.now(), apiUrl: currentApiUrl };
+        // Stop live detection if it's running
+        if (isLiveDetectionActive) {
+          isLiveDetectionActive = false;
+          if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+          }
+        }
         return false;
       }
       
@@ -1071,8 +1085,25 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
       }
       
       updateServiceStatus(false, 'AI service unavailable - face detection disabled');
-      // Cache the failure result to prevent repeated checks
+      // Cache the failure result for longer to prevent repeated checks
       healthCheckCache = { result: false, timestamp: Date.now(), apiUrl: currentApiUrl };
+      // Stop live detection if it's running
+      if (isLiveDetectionActive) {
+        isLiveDetectionActive = false;
+        if (animationFrameId) {
+          cancelAnimationFrame(animationFrameId);
+          animationFrameId = null;
+        }
+        // Show manual capture option
+        const captureBtn = document.getElementById('faceCaptureBtn') as HTMLButtonElement;
+        if (captureBtn) {
+          captureBtn.classList.remove('hidden');
+        }
+        const statusEl = document.getElementById('faceStatus');
+        if (statusEl) {
+          statusEl.textContent = 'AI service unavailable. Click "Take Photo" to capture your face manually.';
+        }
+      }
       return false;
     } finally {
       isCheckingServiceHealth = false;
