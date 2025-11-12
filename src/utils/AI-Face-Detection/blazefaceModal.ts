@@ -507,12 +507,14 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
           // Service not available - show manual capture option
           console.log('AI service not available, showing manual capture');
           captureBtn.classList.remove('hidden');
+          captureBtn.disabled = false;
           statusEl.textContent = 'AI service not available. Click "Take Photo" to capture your face manually.';
           faceLegend.classList.add('hidden'); // Hide legend since detection is disabled
         }
       } else {
         console.log('Video not ready, showing manual capture button');
         captureBtn.classList.remove('hidden');
+        captureBtn.disabled = false;
         statusEl.textContent = 'Camera ready. Click "Take Photo" to capture your face.';
       }
     }, 1000);
@@ -1098,6 +1100,7 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
         const captureBtn = document.getElementById('faceCaptureBtn') as HTMLButtonElement;
         if (captureBtn) {
           captureBtn.classList.remove('hidden');
+          captureBtn.disabled = false;
         }
         const statusEl = document.getElementById('faceStatus');
         if (statusEl) {

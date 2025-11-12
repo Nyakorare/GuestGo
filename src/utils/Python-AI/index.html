@@ -27,8 +27,16 @@
         border-radius: 9999px;
         border: 3px solid rgba(15, 23, 42, 0.12);
         border-top-color: #2563eb;
-            animation: spin 1s linear infinite;
-        }
+        animation: spin 1s linear infinite;
+      }
+      
+      .dark .spinner {
+        border-color: rgba(15, 23, 42, 0.12);
+      }
+      
+      :not(.dark) .spinner {
+        border-color: rgba(15, 23, 42, 0.2);
+      }
 
         @keyframes spin {
         to {
@@ -104,30 +112,30 @@
                 <h1 class="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">GuestGo ↔️ AI service status</h1>
                 <p id="statusSubheading" class="mt-1 text-sm text-slate-500 dark:text-gray-400">Live status between the main GuestGo app and this Render deployment.</p>
                         </div>
-              <div class="flex flex-col items-end gap-3 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-gray-500">
-                <div id="environmentBadge" class="inline-flex items-center gap-2 rounded-full border border-slate-200 dark:border-gray-700 bg-slate-100 dark:bg-gray-800 px-3 py-1 text-[0.7rem] text-slate-600 dark:text-gray-300">
+              <div class="flex flex-col items-end gap-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-gray-500">
+                <div id="environmentBadge" class="inline-flex items-center gap-2 rounded-full border border-slate-300 dark:border-gray-700 bg-slate-100 dark:bg-gray-800 px-3 py-1 text-[0.7rem] text-slate-700 dark:text-gray-300">
                   Environment: Detecting…
                         </div>
-                <div class="inline-flex items-center gap-1 text-[0.65rem] text-slate-400 dark:text-gray-500">
+                <div class="inline-flex items-center gap-1 text-[0.65rem] text-slate-500 dark:text-gray-500">
                   Last checked:
-                  <span id="statusLastChecked" class="font-medium text-slate-500 dark:text-gray-400">—</span>
+                  <span id="statusLastChecked" class="font-medium text-slate-600 dark:text-gray-400">—</span>
                         </div>
                         </div>
                         </div>
             <div class="px-8 py-7">
-              <div id="statusCard" class="flex items-center gap-4 rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-5 py-4 shadow-sm">
+              <div id="statusCard" class="flex items-center gap-4 rounded-xl border border-slate-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-5 py-4 shadow-sm">
                 <span class="spinner"></span>
                 <div class="text-sm font-medium text-slate-600 dark:text-gray-300">Checking connectivity…</div>
                         </div>
 
               <div class="mt-5 grid gap-4 md:grid-cols-2" id="environmentPanels">
-                <div id="localStatusSection" class="hidden rounded-2xl border border-slate-200 dark:border-gray-700 bg-slate-50/90 dark:bg-gray-800/90 px-5 py-4 shadow-sm">
+                <div id="localStatusSection" class="hidden rounded-2xl border border-slate-300 dark:border-gray-700 bg-slate-100/90 dark:bg-gray-800/90 px-5 py-4 shadow-sm">
                   <div class="flex items-start gap-3">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 dark:bg-gray-700 text-xs font-semibold uppercase tracking-wide text-white">Local</div>
+                    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-800 dark:bg-gray-700 text-xs font-semibold uppercase tracking-wide text-white">Local</div>
                     <div>
-                      <p class="text-sm font-semibold text-slate-800 dark:text-gray-200">Local development mode</p>
-                      <p class="mt-1 text-xs text-slate-500 dark:text-gray-400">Main app expected at <span id="localMainAppUrl" class="font-semibold text-slate-700 dark:text-gray-300">http://localhost:5173/</span></p>
-                      <p class="mt-1 text-xs text-slate-500 dark:text-gray-400">Keep Vite running to confirm bidirectional callbacks.</p>
+                      <p class="text-sm font-semibold text-slate-900 dark:text-gray-200">Local development mode</p>
+                      <p class="mt-1 text-xs text-slate-600 dark:text-gray-400">Main app expected at <span id="localMainAppUrl" class="font-semibold text-slate-800 dark:text-gray-300">http://localhost:5173/</span></p>
+                      <p class="mt-1 text-xs text-slate-600 dark:text-gray-400">Keep Vite running to confirm bidirectional callbacks.</p>
                     </div>
                   </div>
                 </div>
@@ -144,28 +152,28 @@
               </div>
 
               <div id="modelInfo" class="mt-6 hidden grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <div class="rounded-2xl border border-slate-200 dark:border-gray-700 bg-slate-50/80 dark:bg-gray-800/80 px-5 py-4 shadow-sm">
-                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-gray-400">API status</p>
+                <div class="rounded-2xl border border-slate-300 dark:border-gray-700 bg-white dark:bg-gray-800/80 px-5 py-4 shadow-sm">
+                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-gray-400">API status</p>
                   <p id="apiStatusValue" class="mt-2 text-lg font-semibold text-slate-900 dark:text-white">-</p>
                 </div>
-                <div class="rounded-2xl border border-slate-200 dark:border-gray-700 bg-slate-50/80 dark:bg-gray-800/80 px-5 py-4 shadow-sm">
-                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-gray-400">Main app connected</p>
+                <div class="rounded-2xl border border-slate-300 dark:border-gray-700 bg-white dark:bg-gray-800/80 px-5 py-4 shadow-sm">
+                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-gray-400">Main app connected</p>
                   <p id="mainAppValue" class="mt-2 text-lg font-semibold text-slate-900 dark:text-white">-</p>
                 </div>
-                <div class="rounded-2xl border border-slate-200 dark:border-gray-700 bg-slate-50/80 dark:bg-gray-800/80 px-5 py-4 shadow-sm">
-                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-gray-400">Main app URL</p>
+                <div class="rounded-2xl border border-slate-300 dark:border-gray-700 bg-white dark:bg-gray-800/80 px-5 py-4 shadow-sm">
+                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-gray-400">Main app URL</p>
                   <p id="mainAppUrlValue" class="mt-2 text-sm font-semibold text-blue-600 dark:text-blue-400 break-words">-</p>
                 </div>
-                <div class="rounded-2xl border border-slate-200 dark:border-gray-700 bg-slate-50/80 dark:bg-gray-800/80 px-5 py-4 shadow-sm">
-                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-gray-400">API version</p>
+                <div class="rounded-2xl border border-slate-300 dark:border-gray-700 bg-white dark:bg-gray-800/80 px-5 py-4 shadow-sm">
+                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-gray-400">API version</p>
                   <p id="apiVersionValue" class="mt-2 text-lg font-semibold text-slate-900 dark:text-white">-</p>
                 </div>
-                <div class="rounded-2xl border border-slate-200 dark:border-gray-700 bg-slate-50/80 dark:bg-gray-800/80 px-5 py-4 shadow-sm">
-                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-gray-400">Endpoints</p>
+                <div class="rounded-2xl border border-slate-300 dark:border-gray-700 bg-white dark:bg-gray-800/80 px-5 py-4 shadow-sm">
+                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-gray-400">Endpoints</p>
                   <p id="endpointsValue" class="mt-2 text-lg font-semibold text-slate-900 dark:text-white">-</p>
                 </div>
-                <div class="rounded-2xl border border-slate-200 dark:border-gray-700 bg-slate-50/80 dark:bg-gray-800/80 px-5 py-4 shadow-sm">
-                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-gray-400">Bidirectional</p>
+                <div class="rounded-2xl border border-slate-300 dark:border-gray-700 bg-white dark:bg-gray-800/80 px-5 py-4 shadow-sm">
+                  <p class="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-gray-400">Bidirectional</p>
                   <p id="bidirectionalValue" class="mt-2 text-lg font-semibold text-slate-900 dark:text-white">-</p>
                 </div>
               </div>
@@ -191,63 +199,200 @@
               <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-blue-600 dark:text-blue-400">
                 <span>Step 1</span>
                 <span class="h-px w-8 bg-blue-200 dark:bg-blue-700"></span>
-                <span>Enrollment</span>
+                <span>Models &amp; Technologies</span>
               </div>
               <div class="mt-3 flex flex-col gap-2">
-                <h2 class="text-2xl font-semibold text-slate-900 dark:text-white">Enroll a face with YOLOv8 detection</h2>
-                <p class="text-sm text-slate-500 dark:text-gray-400">Upload a clear photo or use your webcam to create a high-quality template before verification.</p>
+                <h2 class="text-2xl font-semibold text-slate-900 dark:text-white">Face Detection Models Used</h2>
+                <p class="text-sm text-slate-500 dark:text-gray-400">This service utilizes state-of-the-art machine learning models for accurate face detection and recognition.</p>
               </div>
             </div>
             <div class="px-8 py-7">
-              <div class="grid gap-6 md:grid-cols-2">
-                <div
-                  id="uploadArea"
-                  class="group relative flex cursor-pointer flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-blue-300 dark:border-blue-700 bg-white/80 dark:bg-gray-800/80 px-8 py-12 text-center shadow-sm transition hover:border-blue-500 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30"
-                >
-                  <div class="flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/50 text-3xl text-blue-600 dark:text-blue-400 shadow-inner shadow-blue-200 dark:shadow-blue-900/50">📁</div>
-                  <div class="space-y-1">
-                    <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Upload a reference image</h3>
-                    <p class="text-sm text-slate-500 dark:text-gray-400">Supported formats: JPG, PNG, GIF • Ideal size ≥ 640px</p>
-                        </div>
-                  <div class="rounded-full bg-slate-100 dark:bg-gray-700 px-3 py-1 text-xs font-semibold text-slate-500 dark:text-gray-300">Click or drag &amp; drop</div>
-                  <input type="file" id="fileInput" accept="image/*" class="hidden" />
-                            </div>
-                <div class="flex flex-col gap-4 rounded-2xl border border-blue-300 dark:border-blue-800 bg-white/85 dark:bg-gray-800/85 px-6 py-7 shadow-sm">
-                  <div class="flex items-center gap-3">
-                    <div class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 dark:bg-blue-500 text-3xl text-white">
-                      🎥
-                        </div>
-                    <div>
-                      <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Capture from webcam</h3>
-                      <p class="text-sm text-slate-500 dark:text-gray-400">Live capture leverages YOLOv8 face detection and keeps sampling until we get a full-face image.</p>
+              <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <div class="rounded-2xl border border-blue-200 dark:border-blue-800 bg-blue-50/90 dark:bg-blue-900/30 px-6 py-6 shadow-sm">
+                  <div class="flex items-center gap-3 mb-4">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 dark:bg-blue-500 text-2xl text-white">
+                      🤖
                     </div>
+                    <h3 class="text-lg font-semibold text-slate-900 dark:text-white">YOLOv8 / YOLO11</h3>
                   </div>
-                  <div class="flex flex-wrap gap-2">
-                    <button
-                      id="startEnroll"
-                      class="inline-flex items-center gap-2 rounded-full bg-blue-600 dark:bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:bg-blue-700 dark:hover:bg-blue-600"
-                      type="button"
-                    >
-                      Start enrollment camera
-                    </button>
-                    <button
-                      id="stopEnroll"
-                      class="inline-flex items-center gap-2 rounded-full bg-rose-500 dark:bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-400/30 transition hover:bg-rose-600 dark:hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-rose-300 dark:disabled:bg-rose-800"
-                      type="button"
-                      disabled
-                    >
-                      Stop
-                    </button>
+                  <p class="text-sm text-slate-600 dark:text-gray-300 mb-3">
+                    <strong>Primary Detection Model</strong>
+                  </p>
+                  <ul class="text-sm text-slate-600 dark:text-gray-400 space-y-2 list-disc list-inside">
+                    <li>Ultralytics YOLO (You Only Look Once) architecture</li>
+                    <li>Real-time object detection optimized for faces</li>
+                    <li>Models: YOLOv8n-face, YOLO11n-face (nano variants for efficiency)</li>
+                    <li>Fallback to general YOLOv8n if face-specific models unavailable</li>
+                    <li>High accuracy with minimal computational overhead</li>
+                  </ul>
+                </div>
+
+                <div class="rounded-2xl border border-purple-200 dark:border-purple-800 bg-purple-50/90 dark:bg-purple-900/30 px-6 py-6 shadow-sm">
+                  <div class="flex items-center gap-3 mb-4">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-full bg-purple-600 dark:bg-purple-500 text-2xl text-white">
+                      📦
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-900 dark:text-white">OpenCV</h3>
                   </div>
-                  <div class="relative flex justify-center">
-                    <video id="enrollVideo" autoplay muted class="hidden w-full max-w-md rounded-2xl border border-slate-200 dark:border-gray-700 shadow-lg"></video>
-                    <canvas id="enrollOverlay" class="absolute top-0 left-0 hidden pointer-events-none"></canvas>
+                  <p class="text-sm text-slate-600 dark:text-gray-300 mb-3">
+                    <strong>Image Processing Library</strong>
+                  </p>
+                  <ul class="text-sm text-slate-600 dark:text-gray-400 space-y-2 list-disc list-inside">
+                    <li>Computer vision and image processing operations</li>
+                    <li>Image preprocessing and normalization</li>
+                    <li>Face region extraction and cropping</li>
+                    <li>Histogram equalization for feature enhancement</li>
+                    <li>LBP (Local Binary Pattern) feature extraction</li>
+                  </ul>
+                </div>
+
+                <div class="rounded-2xl border border-green-200 dark:border-green-800 bg-green-50/90 dark:bg-green-900/30 px-6 py-6 shadow-sm">
+                  <div class="flex items-center gap-3 mb-4">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-full bg-green-600 dark:bg-green-500 text-2xl text-white">
+                      🧮
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-900 dark:text-white">NumPy</h3>
                   </div>
-                  <div id="enrollStatus" class="text-sm dark:text-gray-300" aria-live="polite"></div>
+                  <p class="text-sm text-slate-600 dark:text-gray-300 mb-3">
+                    <strong>Numerical Computing</strong>
+                  </p>
+                  <ul class="text-sm text-slate-600 dark:text-gray-400 space-y-2 list-disc list-inside">
+                    <li>Array operations and matrix computations</li>
+                    <li>Feature vector normalization</li>
+                    <li>Correlation coefficient calculations</li>
+                    <li>Similarity metric computations</li>
+                    <li>Efficient numerical processing</li>
+                  </ul>
+                </div>
+
+                <div class="rounded-2xl border border-orange-200 dark:border-orange-800 bg-orange-50/90 dark:bg-orange-900/30 px-6 py-6 shadow-sm">
+                  <div class="flex items-center gap-3 mb-4">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-full bg-orange-600 dark:bg-orange-500 text-2xl text-white">
+                      🖼️
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Pillow (PIL)</h3>
+                  </div>
+                  <p class="text-sm text-slate-600 dark:text-gray-300 mb-3">
+                    <strong>Image Handling</strong>
+                  </p>
+                  <ul class="text-sm text-slate-600 dark:text-gray-400 space-y-2 list-disc list-inside">
+                    <li>Image format conversion and decoding</li>
+                    <li>Base64 image data processing</li>
+                    <li>Image resizing and optimization</li>
+                    <li>Color space conversions (RGB, grayscale)</li>
+                    <li>Memory-efficient image operations</li>
+                  </ul>
+                </div>
+
+                <div class="rounded-2xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/90 dark:bg-indigo-900/30 px-6 py-6 shadow-sm">
+                  <div class="flex items-center gap-3 mb-4">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-600 dark:bg-indigo-500 text-2xl text-white">
+                      🔥
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-900 dark:text-white">PyTorch</h3>
+                  </div>
+                  <p class="text-sm text-slate-600 dark:text-gray-300 mb-3">
+                    <strong>Deep Learning Framework</strong>
+                  </p>
+                  <ul class="text-sm text-slate-600 dark:text-gray-400 space-y-2 list-disc list-inside">
+                    <li>Neural network backend for YOLO models</li>
+                    <li>Tensor operations and GPU acceleration</li>
+                    <li>Model inference and prediction</li>
+                    <li>Optimized for CPU execution in production</li>
+                    <li>Memory-efficient model loading</li>
+                  </ul>
+                </div>
+
+                <div class="rounded-2xl border border-teal-200 dark:border-teal-800 bg-teal-50/90 dark:bg-teal-900/30 px-6 py-6 shadow-sm">
+                  <div class="flex items-center gap-3 mb-4">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-full bg-teal-600 dark:bg-teal-500 text-2xl text-white">
+                      🌐
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Flask</h3>
+                  </div>
+                  <p class="text-sm text-slate-600 dark:text-gray-300 mb-3">
+                    <strong>Web Framework</strong>
+                  </p>
+                  <ul class="text-sm text-slate-600 dark:text-gray-400 space-y-2 list-disc list-inside">
+                    <li>RESTful API endpoints for face detection</li>
+                    <li>Image upload and processing endpoints</li>
+                    <li>CORS support for cross-origin requests</li>
+                    <li>JSON-based communication</li>
+                    <li>Production-ready with Gunicorn</li>
+                  </ul>
                 </div>
               </div>
-              <div id="uploadStatus" class="mt-5" aria-live="polite"></div>
-              <div id="faceInfo" class="mt-6 hidden"></div>
+
+              <div class="mt-6 rounded-2xl border border-slate-200 dark:border-gray-700 bg-slate-50/90 dark:bg-gray-800/90 px-6 py-6 shadow-sm">
+                <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-3">Model Selection Strategy</h3>
+                <p class="text-sm text-slate-600 dark:text-gray-400 mb-4">
+                  The system uses a hierarchical approach to face detection:
+                </p>
+                <ol class="text-sm text-slate-600 dark:text-gray-400 space-y-2 list-decimal list-inside">
+                  <li><strong>Primary:</strong> Attempts to load YOLO face-specific models (yolov8n-face.pt, yolo11n-face.pt) for optimal accuracy</li>
+                  <li><strong>Fallback:</strong> Uses general YOLOv8n model if face-specific models are unavailable</li>
+                  <li><strong>Secondary:</strong> Falls back to MediaPipe Face Detection if YOLO fails or finds no faces</li>
+                  <li><strong>Optimization:</strong> Models are loaded lazily to conserve memory and startup time</li>
+                </ol>
+              </div>
+
+              <!-- Local Run Only: Interactive Enrollment -->
+              <div id="localEnrollmentSection" class="mt-6 hidden">
+                <div class="rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50/90 dark:bg-amber-900/30 px-6 py-4 mb-6">
+                  <p class="text-sm text-amber-800 dark:text-amber-200">
+                    <strong>Local Development Mode:</strong> Interactive enrollment tools are available below for testing.
+                  </p>
+                </div>
+                <div class="grid gap-6 md:grid-cols-2">
+                  <div
+                    id="uploadArea"
+                    class="group relative flex cursor-pointer flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-blue-300 dark:border-blue-700 bg-white/80 dark:bg-gray-800/80 px-8 py-12 text-center shadow-sm transition hover:border-blue-500 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                  >
+                    <div class="flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/50 text-3xl text-blue-600 dark:text-blue-400 shadow-inner shadow-blue-200 dark:shadow-blue-900/50">📁</div>
+                    <div class="space-y-1">
+                      <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Upload a reference image</h3>
+                      <p class="text-sm text-slate-500 dark:text-gray-400">Supported formats: JPG, PNG, GIF • Ideal size ≥ 640px</p>
+                    </div>
+                    <div class="rounded-full bg-slate-100 dark:bg-gray-700 px-3 py-1 text-xs font-semibold text-slate-500 dark:text-gray-300">Click or drag &amp; drop</div>
+                    <input type="file" id="fileInput" accept="image/*" class="hidden" />
+                  </div>
+                  <div class="flex flex-col gap-4 rounded-2xl border border-blue-300 dark:border-blue-800 bg-white/85 dark:bg-gray-800/85 px-6 py-7 shadow-sm">
+                    <div class="flex items-center gap-3">
+                      <div class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 dark:bg-blue-500 text-3xl text-white">
+                        🎥
+                      </div>
+                      <div>
+                        <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Capture from webcam</h3>
+                        <p class="text-sm text-slate-500 dark:text-gray-400">Live capture leverages YOLOv8 face detection and keeps sampling until we get a full-face image.</p>
+                      </div>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                      <button
+                        id="startEnroll"
+                        class="inline-flex items-center gap-2 rounded-full bg-blue-600 dark:bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:bg-blue-700 dark:hover:bg-blue-600"
+                        type="button"
+                      >
+                        Start enrollment camera
+                      </button>
+                      <button
+                        id="stopEnroll"
+                        class="inline-flex items-center gap-2 rounded-full bg-rose-500 dark:bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-400/30 transition hover:bg-rose-600 dark:hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-rose-300 dark:disabled:bg-rose-800"
+                        type="button"
+                        disabled
+                      >
+                        Stop
+                      </button>
+                    </div>
+                    <div class="relative flex justify-center">
+                      <video id="enrollVideo" autoplay muted class="hidden w-full max-w-md rounded-2xl border border-slate-200 dark:border-gray-700 shadow-lg"></video>
+                      <canvas id="enrollOverlay" class="absolute top-0 left-0 hidden pointer-events-none"></canvas>
+                    </div>
+                    <div id="enrollStatus" class="text-sm dark:text-gray-300" aria-live="polite"></div>
+                  </div>
+                </div>
+                <div id="uploadStatus" class="mt-5" aria-live="polite"></div>
+                <div id="faceInfo" class="mt-6 hidden"></div>
+              </div>
             </div>
           </section>
 
@@ -256,44 +401,179 @@
               <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-blue-600 dark:text-blue-400">
                 <span>Step 2</span>
                 <span class="h-px w-8 bg-blue-200 dark:bg-blue-700"></span>
-                <span>Live verification</span>
+                <span>MediaPipe Face Detection</span>
               </div>
               <div class="mt-3 flex flex-col gap-2">
-                <h2 class="text-2xl font-semibold text-slate-900 dark:text-white">Verify with MediaPipe + correlation</h2>
-                <p class="text-sm text-slate-500 dark:text-gray-400">Match the live camera feed against the enrolled template. Keep your face in the guide circle for best results.</p>
+                <h2 class="text-2xl font-semibold text-slate-900 dark:text-white">MediaPipe Library &amp; How It Works</h2>
+                <p class="text-sm text-slate-500 dark:text-gray-400">MediaPipe provides robust face detection capabilities with real-time performance and high accuracy.</p>
               </div>
             </div>
             <div class="px-8 py-7">
-              <div class="flex flex-col gap-6 md:flex-row md:items-start">
-                <div class="relative flex-1">
-                  <div class="aspect-video w-full overflow-hidden rounded-2xl border border-slate-200 dark:border-gray-700 bg-slate-900/90 dark:bg-gray-900 shadow-xl">
-                    <video id="cameraVideo" autoplay muted class="h-full w-full rounded-2xl object-cover"></video>
-                    <canvas id="cameraOverlay" class="absolute inset-0 pointer-events-none"></canvas>
+              <div class="rounded-2xl border border-blue-200 dark:border-blue-800 bg-blue-50/90 dark:bg-blue-900/30 px-6 py-6 shadow-sm mb-6">
+                <div class="flex items-center gap-3 mb-4">
+                  <div class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 dark:bg-blue-500 text-2xl text-white">
+                    📱
                   </div>
-                            <canvas id="cameraCanvas" class="hidden"></canvas>
-                        </div>
-                <div class="flex flex-1 flex-col gap-4">
-                  <div class="flex flex-wrap gap-3">
-                    <button
-                      id="startCamera"
-                      class="inline-flex items-center gap-2 rounded-full bg-blue-600 dark:bg-blue-500 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:bg-blue-700 dark:hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-gray-600"
-                      type="button"
-                    >
-                      Start camera
-                    </button>
-                    <button
-                      id="stopCamera"
-                      class="inline-flex items-center gap-2 rounded-full bg-rose-500 dark:bg-rose-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-400/30 transition hover:bg-rose-600 dark:hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-rose-300 dark:disabled:bg-rose-800"
-                      type="button"
-                      disabled
-                    >
-                      Stop camera
-                    </button>
-                        </div>
-                  <div id="cameraStatus" class="text-sm dark:text-gray-300" aria-live="polite"></div>
-                  <div id="recognitionResult" class="text-sm dark:text-gray-300" aria-live="assertive"></div>
+                  <div>
+                    <h3 class="text-lg font-semibold text-slate-900 dark:text-white">What is MediaPipe?</h3>
+                    <p class="text-sm text-slate-500 dark:text-gray-400">Google's open-source framework for building multimodal ML pipelines</p>
+                  </div>
                 </div>
+                <p class="text-sm text-slate-600 dark:text-gray-400 mb-4">
+                  MediaPipe is a cross-platform framework developed by Google that provides ready-to-use machine learning solutions for various tasks including face detection, pose estimation, hand tracking, and more. It's designed for real-time performance on mobile devices, desktops, and edge devices.
+                </p>
+              </div>
+
+              <div class="grid gap-6 md:grid-cols-2 mb-6">
+                <div class="rounded-2xl border border-slate-200 dark:border-gray-700 bg-white/90 dark:bg-gray-800/90 px-6 py-6 shadow-sm">
+                  <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Face Detection Module</h3>
+                  <ul class="text-sm text-slate-600 dark:text-gray-400 space-y-3">
+                    <li class="flex items-start gap-2">
+                      <span class="text-blue-600 dark:text-blue-400 font-bold">•</span>
+                      <span><strong>Model Selection:</strong> Uses <code class="bg-slate-100 dark:bg-gray-700 px-1 rounded">model_selection=1</code> for faces at various distances (0 for close-range, 1 for full-range)</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                      <span class="text-blue-600 dark:text-blue-400 font-bold">•</span>
+                      <span><strong>Confidence Threshold:</strong> Configurable <code class="bg-slate-100 dark:bg-gray-700 px-1 rounded">min_detection_confidence</code> (default 0.6) filters weak detections</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                      <span class="text-blue-600 dark:text-blue-400 font-bold">•</span>
+                      <span><strong>BlazeFace Architecture:</strong> Lightweight CNN optimized for mobile and edge devices</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                      <span class="text-blue-600 dark:text-blue-400 font-bold">•</span>
+                      <span><strong>Keypoint Detection:</strong> Provides 6 facial landmarks (eyes, nose, mouth, ears) for face alignment</span>
+                    </li>
+                  </ul>
                 </div>
+
+                <div class="rounded-2xl border border-slate-200 dark:border-gray-700 bg-white/90 dark:bg-gray-800/90 px-6 py-6 shadow-sm">
+                  <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">How It Works in This Service</h3>
+                  <ol class="text-sm text-slate-600 dark:text-gray-400 space-y-3 list-decimal list-inside">
+                    <li><strong>Image Input:</strong> Receives RGB image data (numpy array) from uploaded or captured images</li>
+                    <li><strong>Detection:</strong> MediaPipe processes the image and returns detection results with bounding boxes</li>
+                    <li><strong>Quality Filtering:</strong> Validates face size, position, and completeness before acceptance</li>
+                    <li><strong>Feature Extraction:</strong> Extracts face region for correlation-based comparison</li>
+                    <li><strong>Verification:</strong> Compares extracted features using normalized correlation coefficients</li>
+                  </ol>
+                </div>
+              </div>
+
+              <div class="rounded-2xl border border-slate-200 dark:border-gray-700 bg-slate-50/90 dark:bg-gray-800/90 px-6 py-6 shadow-sm mb-6">
+                <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">MediaPipe Face Detection Process Flow</h3>
+                <div class="space-y-4">
+                  <div class="flex items-start gap-4">
+                    <div class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 dark:bg-blue-500 text-sm font-semibold text-white flex-shrink-0">1</div>
+                    <div>
+                      <h4 class="font-semibold text-slate-900 dark:text-white mb-1">Image Preprocessing</h4>
+                      <p class="text-sm text-slate-600 dark:text-gray-400">Input images are converted to RGB format and optionally resized for optimal processing speed. MediaPipe expects images in RGB color space.</p>
+                    </div>
+                  </div>
+                  <div class="flex items-start gap-4">
+                    <div class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 dark:bg-blue-500 text-sm font-semibold text-white flex-shrink-0">2</div>
+                    <div>
+                      <h4 class="font-semibold text-slate-900 dark:text-white mb-1">Face Detection Inference</h4>
+                      <p class="text-sm text-slate-600 dark:text-gray-400">MediaPipe's BlazeFace model analyzes the image using a lightweight convolutional neural network. It detects faces and returns bounding boxes with confidence scores and keypoint coordinates.</p>
+                    </div>
+                  </div>
+                  <div class="flex items-start gap-4">
+                    <div class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 dark:bg-blue-500 text-sm font-semibold text-white flex-shrink-0">3</div>
+                    <div>
+                      <h4 class="font-semibold text-slate-900 dark:text-white mb-1">Result Processing</h4>
+                      <p class="text-sm text-slate-600 dark:text-gray-400">The system processes detection results, selecting the best face based on confidence score and position. Bounding boxes are converted from relative coordinates (0-1) to absolute pixel coordinates.</p>
+                    </div>
+                  </div>
+                  <div class="flex items-start gap-4">
+                    <div class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 dark:bg-blue-500 text-sm font-semibold text-white flex-shrink-0">4</div>
+                    <div>
+                      <h4 class="font-semibold text-slate-900 dark:text-white mb-1">Quality Validation</h4>
+                      <p class="text-sm text-slate-600 dark:text-gray-400">Validates that detected faces meet quality criteria: minimum area ratio (6% of image), proper positioning (not touching borders), and full-face visibility. This ensures reliable feature extraction.</p>
+                    </div>
+                  </div>
+                  <div class="flex items-start gap-4">
+                    <div class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 dark:bg-blue-500 text-sm font-semibold text-white flex-shrink-0">5</div>
+                    <div>
+                      <h4 class="font-semibold text-slate-900 dark:text-white mb-1">Feature Extraction &amp; Comparison</h4>
+                      <p class="text-sm text-slate-600 dark:text-gray-400">Extracted face regions are processed using OpenCV for feature extraction (LBP-based). Features are normalized and compared using correlation coefficients to determine similarity and match status.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid gap-6 md:grid-cols-2">
+                <div class="rounded-2xl border border-green-200 dark:border-green-800 bg-green-50/90 dark:bg-green-900/30 px-6 py-6 shadow-sm">
+                  <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Advantages of MediaPipe</h3>
+                  <ul class="text-sm text-slate-600 dark:text-gray-400 space-y-2 list-disc list-inside">
+                    <li>Real-time performance on CPU (no GPU required)</li>
+                    <li>Lightweight and memory-efficient</li>
+                    <li>Cross-platform support (Windows, Linux, macOS, mobile)</li>
+                    <li>Robust to various lighting conditions and angles</li>
+                    <li>Provides facial landmarks for better face alignment</li>
+                    <li>Well-optimized for production deployments</li>
+                  </ul>
+                </div>
+
+                <div class="rounded-2xl border border-purple-200 dark:border-purple-800 bg-purple-50/90 dark:bg-purple-900/30 px-6 py-6 shadow-sm">
+                  <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Configuration &amp; Usage</h3>
+                  <div class="text-sm text-slate-600 dark:text-gray-400 space-y-3">
+                    <div>
+                      <strong class="text-slate-900 dark:text-white">Python Library:</strong>
+                      <code class="block bg-slate-100 dark:bg-gray-700 px-2 py-1 rounded mt-1">mediapipe==0.10.8</code>
+                    </div>
+                    <div>
+                      <strong class="text-slate-900 dark:text-white">Import Statement:</strong>
+                      <code class="block bg-slate-100 dark:bg-gray-700 px-2 py-1 rounded mt-1">import mediapipe as mp</code>
+                    </div>
+                    <div>
+                      <strong class="text-slate-900 dark:text-white">Initialization:</strong>
+                      <code class="block bg-slate-100 dark:bg-gray-700 px-2 py-1 rounded mt-1">mp.solutions.face_detection.FaceDetection()</code>
+                    </div>
+                    <div>
+                      <strong class="text-slate-900 dark:text-white">Processing:</strong>
+                      <code class="block bg-slate-100 dark:bg-gray-700 px-2 py-1 rounded mt-1">detector.process(rgb_image)</code>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Local Run Only: Interactive Verification -->
+              <div id="localVerificationSection" class="mt-6 hidden">
+                <div class="rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50/90 dark:bg-amber-900/30 px-6 py-4 mb-6">
+                  <p class="text-sm text-amber-800 dark:text-amber-200">
+                    <strong>Local Development Mode:</strong> Interactive verification tools are available below for testing.
+                  </p>
+                </div>
+                <div class="flex flex-col gap-6 md:flex-row md:items-start">
+                  <div class="relative flex-1">
+                    <div class="aspect-video w-full overflow-hidden rounded-2xl border border-slate-200 dark:border-gray-700 bg-slate-900/90 dark:bg-gray-900 shadow-xl">
+                      <video id="cameraVideo" autoplay muted class="h-full w-full rounded-2xl object-cover"></video>
+                      <canvas id="cameraOverlay" class="absolute inset-0 pointer-events-none"></canvas>
+                    </div>
+                    <canvas id="cameraCanvas" class="hidden"></canvas>
+                  </div>
+                  <div class="flex flex-1 flex-col gap-4">
+                    <div class="flex flex-wrap gap-3">
+                      <button
+                        id="startCamera"
+                        class="inline-flex items-center gap-2 rounded-full bg-blue-600 dark:bg-blue-500 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:bg-blue-700 dark:hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-gray-600"
+                        type="button"
+                      >
+                        Start camera
+                      </button>
+                      <button
+                        id="stopCamera"
+                        class="inline-flex items-center gap-2 rounded-full bg-rose-500 dark:bg-rose-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-400/30 transition hover:bg-rose-600 dark:hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-rose-300 dark:disabled:bg-rose-800"
+                        type="button"
+                        disabled
+                      >
+                        Stop camera
+                      </button>
+                    </div>
+                    <div id="cameraStatus" class="text-sm dark:text-gray-300" aria-live="polite"></div>
+                    <div id="recognitionResult" class="text-sm dark:text-gray-300" aria-live="assertive"></div>
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
         </div>
@@ -364,10 +644,10 @@
 
       function setStatusLoading(message = 'Checking connectivity…') {
         const isDark = document.documentElement.classList.contains('dark');
-        statusCard.className = `flex items-center gap-4 rounded-xl border ${isDark ? 'border-gray-700 bg-gray-800' : 'border-slate-200 bg-white'} px-5 py-4 shadow-sm`;
+        statusCard.className = `flex items-center gap-4 rounded-xl border ${isDark ? 'border-gray-700 bg-gray-800' : 'border-slate-300 bg-white'} px-5 py-4 shadow-sm`;
         statusCard.innerHTML = `
           <span class="spinner"></span>
-          <div class="text-sm font-medium ${isDark ? 'text-gray-300' : 'text-slate-600'}">${message}</div>
+          <div class="text-sm font-medium ${isDark ? 'text-gray-300' : 'text-slate-700'}">${message}</div>
         `;
       }
 
@@ -385,7 +665,7 @@
             : 'border-rose-200 bg-rose-50/90 text-rose-700 shadow-[0_20px_45px_-20px_rgba(244,63,94,0.45)]',
           info: isDark
             ? 'border-gray-700 bg-gray-800 text-gray-300 shadow-sm'
-            : 'border-slate-200 bg-white text-slate-700 shadow-sm'
+            : 'border-slate-300 bg-white text-slate-800 shadow-sm'
         };
         const emoji = type === 'success' ? '✅' : type === 'warning' ? '⚠️' : type === 'error' ? '❌' : 'ℹ️';
         statusCard.className = `flex items-start gap-3 rounded-xl border px-5 py-4 ${styles[type] || styles.info}`;
@@ -407,6 +687,29 @@
         }
       }
 
+      // Show/hide local-only interactive sections based on environment
+      function updateLocalSectionsVisibility(data) {
+        const isLocal = !!data.is_local && !data.is_deployed;
+        const enrollmentSection = document.getElementById('localEnrollmentSection');
+        const verificationSection = document.getElementById('localVerificationSection');
+        
+        if (enrollmentSection) {
+          if (isLocal) {
+            enrollmentSection.classList.remove('hidden');
+          } else {
+            enrollmentSection.classList.add('hidden');
+          }
+        }
+        
+        if (verificationSection) {
+          if (isLocal) {
+            verificationSection.classList.remove('hidden');
+          } else {
+            verificationSection.classList.add('hidden');
+          }
+        }
+      }
+
       function updateEnvironmentUI(data) {
         const environment = data.environment || 'unknown';
         const isLocal = !!data.is_local;
@@ -416,13 +719,13 @@
           let badgeClasses = 'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[0.7rem] font-semibold tracking-wide';
           let label = 'Environment: ';
           if (isDeployed) {
-            badgeClasses += ' border-blue-200 bg-blue-50 text-blue-700';
+            badgeClasses += ' border-blue-300 dark:border-blue-800 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300';
             label += 'DEPLOYED';
           } else if (isLocal) {
-            badgeClasses += ' border-slate-300 bg-slate-100 text-slate-600';
+            badgeClasses += ' border-slate-300 dark:border-gray-700 bg-slate-100 dark:bg-gray-800 text-slate-700 dark:text-gray-300';
             label += 'LOCAL';
           } else {
-            badgeClasses += ' border-slate-200 bg-slate-100 text-slate-500';
+            badgeClasses += ' border-slate-300 dark:border-gray-700 bg-slate-100 dark:bg-gray-800 text-slate-600 dark:text-gray-300';
             label += environment.toUpperCase();
           }
           environmentBadge.className = badgeClasses;
@@ -475,6 +778,9 @@
           }
 
           updateEnvironmentUI(data);
+          
+          // Update local sections visibility
+          updateLocalSectionsVisibility(data);
 
           const frontendConnected = data.main_app_connected === true || data.frontend_connected === true;
           const bidirectional = data.connectivity?.bidirectional === true;
@@ -526,6 +832,8 @@
           
           setStatusCard('error', 'Connection failed', `Unable to reach the AI service: ${displayMessage}`);
           updateEnvironmentUI({});
+          // If status check fails, assume local for development
+          updateLocalSectionsVisibility({ is_local: true, is_deployed: false });
           setText(apiStatusValue, 'Error');
           setText(mainAppValue, 'No');
           setText(mainAppUrlValue, 'http://localhost:5173/');
@@ -565,7 +873,7 @@
           yearEl.textContent = new Date().getFullYear();
         }
 
-                loadModelStatus();
+        loadModelStatus();
         });
     </script>
 </body>

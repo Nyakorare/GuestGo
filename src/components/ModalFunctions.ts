@@ -300,6 +300,11 @@ export async function setupEventListeners() {
     const purposeSelect = document.getElementById('purpose') as HTMLSelectElement;
     if (!purposeSelect) return;
 
+    // Save the currently selected purpose value and other purpose text before clearing
+    const previouslySelectedPurpose = purposeSelect.value;
+    const otherPurposeTextarea = document.getElementById('otherPurpose') as HTMLTextAreaElement;
+    const previouslyOtherPurposeText = otherPurposeTextarea?.value || '';
+
     const purposes = await loadPurposesForPlace(placeId);
     
     // Clear existing options except the first one
@@ -332,6 +337,26 @@ export async function setupEventListeners() {
       otherOption.textContent = 'Other';
       purposeSelect.appendChild(otherOption);
     }
+
+    // Restore the previously selected purpose if it still exists in the new options
+    if (previouslySelectedPurpose) {
+      const optionExists = Array.from(purposeSelect.options).some(opt => opt.value === previouslySelectedPurpose);
+      if (optionExists) {
+        purposeSelect.value = previouslySelectedPurpose;
+        
+        // If "other" was selected, restore the other purpose text and show the container
+        if (previouslySelectedPurpose === 'other') {
+          const otherPurposeContainer = document.getElementById('otherPurposeContainer');
+          if (otherPurposeContainer) {
+            otherPurposeContainer.classList.remove('hidden');
+          }
+          if (otherPurposeTextarea) {
+            otherPurposeTextarea.value = previouslyOtherPurposeText;
+            otherPurposeTextarea.disabled = false;
+          }
+        }
+      }
+    }
   }
 
   // Function to create purpose selector for multiple places
@@ -351,6 +376,19 @@ export async function setupEventListeners() {
           name: label?.textContent?.trim() || checkboxEl.value
         };
       });
+
+    // Save existing purpose values before clearing
+    const savedPurposeValues: Record<string, { purpose: string; otherPurpose: string }> = {};
+    checkedPlaces.forEach(place => {
+      const purposeSelect = document.getElementById(`purpose_${place.id}`) as HTMLSelectElement;
+      const otherPurposeTextarea = document.getElementById(`otherPurpose_${place.id}`) as HTMLTextAreaElement;
+      if (purposeSelect) {
+        savedPurposeValues[place.id] = {
+          purpose: purposeSelect.value || '',
+          otherPurpose: otherPurposeTextarea?.value || ''
+        };
+      }
+    });
 
     // Clear existing purpose selectors
     multiplePurposesContainer.innerHTML = '';
@@ -424,6 +462,27 @@ export async function setupEventListeners() {
           otherOption.value = 'other';
           otherOption.textContent = 'Other';
           purposeSelect.appendChild(otherOption);
+        }
+
+        // Restore the previously selected purpose if it exists
+        const savedValue = savedPurposeValues[place.id];
+        if (savedValue && savedValue.purpose) {
+          const optionExists = Array.from(purposeSelect.options).some(opt => opt.value === savedValue.purpose);
+          if (optionExists) {
+            purposeSelect.value = savedValue.purpose;
+            
+            // If "other" was selected, restore the other purpose text and show the container
+            if (savedValue.purpose === 'other') {
+              const otherPurposeContainer = document.getElementById(`otherPurposeContainer_${place.id}`);
+              if (otherPurposeContainer) {
+                otherPurposeContainer.classList.remove('hidden');
+              }
+              const otherPurposeTextarea = document.getElementById(`otherPurpose_${place.id}`) as HTMLTextAreaElement;
+              if (otherPurposeTextarea) {
+                otherPurposeTextarea.value = savedValue.otherPurpose;
+              }
+            }
+          }
         }
 
         // Add event listener for "other" purpose
