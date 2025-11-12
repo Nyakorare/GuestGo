@@ -3,7 +3,7 @@ services:
     name: guestgo-python-ai
     env: python
     pythonVersion: 3.11.9
-    buildCommand: pip install --upgrade pip && pip install --default-timeout=300 --retries=5 -r requirements.txt && chmod +x start.sh
+    buildCommand: chmod +x build.sh && ./build.sh
     startCommand: ./start.sh
     healthCheckPath: /health
     envVars:
