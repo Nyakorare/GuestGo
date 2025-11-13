@@ -1,6 +1,8 @@
-// Face detection using Python API only
+// Face detection using Python API with BlazeFace fallback
 import { PYTHON_API_URL } from '../../config/python-api';
 import { safeJsonParse } from '../safe-json-parse';
+import * as blazeface from '@tensorflow-models/blazeface';
+import * as tf from '@tensorflow/tfjs';
 
 // API URLs
 const LOCAL_API_URL = 'http://localhost:5000';
@@ -145,6 +147,93 @@ function createModal(): HTMLElement {
 
 let activeStream: MediaStream | null = null;
 
+// BlazeFace model instance (lazy-loaded)
+let blazefaceModel: blazeface.BlazeFaceModel | null = null;
+let isBlazefaceLoading = false;
+
+// Initialize BlazeFace model
+async function initializeBlazeFace(): Promise<blazeface.BlazeFaceModel | null> {
+  if (blazefaceModel) {
+    return blazefaceModel;
+  }
+  
+  if (isBlazefaceLoading) {
+    // Wait for existing load to complete
+    while (isBlazefaceLoading) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    return blazefaceModel;
+  }
+  
+  try {
+    isBlazefaceLoading = true;
+    console.log('Initializing BlazeFace model...');
+    blazefaceModel = await blazeface.load();
+    console.log('BlazeFace model loaded successfully');
+    return blazefaceModel;
+  } catch (error) {
+    console.error('Failed to load BlazeFace model:', error);
+    return null;
+  } finally {
+    isBlazefaceLoading = false;
+  }
+}
+
+// Client-side face detection using BlazeFace
+async function detectFacesBlazeFace(imageElement: HTMLVideoElement | HTMLCanvasElement): Promise<PythonFace[]> {
+  try {
+    const model = await initializeBlazeFace();
+    if (!model) {
+      return [];
+    }
+
+    // Get dimensions
+    const width = imageElement instanceof HTMLVideoElement ? imageElement.videoWidth : imageElement.width;
+    const height = imageElement instanceof HTMLVideoElement ? imageElement.videoHeight : imageElement.height;
+    
+    // Check if dimensions are valid
+    if (!width || !height || width <= 0 || height <= 0) {
+      return [];
+    }
+
+    // Convert image element to tensor
+    const imageTensor = tf.browser.fromPixels(imageElement);
+
+    // Run detection
+    const predictions = await model.estimateFaces(imageTensor, false);
+    
+    // Dispose tensor to free memory
+    imageTensor.dispose();
+
+    if (!predictions || predictions.length === 0) {
+      return [];
+    }
+
+    // Convert BlazeFace predictions to PythonFace format
+    // BlazeFace returns pixel coordinates, convert to normalized (0-1)
+    const faces: PythonFace[] = predictions.map(pred => {
+      const start = pred.topLeft as [number, number];
+      const end = pred.bottomRight as [number, number];
+      const probability = pred.probability ? [pred.probability] : [1.0];
+      
+      const topLeft: [number, number] = [start[0] / width, start[1] / height];
+      const bottomRight: [number, number] = [end[0] / width, end[1] / height];
+      
+      return {
+        topLeft,
+        bottomRight,
+        probability,
+        landmarks: pred.landmarks ? pred.landmarks.map((lm: [number, number]) => [lm[0] / width, lm[1] / height]) : undefined
+      };
+    });
+
+    return faces;
+  } catch (error) {
+    console.error('BlazeFace detection error:', error);
+    return [];
+  }
+}
+
 async function startCamera(video: HTMLVideoElement): Promise<void> {
   stopCamera();
   activeStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
@@ -222,9 +311,10 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
   let animationFrameId: number | null = null;
   let hasAutoPreview: boolean = false; // ensure we only auto-open preview once per session
   
-  // API state management (for local development)
+  // API state management
   const isLocalDev = isLocalDevelopment();
-  let currentApiUrl: string = isLocalDev ? LOCAL_API_URL : PYTHON_API_URL;
+  // Start with deployed, but will check local first and switch if available
+  let currentApiUrl: string = PYTHON_API_URL;
   let localApiAvailable: boolean = false;
   let deployedApiAvailable: boolean = false;
   
@@ -323,16 +413,7 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
     }
 
     try {
-      console.log('Running face detection on video frame...');
       const predictions = await detectFaces(video);
-      console.log('Raw predictions:', predictions?.length || 0, 'faces detected');
-      
-      if (predictions && predictions.length > 0) {
-        console.log('First face detection data:', predictions[0]);
-        console.log('Face topLeft:', predictions[0].topLeft);
-        console.log('Face bottomRight:', predictions[0].bottomRight);
-        console.log('Face probability:', predictions[0].probability);
-      }
       
       // Clear canvas for live detection overlay
       canvas.width = video.videoWidth;
@@ -341,7 +422,6 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
       
       // Apply NMS to dedupe overlapping faces
       const deduped = (predictions && predictions.length > 0) ? nmsFaces(predictions) : [];
-      console.log('After NMS deduplication:', deduped?.length || 0, 'faces');
       
       // Update live face preview
       updateLiveFacePreview(deduped);
@@ -504,12 +584,20 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
         if (isServiceAvailable) {
           liveFaceDetection();
         } else {
-          // Service not available - show manual capture option
-          console.log('AI service not available, showing manual capture');
-          captureBtn.classList.remove('hidden');
-          captureBtn.disabled = false;
-          statusEl.textContent = 'AI service not available. Click "Take Photo" to capture your face manually.';
-          faceLegend.classList.add('hidden'); // Hide legend since detection is disabled
+          // Service not available - use BlazeFace for live detection
+          console.log('AI service not available, using BlazeFace for live detection');
+          statusEl.textContent = 'Using browser-based face detection. Position your face in the camera frame.';
+          // Initialize BlazeFace model in the background
+          initializeBlazeFace().then(() => {
+            console.log('BlazeFace model ready, starting live detection');
+            liveFaceDetection();
+          }).catch((error) => {
+            console.error('Failed to initialize BlazeFace, showing manual capture:', error);
+            captureBtn.classList.remove('hidden');
+            captureBtn.disabled = false;
+            statusEl.textContent = 'Face detection unavailable. Click "Take Photo" to capture your face manually.';
+            faceLegend.classList.add('hidden');
+          });
         }
       } else {
         console.log('Video not ready, showing manual capture button');
@@ -887,10 +975,8 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
   // Track if we've already checked both APIs to avoid repeated checks
   let hasCheckedBothApis = false;
   
-  // Check both APIs in local development
+  // Check both APIs - always check local first, even when not in local dev
   async function checkBothApis(force: boolean = false): Promise<void> {
-    if (!isLocalDev) return;
-    
     // Only check once unless forced (to avoid repeated checks during face detection)
     if (hasCheckedBothApis && !force) return;
     
@@ -912,16 +998,23 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
     deployedApiAvailable = deployedAvailable;
     hasCheckedBothApis = true;
     
-    // If local is not available but deployed is, switch to deployed
-    if (!localApiAvailable && deployedApiAvailable && currentApiUrl === LOCAL_API_URL) {
+    // Always prefer local if available, regardless of environment
+    if (localApiAvailable) {
+      if (currentApiUrl !== LOCAL_API_URL) {
+        currentApiUrl = LOCAL_API_URL;
+        if (isLocalDev) {
+          updateServiceStatus(true, 'Using local AI service');
+        }
+      }
+    } else if (!localApiAvailable && deployedApiAvailable && currentApiUrl === LOCAL_API_URL) {
+      // If local is not available but deployed is, switch to deployed
       currentApiUrl = DEPLOYED_API_URL;
       updateServiceStatus(true, 'Using deployed AI service (local unavailable)');
-    } else if (localApiAvailable && currentApiUrl === DEPLOYED_API_URL) {
-      // Optionally switch back to local if it becomes available
-      // For now, we'll keep the current selection
     }
     
-    updateApiSelectionUI();
+    if (isLocalDev) {
+      updateApiSelectionUI();
+    }
   }
 
   // Switch between local and deployed APIs
@@ -983,13 +1076,13 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
     try {
       isCheckingServiceHealth = true;
       
-      // In local development, check both APIs first (only on initial check)
-      if (isLocalDev && !retryWithOtherApi) {
+      // Always check both APIs first (only on initial check) - prefer local if available
+      if (!retryWithOtherApi) {
         await checkBothApis(false); // Don't force, use cached result if available
       }
       
       // If no API is available, show appropriate message
-      if (isLocalDev && !localApiAvailable && !deployedApiAvailable) {
+      if (!localApiAvailable && !deployedApiAvailable) {
         updateServiceStatus(false, 'No AI service available (local and deployed both unavailable)');
         healthCheckCache = { result: false, timestamp: Date.now(), apiUrl: currentApiUrl };
         return false;
@@ -1072,16 +1165,27 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
         lastCorsErrorLog = now;
       }
       
-      // In local dev, if current API fails and we haven't retried, try the other one if available
-      if (isLocalDev && !retryWithOtherApi) {
-        const otherApi = currentApiUrl === LOCAL_API_URL ? DEPLOYED_API_URL : LOCAL_API_URL;
-        const otherAvailable = currentApiUrl === LOCAL_API_URL ? deployedApiAvailable : localApiAvailable;
-        
-        if (otherAvailable) {
-          currentApiUrl = otherApi;
-          updateApiSelectionUI();
-          updateServiceStatus(true, `Switched to ${otherApi === DEPLOYED_API_URL ? 'deployed' : 'local'} AI service`);
-          // Retry with the other API
+      // If current API fails and we haven't retried, try the other one if available
+      // Always prefer local first, then fallback to deployed
+      if (!retryWithOtherApi) {
+        // If we're using deployed and local becomes available, try local
+        if (currentApiUrl === DEPLOYED_API_URL && localApiAvailable) {
+          currentApiUrl = LOCAL_API_URL;
+          if (isLocalDev) {
+            updateApiSelectionUI();
+          }
+          updateServiceStatus(true, 'Switched to local AI service');
+          // Retry with local API
+          return await checkPythonServiceHealth(true);
+        }
+        // If we're using local and it fails, try deployed if available
+        else if (currentApiUrl === LOCAL_API_URL && deployedApiAvailable) {
+          currentApiUrl = DEPLOYED_API_URL;
+          if (isLocalDev) {
+            updateApiSelectionUI();
+          }
+          updateServiceStatus(true, 'Switched to deployed AI service (local unavailable)');
+          // Retry with deployed API
           return await checkPythonServiceHealth(true);
         }
       }
@@ -1142,14 +1246,14 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
       // Check service health first
       const isServiceAvailable = await checkPythonServiceHealth();
       if (!isServiceAvailable) {
-        // Only log occasionally to prevent spam
+        // Use BlazeFace fallback when service is unavailable
         const now = Date.now();
         if (now - lastServiceUnavailableLog > SERVICE_UNAVAILABLE_LOG_INTERVAL) {
-          console.log('Python AI service not available, disabling face detection');
+          console.log('Python AI service not available, using BlazeFace fallback');
           lastServiceUnavailableLog = now;
         }
-        // Don't use fallback detection - it's too unreliable
-        return [];
+        // Use client-side BlazeFace detection
+        return await detectFacesBlazeFace(imageElement);
       }
 
       // Convert image element to data URL

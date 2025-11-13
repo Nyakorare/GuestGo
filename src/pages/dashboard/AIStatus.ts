@@ -1,4 +1,5 @@
 import { safeJsonParse } from '../../utils/safe-json-parse';
+import { LOCAL_API_URL, DEPLOYED_API_URL, getApiUrlPreference, setApiUrlPreference } from '../../config/python-api';
 
 interface ServiceStatus {
   status: 'running' | 'error' | 'checking';
@@ -18,27 +19,23 @@ interface ServiceStatus {
   is_deployed?: boolean;
 }
 
-const LOCAL_API_URL = 'http://localhost:5000';
-const DEPLOYED_API_URL = 'https://guestgo-ai.onrender.com';
-
-function isDeployedSite(): boolean {
-  return typeof window !== 'undefined' && window.location.hostname.includes('vercel.app');
-}
-
 export function renderAIStatus(): string {
-  const isDeployed = isDeployedSite();
-  const gridCols = isDeployed ? 'md:grid-cols-1' : 'md:grid-cols-2';
-  
-  const localServiceSection = isDeployed ? '' : `
+  // Always show local service section
+  const localServiceSection = `
         <!-- Local Service Status -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold uppercase tracking-wide text-white">
-              Local
+        <div id="localServiceSection" class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold uppercase tracking-wide text-white">
+                Local
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Local Development</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">${LOCAL_API_URL}</p>
+              </div>
             </div>
-            <div>
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Local Development</h3>
-              <p class="text-sm text-gray-500 dark:text-gray-400">${LOCAL_API_URL}</p>
+            <div class="flex items-center gap-2">
+              <span id="localActiveBadge" class="hidden px-2 py-1 text-xs font-semibold rounded bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">Active</span>
             </div>
           </div>
           
@@ -91,17 +88,22 @@ export function renderAIStatus(): string {
         </button>
       </div>
 
-      <div class="grid gap-6 ${gridCols}">
+      <div id="aiStatusGrid" class="grid gap-6 md:grid-cols-2">
         ${localServiceSection}
         <!-- Deployed Service Status -->
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-blue-200 dark:border-blue-700">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold uppercase tracking-wide text-white">
-              Live
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold uppercase tracking-wide text-white">
+                Live
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Deployed Service</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">${DEPLOYED_API_URL}</p>
+              </div>
             </div>
-            <div>
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Deployed Service</h3>
-              <p class="text-sm text-gray-500 dark:text-gray-400">${DEPLOYED_API_URL}</p>
+            <div class="flex items-center gap-2">
+              <span id="deployedActiveBadge" class="hidden px-2 py-1 text-xs font-semibold rounded bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">Active</span>
             </div>
           </div>
           
@@ -253,21 +255,56 @@ export async function loadAIStatus(): Promise<void> {
     lastChecked.textContent = new Date().toLocaleTimeString();
   }
 
-  const isDeployed = isDeployedSite();
+  // Always check both services in parallel
+  const [localStatus, deployedStatus] = await Promise.all([
+    checkServiceStatus(LOCAL_API_URL),
+    checkServiceStatus(DEPLOYED_API_URL)
+  ]);
 
-  if (isDeployed) {
-    // Only check deployed service on deployed site
-    const deployedStatus = await checkServiceStatus(DEPLOYED_API_URL);
-    updateStatusCard('deployedStatusCard', 'deployedStatusDetails', deployedStatus, 'deployed');
-  } else {
-    // Check both services in parallel on local development
-    const [localStatus, deployedStatus] = await Promise.all([
-      checkServiceStatus(LOCAL_API_URL),
-      checkServiceStatus(DEPLOYED_API_URL)
-    ]);
+  // Check if local service is online (status === 'running' and api_connected)
+  const isLocalOnline = localStatus && localStatus.status === 'running' && localStatus.api_connected;
+  
+  // Always show both service sections - no need to hide/show them
+  // Both sections are always visible regardless of availability
 
-    updateStatusCard('localStatusCard', 'localStatusDetails', localStatus, 'local');
-    updateStatusCard('deployedStatusCard', 'deployedStatusDetails', deployedStatus, 'deployed');
+  updateStatusCard('localStatusCard', 'localStatusDetails', localStatus, 'local');
+  updateStatusCard('deployedStatusCard', 'deployedStatusDetails', deployedStatus, 'deployed');
+  
+  // Automatically set preference based on availability: prefer local if available
+  if (isLocalOnline) {
+    setApiUrlPreference('local');
+  } else if (deployedStatus && deployedStatus.status === 'running' && deployedStatus.api_connected) {
+    // Only set to deployed if local is not available and deployed is available
+    setApiUrlPreference('deployed');
+  }
+  
+  // Update active badges with actual status
+  updateActiveBadges(isLocalOnline, deployedStatus && deployedStatus.status === 'running' && deployedStatus.api_connected);
+}
+
+function updateActiveBadges(localIsOnline: boolean = false, deployedIsOnline: boolean = false): void {
+  const preference = getApiUrlPreference();
+  
+  // Determine which service is active: prefer local if available, otherwise use deployed
+  const isUsingLocal = (preference === 'local') || (preference === null && localIsOnline) || (preference !== 'deployed' && localIsOnline);
+  
+  const localActiveBadge = document.getElementById('localActiveBadge');
+  const deployedActiveBadge = document.getElementById('deployedActiveBadge');
+  
+  if (localActiveBadge) {
+    if (isUsingLocal && localIsOnline) {
+      localActiveBadge.classList.remove('hidden');
+    } else {
+      localActiveBadge.classList.add('hidden');
+    }
+  }
+  
+  if (deployedActiveBadge) {
+    if (!isUsingLocal && deployedIsOnline) {
+      deployedActiveBadge.classList.remove('hidden');
+    } else {
+      deployedActiveBadge.classList.add('hidden');
+    }
   }
 }
 
@@ -278,7 +315,7 @@ export function setupAIStatusEventListeners(): void {
       loadAIStatus();
     });
   }
-
+  
   // Load status on mount
   loadAIStatus();
 }
