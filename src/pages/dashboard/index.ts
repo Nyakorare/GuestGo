@@ -2162,6 +2162,8 @@ async function loadLogs() {
     allLogs = logs || [];
     filteredLogs = [...allLogs];
     await renderLogs();
+    // Update action filter options after loading logs
+    updateLogsActionFilterOptions();
   } catch (error) {
     console.error('Error loading logs:', error);
     const logsList = document.getElementById('logsList');
@@ -2217,6 +2219,15 @@ async function renderLogs(): Promise<void> {
 
         if (log.details) {
           parsedDetails = typeof log.details === 'string' ? JSON.parse(log.details) : log.details;
+        }
+
+        // Handle guard_action logs - convert to gate_entrance_scan or gate_exit_scan
+        if (log.action === 'guard_action' && parsedDetails) {
+          if (parsedDetails.action === 'exit') {
+            displayAction = 'gate_exit_scan';
+          } else if (parsedDetails.action === 'entrance') {
+            displayAction = 'gate_entrance_scan';
+          }
         }
 
         if (log.action === 'visit_scheduled' && parsedDetails) {
@@ -2326,7 +2337,7 @@ async function renderLogs(): Promise<void> {
           }
         }
 
-        const details = await formatLogDetails(overrideDetails ?? log.details, log.action, log);
+        const details = await formatLogDetails(overrideDetails ?? log.details, displayAction, log);
 
         return {
           ...log,
@@ -2377,23 +2388,25 @@ async function renderLogs(): Promise<void> {
                       log.displayAction === 'place_update' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
                       log.displayAction === 'place_availability_toggle' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
                       log.displayAction === 'place_create' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                      log.displayAction === 'place_delete' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                      log.displayAction === 'place_delete' ? 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200' :
                       log.displayAction === 'personnel_assignment' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
                       log.displayAction === 'personnel_removal' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
                       log.displayAction === 'personnel_availability_change' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' :
                       log.displayAction === 'visit_scheduled' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' :
-                      log.displayAction === 'visit_temporary_exit' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                      log.displayAction === 'visit_temporary_exit' ? 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200' :
                       log.displayAction === 'visit_completed' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
-                      log.displayAction === 'visit_completed_flagged' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                      log.displayAction === 'visit_unsuccessful' ? 'bg-gray-200 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
+                      log.displayAction === 'visit_completed_flagged' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
+                      log.displayAction === 'visit_unsuccessful' ? 'bg-red-200 text-red-900 dark:bg-red-800 dark:text-red-100' :
+                      log.displayAction === 'place_visit_limit_update' ? 'bg-blue-200 text-blue-900 dark:bg-blue-800 dark:text-blue-100' :
+                      log.displayAction === 'visit_feedback_submitted' ? 'bg-cyan-200 text-cyan-900 dark:bg-cyan-800 dark:text-cyan-100' :
                       log.displayAction === 'gate_create' ? 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200' :
-                      log.displayAction === 'gate_update' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
+                      log.displayAction === 'gate_update' ? 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-900 dark:text-fuchsia-200' :
                       log.displayAction === 'gate_status_change' ? 'bg-lime-100 text-lime-800 dark:bg-lime-900 dark:text-lime-200' :
-                      log.displayAction === 'gate_entrance_scan' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                      log.displayAction === 'gate_exit_scan' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                      log.displayAction === 'visit_flagged_no_exit' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                      log.displayAction === 'gate_entrance_scan' ? 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200' :
+                      log.displayAction === 'gate_exit_scan' ? 'bg-orange-200 text-orange-900 dark:bg-orange-800 dark:text-orange-100' :
+                      log.displayAction === 'visit_flagged_no_exit' ? 'bg-stone-100 text-stone-800 dark:bg-stone-900 dark:text-stone-200' :
                       log.displayAction === 'role_change' ? 'bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200' :
-                      'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                      'bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200'
                     }">
                       ${log.displayAction === 'visit_completed_flagged' ? 'Completed (Flagged)' : log.displayAction.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                     </span>
@@ -2453,23 +2466,25 @@ async function renderLogs(): Promise<void> {
                       log.displayAction === 'place_update' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
                       log.displayAction === 'place_availability_toggle' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
                       log.displayAction === 'place_create' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                      log.displayAction === 'place_delete' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                      log.displayAction === 'place_delete' ? 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200' :
                       log.displayAction === 'personnel_assignment' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
                       log.displayAction === 'personnel_removal' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
                       log.displayAction === 'personnel_availability_change' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' :
                       log.displayAction === 'visit_scheduled' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' :
-                      log.displayAction === 'visit_temporary_exit' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                      log.displayAction === 'visit_temporary_exit' ? 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200' :
                       log.displayAction === 'visit_completed' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
-                      log.displayAction === 'visit_completed_flagged' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                      log.displayAction === 'visit_unsuccessful' ? 'bg-gray-200 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
+                      log.displayAction === 'visit_completed_flagged' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
+                      log.displayAction === 'visit_unsuccessful' ? 'bg-red-200 text-red-900 dark:bg-red-800 dark:text-red-100' :
+                      log.displayAction === 'place_visit_limit_update' ? 'bg-blue-200 text-blue-900 dark:bg-blue-800 dark:text-blue-100' :
+                      log.displayAction === 'visit_feedback_submitted' ? 'bg-cyan-200 text-cyan-900 dark:bg-cyan-800 dark:text-cyan-100' :
                       log.displayAction === 'gate_create' ? 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200' :
-                      log.displayAction === 'gate_update' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-cyan-200' :
+                      log.displayAction === 'gate_update' ? 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-900 dark:text-fuchsia-200' :
                       log.displayAction === 'gate_status_change' ? 'bg-lime-100 text-lime-800 dark:bg-lime-900 dark:text-lime-200' :
-                      log.displayAction === 'gate_entrance_scan' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                      log.displayAction === 'gate_exit_scan' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                      log.displayAction === 'visit_flagged_no_exit' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                      log.displayAction === 'gate_entrance_scan' ? 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200' :
+                      log.displayAction === 'gate_exit_scan' ? 'bg-orange-200 text-orange-900 dark:bg-orange-800 dark:text-orange-100' :
+                      log.displayAction === 'visit_flagged_no_exit' ? 'bg-stone-100 text-stone-800 dark:bg-stone-900 dark:text-stone-200' :
                       log.displayAction === 'role_change' ? 'bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200' :
-                      'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                      'bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200'
                     }">
                       ${log.displayAction === 'visit_completed_flagged' ? 'Completed (Flagged)' : log.displayAction.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                     </span>
@@ -3067,11 +3082,25 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
           : getUserDisplayName(log?.user_id || '');
         return `<div><span class="font-medium">Personnel:</span> ${personnelDisplay}</div><div><span class="font-medium">Place:</span> ${availabilityPlaceName}</div><div><span class="font-medium">Status:</span> <span class="${statusColor}">${status}</span></div>${dateAffected}${reason}`;
       case 'gate_entrance_scan':
+        // Handle guard_action logs that are displayed as gate_entrance_scan
+        if (parsedDetails.action === 'entrance' && parsedDetails.guard_id) {
+          const visitShort = parsedDetails.visit_id ? `${String(parsedDetails.visit_id).substring(0, 8)}...` : 'Unknown';
+          const when = parsedDetails.timestamp ? new Date(parsedDetails.timestamp).toLocaleString() : 'Unknown time';
+          const guardName = parsedDetails.guard_id ? await getUserName(parsedDetails.guard_id) : getUserDisplayName(log?.user_id || '');
+          return `<div><span class="font-medium">Guard:</span> ${guardName}</div><div><span class="font-medium">Visit:</span> ${visitShort}</div><div><span class="font-medium">Time:</span> ${when}</div>`;
+        }
         const entranceGateName = parsedDetails.gate_name || 'Unknown Gate';
         const entranceVisitorName = parsedDetails.visitor_name || 'Unknown Visitor';
         const entranceTime = parsedDetails.scanned_at ? new Date(parsedDetails.scanned_at).toLocaleString() : 'Unknown time';
         return `<div><span class="font-medium">Gate:</span> ${entranceGateName}</div><div><span class="font-medium">Visitor:</span> ${entranceVisitorName}</div><div><span class="font-medium">Time:</span> ${entranceTime}</div>`;
       case 'gate_exit_scan':
+        // Handle guard_action logs that are displayed as gate_exit_scan
+        if (parsedDetails.action === 'exit' && parsedDetails.guard_id) {
+          const visitShort = parsedDetails.visit_id ? `${String(parsedDetails.visit_id).substring(0, 8)}...` : 'Unknown';
+          const when = parsedDetails.timestamp ? new Date(parsedDetails.timestamp).toLocaleString() : 'Unknown time';
+          const guardName = parsedDetails.guard_id ? await getUserName(parsedDetails.guard_id) : getUserDisplayName(log?.user_id || '');
+          return `<div><span class="font-medium">Guard:</span> ${guardName}</div><div><span class="font-medium">Visit:</span> ${visitShort}</div><div><span class="font-medium">Time:</span> ${when}</div>`;
+        }
         const exitGateName = parsedDetails.gate_name || 'Unknown Gate';
         const exitVisitorName = parsedDetails.visitor_name || 'Unknown Visitor';
         const exitTime = parsedDetails.scanned_at ? new Date(parsedDetails.scanned_at).toLocaleString() : 'Unknown time';
@@ -5508,6 +5537,21 @@ async function getEffectiveLogAction(log: any): Promise<string> {
   try {
     if (!log) return '';
     let action = log.action;
+    
+    // Handle guard_action logs - convert to gate_entrance_scan or gate_exit_scan
+    if (action === 'guard_action') {
+      try {
+        const parsed = log.details
+          ? (typeof log.details === 'string' ? JSON.parse(log.details) : log.details)
+          : null;
+        if (parsed && parsed.action) {
+          if (parsed.action === 'exit') return 'gate_exit_scan';
+          if (parsed.action === 'entrance') return 'gate_entrance_scan';
+        }
+      } catch (_) {}
+      return action; // Return guard_action if we can't parse
+    }
+    
     // Prefer original_action from details if present (fallback logging scenario),
     // but DO NOT use it for visit_scheduled because we need derived status for filtering.
     try {
@@ -5681,9 +5725,15 @@ async function applySearchAndFilterForLogs() {
 
   // Apply tab filter only when no specific action is selected
   if (currentLogsTabFilter !== 'all' && (actionValue === 'all' || !actionValue)) {
-    filtered = filtered.filter(log => {
+    const evaluated = await Promise.all(filtered.map(async (log) => ({
+      log,
+      effective: await getEffectiveLogAction(log)
+    })));
+    filtered = evaluated.filter(({ log, effective }) => {
       if (currentLogsTabFilter === 'gate') {
-        return log.action && log.action.startsWith('gate_');
+        return (log.action && log.action.startsWith('gate_')) || 
+               (effective && effective.startsWith('gate_')) ||
+               (log.action === 'guard_action');
       } else if (currentLogsTabFilter === 'place') {
         return log.action && log.action.startsWith('place_');
       } else if (currentLogsTabFilter === 'personnel') {
@@ -5696,7 +5746,7 @@ async function applySearchAndFilterForLogs() {
         return log.action && log.action === 'visit_feedback_submitted';
       }
       return true;
-    });
+    }).map(({ log }) => log);
   }
 
   filteredLogs = filtered;
