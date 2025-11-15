@@ -1386,7 +1386,7 @@ async function showFaceDetectionForGateScan(visitId: string, gateId: string) {
     // Remove loading overlay
     loadingOverlay.remove();
 
-    if (faceResult.success && faceResult.imageDataUrl) {
+    if (faceResult.success && faceResult.croppedImageDataUrl) {
       // Process the gate scan with face data
       await processGateScanWithFaceData(visitId, gateId, faceResult);
     } else {
@@ -1412,10 +1412,10 @@ async function processGateScanWithFaceData(visitId: string, gateId: string, face
     let faceImageData = null;
     let faceDetectionMetadata = null;
 
-    if (faceResult.imageDataUrl) {
-      // Compress the face image for storage
+    if (faceResult.croppedImageDataUrl) {
+      // Compress the cropped face image for storage
       const { compressImageDataUrl } = await import('../utils/imageCompression');
-      const compressedImage = await compressImageDataUrl(faceResult.imageDataUrl, 0.8, 400, 400);
+      const compressedImage = await compressImageDataUrl(faceResult.croppedImageDataUrl, 0.8, 400, 400);
       faceImageData = compressedImage;
       
       // Prepare metadata
@@ -1423,7 +1423,7 @@ async function processGateScanWithFaceData(visitId: string, gateId: string, face
         timestamp: new Date().toISOString(),
         confidence: faceResult.confidence || 0,
         boundingBox: faceResult.detections?.[0] || null,
-        originalSize: faceResult.imageDataUrl.length,
+        originalSize: faceResult.croppedImageDataUrl.length,
         compressedSize: compressedImage.length
       };
     }

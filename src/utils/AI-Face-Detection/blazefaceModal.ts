@@ -49,7 +49,7 @@ function createModal(): HTMLElement {
            <span id="serviceStatusIcon" class="inline-block w-2 h-2 rounded-full mr-2"></span>
            <span id="serviceStatusText">Checking AI service...</span>
          </div>
-         <!-- API Selection (only shown in local development) -->
+         <!-- API Selection (shown in both local and deployed) -->
          <div id="apiSelectionSection" class="hidden mb-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-md border border-gray-200 dark:border-gray-600">
            <div class="flex items-center justify-between">
              <div class="flex-1">
@@ -247,12 +247,23 @@ function stopCamera() {
   }
 }
 
-function hideModal() {
+function hideModal(shouldRefreshIfFaceDetected: boolean = true) {
   const wrapper = document.getElementById('faceDetectionModal');
   if (wrapper) {
+    // Check if a face has been detected by checking if preview section is visible
+    const previewSection = wrapper.querySelector('#previewSection') as HTMLElement;
+    const hasFaceDetected = previewSection && !previewSection.classList.contains('hidden');
+    
     wrapper.classList.add('hidden');
+    stopCamera();
+    
+    // Refresh the page if a face was detected and we should refresh (i.e., closing via close button, not confirming)
+    if (hasFaceDetected && shouldRefreshIfFaceDetected) {
+      window.location.reload();
+    }
+  } else {
+    stopCamera();
   }
-  stopCamera();
 }
 
 export type FaceDetectionOutcome = {
@@ -318,8 +329,8 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
   let localApiAvailable: boolean = false;
   let deployedApiAvailable: boolean = false;
   
-  // Show API selection section only in local development
-  if (isLocalDev && apiSelectionSection) {
+  // Show API selection section always (in both local and deployed)
+  if (apiSelectionSection) {
     apiSelectionSection.classList.remove('hidden');
     // Initialize API selection UI (will be updated after health checks)
     updateApiSelectionUI();
@@ -906,7 +917,7 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
 
   // Update API selection UI
   function updateApiSelectionUI() {
-    if (!isLocalDev || !apiSelectionSection) return;
+    if (!apiSelectionSection) return;
     
     const isLocal = currentApiUrl === LOCAL_API_URL;
     if (currentApiLabel) {
@@ -920,9 +931,16 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
     }
     
     if (switchApiBtn) {
-      const targetAvailable = isLocal ? deployedApiAvailable : localApiAvailable;
-      switchApiBtn.textContent = isLocal ? 'Switch to Deployed' : 'Switch to Local';
-      switchApiBtn.disabled = !targetAvailable;
+      // Only enable switching in local development (where both APIs might be available)
+      if (isLocalDev) {
+        const targetAvailable = isLocal ? deployedApiAvailable : localApiAvailable;
+        switchApiBtn.textContent = isLocal ? 'Switch to Deployed' : 'Switch to Local';
+        switchApiBtn.disabled = !targetAvailable;
+        switchApiBtn.classList.remove('hidden');
+      } else {
+        // In deployed version, hide the switch button since local won't be available
+        switchApiBtn.classList.add('hidden');
+      }
     }
   }
 
@@ -998,23 +1016,22 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
     deployedApiAvailable = deployedAvailable;
     hasCheckedBothApis = true;
     
-    // Always prefer local if available, regardless of environment
-    if (localApiAvailable) {
-      if (currentApiUrl !== LOCAL_API_URL) {
-        currentApiUrl = LOCAL_API_URL;
-        if (isLocalDev) {
-          updateServiceStatus(true, 'Using local AI service');
+      // Always prefer local if available, regardless of environment
+      if (localApiAvailable) {
+        if (currentApiUrl !== LOCAL_API_URL) {
+          currentApiUrl = LOCAL_API_URL;
+          if (isLocalDev) {
+            updateServiceStatus(true, 'Using local AI service');
+          }
         }
+      } else if (!localApiAvailable && deployedApiAvailable && currentApiUrl === LOCAL_API_URL) {
+        // If local is not available but deployed is, switch to deployed
+        currentApiUrl = DEPLOYED_API_URL;
+        updateServiceStatus(true, 'Using deployed AI service (local unavailable)');
       }
-    } else if (!localApiAvailable && deployedApiAvailable && currentApiUrl === LOCAL_API_URL) {
-      // If local is not available but deployed is, switch to deployed
-      currentApiUrl = DEPLOYED_API_URL;
-      updateServiceStatus(true, 'Using deployed AI service (local unavailable)');
-    }
-    
-    if (isLocalDev) {
+      
+      // Always update API selection UI (works in both local and deployed)
       updateApiSelectionUI();
-    }
   }
 
   // Switch between local and deployed APIs
@@ -1171,9 +1188,7 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
         // If we're using deployed and local becomes available, try local
         if (currentApiUrl === DEPLOYED_API_URL && localApiAvailable) {
           currentApiUrl = LOCAL_API_URL;
-          if (isLocalDev) {
-            updateApiSelectionUI();
-          }
+          updateApiSelectionUI();
           updateServiceStatus(true, 'Switched to local AI service');
           // Retry with local API
           return await checkPythonServiceHealth(true);
@@ -1181,9 +1196,7 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
         // If we're using local and it fails, try deployed if available
         else if (currentApiUrl === LOCAL_API_URL && deployedApiAvailable) {
           currentApiUrl = DEPLOYED_API_URL;
-          if (isLocalDev) {
-            updateApiSelectionUI();
-          }
+          updateApiSelectionUI();
           updateServiceStatus(true, 'Switched to deployed AI service (local unavailable)');
           // Retry with deployed API
           return await checkPythonServiceHealth(true);
@@ -1526,7 +1539,8 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
     }
     confirmBtn.onclick = async () => {
       const result = lastDetection;
-      hideModal();
+      // Don't refresh when confirming - let the calling code handle the result
+      hideModal(false);
       
       // Stop live detection
       isLiveDetectionActive = false;

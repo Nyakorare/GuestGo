@@ -19,7 +19,19 @@ interface ServiceStatus {
   is_deployed?: boolean;
 }
 
+// Helper to check if we're in local development
+function isLocalDevelopment(): boolean {
+  return typeof window !== 'undefined' && 
+         (window.location.hostname === 'localhost' || 
+          window.location.hostname === '127.0.0.1' ||
+          window.location.hostname.includes('localhost'));
+}
+
 export function renderAIStatus(): string {
+  const isLocalDev = isLocalDevelopment();
+  const localTitle = isLocalDev ? 'Local Development' : 'Local Model enabled';
+  const localUrlDisplay = isLocalDev ? `<p class="text-sm text-gray-500 dark:text-gray-400">${LOCAL_API_URL}</p>` : '';
+  
   // Always show local service section
   const localServiceSection = `
         <!-- Local Service Status -->
@@ -30,8 +42,8 @@ export function renderAIStatus(): string {
                 Local
               </div>
               <div>
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Local Development</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400">${LOCAL_API_URL}</p>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">${localTitle}</h3>
+                ${localUrlDisplay}
               </div>
             </div>
             <div class="flex items-center gap-2">

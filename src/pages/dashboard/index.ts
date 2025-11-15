@@ -892,7 +892,7 @@ export function DashboardPage() {
             <!-- Search and Filter Section -->
             <div class="flex flex-col gap-3 w-full lg:w-auto">
               <!-- Search and Filter Row -->
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 <!-- Search Input -->
                 <div class="relative">
                   <input 
@@ -907,17 +907,6 @@ export function DashboardPage() {
                     </svg>
                   </div>
                 </div>
-                <!-- Status Filter -->
-                <select 
-                  id="visitStatusFilter"
-                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
-                >
-                  <option value="all">All Status</option>
-                  <option value="pending">Pending</option>
-                  <option value="completed">Completed</option>
-                  <option value="completed_flagged">Completed (Flagged)</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
                 <!-- Visitor Role Filter -->
                 <select 
                   id="visitorRoleFilter"
@@ -4831,15 +4820,6 @@ function setupDashboardEventListeners() {
     });
   }
 
-  // Status filter event listener
-  const visitStatusFilter = document.getElementById('visitStatusFilter') as HTMLSelectElement;
-  if (visitStatusFilter) {
-    visitStatusFilter.addEventListener('change', async () => {
-      currentStatusFilter = visitStatusFilter.value;
-      await applyVisitsFilters();
-    });
-  }
-
   // Role filter event listener
   const visitorRoleFilter = document.getElementById('visitorRoleFilter') as HTMLSelectElement;
   if (visitorRoleFilter) {
@@ -7191,52 +7171,63 @@ async function loadFinishedSchedules() {
 async function applyVisitsFilters() {
   let filteredVisits = [...allScheduledVisits];
 
-  // Filter out unsuccessful visits from scheduled visits view (personnel should not see unsuccessful visits)
-  filteredVisits = filteredVisits.filter(visit => visit.status !== 'unsuccessful');
+  // Filter out completed, completed_flagged, and unsuccessful visits from scheduled visits view
+  // Personnel should only see active visits (pending, in_progress, temporary_exit)
+  filteredVisits = filteredVisits.filter(visit => 
+    visit.status !== 'unsuccessful' && 
+    visit.status !== 'completed' && 
+    visit.status !== 'completed_flagged'
+  );
 
   // Apply schedule type filter using Philippine time
-  const philippineToday = await getCurrentPhilippineDateFromDB();
+  const philippineTodayStr = await getCurrentPhilippineDateFromDB();
 
   switch (currentScheduleType) {
     case 'today':
-      // Show all pending visits scheduled for today or any past date (overdue)
+      // Show all active visits scheduled for today only (no past dates)
+      // Include: pending, in_progress, temporary_exit
       filteredVisits = filteredVisits.filter(visit => {
-        const visitDate = parseDateAsPhilippine(visit.visit_date);
-        visitDate.setHours(0, 0, 0, 0);
-        const philippineVisitDate = toPhilippineTime(visitDate);
-        philippineVisitDate.setHours(0, 0, 0, 0);
-        // Show if visit date is today or before today (overdue), and still pending
-        return philippineVisitDate.getTime() <= philippineToday.getTime() && visit.status === 'pending';
+        const visitDateStr = getVisitDateString(visit.visit_date);
+        if (!visitDateStr || !philippineTodayStr) {
+          return false;
+        }
+        // Show only if visit date is exactly today, and status is active
+        const isToday = visitDateStr === philippineTodayStr;
+        const isActiveStatus = visit.status === 'pending' || 
+                              visit.status === 'in_progress' ||
+                              visit.status === 'temporary_exit';
+        return isToday && isActiveStatus;
       });
       break;
     case 'future':
       filteredVisits = filteredVisits.filter(visit => {
-        const visitDate = parseDateAsPhilippine(visit.visit_date);
-        visitDate.setHours(0, 0, 0, 0);
-        const philippineVisitDate = toPhilippineTime(visitDate);
-        philippineVisitDate.setHours(0, 0, 0, 0);
+        const visitDateStr = getVisitDateString(visit.visit_date);
+        if (!visitDateStr) {
+          return false;
+        }
         // If a specific future date is selected, match that date exactly
         if (currentFutureSpecificDate) {
-          const selected = new Date(currentFutureSpecificDate);
-          selected.setHours(0, 0, 0, 0);
-          const selectedPh = toPhilippineTime(selected);
-          selectedPh.setHours(0, 0, 0, 0);
-          return philippineVisitDate.getTime() === selectedPh.getTime();
+          return visitDateStr === currentFutureSpecificDate;
         }
         // Otherwise, any date strictly after today
-        return philippineVisitDate.getTime() > philippineToday.getTime();
+        return philippineTodayStr ? visitDateStr > philippineTodayStr : true;
       });
       break;
     case 'all':
-      // For 'all' schedules, filter out completed places to only show pending places
-      filteredVisits = filteredVisits.filter(visit => visit.place_status !== 'completed');
+      // For 'all' schedules, filter out completed places and past dates
+      filteredVisits = filteredVisits.filter(visit => {
+        const visitDateStr = getVisitDateString(visit.visit_date);
+        if (!visitDateStr || !philippineTodayStr) {
+          return false;
+        }
+        // Only show today and future dates, exclude past dates
+        const isTodayOrFuture = visitDateStr >= philippineTodayStr;
+        return isTodayOrFuture && visit.place_status !== 'completed';
+      });
       break;
   }
 
-  // Apply status filter (but still exclude unsuccessful visits)
-  if (currentStatusFilter !== 'all') {
-    filteredVisits = filteredVisits.filter(visit => visit.status === currentStatusFilter);
-  }
+  // Status filter removed - personnel dashboard only shows active visits
 
   // Apply role filter
   if (currentRoleFilter !== 'all') {
@@ -7279,7 +7270,7 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
       <div class="text-center py-8">
         <div class="text-gray-500 dark:text-gray-400 text-lg">No scheduled visits found</div>
         <div class="text-gray-400 dark:text-gray-500 text-sm mt-2">
-          ${currentSearchTerm || currentStatusFilter !== 'all' || currentRoleFilter !== 'all' || currentScheduleType !== 'all' 
+          ${currentSearchTerm || currentRoleFilter !== 'all' || currentScheduleType !== 'all' 
             ? 'Try adjusting your search or filters' 
             : 'No visits are currently scheduled'}
         </div>
@@ -7292,7 +7283,7 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
   }
 
   // Get real-time Philippine date for accurate comparison
-  const philippineToday = await getCurrentPhilippineDateFromDB();
+  const philippineTodayStr = await getCurrentPhilippineDateFromDB();
 
   // Check permissions for all visits
   const { data: { user } } = await supabase.auth.getUser();
@@ -7330,7 +7321,8 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
     const visitorRole = visit.visitor_role || 'guest';
     const isLoggedIn = visit.visitor_user_id !== null;
     const visitorId = isLoggedIn ? visit.visitor_user_id : 'guest';
-    const scheduledDate = new Date(visit.visit_date).toLocaleDateString();
+    const visitDateStr = getVisitDateString(visit.visit_date);
+    const scheduledDate = formatPhilippineDateForDisplay(visitDateStr);
     const scheduledTime = new Date(visit.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     
     const statusColors: { [key: string]: string } = {
@@ -7349,8 +7341,7 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
     };
 
     // Use strict YYYY-MM-DD string comparison for visit date and Philippine date
-    const visitDateStr = (visit.visit_date || '').split('T')[0];
-    const todayStr = philippineToday.toISOString().split('T')[0];
+    const todayStr = philippineTodayStr || '';
     // Debug log
     console.log('[DATE DEBUG] visitDateStr:', visitDateStr, 'currentDateStr:', todayStr);
 
@@ -7884,6 +7875,44 @@ function toPhilippineTime(date: Date): Date {
   return philippineTime;
 }
 
+function getVisitDateString(rawDate: any): string {
+  if (!rawDate) {
+    return '';
+  }
+
+  if (typeof rawDate === 'string') {
+    return rawDate.split('T')[0];
+  }
+
+  if (rawDate instanceof Date) {
+    return isNaN(rawDate.getTime()) ? '' : rawDate.toISOString().split('T')[0];
+  }
+
+  try {
+    const parsed = new Date(rawDate);
+    return isNaN(parsed.getTime()) ? '' : parsed.toISOString().split('T')[0];
+  } catch (error) {
+    console.error('Unable to parse visit date:', error, rawDate);
+    return '';
+  }
+}
+
+function formatPhilippineDateForDisplay(dateStr: string): string {
+  if (!dateStr) {
+    return 'Unknown date';
+  }
+
+  const manilaDate = new Date(`${dateStr}T00:00:00+08:00`);
+
+  if (isNaN(manilaDate.getTime())) {
+    return dateStr;
+  }
+
+  return manilaDate.toLocaleDateString(undefined, {
+    timeZone: 'Asia/Manila'
+  });
+}
+
 // Helper function to set max date for visitor past calendar filters
 function setMaxDateForVisitorPastFilters() {
   const today = new Date();
@@ -7931,19 +7960,19 @@ async function getCurrentPhilippineTimeFromDB(): Promise<Date> {
   }
 }
 // Helper function to get current Philippine date from database (real-time)
-async function getCurrentPhilippineDateFromDB(): Promise<Date> {
+async function getCurrentPhilippineDateFromDB(): Promise<string> {
   try {
     const { data, error } = await supabase.rpc('get_philippine_date');
-    if (error) {
+    if (error || !data) {
       console.error('Error getting Philippine date from DB:', error);
       // Fallback to local calculation
-      return getPhilippineDate();
+      return getVisitDateString(getPhilippineDate());
     }
-    return new Date(data);
+    return getVisitDateString(data);
   } catch (error) {
     console.error('Exception getting Philippine date from DB:', error);
     // Fallback to local calculation
-    return getPhilippineDate();
+    return getVisitDateString(getPhilippineDate());
   }
 }
 
@@ -7991,15 +8020,6 @@ function startPhilippineClock() {
 setTimeout(() => {
   startPhilippineClock();
 }, 100);
-
-// Helper to parse YYYY-MM-DD as Asia/Manila midnight
-function parseDateAsPhilippine(dateStr: string): Date {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  // Create date in Philippine timezone (UTC+8)
-  const utcTime = Date.UTC(year, month - 1, day, 0, 0, 0);
-  const philippineTime = new Date(utcTime + (8 * 60 * 60 * 1000)); // Add 8 hours for UTC+8
-  return philippineTime;
-}
 
 // Add a real-time auto-refresh for schedule lists and Mark Complete button
 let scheduleAutoRefreshInterval: any = null;
@@ -8825,7 +8845,7 @@ async function showFaceDetectionForGateScan(visitId: string, gateId: string) {
     // Remove loading overlay
     loadingOverlay.remove();
 
-    if (faceResult.success && faceResult.imageDataUrl) {
+    if (faceResult.success && faceResult.croppedImageDataUrl) {
       // Process the gate scan with face data
       await processGateScanWithFaceData(visitId, gateId, faceResult);
     } else {
@@ -8851,10 +8871,10 @@ async function processGateScanWithFaceData(visitId: string, gateId: string, face
     let faceImageData = null;
     let faceDetectionMetadata = null;
 
-    if (faceResult.imageDataUrl) {
-      // Compress the face image for storage
+    if (faceResult.croppedImageDataUrl) {
+      // Compress the cropped face image for storage
       const { compressImageDataUrl } = await import('../../utils/imageCompression');
-      const compressedImage = await compressImageDataUrl(faceResult.imageDataUrl, 0.8, 400, 400);
+      const compressedImage = await compressImageDataUrl(faceResult.croppedImageDataUrl, 0.8, 400, 400);
       faceImageData = compressedImage;
       
       // Prepare metadata
@@ -8862,7 +8882,7 @@ async function processGateScanWithFaceData(visitId: string, gateId: string, face
         timestamp: new Date().toISOString(),
         confidence: faceResult.confidence || 0,
         boundingBox: faceResult.detections?.[0] || null,
-        originalSize: faceResult.imageDataUrl.length,
+        originalSize: faceResult.croppedImageDataUrl.length,
         compressedSize: compressedImage.length
       };
     }
