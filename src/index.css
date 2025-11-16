@@ -159,6 +159,21 @@
   background: #2563eb; /* blue-600 */
 }
 
+/* Infinite sliding animation for contact cards */
+.contact-slider {
+  width: 700%; /* 5 original + 2 duplicates = 7 cards total */
+  will-change: transform;
+}
+
+@keyframes slideInfinite {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-71.42857%); /* Move by 5 cards (5/7 of slider = 500% of container) */
+  }
+}
+
 /* Hover animation for the contact cards container */
 .contact-cards-group:hover .contact-card {
   transform: scale(1.04) translateY(-4px);

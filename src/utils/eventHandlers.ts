@@ -451,29 +451,88 @@ export function setupAboutPageInteractivity() {
     walter: { name: 'Walter', title: 'QA Engineer', bio: 'Guarantees quality and reliability across the platform.', img: '/walter.jpg' },
   };
   
+  // Create modal dynamically and append to body
+  function createTeamModal() {
+    // Remove existing modal if any
+    const existingModal = document.getElementById('team-modal');
+    if (existingModal) {
+      existingModal.remove();
+    }
+    
+    const modal = document.createElement('div');
+    modal.id = 'team-modal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-0 flex items-start justify-center z-[9999] hidden backdrop-blur-sm transition-all duration-300 ease-out overflow-y-auto pt-4 sm:pt-8 md:pt-12';
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.right = '0';
+    modal.style.bottom = '0';
+    
+    modal.innerHTML = `
+      <div class="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-4 sm:p-6 md:p-8 max-w-md w-full mx-4 mt-4 sm:mt-8 relative transform scale-75 opacity-0 transition-all duration-500 ease-out">
+        <button id="close-team-modal" class="absolute top-2 right-2 text-gray-500 hover:text-red-500 text-2xl transition-colors duration-200 transform hover:scale-110 z-10">&times;</button>
+        <div id="team-modal-content" class="animate-fade-in-up" style="animation-delay: 0.2s;"></div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    return modal;
+  }
+  
+  // Initialize modal
+  let teamModal = createTeamModal();
+  
+  // Function to close modal
+  function closeTeamModal() {
+    if (teamModal) {
+      teamModal.classList.remove('show');
+      document.body.style.overflow = '';
+      
+      setTimeout(() => {
+        teamModal.classList.add('hidden');
+      }, 500);
+    }
+  }
+  
+  // Cleanup function to remove modal when navigating away
+  function cleanupTeamModal() {
+    if (teamModal && document.body.contains(teamModal)) {
+      document.body.style.overflow = '';
+      teamModal.remove();
+    }
+  }
+  
+  // Store cleanup function for navigation cleanup
+  (window as any).cleanupAboutPage = cleanupTeamModal;
+  
   document.querySelectorAll('.team-member').forEach(btn => {
     btn.addEventListener('click', function() {
       const member = this.getAttribute('data-member');
       const details = teamDetails[member];
       if (details) {
-        const modal = document.getElementById('team-modal');
+        // Ensure modal exists
+        if (!teamModal || !document.body.contains(teamModal)) {
+          teamModal = createTeamModal();
+        }
+        
         const modalContent = document.getElementById('team-modal-content');
         
         if (modalContent) {
           modalContent.innerHTML = `
-            <img src="${details.img}" alt="${details.name}" class="w-24 h-24 rounded-full mx-auto mb-4 object-cover">
-            <h3 class="text-2xl font-bold mb-2">${details.name}</h3>
-            <p class="text-blue-600 dark:text-blue-400 font-semibold mb-2">${details.title}</p>
-            <p class="text-gray-700 dark:text-gray-300">${details.bio}</p>
+            <img src="${details.img}" alt="${details.name}" class="w-20 h-20 sm:w-24 sm:h-24 rounded-full mx-auto mb-3 sm:mb-4 object-cover">
+            <h3 class="text-xl sm:text-2xl font-bold mb-2">${details.name}</h3>
+            <p class="text-blue-600 dark:text-blue-400 font-semibold mb-2 text-sm sm:text-base">${details.title}</p>
+            <p class="text-gray-700 dark:text-gray-300 text-sm sm:text-base">${details.bio}</p>
           `;
         }
         
-        if (modal) {
-          modal.classList.remove('hidden');
+        if (teamModal) {
+          teamModal.classList.remove('hidden');
+          document.body.style.overflow = 'hidden';
           
           // Small delay to ensure the modal is visible before animating
           setTimeout(() => {
-            modal.classList.add('show');
+            teamModal.classList.add('show');
           }, 10);
         }
       }
@@ -481,56 +540,92 @@ export function setupAboutPageInteractivity() {
   });
   
   // Close team modal with smooth animation
-  const closeBtn = document.getElementById('close-team-modal');
-  if (closeBtn) {
-    closeBtn.addEventListener('click', () => {
-      const modal = document.getElementById('team-modal');
-      if (modal) {
-        // Start exit animation
-        modal.classList.remove('show');
-        
-        // Wait for animation to complete before hiding
-        setTimeout(() => {
-          modal.classList.add('hidden');
-        }, 500);
-      }
-    });
-  }
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    if (target.id === 'close-team-modal') {
+      closeTeamModal();
+    }
+  });
   
   // Close modal when clicking outside
-  const teamModal = document.getElementById('team-modal');
   if (teamModal) {
     teamModal.addEventListener('click', (e) => {
       if (e.target === teamModal) {
-        // Start exit animation
-        teamModal.classList.remove('show');
-        
-        // Wait for animation to complete before hiding
-        setTimeout(() => {
-          teamModal.classList.add('hidden');
-        }, 500);
+        closeTeamModal();
       }
     });
   }
+  
+  // Close modal on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && teamModal && !teamModal.classList.contains('hidden')) {
+      closeTeamModal();
+    }
+  });
 
-  // Guests Managed Counter (from DB) with improved animation
+  // Load real statistics from database
   (async () => {
-    const el = document.getElementById('guests-managed');
-    if (el) {
-      const { count, error } = await supabase
-        .from('scheduled_visits')
+    try {
+      // Get visit statistics using RPC function
+      const { data: visitStats, error: statsError } = await supabase
+        .rpc('get_visit_statistics');
+      
+      // Get total places count
+      const { count: placesCount, error: placesError } = await supabase
+        .from('places_to_visit')
         .select('*', { count: 'exact', head: true });
-      if (!error) {
-        animateCounter(el, count || 0);
+      
+      if (!statsError && visitStats && visitStats.length > 0) {
+        const stats = visitStats[0];
+        
+        // Total Visits
+        const totalVisitsEl = document.getElementById('stat-total-visits');
+        if (totalVisitsEl) {
+          animateCounter(totalVisitsEl, Number(stats.total_visits) || 0);
+        }
+        
+        // Completed Today (completed + completed_flagged)
+        const completedTodayEl = document.getElementById('stat-completed-today');
+        if (completedTodayEl) {
+          const completedToday = (Number(stats.today_completed) || 0) + (Number(stats.today_completed_flagged) || 0);
+          animateCounter(completedTodayEl, completedToday);
+        }
+        
+        // Success Rate (completed visits / total visits * 100)
+        const successRateEl = document.getElementById('stat-success-rate');
+        if (successRateEl) {
+          const totalVisits = Number(stats.total_visits) || 0;
+          const completedVisits = (Number(stats.completed_visits) || 0) + (Number(stats.completed_flagged_visits) || 0);
+          const successRate = totalVisits > 0 ? Math.round((completedVisits / totalVisits) * 100) : 0;
+          animateCounter(successRateEl, successRate, 0);
+        }
       }
+      
+      // Visit Locations (Places)
+      const placesEl = document.getElementById('stat-places');
+      if (placesEl && !placesError) {
+        animateCounter(placesEl, placesCount || 0);
+      }
+      
+    } catch (error) {
+      console.error('Error loading statistics:', error);
+      // Set default values on error
+      const elements = [
+        'stat-total-visits',
+        'stat-completed-today',
+        'stat-places',
+        'stat-success-rate'
+      ];
+      elements.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.textContent = id === 'stat-success-rate' ? '0%' : '0';
+        }
+      });
     }
   })();
-  
-  // Uptime Counter (placeholder, e.g. 99.98)
-  const uptimeEl = document.getElementById('uptime');
-  if (uptimeEl) animateCounter(uptimeEl, 99.98, 2);
 
-  function animateCounter(el, target, decimals = 0) {
+  function animateCounter(el: HTMLElement, target: number, decimals = 0) {
     let count = 0;
     const increment = Math.max(1, Math.floor(target / 100));
     const duration = 2000; // 2 seconds
@@ -540,7 +635,8 @@ export function setupAboutPageInteractivity() {
     function update() {
       if (count < target) {
         count = Math.min(target, count + increment);
-        el.innerText = decimals ? count.toFixed(decimals) : count.toLocaleString();
+        const displayValue = decimals > 0 ? count.toFixed(decimals) : Math.floor(count).toLocaleString();
+        el.innerText = el.id === 'stat-success-rate' ? displayValue + '%' : displayValue;
         
         // Add a subtle scale effect during counting
         el.style.transform = 'scale(1.1)';
@@ -550,7 +646,8 @@ export function setupAboutPageInteractivity() {
         
         setTimeout(update, stepDuration);
       } else {
-        el.innerText = decimals ? target.toFixed(decimals) : target.toLocaleString();
+        const finalValue = decimals > 0 ? target.toFixed(decimals) : target.toLocaleString();
+        el.innerText = el.id === 'stat-success-rate' ? finalValue + '%' : finalValue;
         el.style.transform = 'scale(1)';
       }
     }

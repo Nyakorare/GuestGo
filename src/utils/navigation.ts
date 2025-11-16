@@ -223,6 +223,11 @@ async function performNavigation() {
       }
     }
 
+    // Cleanup previous page resources
+    if ((window as any).cleanupAboutPage && path !== '/about') {
+      (window as any).cleanupAboutPage();
+    }
+    
     // Update DOM efficiently with smooth transition
     const contentDiv = document.createElement('div');
     contentDiv.className = 'page-transition';

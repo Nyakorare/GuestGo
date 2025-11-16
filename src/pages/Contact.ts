@@ -1,66 +1,300 @@
+import supabase from '../config/supabase';
+
 export function ContactPage() {
-  return `    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-6 transition-colors duration-200">
+  return `    <div class="w-full py-12 -mx-4 sm:-mx-6 lg:-mx-8">
+      <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-6 transition-colors duration-200 px-4 sm:px-6 lg:px-8">
         Contact Us
       </h1>
       
-      <!-- Contact Person Cards Horizontal Scroll -->
-      <div class="overflow-x-auto pb-6 contact-scrollbar">
-        <div class="flex space-x-6 min-w-max">
+      <!-- Contact Person Cards Auto-Sliding Animation -->
+      <div class="relative overflow-hidden pb-6 w-screen" style="margin-left: calc(50% - 50vw);">
+        <div class="contact-slider flex" style="animation: slideInfinite 25s linear infinite;">
           <!-- Card 1 -->
-          <div class="relative w-64 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 flex-shrink-0 transition-transform transition-shadow duration-200 hover:scale-105 hover:shadow-2xl hover:z-10">
-            <div class="w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mb-4 overflow-hidden">
-              <img src="/glenn.jpg" alt="Glenn R. Galbadores I" class="w-full h-full object-cover rounded-full" />
+          <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-md flex-shrink-0 transition-transform transition-shadow duration-200 hover:scale-105 hover:shadow-2xl hover:z-10 overflow-hidden flex mr-4" style="width: 14.2857%;">
+            <!-- Left Side - Current Design -->
+            <div class="w-1/2 p-6 border-r border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center">
+              <div class="w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mb-4 overflow-hidden">
+                <img src="/glenn.jpg" alt="Glenn R. Galbadores I" class="w-full h-full object-cover rounded-full" />
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white text-center">Glenn R. Galbadores I</h3>
+              <p class="text-gray-600 dark:text-gray-300 text-center">CEO</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">john@example.com</p>
             </div>
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white text-center">Glenn R. Galbadores I</h3>
-            <p class="text-gray-600 dark:text-gray-300 text-center">CEO</p>
-            <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">john@example.com</p>
+            <!-- Right Side - New Design -->
+            <div class="w-1/2 p-6 bg-gradient-to-br from-blue-500 to-blue-700 dark:from-blue-600 dark:to-blue-800 flex flex-col justify-center items-center text-white relative overflow-hidden">
+              <div class="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-16 -mt-16"></div>
+              <div class="absolute bottom-0 left-0 w-24 h-24 bg-white opacity-10 rounded-full -ml-12 -mb-12"></div>
+              <div class="relative z-10 text-center">
+                <div class="mb-4">
+                  <svg class="w-12 h-12 mx-auto mb-2 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                  </svg>
+                </div>
+                <h4 class="text-sm font-semibold mb-3 opacity-95">Leadership</h4>
+                <div class="space-y-2 text-xs">
+                  <div class="flex items-center justify-center space-x-2">
+                    <span class="w-2 h-2 bg-white rounded-full"></span>
+                    <span>Strategic Vision</span>
+                  </div>
+                  <div class="flex items-center justify-center space-x-2">
+                    <span class="w-2 h-2 bg-white rounded-full"></span>
+                    <span>Team Building</span>
+                  </div>
+                  <div class="flex items-center justify-center space-x-2">
+                    <span class="w-2 h-2 bg-white rounded-full"></span>
+                    <span>Innovation</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Card 2 -->
-          <div class="relative w-64 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 flex-shrink-0 transition-transform transition-shadow duration-200 hover:scale-105 hover:shadow-2xl hover:z-10">
-            <div class="w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mb-4 overflow-hidden">
-              <img src="/kurt.jpg" alt="Kurt Angelo F. Ballarta" class="w-full h-full object-cover rounded-full" />
+          <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-md flex-shrink-0 transition-transform transition-shadow duration-200 hover:scale-105 hover:shadow-2xl hover:z-10 overflow-hidden flex mr-4" style="width: 14.2857%;">
+            <!-- Left Side - Current Design -->
+            <div class="w-1/2 p-6 border-r border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center">
+              <div class="w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mb-4 overflow-hidden">
+                <img src="/kurt.jpg" alt="Kurt Angelo F. Ballarta" class="w-full h-full object-cover rounded-full" />
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white text-center">Kurt Angelo F. Ballarta</h3>
+              <p class="text-gray-600 dark:text-gray-300 text-center">CTO</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">jane@example.com</p>
             </div>
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white text-center">Kurt Angelo F. Ballarta</h3>
-            <p class="text-gray-600 dark:text-gray-300 text-center">CTO</p>
-            <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">jane@example.com</p>
+            <!-- Right Side - New Design -->
+            <div class="w-1/2 p-6 bg-gradient-to-br from-purple-500 to-purple-700 dark:from-purple-600 dark:to-purple-800 flex flex-col justify-center items-center text-white relative overflow-hidden">
+              <div class="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-16 -mt-16"></div>
+              <div class="absolute bottom-0 left-0 w-24 h-24 bg-white opacity-10 rounded-full -ml-12 -mb-12"></div>
+              <div class="relative z-10 text-center">
+                <div class="mb-4">
+                  <svg class="w-12 h-12 mx-auto mb-2 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+                  </svg>
+                </div>
+                <h4 class="text-sm font-semibold mb-3 opacity-95">Technology</h4>
+                <div class="space-y-2 text-xs">
+                  <div class="flex items-center justify-center space-x-2">
+                    <span class="w-2 h-2 bg-white rounded-full"></span>
+                    <span>System Architecture</span>
+                  </div>
+                  <div class="flex items-center justify-center space-x-2">
+                    <span class="w-2 h-2 bg-white rounded-full"></span>
+                    <span>Cloud Solutions</span>
+                  </div>
+                  <div class="flex items-center justify-center space-x-2">
+                    <span class="w-2 h-2 bg-white rounded-full"></span>
+                    <span>Security</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Card 3 -->
-          <div class="relative w-64 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 flex-shrink-0 transition-transform transition-shadow duration-200 hover:scale-105 hover:shadow-2xl hover:z-10">
-            <div class="w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mb-4 overflow-hidden">
-              <img src="/justine.jpg" alt="Justine B. Mantilla" class="w-full h-full object-cover rounded-full" />
+          <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-md flex-shrink-0 transition-transform transition-shadow duration-200 hover:scale-105 hover:shadow-2xl hover:z-10 overflow-hidden flex mr-4" style="width: 14.2857%;">
+            <!-- Left Side - Current Design -->
+            <div class="w-1/2 p-6 border-r border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center">
+              <div class="w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mb-4 overflow-hidden">
+                <img src="/justine.jpg" alt="Justine B. Mantilla" class="w-full h-full object-cover rounded-full" />
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white text-center">Justine B. Mantilla</h3>
+              <p class="text-gray-600 dark:text-gray-300 text-center">COO</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">mike@example.com</p>
             </div>
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white text-center">Justine B. Mantilla</h3>
-            <p class="text-gray-600 dark:text-gray-300 text-center">COO</p>
-            <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">mike@example.com</p>
+            <!-- Right Side - New Design -->
+            <div class="w-1/2 p-6 bg-gradient-to-br from-green-500 to-green-700 dark:from-green-600 dark:to-green-800 flex flex-col justify-center items-center text-white relative overflow-hidden">
+              <div class="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-16 -mt-16"></div>
+              <div class="absolute bottom-0 left-0 w-24 h-24 bg-white opacity-10 rounded-full -ml-12 -mb-12"></div>
+              <div class="relative z-10 text-center">
+                <div class="mb-4">
+                  <svg class="w-12 h-12 mx-auto mb-2 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                  </svg>
+                </div>
+                <h4 class="text-sm font-semibold mb-3 opacity-95">Operations</h4>
+                <div class="space-y-2 text-xs">
+                  <div class="flex items-center justify-center space-x-2">
+                    <span class="w-2 h-2 bg-white rounded-full"></span>
+                    <span>Process Optimization</span>
+                  </div>
+                  <div class="flex items-center justify-center space-x-2">
+                    <span class="w-2 h-2 bg-white rounded-full"></span>
+                    <span>Quality Assurance</span>
+                  </div>
+                  <div class="flex items-center justify-center space-x-2">
+                    <span class="w-2 h-2 bg-white rounded-full"></span>
+                    <span>Efficiency</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Card 4 -->
-          <div class="relative w-64 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 flex-shrink-0 transition-transform transition-shadow duration-200 hover:scale-105 hover:shadow-2xl hover:z-10">
-            <div class="w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mb-4 overflow-hidden">
-              <img src="/walter.jpg" alt="John Walter D. Marquez" class="w-full h-full object-cover rounded-full" />
+          <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-md flex-shrink-0 transition-transform transition-shadow duration-200 hover:scale-105 hover:shadow-2xl hover:z-10 overflow-hidden flex mr-4" style="width: 14.2857%;">
+            <!-- Left Side - Current Design -->
+            <div class="w-1/2 p-6 border-r border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center">
+              <div class="w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mb-4 overflow-hidden">
+                <img src="/walter.jpg" alt="John Walter D. Marquez" class="w-full h-full object-cover rounded-full" />
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white text-center">John Walter D. Marquez</h3>
+              <p class="text-gray-600 dark:text-gray-300 text-center">CFO</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">sarah@example.com</p>
             </div>
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white text-center">John Walter D. Marquez</h3>
-            <p class="text-gray-600 dark:text-gray-300 text-center">CFO</p>
-            <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">sarah@example.com</p>
+            <!-- Right Side - New Design -->
+            <div class="w-1/2 p-6 bg-gradient-to-br from-orange-500 to-orange-700 dark:from-orange-600 dark:to-orange-800 flex flex-col justify-center items-center text-white relative overflow-hidden">
+              <div class="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-16 -mt-16"></div>
+              <div class="absolute bottom-0 left-0 w-24 h-24 bg-white opacity-10 rounded-full -ml-12 -mb-12"></div>
+              <div class="relative z-10 text-center">
+                <div class="mb-4">
+                  <svg class="w-12 h-12 mx-auto mb-2 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                </div>
+                <h4 class="text-sm font-semibold mb-3 opacity-95">Finance</h4>
+                <div class="space-y-2 text-xs">
+                  <div class="flex items-center justify-center space-x-2">
+                    <span class="w-2 h-2 bg-white rounded-full"></span>
+                    <span>Financial Planning</span>
+                  </div>
+                  <div class="flex items-center justify-center space-x-2">
+                    <span class="w-2 h-2 bg-white rounded-full"></span>
+                    <span>Budget Management</span>
+                  </div>
+                  <div class="flex items-center justify-center space-x-2">
+                    <span class="w-2 h-2 bg-white rounded-full"></span>
+                    <span>Analytics</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Card 5 -->
-          <div class="relative w-64 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 flex-shrink-0 transition-transform transition-shadow duration-200 hover:scale-105 hover:shadow-2xl hover:z-10">
-            <div class="w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mb-4 overflow-hidden">
-              <img src="/ken.jpg" alt="Ken Zedrick E. Montano" class="w-full h-full object-cover rounded-full" />
+          <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-md flex-shrink-0 transition-transform transition-shadow duration-200 hover:scale-105 hover:shadow-2xl hover:z-10 overflow-hidden flex mr-4" style="width: 14.2857%;">
+            <!-- Left Side - Current Design -->
+            <div class="w-1/2 p-6 border-r border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center">
+              <div class="w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mb-4 overflow-hidden">
+                <img src="/ken.jpg" alt="Ken Zedrick E. Montano" class="w-full h-full object-cover rounded-full" />
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white text-center">Ken Zedrick E. Montano</h3>
+              <p class="text-gray-600 dark:text-gray-300 text-center">CMO</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">david@example.com</p>
             </div>
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white text-center">Ken Zedrick E. Montano</h3>
-            <p class="text-gray-600 dark:text-gray-300 text-center">CMO</p>
-            <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">david@example.com</p>
+            <!-- Right Side - New Design -->
+            <div class="w-1/2 p-6 bg-gradient-to-br from-pink-500 to-pink-700 dark:from-pink-600 dark:to-pink-800 flex flex-col justify-center items-center text-white relative overflow-hidden">
+              <div class="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-16 -mt-16"></div>
+              <div class="absolute bottom-0 left-0 w-24 h-24 bg-white opacity-10 rounded-full -ml-12 -mb-12"></div>
+              <div class="relative z-10 text-center">
+                <div class="mb-4">
+                  <svg class="w-12 h-12 mx-auto mb-2 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/>
+                  </svg>
+                </div>
+                <h4 class="text-sm font-semibold mb-3 opacity-95">Marketing</h4>
+                <div class="space-y-2 text-xs">
+                  <div class="flex items-center justify-center space-x-2">
+                    <span class="w-2 h-2 bg-white rounded-full"></span>
+                    <span>Brand Strategy</span>
+                  </div>
+                  <div class="flex items-center justify-center space-x-2">
+                    <span class="w-2 h-2 bg-white rounded-full"></span>
+                    <span>Digital Campaigns</span>
+                  </div>
+                  <div class="flex items-center justify-center space-x-2">
+                    <span class="w-2 h-2 bg-white rounded-full"></span>
+                    <span>Growth</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Duplicate cards for seamless infinite loop -->
+          <!-- Card 1 (Duplicate) -->
+          <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-md flex-shrink-0 transition-transform transition-shadow duration-200 hover:scale-105 hover:shadow-2xl hover:z-10 overflow-hidden flex mr-4" style="width: 14.2857%;">
+            <!-- Left Side - Current Design -->
+            <div class="w-1/2 p-6 border-r border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center">
+              <div class="w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mb-4 overflow-hidden">
+                <img src="/glenn.jpg" alt="Glenn R. Galbadores I" class="w-full h-full object-cover rounded-full" />
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white text-center">Glenn R. Galbadores I</h3>
+              <p class="text-gray-600 dark:text-gray-300 text-center">CEO</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">john@example.com</p>
+            </div>
+            <!-- Right Side - New Design -->
+            <div class="w-1/2 p-6 bg-gradient-to-br from-blue-500 to-blue-700 dark:from-blue-600 dark:to-blue-800 flex flex-col justify-center items-center text-white relative overflow-hidden">
+              <div class="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-16 -mt-16"></div>
+              <div class="absolute bottom-0 left-0 w-24 h-24 bg-white opacity-10 rounded-full -ml-12 -mb-12"></div>
+              <div class="relative z-10 text-center">
+                <div class="mb-4">
+                  <svg class="w-12 h-12 mx-auto mb-2 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                  </svg>
+                </div>
+                <h4 class="text-sm font-semibold mb-3 opacity-95">Leadership</h4>
+                <div class="space-y-2 text-xs">
+                  <div class="flex items-center justify-center space-x-2">
+                    <span class="w-2 h-2 bg-white rounded-full"></span>
+                    <span>Strategic Vision</span>
+                  </div>
+                  <div class="flex items-center justify-center space-x-2">
+                    <span class="w-2 h-2 bg-white rounded-full"></span>
+                    <span>Team Building</span>
+                  </div>
+                  <div class="flex items-center justify-center space-x-2">
+                    <span class="w-2 h-2 bg-white rounded-full"></span>
+                    <span>Innovation</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2 (Duplicate) -->
+          <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-md flex-shrink-0 transition-transform transition-shadow duration-200 hover:scale-105 hover:shadow-2xl hover:z-10 overflow-hidden flex mr-4" style="width: 14.2857%;">
+            <!-- Left Side - Current Design -->
+            <div class="w-1/2 p-6 border-r border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center">
+              <div class="w-24 h-24 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mb-4 overflow-hidden">
+                <img src="/kurt.jpg" alt="Kurt Angelo F. Ballarta" class="w-full h-full object-cover rounded-full" />
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white text-center">Kurt Angelo F. Ballarta</h3>
+              <p class="text-gray-600 dark:text-gray-300 text-center">CTO</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">jane@example.com</p>
+            </div>
+            <!-- Right Side - New Design -->
+            <div class="w-1/2 p-6 bg-gradient-to-br from-purple-500 to-purple-700 dark:from-purple-600 dark:to-purple-800 flex flex-col justify-center items-center text-white relative overflow-hidden">
+              <div class="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-16 -mt-16"></div>
+              <div class="absolute bottom-0 left-0 w-24 h-24 bg-white opacity-10 rounded-full -ml-12 -mb-12"></div>
+              <div class="relative z-10 text-center">
+                <div class="mb-4">
+                  <svg class="w-12 h-12 mx-auto mb-2 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+                  </svg>
+                </div>
+                <h4 class="text-sm font-semibold mb-3 opacity-95">Technology</h4>
+                <div class="space-y-2 text-xs">
+                  <div class="flex items-center justify-center space-x-2">
+                    <span class="w-2 h-2 bg-white rounded-full"></span>
+                    <span>System Architecture</span>
+                  </div>
+                  <div class="flex items-center justify-center space-x-2">
+                    <span class="w-2 h-2 bg-white rounded-full"></span>
+                    <span>Cloud Solutions</span>
+                  </div>
+                  <div class="flex items-center justify-center space-x-2">
+                    <span class="w-2 h-2 bg-white rounded-full"></span>
+                    <span>Security</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Interactive Contact Form -->
-      <div class="mt-12 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
+      <div class="mt-12 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 mx-4 sm:mx-6 lg:mx-8">
         <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">Send us a Message</h2>
         <form id="contact-form" class="space-y-6">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -125,7 +359,7 @@ export function ContactPage() {
       </div>
 
       <!-- Interactive Map Section -->
-      <div class="mt-12 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
+      <div class="mt-12 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 mx-4 sm:mx-6 lg:mx-8">
         <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">Find Us</h2>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div class="space-y-6">
@@ -195,7 +429,7 @@ export function ContactPage() {
       </div>
 
       <!-- Interactive Business Hours -->
-      <div class="mt-12 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
+      <div class="mt-12 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 mx-4 sm:mx-6 lg:mx-8">
         <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">Business Hours</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div class="space-y-4">
@@ -225,7 +459,7 @@ export function ContactPage() {
       </div>
 
       <!-- Social Media Links -->
-      <div class="mt-12 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
+      <div class="mt-12 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 mx-4 sm:mx-6 lg:mx-8">
         <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">Follow Us</h2>
         <div class="flex justify-center space-x-6">
           <button onclick="window.location.hash = '/about'" class="social-link group flex items-center justify-center w-12 h-12 bg-blue-600 text-white rounded-full hover:bg-blue-700 transform hover:scale-110 transition-all duration-200">
@@ -251,123 +485,181 @@ export function ContactPage() {
         </div>
       </div>
 
-      <!-- Client Testimonials -->
-      <div class="mt-12 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
-        <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-8 text-center">What Our Clients Say</h2>
+      <!-- User Feedback -->
+      <div class="mt-12 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 mx-4 sm:mx-6 lg:mx-8">
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-8 text-center">User Feedback</h2>
         
-        <!-- Testimonial 1 -->
-        <div class="testimonial-item mb-8 p-6 bg-gray-50 dark:bg-gray-700 rounded-lg">
-          <div class="flex items-start space-x-4">
-            <div class="flex-shrink-0">
-              <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                <svg class="w-6 h-6 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h4v10h-10z"/>
-                </svg>
-              </div>
-            </div>
-            <div class="flex-1">
-              <blockquote class="text-lg text-gray-700 dark:text-gray-300 italic mb-4">
-                "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation."
-              </blockquote>
-              <div class="flex items-center">
-                <div>
-                  <cite class="text-sm font-semibold text-gray-900 dark:text-white">Sarah Johnson</cite>
-                  <p class="text-sm text-gray-500 dark:text-gray-400">CEO, TechCorp</p>
-                </div>
-                <div class="ml-auto">
-                  <div class="flex text-yellow-400">
-                    <svg class="w-5 h-5 fill-current" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
-                    <svg class="w-5 h-5 fill-current" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
-                    <svg class="w-5 h-5 fill-current" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
-                    <svg class="w-5 h-5 fill-current" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
-                    <svg class="w-5 h-5 fill-current" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
-                  </div>
-                </div>
-              </div>
-            </div>
+        <div id="feedback-container" class="space-y-8">
+          <!-- Loading state -->
+          <div id="feedback-loading" class="text-center py-8">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p class="mt-4 text-gray-600 dark:text-gray-400">Loading feedback...</p>
           </div>
-        </div>
-
-        <!-- Testimonial 2 -->
-        <div class="testimonial-item mb-8 p-6 bg-gray-50 dark:bg-gray-700 rounded-lg">
-          <div class="flex items-start space-x-4">
-            <div class="flex-shrink-0">
-              <div class="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
-                <svg class="w-6 h-6 text-green-600 dark:text-green-400" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h4v10h-10z"/>
-                </svg>
-              </div>
-            </div>
-            <div class="flex-1">
-              <blockquote class="text-lg text-gray-700 dark:text-gray-300 italic mb-4">
-                "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse."
-              </blockquote>
-              <div class="flex items-center">
-                <div>
-                  <cite class="text-sm font-semibold text-gray-900 dark:text-white">Michael Chen</cite>
-                  <p class="text-sm text-gray-500 dark:text-gray-400">Security Director, SecureBuild</p>
-                </div>
-                <div class="ml-auto">
-                  <div class="flex text-yellow-400">
-                    <svg class="w-5 h-5 fill-current" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
-                    <svg class="w-5 h-5 fill-current" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
-                    <svg class="w-5 h-5 fill-current" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
-                    <svg class="w-5 h-5 fill-current" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
-                    <svg class="w-5 h-5 fill-current" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
-                  </div>
-                </div>
-              </div>
-            </div>
+          
+          <!-- Empty state (hidden by default) -->
+          <div id="feedback-empty" class="text-center py-8 hidden">
+            <p class="text-gray-600 dark:text-gray-400">No feedback available yet. Check back soon!</p>
           </div>
-        </div>
-
-        <!-- Testimonial 3 -->
-        <div class="testimonial-item mb-8 p-6 bg-gray-50 dark:bg-gray-700 rounded-lg">
-          <div class="flex items-start space-x-4">
-            <div class="flex-shrink-0">
-              <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center">
-                <svg class="w-6 h-6 text-purple-600 dark:text-purple-400" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h4v10h-10z"/>
-                </svg>
-              </div>
-            </div>
-            <div class="flex-1">
-              <blockquote class="text-lg text-gray-700 dark:text-gray-300 italic mb-4">
-                "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia."
-              </blockquote>
-              <div class="flex items-center">
-                <div>
-                  <cite class="text-sm font-semibold text-gray-900 dark:text-white">Emily Rodriguez</cite>
-                  <p class="text-sm text-gray-500 dark:text-gray-400">Office Manager, InnovateLab</p>
-                </div>
-                <div class="ml-auto">
-                  <div class="flex text-yellow-400">
-                    <svg class="w-5 h-5 fill-current" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
-                    <svg class="w-5 h-5 fill-current" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
-                    <svg class="w-5 h-5 fill-current" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
-                    <svg class="w-5 h-5 fill-current" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
-                    <svg class="w-5 h-5 fill-current" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Call to Action -->
-        <div class="text-center mt-8">
-          <button onclick="window.location.hash = '/about'" class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
-            <span>Read More Testimonials</span>
-            <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-            </svg>
-          </button>
         </div>
       </div>
     </div>
     <script>
+      // Load feedback from database
+      async function loadFeedback() {
+        const feedbackContainer = document.getElementById('feedback-container');
+        const feedbackLoading = document.getElementById('feedback-loading');
+        const feedbackEmpty = document.getElementById('feedback-empty');
+        
+        try {
+          // Use the supabase client from the global scope (set up in App.ts)
+          const supabaseClient = window.supabaseClient;
+          
+          if (!supabaseClient) {
+            console.error('Supabase client not available');
+            if (feedbackLoading) feedbackLoading.classList.add('hidden');
+            if (feedbackEmpty) feedbackEmpty.classList.remove('hidden');
+            return;
+          }
+          
+          // Try RPC function first, fallback to direct query if it fails
+          let feedbackData = null;
+          let error = null;
+          
+          try {
+            const result = await supabaseClient.rpc('get_public_feedback');
+            feedbackData = result.data;
+            error = result.error;
+          } catch (rpcError) {
+            console.log('RPC function not available, trying direct query...', rpcError);
+            // Fallback: query directly from visit_feedback table
+            const { data, error: queryError } = await supabaseClient
+              .from('visit_feedback')
+              .select('id, comments, overall_satisfaction, submitted_at, scheduled_visits(visitor_first_name, visitor_last_name)')
+              .not('comments', 'is', null)
+              .gte('overall_satisfaction', 4)
+              .order('submitted_at', { ascending: false })
+              .limit(100);
+            
+            if (queryError) {
+              error = queryError;
+            } else if (data && data.length > 0) {
+              // Select random feedback based on today's date
+              const today = new Date();
+              const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
+              const randomIndex = dayOfYear % data.length;
+              const selected = data[randomIndex];
+              
+              feedbackData = [{
+                id: selected.id,
+                visitor_name: (selected.scheduled_visits?.visitor_first_name || '') + ' ' + (selected.scheduled_visits?.visitor_last_name || '') || 'Anonymous',
+                comments: selected.comments,
+                overall_satisfaction: selected.overall_satisfaction,
+                submitted_at: selected.submitted_at
+              }];
+            }
+          }
+          
+          if (error) {
+            console.error('Error loading feedback:', error);
+            if (feedbackLoading) feedbackLoading.classList.add('hidden');
+            if (feedbackEmpty) feedbackEmpty.classList.remove('hidden');
+            return;
+          }
+          
+          // Hide loading state
+          if (feedbackLoading) feedbackLoading.classList.add('hidden');
+          
+          // Handle the response
+          let feedback = null;
+          if (Array.isArray(feedbackData)) {
+            feedback = feedbackData.length > 0 ? feedbackData[0] : null;
+          } else if (feedbackData) {
+            feedback = feedbackData;
+          }
+          
+          // If no feedback found, show empty state
+          if (!feedback || !feedback.comments) {
+            if (feedbackEmpty) feedbackEmpty.classList.remove('hidden');
+            return;
+          }
+          
+          // Clear container and render single feedback
+          if (feedbackContainer) {
+            const color = { bg: 'bg-blue-100', darkBg: 'dark:bg-blue-900', text: 'text-blue-600', darkText: 'dark:text-blue-400' };
+            const rating = feedback.overall_satisfaction || 5;
+            const comment = (feedback.comments || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            const visitorName = feedback.visitor_name || 'Anonymous';
+            const date = new Date(feedback.submitted_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+            
+            // Create stars HTML - simpler approach
+            let starsHtml = '';
+            for (let i = 0; i < 5; i++) {
+              if (i < rating) {
+                starsHtml += '<span class="text-yellow-400 text-xl">★</span>';
+              } else {
+                starsHtml += '<span class="text-gray-300 dark:text-gray-600 text-xl">★</span>';
+              }
+            }
+            
+            feedbackContainer.innerHTML = '<div class="testimonial-item mb-8 p-6 bg-gray-50 dark:bg-gray-700 rounded-lg">' +
+              '<div class="flex items-start space-x-4">' +
+                '<div class="flex-shrink-0">' +
+                  '<div class="w-12 h-12 ' + color.bg + ' ' + color.darkBg + ' rounded-full flex items-center justify-center">' +
+                    '<svg class="w-6 h-6 ' + color.text + ' ' + color.darkText + '" fill="currentColor" viewBox="0 0 24 24">' +
+                      '<path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h4v10h-10z"/>' +
+                    '</svg>' +
+                  '</div>' +
+                '</div>' +
+                '<div class="flex-1">' +
+                  '<blockquote class="text-lg text-gray-700 dark:text-gray-300 italic mb-4">' +
+                    '"' + comment + '"' +
+                  '</blockquote>' +
+                  '<div class="flex items-center">' +
+                    '<div>' +
+                      '<cite class="text-sm font-semibold text-gray-900 dark:text-white">' + visitorName + '</cite>' +
+                      '<p class="text-sm text-gray-500 dark:text-gray-400">' + date + '</p>' +
+                    '</div>' +
+                    '<div class="ml-auto">' +
+                      '<div class="flex items-center gap-1">' +
+                        starsHtml +
+                      '</div>' +
+                    '</div>' +
+                  '</div>' +
+                '</div>' +
+              '</div>' +
+            '</div>';
+          }
+        } catch (error) {
+          console.error('Error in loadFeedback:', error);
+          if (feedbackLoading) feedbackLoading.classList.add('hidden');
+          if (feedbackEmpty) feedbackEmpty.classList.remove('hidden');
+        }
+      }
+      
       // Contact form validation and submission
       document.addEventListener('DOMContentLoaded', function() {
+        // Load feedback when page loads (with retry mechanism)
+        let retryCount = 0;
+        const maxRetries = 5;
+        
+        function attemptLoadFeedback() {
+          if (window.supabaseClient) {
+            loadFeedback();
+          } else if (retryCount < maxRetries) {
+            retryCount++;
+            setTimeout(attemptLoadFeedback, 200);
+          } else {
+            // Fallback: hide loading and show empty state
+            const feedbackLoading = document.getElementById('feedback-loading');
+            const feedbackEmpty = document.getElementById('feedback-empty');
+            if (feedbackLoading) feedbackLoading.classList.add('hidden');
+            if (feedbackEmpty) feedbackEmpty.classList.remove('hidden');
+            console.error('Supabase client not available after retries');
+          }
+        }
+        
+        attemptLoadFeedback();
+        
         const form = document.getElementById('contact-form');
         const submitBtn = form.querySelector('button[type="submit"]');
         const submitText = submitBtn.querySelector('.submit-text');

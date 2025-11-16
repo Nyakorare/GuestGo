@@ -70,6 +70,9 @@ export default function setupApp() {
   // Initialize theme
   const theme = getThemePreference();
   updateTheme(theme);
+  
+  // Expose supabase client globally for use in inline scripts
+  (window as any).supabaseClient = supabase;
 
   const app = document.querySelector<HTMLDivElement>('#app')!;
   
