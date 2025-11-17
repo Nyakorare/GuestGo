@@ -17,6 +17,29 @@ const pageCache = new Map<string, string>();
 let userDataCache: { user: any; role: string | null } | null = null;
 let userDataCacheTime = 0;
 const CACHE_DURATION = 30000; // 30 seconds
+const SUPABASE_REQUEST_TIMEOUT = 8000;
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+	if (typeof window === 'undefined') {
+		return promise;
+	}
+
+	let timeoutId: number | undefined;
+	const timeoutPromise = new Promise<never>((_, reject) => {
+		timeoutId = window.setTimeout(() => {
+			reject(new Error(`${label} timed out after ${timeoutMs}ms`));
+		}, timeoutMs);
+	});
+
+	return Promise.race([
+		promise.finally(() => {
+			if (timeoutId !== undefined) {
+				clearTimeout(timeoutId);
+			}
+		}),
+		timeoutPromise
+	]);
+}
 
 // Debounce function to prevent rapid navigation calls
 let navigationTimeout: number | null = null;
@@ -70,18 +93,35 @@ async function getUserData(): Promise<{ user: any; role: string | null }> {
   }
 
   try {
-    const { data: { user } } = await import('../config/supabase').then(m => m.default.auth.getUser());
+    const supabaseClient = await import('../config/supabase').then(m => m.default);
+    let user: any = null;
     let role: string | null = null;
+
+    try {
+      const userResponse = await withTimeout(
+        supabaseClient.auth.getUser(),
+        SUPABASE_REQUEST_TIMEOUT,
+        'auth.getUser'
+      );
+      user = userResponse?.data?.user ?? null;
+    } catch (error) {
+      console.warn('[Navigation] auth.getUser failed or timed out:', error);
+    }
     
     if (user) {
       try {
-        const { data: roleData } = await import('../config/supabase').then(m => m.default
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .single());
-        role = roleData?.role || null;
+        const roleResponse = await withTimeout(
+          supabaseClient
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id)
+            .maybeSingle(),
+          SUPABASE_REQUEST_TIMEOUT,
+          'user role lookup'
+        );
+        role = roleResponse?.data?.role || null;
       } catch (error) {
+        console.warn('[Navigation] user role lookup failed or timed out:', error);
       }
     }
 
@@ -114,6 +154,7 @@ async function getUserData(): Promise<{ user: any; role: string | null }> {
     
     return { user, role };
   } catch (error) {
+    console.error('[Navigation] getUserData failed:', error);
     userDataCache = { user: null, role: null };
     userDataCacheTime = now;
     return { user: null, role: null };

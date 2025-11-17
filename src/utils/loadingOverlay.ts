@@ -1,8 +1,22 @@
 let overlayElement: HTMLElement | null = null;
+let overlayFailsafeTimeout: number | null = null;
+const OVERLAY_FAILSAFE_MS = 12000;
+
+function scheduleOverlayFailsafe() {
+	if (typeof window === 'undefined') return;
+	if (overlayFailsafeTimeout) {
+		clearTimeout(overlayFailsafeTimeout);
+	}
+	overlayFailsafeTimeout = window.setTimeout(() => {
+		console.warn('[LoadingOverlay] Failsafe triggered after timeout. Forcing overlay hide.');
+		hideLoadingOverlay();
+	}, OVERLAY_FAILSAFE_MS);
+}
 
 export function showLoadingOverlay(message: string = 'Loading...') {
 	if (overlayElement) {
 		updateLoadingOverlay(message);
+		scheduleOverlayFailsafe();
 		return;
 	}
 
@@ -34,6 +48,7 @@ export function showLoadingOverlay(message: string = 'Loading...') {
 
 	document.body.appendChild(overlay);
 	overlayElement = overlay;
+	scheduleOverlayFailsafe();
 
 	// Trigger fade-in
 	setTimeout(() => {
@@ -50,6 +65,10 @@ export function updateLoadingOverlay(message: string) {
 
 export function hideLoadingOverlay() {
 	if (overlayElement) {
+		if (overlayFailsafeTimeout) {
+			clearTimeout(overlayFailsafeTimeout);
+			overlayFailsafeTimeout = null;
+		}
 		// Add fade-out animation
 		overlayElement.style.transition = 'opacity 0.3s ease-out';
 		overlayElement.style.opacity = '0';
