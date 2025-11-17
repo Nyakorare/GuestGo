@@ -8,7 +8,7 @@ export function ContactPage() {
       
       <!-- Contact Person Cards Auto-Sliding Animation -->
       <div class="relative overflow-hidden pb-6 w-screen" style="margin-left: calc(50% - 50vw);">
-        <div class="contact-slider flex" style="animation: slideInfinite 25s linear infinite;">
+        <div class="contact-slider flex" style="animation: slideInfinite 40s linear infinite;">
           <!-- Card 1 -->
           <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-md flex-shrink-0 transition-transform transition-shadow duration-200 hover:scale-105 hover:shadow-2xl hover:z-10 overflow-hidden flex mr-4" style="width: 14.2857%;">
             <!-- Left Side - Current Design -->

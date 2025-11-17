@@ -7536,7 +7536,7 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
               Details
             </button>
           </div>
-        ` : visit.status === 'pending' && visitDateStr === todayStr && visit.total_places > 0 && visit.completed_places === visit.total_places && !visit.gate_exit_scanned ? `
+        ` : (visit.status === 'pending' || visit.status === 'in_progress') && visitDateStr === todayStr && visit.total_places > 0 && visit.completed_places === visit.total_places && !visit.gate_exit_scanned ? `
           <div class="flex justify-end">
             <div class="px-4 py-2 bg-yellow-100 text-yellow-700 rounded-md text-sm font-medium">
               ⏳ All places completed - waiting for exit scan or end of day
@@ -8194,8 +8194,8 @@ function calculateVisitProgress(visit: any): { percentage: number; status: strin
     };
   }
   
-  // For pending visits, calculate progress based on places completed and gate scans
-  if (visit.status === 'pending') {
+  // Helper function to calculate progress for pending/in_progress visits
+  const calculatePlacesAndGateProgress = (visit: any) => {
     const places = Array.isArray(visit.places) ? visit.places : [];
     const completedPlaces = places.filter((place: any) => place.status === 'completed').length;
     const totalPlaces = places.length;
@@ -8240,7 +8240,7 @@ function calculateVisitProgress(visit: any): { percentage: number; status: strin
     
     const totalPercentage = placesPercentage + gatePercentage;
     
-    let status = 'Pending';
+    let status = visit.status === 'in_progress' ? 'In Progress' : 'Pending';
     let color = 'bg-blue-500';
     
     if (isToday && !entranceScanned) {
@@ -8272,6 +8272,16 @@ function calculateVisitProgress(visit: any): { percentage: number; status: strin
       color,
       gateProgress: { entrance: entranceScanned, exit: exitScanned }
     };
+  };
+
+  // For pending visits, calculate progress based on places completed and gate scans
+  if (visit.status === 'pending') {
+    return calculatePlacesAndGateProgress(visit);
+  }
+  
+  // For in_progress visits, use the same calculation as pending
+  if (visit.status === 'in_progress') {
+    return calculatePlacesAndGateProgress(visit);
   }
   
   // Check if this is a future visit (visit date is in the future)
@@ -8367,6 +8377,7 @@ async function completeVisitPlace(visitId: string, placeId: string) {
     // Reload the visits to reflect the changes
     await loadScheduledVisits();
     await loadFinishedSchedules();
+    await loadVisitorVisits(); // Refresh visitor dashboard to update progress
   } catch (error: any) {
     console.error('Error in completeVisitPlace:', error);
     // Show error message if available
@@ -8543,6 +8554,7 @@ async function completeVisit(visitId: string) {
     // Reload the visits to reflect the changes
     await loadScheduledVisits();
     await loadFinishedSchedules();
+    await loadVisitorVisits(); // Refresh visitor dashboard to update progress
   } catch (error) {
     console.error('Error in completeVisit:', error);
     showNotification('Error completing visit', 'error');
@@ -9258,8 +9270,132 @@ function showGateExitScanningModal(visitId: string) {
   });
 }
 
-// Function to process gate exit scan
-async function processGateExitScan(visitId: string, gateId: string) {
+// Function to retrieve entrance face image for verification
+async function getEntranceFaceImage(visitId: string): Promise<string | null> {
+  try {
+    // Get the entrance scan for this visit
+    const { data: entranceScans, error } = await supabase
+      .from('gate_scans')
+      .select('face_image_data')
+      .eq('visit_id', visitId)
+      .eq('scan_type', 'entrance')
+      .order('scanned_at', { ascending: false })
+      .limit(1);
+
+    if (error || !entranceScans || entranceScans.length === 0) {
+      console.error('Error retrieving entrance face image:', error);
+      return null;
+    }
+
+    return entranceScans[0].face_image_data || null;
+  } catch (error) {
+    console.error('Error in getEntranceFaceImage:', error);
+    return null;
+  }
+}
+
+// Function to verify faces using Python AI API
+async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Promise<{ match: boolean; similarity: number; error?: string }> {
+  try {
+    const { getEffectiveApiUrl } = await import('../../config/python-api');
+    const apiUrl = getEffectiveApiUrl();
+
+    const response = await fetch(`${apiUrl}/metrics/verify-images`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        base_image: entranceFaceImage,
+        probe_image: exitFaceImage
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      return { match: false, similarity: 0, error: errorData.error || 'Face verification failed' };
+    }
+
+    const result = await response.json();
+    
+    // Check if both faces were found
+    if (!result.base?.found || !result.probe?.found) {
+      return { 
+        match: false, 
+        similarity: 0, 
+        error: !result.base?.found ? 'Entrance face not detected' : 'Exit face not detected' 
+      };
+    }
+
+    // Use similarity threshold of 0.75 (same as in compare_face_features)
+    const threshold = 0.75;
+    const isMatch = result.match && result.similarity >= threshold;
+
+    return {
+      match: isMatch,
+      similarity: result.similarity || 0
+    };
+  } catch (error) {
+    console.error('Error verifying faces:', error);
+    return { 
+      match: false, 
+      similarity: 0, 
+      error: error instanceof Error ? error.message : 'Face verification service unavailable' 
+    };
+  }
+}
+
+// Function to show face detection for exit gate scan
+async function showFaceDetectionForExitGateScan(visitId: string, gateId: string) {
+  try {
+    // Show loading overlay
+    const loadingOverlay = document.createElement('div');
+    loadingOverlay.id = 'faceDetectionLoading';
+    loadingOverlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    loadingOverlay.innerHTML = `
+      <div class="bg-white dark:bg-gray-800 rounded-lg p-6 text-center">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p class="text-gray-600 dark:text-gray-400">Preparing face detection...</p>
+      </div>
+    `;
+    document.body.appendChild(loadingOverlay);
+
+    // Retrieve entrance face image first
+    const entranceFaceImage = await getEntranceFaceImage(visitId);
+    
+    if (!entranceFaceImage) {
+      loadingOverlay.remove();
+      showGateExitScanError('Entrance face data not found', 'Unable to retrieve entrance face image for verification. Please ensure the entrance was scanned with face detection.');
+      return;
+    }
+
+    // Open face detection modal
+    const { openFaceDetectionModal } = await import('../../utils/AI-Face-Detection/blazefaceModal');
+    const faceResult = await openFaceDetectionModal();
+    
+    // Remove loading overlay
+    loadingOverlay.remove();
+
+    if (faceResult.success && faceResult.croppedImageDataUrl) {
+      // Process the exit gate scan with face verification
+      await processGateExitScanWithFaceVerification(visitId, gateId, faceResult, entranceFaceImage);
+    } else {
+      // Face detection failed or was cancelled
+      showGateExitScanError('Face detection is required to scan the gate exit. Please try again.');
+    }
+  } catch (error) {
+    console.error('Error in face detection for exit gate scan:', error);
+    showGateExitScanError('Error during face detection. Please try again.');
+  }
+}
+
+// Function to process gate exit scan with face verification
+async function processGateExitScanWithFaceVerification(
+  visitId: string, 
+  gateId: string, 
+  faceResult: any, 
+  entranceFaceImage: string
+) {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -9267,11 +9403,56 @@ async function processGateExitScan(visitId: string, gateId: string) {
       return;
     }
 
-    // Call the gate exit scanning function
+    // Prepare exit face image data
+    let exitFaceImageData = null;
+    let faceDetectionMetadata = null;
+
+    if (faceResult.croppedImageDataUrl) {
+      // Compress the cropped face image for storage
+      const { compressImageDataUrl } = await import('../../utils/imageCompression');
+      const compressedImage = await compressImageDataUrl(faceResult.croppedImageDataUrl, 0.8, 400, 400);
+      exitFaceImageData = compressedImage;
+      
+      // Prepare metadata
+      faceDetectionMetadata = {
+        timestamp: new Date().toISOString(),
+        confidence: faceResult.confidence || 0,
+        boundingBox: faceResult.detections?.[0] || null,
+        originalSize: faceResult.croppedImageDataUrl.length,
+        compressedSize: compressedImage.length
+      };
+
+      // Verify faces match
+      const verificationResult = await verifyFaces(entranceFaceImage, compressedImage);
+
+      if (verificationResult.error) {
+        showGateExitScanError('Face Verification Error', verificationResult.error);
+        return;
+      }
+
+      if (!verificationResult.match) {
+        showGateExitScanError(
+          'Face Verification Failed', 
+          `Faces do not match. Similarity: ${(verificationResult.similarity * 100).toFixed(1)}%. Please ensure you are the same person who entered.`
+        );
+        return;
+      }
+
+      // Faces match, proceed with exit scan
+      console.log(`Face verification successful. Similarity: ${(verificationResult.similarity * 100).toFixed(1)}%`);
+    } else {
+      showGateExitScanError('Face detection failed', 'Unable to capture face image. Please try again.');
+      return;
+    }
+
+    // Call the gate exit scanning function with face data
     const { error } = await supabase.rpc('scan_gate_exit', {
       p_visit_id: visitId,
       p_gate_id: gateId,
-      p_scanned_by: user.id
+      p_scanned_by: user.id,
+      p_face_image_data: exitFaceImageData,
+      p_face_detection_confidence: faceResult.confidence || 0,
+      p_face_detection_metadata: faceDetectionMetadata
     });
 
     if (error) {
@@ -9280,7 +9461,7 @@ async function processGateExitScan(visitId: string, gateId: string) {
       return;
     }
 
-    showGateExitScanSuccess('Gate exit scanned successfully!');
+    showGateExitScanSuccess('Gate exit scanned successfully! Face verified.');
     
     // Close modal after a short delay
     setTimeout(() => {
@@ -9291,6 +9472,17 @@ async function processGateExitScan(visitId: string, gateId: string) {
       loadScheduledVisits();
       loadVisitorVisits();
     }, 3000);
+  } catch (error) {
+    console.error('Error in processGateExitScanWithFaceVerification:', error);
+    showGateExitScanError('Error processing gate exit scan with face verification');
+  }
+}
+
+// Function to process gate exit scan (updated to use face detection)
+async function processGateExitScan(visitId: string, gateId: string) {
+  try {
+    // Show face detection modal for exit scan
+    await showFaceDetectionForExitGateScan(visitId, gateId);
   } catch (error) {
     console.error('Error in processGateExitScan:', error);
     showGateExitScanError('Error processing gate exit scan');
@@ -9859,7 +10051,7 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
                   <span>Scan Gate</span>
                 </button>
               ` : ''}
-              ${isToday && visit.status === 'pending' && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && completedPlaces === totalPlaces && totalPlaces > 0 ? `
+              ${isToday && (visit.status === 'pending' || visit.status === 'in_progress') && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && completedPlaces === totalPlaces && totalPlaces > 0 ? `
                 <button 
                   onclick="scanGateExit('${visit.id}')"
                   class="px-3 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded-full text-xs font-medium hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors duration-200 flex items-center space-x-1"
@@ -9871,7 +10063,7 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
                   <span>Scan Exit</span>
                 </button>
               ` : ''}
-              ${isToday && visit.status === 'pending' && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && (completedPlaces < totalPlaces || totalPlaces === 0) ? `
+              ${isToday && (visit.status === 'pending' || visit.status === 'in_progress') && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && (completedPlaces < totalPlaces || totalPlaces === 0) ? `
                 <div class="flex flex-col items-end space-y-1">
                   <button 
                     disabled
@@ -10170,7 +10362,7 @@ async function displayVisitorTodayVisits(visits: any[]): Promise<void> {
                   <span>Scan Entrance</span>
                 </button>
               ` : ''}
-              ${isToday && visit.status === 'pending' && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && completedPlaces === totalPlaces && totalPlaces > 0 ? `
+              ${isToday && (visit.status === 'pending' || visit.status === 'in_progress') && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && completedPlaces === totalPlaces && totalPlaces > 0 ? `
                 <button 
                   onclick="scanGateExit('${visit.id}')"
                   class="px-3 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded-full text-xs font-medium hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors duration-200 flex items-center space-x-1"
@@ -10182,7 +10374,7 @@ async function displayVisitorTodayVisits(visits: any[]): Promise<void> {
                   <span>Scan Exit</span>
                 </button>
               ` : ''}
-              ${isToday && visit.status === 'pending' && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && (completedPlaces < totalPlaces || totalPlaces === 0) ? `
+              ${isToday && (visit.status === 'pending' || visit.status === 'in_progress') && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && (completedPlaces < totalPlaces || totalPlaces === 0) ? `
                 <div class="flex flex-col items-end space-y-1">
                   <button 
                     disabled
@@ -10481,7 +10673,7 @@ async function displayVisitorFutureVisits(visits: any[]): Promise<void> {
                   <span>Scan Entrance</span>
                 </button>
               ` : ''}
-              ${isToday && visit.status === 'pending' && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && completedPlaces === totalPlaces && totalPlaces > 0 ? `
+              ${isToday && (visit.status === 'pending' || visit.status === 'in_progress') && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && completedPlaces === totalPlaces && totalPlaces > 0 ? `
                 <button 
                   onclick="scanGateExit('${visit.id}')"
                   class="px-3 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded-full text-xs font-medium hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors duration-200 flex items-center space-x-1"
@@ -10493,7 +10685,7 @@ async function displayVisitorFutureVisits(visits: any[]): Promise<void> {
                   <span>Scan Exit</span>
                 </button>
               ` : ''}
-              ${isToday && visit.status === 'pending' && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && (completedPlaces < totalPlaces || totalPlaces === 0) ? `
+              ${isToday && (visit.status === 'pending' || visit.status === 'in_progress') && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && (completedPlaces < totalPlaces || totalPlaces === 0) ? `
                 <div class="flex flex-col items-end space-y-1">
                   <button 
                     disabled
@@ -10716,7 +10908,7 @@ async function displayVisitorPastVisits(visits: any[]): Promise<void> {
               }">
                 ${visit.status === 'failed' ? 'Failed' : 
                   visit.status === 'completed_flagged' ? 'Completed (Flagged) - Process started but not fully completed' : 
-                  visit.status === 'pending' && isToday && completedPlaces === totalPlaces && totalPlaces > 0 && !visit.gate_exit_scanned ? 'Pending - All places completed, waiting for exit scan' :
+                  (visit.status === 'pending' || visit.status === 'in_progress') && isToday && completedPlaces === totalPlaces && totalPlaces > 0 && !visit.gate_exit_scanned ? 'Pending - All places completed, waiting for exit scan' :
                   visit.status.charAt(0).toUpperCase() + visit.status.slice(1)}
               </span>
             </div>

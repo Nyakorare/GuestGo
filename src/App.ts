@@ -2,6 +2,8 @@ import { getThemePreference, updateTheme } from './utils/theme';
 import { updateNavigation, clearUserCache } from './utils/navigation';
 import { setupEventListeners } from './utils/eventHandlers';
 import { createLoginModal, createSignupModal, setupAuthEventListeners } from './components/AuthModals';
+import { initializeSessionManager } from './utils/sessionManager';
+import { initializeDeviceSessionManager } from './utils/deviceSessionManager';
 import supabase from './config/supabase';
 
 // Cache for DOM elements to avoid repeated queries
@@ -113,6 +115,13 @@ export default function setupApp() {
           <!-- Right side menu -->
           <div class="flex items-center space-x-4">
             <span id="welcome-message" class="text-gray-700 dark:text-gray-300 hidden"></span>
+            <!-- Session Timer -->
+            <div id="session-timer-container" class="hidden px-3 py-1.5 bg-blue-100 dark:bg-blue-900 border border-blue-300 dark:border-blue-700 rounded-md">
+              <span class="text-sm font-mono font-semibold text-blue-700 dark:text-blue-300">
+                <span class="mr-1">⏱</span>
+                <span id="session-timer">00:00</span>
+              </span>
+            </div>
             <div class="relative">
               <button 
                 id="profileSettingsBtn"
@@ -268,6 +277,12 @@ export default function setupApp() {
   // Setup all event listeners
   setupEventListeners();
   setupAuthEventListeners();
+  
+  // Initialize session management
+  initializeSessionManager();
+  
+  // Initialize device session management (single device login)
+  initializeDeviceSessionManager();
 
   // Theme toggle functionality
   const themeToggleButton = getCachedElement('theme-toggle');
