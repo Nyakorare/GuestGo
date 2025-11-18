@@ -2172,7 +2172,7 @@ export async function setupEventListeners() {
           .select('id')
           .or(`visitor_email.eq.${userEmail},visitor_user_id.eq.${userId}`)
           .eq('visit_date', visitDateInput.value)
-          .in('status', ['pending', 'completed', 'completed_flagged']);
+          .in('status', ['pending', 'in_progress', 'completed', 'completed_flagged', 'temporary_exit']);
         if (checkError) {
           console.error('Error checking for existing scheduled visit:', checkError);
         } else if (existingVisits && existingVisits.length > 0) {
@@ -2280,7 +2280,7 @@ export async function setupEventListeners() {
               .eq('visitor_user_id', userId)
               .gte('visit_date', weekStartStr)
               .lte('visit_date', weekEndStr)
-              .in('status', ['pending', 'completed', 'completed_flagged']);
+              .in('status', ['pending', 'in_progress', 'completed', 'completed_flagged', 'temporary_exit']);
             
             if (visitError) {
               console.error('Error checking weekly visit limit:', visitError);
@@ -2295,7 +2295,7 @@ export async function setupEventListeners() {
               .eq('visitor_email', userEmail)
               .gte('visit_date', weekStartStr)
               .lte('visit_date', weekEndStr)
-              .in('status', ['pending', 'completed', 'completed_flagged']);
+              .in('status', ['pending', 'in_progress', 'completed', 'completed_flagged', 'temporary_exit']);
             
             if (visitError) {
               console.error('Error checking weekly visit limit:', visitError);
@@ -2644,7 +2644,7 @@ export async function setupEventListeners() {
         .from('scheduled_visits')
         .select('visit_date, status')
         .or(`visitor_user_id.eq.${user.id},visitor_email.eq.${user.email}`)
-        .in('status', ['pending', 'completed', 'completed_flagged']);
+        .in('status', ['pending', 'in_progress', 'completed', 'completed_flagged', 'temporary_exit']);
 
       if (error) {
         console.error('Error loading weekly visit count for modal:', error);
@@ -2659,7 +2659,7 @@ export async function setupEventListeners() {
 
       // Count the visits for current week only
       const visitCount = currentWeekVisits.length;
-      const pendingCount = currentWeekVisits.filter(v => v.status === 'pending').length;
+      const pendingCount = currentWeekVisits.filter(v => v.status === 'pending' || v.status === 'in_progress').length;
       const completedCount = currentWeekVisits.filter(v => v.status === 'completed').length;
       const completedFlaggedCount = currentWeekVisits.filter(v => v.status === 'completed_flagged').length;
       const totalCompletedSchedules = completedCount + completedFlaggedCount;
@@ -2803,7 +2803,7 @@ export async function setupEventListeners() {
         .from('scheduled_visits')
         .select('visit_date, status')
         .or(`visitor_user_id.eq.${user.id},visitor_email.eq.${user.email}`)
-        .in('status', ['pending', 'completed', 'completed_flagged']);
+        .in('status', ['pending', 'in_progress', 'completed', 'completed_flagged', 'temporary_exit']);
 
       if (error) {
         console.error('Error refreshing weekly visit count for modal:', error);
@@ -2818,7 +2818,7 @@ export async function setupEventListeners() {
 
       // Count the visits for current week only
       const visitCount = currentWeekVisits.length;
-      const pendingCount = currentWeekVisits.filter(v => v.status === 'pending').length;
+      const pendingCount = currentWeekVisits.filter(v => v.status === 'pending' || v.status === 'in_progress').length;
       const completedCount = currentWeekVisits.filter(v => v.status === 'completed').length;
       const completedFlaggedCount = currentWeekVisits.filter(v => v.status === 'completed_flagged').length;
       const totalCompletedSchedules = completedCount + completedFlaggedCount;
@@ -2948,7 +2948,7 @@ export async function setupEventListeners() {
       .from('scheduled_visits')
       .select('visit_date, status')
       .eq('visitor_email', email)
-      .in('status', ['pending', 'completed', 'completed_flagged'])
+      .in('status', ['pending', 'in_progress', 'completed', 'completed_flagged', 'temporary_exit'])
       .gte('visit_date', weekStart.toISOString())
       .lte('visit_date', weekEnd.toISOString());
 
@@ -2957,7 +2957,7 @@ export async function setupEventListeners() {
       .from('scheduled_visits')
       .select('visit_date, status')
       .eq('visitor_email', email)
-      .in('status', ['pending', 'completed', 'completed_flagged'])
+      .in('status', ['pending', 'in_progress', 'completed', 'completed_flagged', 'temporary_exit'])
       .gte('visit_date', prevWeekStart.toISOString())
       .lte('visit_date', prevWeekEnd.toISOString());
 
@@ -2966,7 +2966,7 @@ export async function setupEventListeners() {
       .from('scheduled_visits')
       .select('visit_date, status')
       .eq('visitor_email', email)
-      .in('status', ['pending', 'completed', 'completed_flagged'])
+      .in('status', ['pending', 'in_progress', 'completed', 'completed_flagged', 'temporary_exit'])
       .gte('visit_date', nextWeekStart.toISOString())
       .lte('visit_date', endOfMonth.toISOString());
 
@@ -3262,7 +3262,7 @@ async function scheduleVisitFromConfirmation(data: VisitConfirmationData) {
         .from('scheduled_visits')
         .select('id, status')
         .eq('visit_date', data.visitDate)
-        .in('status', ['pending', 'completed', 'completed_flagged'])
+        .in('status', ['pending', 'in_progress', 'completed', 'completed_flagged', 'temporary_exit'])
         .limit(1);
 
       let existing;

@@ -3,7 +3,6 @@ import { updateNavigation, clearUserCache } from './utils/navigation';
 import { setupEventListeners } from './utils/eventHandlers';
 import { createLoginModal, createSignupModal, setupAuthEventListeners } from './components/AuthModals';
 import { initializeSessionManager } from './utils/sessionManager';
-import { initializeDeviceSessionManager } from './utils/deviceSessionManager';
 import supabase from './config/supabase';
 
 // Cache for DOM elements to avoid repeated queries
@@ -116,11 +115,19 @@ export default function setupApp() {
           <div class="flex items-center space-x-4">
             <span id="welcome-message" class="text-gray-700 dark:text-gray-300 hidden"></span>
             <!-- Session Timer -->
-            <div id="session-timer-container" class="hidden px-3 py-1.5 bg-blue-100 dark:bg-blue-900 border border-blue-300 dark:border-blue-700 rounded-md">
+            <div id="session-timer-container" class="hidden relative group px-3 py-1.5 bg-blue-100 dark:bg-blue-900 border border-blue-300 dark:border-blue-700 rounded-md">
               <span class="text-sm font-mono font-semibold text-blue-700 dark:text-blue-300">
                 <span class="mr-1">⏱</span>
                 <span id="session-timer">00:00</span>
               </span>
+              <div
+                id="session-timer-tooltip"
+                class="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-2 w-56 px-3 py-2 text-xs leading-snug text-center bg-gray-900 text-white dark:bg-gray-700 dark:text-gray-100 rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                role="status"
+                aria-live="polite"
+              >
+                <span id="session-timer-tooltip-text">Stay active to keep your session.</span>
+              </div>
             </div>
             <div class="relative">
               <button 
@@ -281,9 +288,6 @@ export default function setupApp() {
   // Initialize session management
   initializeSessionManager();
   
-  // Initialize device session management (single device login)
-  initializeDeviceSessionManager();
-
   // Theme toggle functionality
   const themeToggleButton = getCachedElement('theme-toggle');
   themeToggleButton?.addEventListener('click', () => {

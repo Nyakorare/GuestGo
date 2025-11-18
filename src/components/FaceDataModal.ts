@@ -4,6 +4,7 @@
  */
 
 import { processFaceImageForDisplay } from '../utils/imageCompression';
+import supabase from '../config/supabase';
 
 export interface FaceDataModalProps {
   visitId: string;
@@ -62,6 +63,14 @@ export function createFaceDataModal(props: FaceDataModalProps): HTMLElement {
               </div>
             </div>
 
+            <!-- Face Verification Similarity (for exit scans) -->
+            <div id="faceVerificationSimilarity" class="hidden bg-green-50 dark:bg-green-900/20 rounded-lg p-4 mb-4">
+              <h4 class="font-medium text-green-800 dark:text-green-200 mb-2">Face Verification</h4>
+              <div id="similarityDetails" class="text-sm text-green-700 dark:text-green-300 space-y-1">
+                <!-- Similarity details will be populated here -->
+              </div>
+            </div>
+
             <!-- Face Detection Info -->
             <div id="faceDetectionInfo" class="hidden bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-4">
               <h4 class="font-medium text-blue-800 dark:text-blue-200 mb-2">Face Detection Details</h4>
@@ -116,19 +125,13 @@ export function createFaceDataModal(props: FaceDataModalProps): HTMLElement {
   });
 
   // Load face data
-  loadFaceData(props.visitId, props.scanType);
+  loadFaceData(props.visitId, props.scanType, modal);
 
   return modal;
 }
 
-async function loadFaceData(visitId: string, scanType: 'entrance' | 'exit') {
+async function loadFaceData(visitId: string, scanType: 'entrance' | 'exit', modal?: HTMLElement) {
   try {
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-      import.meta.env.VITE_SUPABASE_URL,
-      import.meta.env.VITE_SUPABASE_ANON_KEY
-    );
-
     // Check current user
     const { error: userError } = await supabase.auth.getUser();
     if (userError) {
@@ -252,6 +255,11 @@ async function loadFaceData(visitId: string, scanType: 'entrance' | 'exit') {
           </div>
         `;
 
+        // For exit scans, calculate similarity with entrance face
+        if (scanType === 'exit') {
+          await calculateAndDisplaySimilarity(visitId, decryptedDataUrl);
+        }
+
         // Show detection info if available
         if (scan.face_detection_confidence || scan.face_detection_metadata) {
           let detailsHtml = '';
@@ -304,6 +312,128 @@ async function loadFaceData(visitId: string, scanType: 'entrance' | 'exit') {
   } catch (error) {
     console.error('Error loading face data:', error);
     showError(error instanceof Error ? error.message : 'Failed to load face data');
+  }
+}
+
+async function calculateAndDisplaySimilarity(visitId: string, exitFaceImage: string) {
+  try {
+    // Get entrance face image
+    const { data: entranceScans, error } = await supabase
+      .from('gate_scans')
+      .select('face_image_data')
+      .eq('visit_id', visitId)
+      .eq('scan_type', 'entrance')
+      .order('scanned_at', { ascending: false })
+      .limit(1);
+
+    if (error || !entranceScans || entranceScans.length === 0) {
+      console.log('No entrance face data found for comparison');
+      return;
+    }
+
+    const storedImageData = entranceScans[0].face_image_data;
+    if (!storedImageData) {
+      console.log('Entrance face image data is empty');
+      return;
+    }
+
+    // Decrypt the entrance face image
+    const entranceFaceImage = processFaceImageForDisplay(storedImageData);
+
+    // Verify faces using Python AI API
+    const similarityResult = await verifyFaces(entranceFaceImage, exitFaceImage);
+
+    // Display similarity
+    const faceVerificationSimilarity = document.getElementById('faceVerificationSimilarity');
+    const similarityDetails = document.getElementById('similarityDetails');
+
+    if (faceVerificationSimilarity && similarityDetails) {
+      if (similarityResult.error) {
+        similarityDetails.innerHTML = `
+          <div class="text-yellow-700 dark:text-yellow-300">
+            <strong>Verification Error:</strong> ${similarityResult.error}
+          </div>
+        `;
+      } else {
+        const similarityPercent = (similarityResult.similarity * 100).toFixed(1);
+        const isMatch = similarityResult.match;
+        
+        similarityDetails.innerHTML = `
+          <div class="flex items-center space-x-2">
+            <span class="font-semibold">Similarity:</span>
+            <span class="text-lg font-bold ${isMatch ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'}">
+              ${similarityPercent}%
+            </span>
+            ${isMatch ? '<span class="text-green-600 dark:text-green-400">✓ Match</span>' : '<span class="text-yellow-600 dark:text-yellow-400">⚠ Below threshold</span>'}
+          </div>
+          <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+            Compared with entrance face image
+          </div>
+        `;
+      }
+      
+      faceVerificationSimilarity.classList.remove('hidden');
+    }
+  } catch (error) {
+    console.error('Error calculating similarity:', error);
+  }
+}
+
+async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Promise<{ match: boolean; similarity: number; error?: string }> {
+  try {
+    // Validate that both images are valid base64 data URLs
+    if (!entranceFaceImage || !entranceFaceImage.startsWith('data:image/')) {
+      return { match: false, similarity: 0, error: 'Invalid entrance face image format' };
+    }
+    if (!exitFaceImage || !exitFaceImage.startsWith('data:image/')) {
+      return { match: false, similarity: 0, error: 'Invalid exit face image format' };
+    }
+
+    const { getEffectiveApiUrl } = await import('../config/python-api');
+    const apiUrl = getEffectiveApiUrl();
+
+    const response = await fetch(`${apiUrl}/metrics/verify-images`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        base_image: entranceFaceImage,
+        probe_image: exitFaceImage
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      return { match: false, similarity: 0, error: errorData.error || 'Face verification failed' };
+    }
+
+    const result = await response.json();
+    
+    // Check if both faces were found
+    if (!result.base?.found || !result.probe?.found) {
+      return { 
+        match: false, 
+        similarity: 0, 
+        error: !result.base?.found ? 'Entrance face not detected' : 'Exit face not detected' 
+      };
+    }
+
+    // Use similarity threshold of 0.75 (same as in compare_face_features)
+    const threshold = 0.75;
+    const isMatch = result.match && result.similarity >= threshold;
+
+    return {
+      match: isMatch,
+      similarity: result.similarity || 0
+    };
+  } catch (error) {
+    console.error('Error verifying faces:', error);
+    return { 
+      match: false, 
+      similarity: 0, 
+      error: error instanceof Error ? error.message : 'Face verification service unavailable' 
+    };
   }
 }
 

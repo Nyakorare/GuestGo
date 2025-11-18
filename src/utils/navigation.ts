@@ -18,27 +18,94 @@ let userDataCache: { user: any; role: string | null } | null = null;
 let userDataCacheTime = 0;
 const CACHE_DURATION = 30000; // 30 seconds
 const SUPABASE_REQUEST_TIMEOUT = 8000;
+const NAVIGATION_USER_FALLBACK_TIMEOUT = 5000;
+const SUPABASE_STORAGE_KEY = deriveSupabaseStorageKey();
 
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+function deriveSupabaseStorageKey(): string | null {
+  try {
+    const supabaseUrl = (import.meta as any)?.env?.VITE_SUPABASE_URL as string | undefined;
+    if (!supabaseUrl) return null;
+    const url = new URL(supabaseUrl);
+    const projectRef = url.hostname.split('.')[0];
+    if (!projectRef) return null;
+    return `sb-${projectRef}-auth-token`;
+  } catch {
+    return null;
+  }
+}
+
+function getRoleFromUserMetadata(user: any): string | null {
+  if (!user) return null;
+  const metaRole =
+    (user as any)?.user_metadata?.role ||
+    (user as any)?.app_metadata?.role ||
+    null;
+  if (!metaRole || typeof metaRole !== 'string') {
+    return null;
+  }
+  return normalizeRole(metaRole);
+}
+
+function getCachedSessionUser(): any | null {
+  if (typeof window === 'undefined' || !SUPABASE_STORAGE_KEY) {
+    return null;
+  }
+  try {
+    const raw = window.localStorage.getItem(SUPABASE_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const session = parsed.currentSession || parsed.session || null;
+    const user = session?.user || parsed.currentUser || null;
+    return user ?? null;
+  } catch (error) {
+    console.warn('[Navigation] Unable to read cached Supabase session:', error);
+    return null;
+  }
+}
+
+function normalizeRole(role: string | null): string | null {
+  if (!role || typeof role !== 'string') {
+    return null;
+  }
+
+  const normalized = role.toLowerCase();
+  if (normalized === 'logs') {
+    return 'log';
+  }
+  if (normalized === 'guards') {
+    return 'guard';
+  }
+  if (normalized === 'personel') {
+    return 'personnel';
+  }
+  return normalized;
+}
+
+function withTimeout<T>(promiseFactory: () => Promise<T>, timeoutMs: number, label: string): Promise<T> {
 	if (typeof window === 'undefined') {
-		return promise;
+		return promiseFactory();
 	}
 
-	let timeoutId: number | undefined;
-	const timeoutPromise = new Promise<never>((_, reject) => {
-		timeoutId = window.setTimeout(() => {
+	return new Promise<T>((resolve, reject) => {
+		let timeoutId: number | undefined = window.setTimeout(() => {
+			timeoutId = undefined;
 			reject(new Error(`${label} timed out after ${timeoutMs}ms`));
 		}, timeoutMs);
-	});
 
-	return Promise.race([
-		promise.finally(() => {
-			if (timeoutId !== undefined) {
-				clearTimeout(timeoutId);
-			}
-		}),
-		timeoutPromise
-	]);
+		promiseFactory()
+			.then((result) => {
+				if (timeoutId !== undefined) {
+					clearTimeout(timeoutId);
+				}
+				resolve(result);
+			})
+			.catch((error) => {
+				if (timeoutId !== undefined) {
+					clearTimeout(timeoutId);
+				}
+				reject(error);
+			});
+	});
 }
 
 // Debounce function to prevent rapid navigation calls
@@ -98,24 +165,21 @@ async function getUserData(): Promise<{ user: any; role: string | null }> {
     let role: string | null = null;
 
     try {
-      const userResponse = await withTimeout(
-        supabaseClient.auth.getUser(),
-        SUPABASE_REQUEST_TIMEOUT,
-        'auth.getUser'
-      );
-      user = userResponse?.data?.user ?? null;
+      const sessionResponse = await supabaseClient.auth.getSession();
+      user = sessionResponse?.data?.session?.user ?? null;
     } catch (error) {
-      console.warn('[Navigation] auth.getUser failed or timed out:', error);
+      console.warn('[Navigation] auth.getSession failed:', error);
     }
     
     if (user) {
       try {
         const roleResponse = await withTimeout(
-          supabaseClient
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', user.id)
-            .maybeSingle(),
+          () =>
+            supabaseClient
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', user.id)
+              .maybeSingle(),
           SUPABASE_REQUEST_TIMEOUT,
           'user role lookup'
         );
@@ -127,26 +191,10 @@ async function getUserData(): Promise<{ user: any; role: string | null }> {
 
     // Fallbacks: try metadata if DB role not found (e.g., deployment without user_roles seeded)
     if (!role && user) {
-      const metaRole = (user as any)?.user_metadata?.role || (user as any)?.app_metadata?.role;
-      if (metaRole && typeof metaRole === 'string') {
-        role = metaRole;
-      }
+      role = getRoleFromUserMetadata(user);
     }
 
-    // Normalize role value
-    if (role && typeof role === 'string') {
-      const normalized = role.toLowerCase();
-      // Map common variants
-      if (normalized === 'logs') {
-        role = 'log';
-      } else if (normalized === 'guards') {
-        role = 'guard';
-      } else if (normalized === 'personel') {
-        role = 'personnel';
-      } else {
-        role = normalized;
-      }
-    }
+    role = normalizeRole(role);
 
     // Update cache
     userDataCache = { user, role };
@@ -155,9 +203,12 @@ async function getUserData(): Promise<{ user: any; role: string | null }> {
     return { user, role };
   } catch (error) {
     console.error('[Navigation] getUserData failed:', error);
-    userDataCache = { user: null, role: null };
+    const cachedUser = getCachedSessionUser();
+    const fallbackRole = getRoleFromUserMetadata(cachedUser);
+    const fallbackData = { user: cachedUser, role: fallbackRole };
+    userDataCache = fallbackData;
     userDataCacheTime = now;
-    return { user: null, role: null };
+    return fallbackData;
   }
 }
 
@@ -165,6 +216,22 @@ async function getUserData(): Promise<{ user: any; role: string | null }> {
 export function clearUserCache() {
   userDataCache = null;
   userDataCacheTime = 0;
+}
+
+async function getFallbackUserData(): Promise<{ user: any; role: string | null }> {
+  if (userDataCache) {
+    return userDataCache;
+  }
+
+  const cachedUser = getCachedSessionUser();
+  if (cachedUser) {
+    return {
+      user: cachedUser,
+      role: getRoleFromUserMetadata(cachedUser)
+    };
+  }
+
+  return { user: null, role: null };
 }
 
 // Optimized navigation update with debouncing
@@ -204,8 +271,56 @@ async function performNavigation() {
   showLoadingOverlay('Loading page...');
 
   try {
-    // Get user data (cached)
-    let { user, role } = await getUserData();
+    // Get user data (cached) but never let it block navigation
+    let user = null;
+    let role: string | null = null;
+    let userFetchTimedOut = false;
+    let fallbackTimeoutId: number | null = null;
+
+    try {
+      const userDataPromise = getUserData();
+      const fallbackPromise = new Promise<{ user: any; role: string | null }>((resolve) => {
+        fallbackTimeoutId = window.setTimeout(() => {
+          userFetchTimedOut = true;
+          console.warn('[Navigation] getUserData fallback triggered. Proceeding with cached/session data and will retry in background.');
+          getFallbackUserData()
+            .then(resolve)
+            .catch(() => resolve({ user: null, role: null }));
+        }, NAVIGATION_USER_FALLBACK_TIMEOUT);
+      });
+
+      const userData = await Promise.race([userDataPromise, fallbackPromise]);
+      if (fallbackTimeoutId !== null) {
+        clearTimeout(fallbackTimeoutId);
+      }
+      user = userData.user;
+      role = userData.role;
+
+      if (userFetchTimedOut) {
+        userDataPromise
+          .then((finalData) => {
+            if (!finalData) return;
+            const gainedUser = !user && finalData.user;
+            const gainedRole = !role && finalData.role;
+            if (gainedUser || gainedRole) {
+              setTimeout(() => {
+                updateNavigation();
+              }, 0);
+            }
+          })
+          .catch((error) => {
+            console.warn('[Navigation] Deferred user data retrieval failed:', error);
+          });
+      }
+    } catch (error) {
+      console.warn('[Navigation] getUserData failed:', error);
+      user = null;
+      role = null;
+    }
+
+    if (userFetchTimedOut) {
+      console.warn('[Navigation] getUserData fallback triggered. Proceeding without user data to avoid blocking UI.');
+    }
 
     // If navigating to a protected route and we have a user but no role yet,
     // force a single re-fetch to avoid redirecting due to a race condition.

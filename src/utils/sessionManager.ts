@@ -1,6 +1,7 @@
 import supabase from '../config/supabase';
 
 const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes in milliseconds
+const INACTIVITY_TIMEOUT_LABEL = formatTime(INACTIVITY_TIMEOUT);
 let inactivityTimer: ReturnType<typeof setTimeout> | null = null;
 let sessionTimerInterval: ReturnType<typeof setInterval> | null = null;
 let sessionStartTime: number | null = null;
@@ -36,6 +37,7 @@ function showSessionTimer() {
   if (timerElement && timerContainer) {
     timerContainer.classList.remove('hidden');
     updateSessionTimerDisplay();
+    updateSessionTimerTooltip();
   }
 }
 
@@ -46,6 +48,25 @@ function hideSessionTimer() {
   const timerContainer = document.getElementById('session-timer-container');
   if (timerContainer) {
     timerContainer.classList.add('hidden');
+  }
+}
+
+/**
+ * Updates the hover tooltip for the session timer
+ */
+function updateSessionTimerTooltip() {
+  const tooltipTextElement = document.getElementById('session-timer-tooltip-text');
+  const timerContainer = document.getElementById('session-timer-container');
+
+  if (tooltipTextElement) {
+    tooltipTextElement.textContent = `If this timer reaches ${INACTIVITY_TIMEOUT_LABEL} without any activity, you'll be logged out for security. Move your mouse, tap, or type to keep your session active.`;
+  }
+
+  if (timerContainer) {
+    timerContainer.setAttribute(
+      'aria-description',
+      `Session auto-logout triggers at ${INACTIVITY_TIMEOUT_LABEL} of inactivity.`
+    );
   }
 }
 

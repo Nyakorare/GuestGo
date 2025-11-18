@@ -1140,8 +1140,101 @@ async function logGuardAction(action: 'entrance' | 'exit' | 'temporary_exit', vi
   }
 }
 
-// New function to log guard actions with face image data
+// Function to retrieve entrance face image for verification
+async function getEntranceFaceImage(visitId: string): Promise<string | null> {
+  try {
+    // Get the entrance scan for this visit
+    const { data: entranceScans, error } = await supabase
+      .from('gate_scans')
+      .select('face_image_data')
+      .eq('visit_id', visitId)
+      .eq('scan_type', 'entrance')
+      .order('scanned_at', { ascending: false })
+      .limit(1);
+
+    if (error || !entranceScans || entranceScans.length === 0) {
+      console.error('Error retrieving entrance face image:', error);
+      return null;
+    }
+
+    const storedImageData = entranceScans[0].face_image_data;
+    if (!storedImageData) {
+      return null;
+    }
+
+    // Decrypt the image data if it's encrypted
+    const { processFaceImageForDisplay } = await import('../utils/imageCompression');
+    const decryptedImage = processFaceImageForDisplay(storedImageData);
+    
+    return decryptedImage;
+  } catch (error) {
+    console.error('Error in getEntranceFaceImage:', error);
+    return null;
+  }
+}
+
+// Function to verify faces using Python AI API
+async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Promise<{ match: boolean; similarity: number; error?: string }> {
+  try {
+    // Validate that both images are valid base64 data URLs
+    if (!entranceFaceImage || !entranceFaceImage.startsWith('data:image/')) {
+      return { match: false, similarity: 0, error: 'Invalid entrance face image format' };
+    }
+    if (!exitFaceImage || !exitFaceImage.startsWith('data:image/')) {
+      return { match: false, similarity: 0, error: 'Invalid exit face image format' };
+    }
+
+    const { getEffectiveApiUrl } = await import('../config/python-api');
+    const apiUrl = getEffectiveApiUrl();
+
+    const response = await fetch(`${apiUrl}/metrics/verify-images`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        base_image: entranceFaceImage,
+        probe_image: exitFaceImage
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      return { match: false, similarity: 0, error: errorData.error || 'Face verification failed' };
+    }
+
+    const result = await response.json();
+    
+    // Check if both faces were found
+    if (!result.base?.found || !result.probe?.found) {
+      return { 
+        match: false, 
+        similarity: 0, 
+        error: !result.base?.found ? 'Entrance face not detected' : 'Exit face not detected' 
+      };
+    }
+
+    // Use similarity threshold of 0.75 (same as in compare_face_features)
+    const threshold = 0.75;
+    const isMatch = result.match && result.similarity >= threshold;
+
+    return {
+      match: isMatch,
+      similarity: result.similarity || 0
+    };
+  } catch (error) {
+    console.error('Error verifying faces:', error);
+    return { 
+      match: false, 
+      similarity: 0, 
+      error: error instanceof Error ? error.message : 'Face verification service unavailable' 
+    };
+  }
+}
+
 async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitData: VisitQRData, faceResult: any) {
+  let exitSimilarityPercent: string | null = null; // Store similarity for exit success message
+  
   try {
     // Validate face result data
     if (!faceResult || !faceResult.success) {
@@ -1255,6 +1348,39 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
     } else if (action === 'exit') {
       console.log('Logging guard exit action with face data...');
       
+      // Verify exit face with entrance face before logging exit
+      const entranceFaceImage = await getEntranceFaceImage(visitData.visitId);
+      
+      if (!entranceFaceImage) {
+        showGuardError('Face Verification Error', 'Unable to retrieve entrance face image for verification. Please ensure the entrance was scanned with face detection.');
+        return;
+      }
+
+      // Compress exit face image for verification (use same compression as storage)
+      const { compressImageDataUrl } = await import('../utils/imageCompression');
+      const compressedExitImage = await compressImageDataUrl(faceResult.croppedImageDataUrl, 0.8, 400, 400);
+
+      // Verify faces match
+      const verificationResult = await verifyFaces(entranceFaceImage, compressedExitImage);
+
+      if (verificationResult.error) {
+        showGuardError('Face Verification Error', verificationResult.error);
+        return;
+      }
+
+      if (!verificationResult.match) {
+        const similarityPercent = (verificationResult.similarity * 100).toFixed(1);
+        showGuardError(
+          'Face Verification Failed', 
+          `Face does not match the entrance picture. Similarity: ${similarityPercent}%`
+        );
+        return;
+      }
+
+      // Faces match, proceed with exit logging
+      exitSimilarityPercent = (verificationResult.similarity * 100).toFixed(1);
+      console.log(`Face verification successful. Similarity: ${exitSimilarityPercent}%`);
+      
       // For guards, we don't use the visitor gate scanning functions
       // Instead, we log the guard action and manually update the visit
       const { error: guardActionError } = await supabase.rpc('log_guard_action', {
@@ -1307,7 +1433,7 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
         // Non-fatal error, continue
       }
 
-      console.log('Guard exit logged successfully with face data');
+      console.log(`Guard exit logged successfully with face data. Similarity: ${exitSimilarityPercent}%`);
     }
 
     // Close modal on successful entrance/exit
@@ -1316,8 +1442,12 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
       openModal.remove();
     }
 
-    // Show success message
-    showGuardSuccess(`${action.charAt(0).toUpperCase() + action.slice(1)} logged successfully for ${visitData.visitorName}!`);
+    // Show success message with similarity for exit
+    if (action === 'exit' && exitSimilarityPercent) {
+      showGuardSuccess(`Exit logged successfully for ${visitData.visitorName}! Face verified with ${exitSimilarityPercent}% similarity match.`);
+    } else {
+      showGuardSuccess(`${action.charAt(0).toUpperCase() + action.slice(1)} logged successfully for ${visitData.visitorName}!`);
+    }
 
     // Reset scanner after successful logging
     setTimeout(() => {

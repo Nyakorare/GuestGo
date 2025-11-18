@@ -1485,7 +1485,16 @@ async function getEntranceFaceImage(visitId: string): Promise<string | null> {
       return null;
     }
 
-    return entranceScans[0].face_image_data || null;
+    const storedImageData = entranceScans[0].face_image_data;
+    if (!storedImageData) {
+      return null;
+    }
+
+    // Decrypt the image data if it's encrypted
+    const { processFaceImageForDisplay } = await import('../utils/imageCompression');
+    const decryptedImage = processFaceImageForDisplay(storedImageData);
+    
+    return decryptedImage;
   } catch (error) {
     console.error('Error in getEntranceFaceImage:', error);
     return null;
@@ -1495,6 +1504,14 @@ async function getEntranceFaceImage(visitId: string): Promise<string | null> {
 // Function to verify faces using Python AI API
 async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Promise<{ match: boolean; similarity: number; error?: string }> {
   try {
+    // Validate that both images are valid base64 data URLs
+    if (!entranceFaceImage || !entranceFaceImage.startsWith('data:image/')) {
+      return { match: false, similarity: 0, error: 'Invalid entrance face image format' };
+    }
+    if (!exitFaceImage || !exitFaceImage.startsWith('data:image/')) {
+      return { match: false, similarity: 0, error: 'Invalid exit face image format' };
+    }
+
     const { getEffectiveApiUrl } = await import('../config/python-api');
     const apiUrl = getEffectiveApiUrl();
 
@@ -1629,49 +1646,54 @@ async function processGateExitScanWithFaceVerification(
       }
 
       if (!verificationResult.match) {
+        const similarityPercent = (verificationResult.similarity * 100).toFixed(1);
         showGateExitScanError(
           'Face Verification Failed', 
-          `Faces do not match. Similarity: ${(verificationResult.similarity * 100).toFixed(1)}%. Please ensure you are the same person who entered.`
+          `Face does not match the entrance picture. Similarity: ${similarityPercent}%`
         );
         return;
       }
 
       // Faces match, proceed with exit scan
-      console.log(`Face verification successful. Similarity: ${(verificationResult.similarity * 100).toFixed(1)}%`);
+      const similarityPercent = (verificationResult.similarity * 100).toFixed(1);
+      console.log(`Face verification successful. Similarity: ${similarityPercent}%`);
+      
+      // Store similarity for success message
+      const verificationSimilarity = similarityPercent;
+      
+      // Call the gate exit scanning function with face data
+      const { error } = await supabase.rpc('scan_gate_exit', {
+        p_visit_id: visitId,
+        p_gate_id: gateId,
+        p_scanned_by: user.id,
+        p_face_image_data: exitFaceImageData,
+        p_face_detection_confidence: faceResult.confidence || 0,
+        p_face_detection_metadata: faceDetectionMetadata
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      // Show success message with similarity percentage
+      showGateExitScanSuccess(`Gate exit scanned successfully! Face verified with ${verificationSimilarity}% similarity match. Visit completed!`);
+      
+      // Close modal after a delay
+      setTimeout(() => {
+        const modal = document.getElementById('gateExitScanModal');
+        if (modal) {
+          modal.remove();
+        }
+        // Refresh the visit details to show updated status
+        const visitIdInput = document.getElementById('visitIdInput') as HTMLInputElement;
+        if (visitIdInput?.value.trim()) {
+          trackVisit(visitIdInput.value.trim());
+        }
+      }, 2000);
     } else {
       showGateExitScanError('Face detection failed', 'Unable to capture face image. Please try again.');
       return;
     }
-
-    // Call the gate exit scanning function with face data
-    const { error } = await supabase.rpc('scan_gate_exit', {
-      p_visit_id: visitId,
-      p_gate_id: gateId,
-      p_scanned_by: user.id,
-      p_face_image_data: exitFaceImageData,
-      p_face_detection_confidence: faceResult.confidence || 0,
-      p_face_detection_metadata: faceDetectionMetadata
-    });
-
-    if (error) {
-      throw error;
-    }
-
-    // Show success message
-    showGateExitScanSuccess('Gate exit scanned successfully! Face verified. Visit completed!');
-    
-    // Close modal after a delay
-    setTimeout(() => {
-      const modal = document.getElementById('gateExitScanModal');
-      if (modal) {
-        modal.remove();
-      }
-      // Refresh the visit details to show updated status
-      const visitIdInput = document.getElementById('visitIdInput') as HTMLInputElement;
-      if (visitIdInput?.value.trim()) {
-        trackVisit(visitIdInput.value.trim());
-      }
-    }, 2000);
 
   } catch (error: any) {
     console.error('Error scanning gate exit:', error);

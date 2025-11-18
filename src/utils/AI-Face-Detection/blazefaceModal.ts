@@ -49,6 +49,13 @@ function createModal(): HTMLElement {
            <span id="serviceStatusIcon" class="inline-block w-2 h-2 rounded-full mr-2"></span>
            <span id="serviceStatusText">Checking AI service...</span>
          </div>
+         <div id="apiLoadingIndicator" class="flex items-center text-sm text-gray-600 dark:text-gray-300 bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 rounded-md px-3 py-2 hidden">
+           <svg class="animate-spin h-4 w-4 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none">
+             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+           </svg>
+           <span id="apiLoadingText" class="ml-2">Connecting to AI service...</span>
+         </div>
          <!-- API Selection (shown in both local and deployed) -->
          <div id="apiSelectionSection" class="hidden mb-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-md border border-gray-200 dark:border-gray-600">
            <div class="flex items-center justify-between">
@@ -86,6 +93,13 @@ function createModal(): HTMLElement {
            <button id="faceStartBtn" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Start Face Detection</button>
            <button id="faceCaptureBtn" class="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 hidden">Take Photo</button>
            <button id="faceRetakeBtn" class="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 hidden">Retake</button>
+         </div>
+         <div id="captureProcessingIndicator" class="hidden mt-3 flex items-center justify-center text-sm text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-md px-3 py-2">
+           <svg class="animate-spin h-4 w-4 text-blue-600 dark:text-blue-300" viewBox="0 0 24 24" fill="none">
+             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+           </svg>
+           <span id="captureProcessingText" class="ml-2">Working on your photo...</span>
          </div>
              </div>
              
@@ -302,12 +316,80 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
   const currentApiLabel = wrapper.querySelector('#currentApiLabel') as HTMLElement;
   const apiStatusBadge = wrapper.querySelector('#apiStatusBadge') as HTMLElement;
   const switchApiBtn = wrapper.querySelector('#switchApiBtn') as HTMLButtonElement;
+  const apiLoadingIndicator = wrapper.querySelector('#apiLoadingIndicator') as HTMLElement;
+  const apiLoadingText = wrapper.querySelector('#apiLoadingText') as HTMLElement;
+  const captureProcessingIndicator = wrapper.querySelector('#captureProcessingIndicator') as HTMLElement;
+  const captureProcessingText = wrapper.querySelector('#captureProcessingText') as HTMLElement;
+  const captureBtnDefaultLabel = (captureBtn?.textContent?.trim() || 'Take Photo');
 
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas 2D context unavailable');
 
   const livePreviewCtx = liveFacePreview.getContext('2d');
   if (!livePreviewCtx) throw new Error('Live preview canvas 2D context unavailable');
+
+  const quirkyLoadingMessages = [
+    'aligning photon beams',
+    'warming up AI hamsters',
+    'dusting lens pixels',
+    'syncing guard shields',
+    'boosting camera confidence',
+    'coaxing face detector'
+  ];
+  const captureProcessingMessages = [
+    'polishing pixels',
+    'counting freckles',
+    'stabilizing snapshot',
+    'decoding smiles',
+    'measuring light rays'
+  ];
+  let loadingMessageInterval: number | null = null;
+  let loadingBaseMessage = 'Connecting to AI service';
+
+  function rotateLoadingMessage() {
+    if (!apiLoadingText) return;
+    const phrase = quirkyLoadingMessages[Math.floor(Math.random() * quirkyLoadingMessages.length)];
+    apiLoadingText.textContent = `${loadingBaseMessage} • ${phrase}`;
+  }
+
+  function showApiLoading(baseMessage?: string) {
+    if (!apiLoadingIndicator || !apiLoadingText) return;
+    if (baseMessage) {
+      loadingBaseMessage = baseMessage;
+    }
+    apiLoadingIndicator.classList.remove('hidden');
+    rotateLoadingMessage();
+    if (loadingMessageInterval) {
+      window.clearInterval(loadingMessageInterval);
+    }
+    loadingMessageInterval = window.setInterval(rotateLoadingMessage, 3500);
+  }
+
+  function hideApiLoading(finalMessage?: string) {
+    if (!apiLoadingIndicator || !apiLoadingText) return;
+    if (loadingMessageInterval) {
+      window.clearInterval(loadingMessageInterval);
+      loadingMessageInterval = null;
+    }
+    if (finalMessage) {
+      apiLoadingText.textContent = finalMessage;
+    }
+    apiLoadingIndicator.classList.add('hidden');
+  }
+
+  function showCaptureProcessing(baseMessage?: string) {
+    if (!captureProcessingIndicator || !captureProcessingText) return;
+    const phrase = captureProcessingMessages[Math.floor(Math.random() * captureProcessingMessages.length)];
+    const message = baseMessage || 'Processing face photo';
+    captureProcessingText.textContent = `${message} • ${phrase}`;
+    captureProcessingIndicator.classList.remove('hidden');
+  }
+
+  function hideCaptureProcessing(finalMessage?: string) {
+    if (!captureProcessingIndicator || !captureProcessingText) return;
+    captureProcessingText.textContent = finalMessage || 'Working on your photo...';
+    captureProcessingIndicator.classList.add('hidden');
+  }
 
   // Persistent live preview crop state for smoothing (reserved for future use)
   // let livePrevCropX: number | null = null;
@@ -321,6 +403,7 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
   let isLiveDetectionActive = false; // Start with detection disabled
   let animationFrameId: number | null = null;
   let hasAutoPreview: boolean = false; // ensure we only auto-open preview once per session
+  let isFallbackCaptureMode = false;
   
   // API state management
   const isLocalDev = isLocalDevelopment();
@@ -578,6 +661,10 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
     startBtn.classList.add('hidden');
     captureBtn.classList.add('hidden'); // hide manual take photo button in auto mode
     captureBtn.disabled = true;
+    captureBtn.textContent = captureBtnDefaultLabel;
+    captureBtn.classList.remove('cursor-wait');
+    isFallbackCaptureMode = false;
+    hideCaptureProcessing();
     faceLegend.classList.remove('hidden'); // Show the legend
     statusEl.textContent = 'Position your face in the camera frame.';
     
@@ -591,19 +678,27 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
       
       if (video.videoWidth && video.videoHeight) {
         // Check if AI service is available before starting detection
+        showApiLoading('Connecting to AI service');
         const isServiceAvailable = await checkPythonServiceHealth();
         if (isServiceAvailable) {
+          isFallbackCaptureMode = false;
+          hideApiLoading('AI service ready');
           liveFaceDetection();
         } else {
           // Service not available - use BlazeFace for live detection
           console.log('AI service not available, using BlazeFace for live detection');
           statusEl.textContent = 'Using browser-based face detection. Position your face in the camera frame.';
           // Initialize BlazeFace model in the background
+          showApiLoading('Preparing browser fallback');
           initializeBlazeFace().then(() => {
             console.log('BlazeFace model ready, starting live detection');
+            isFallbackCaptureMode = false;
+            hideApiLoading('Browser fallback ready');
             liveFaceDetection();
           }).catch((error) => {
             console.error('Failed to initialize BlazeFace, showing manual capture:', error);
+            hideApiLoading('Browser fallback unavailable');
+            isFallbackCaptureMode = true;
             captureBtn.classList.remove('hidden');
             captureBtn.disabled = false;
             statusEl.textContent = 'Face detection unavailable. Click "Take Photo" to capture your face manually.';
@@ -614,6 +709,9 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
         console.log('Video not ready, showing manual capture button');
         captureBtn.classList.remove('hidden');
         captureBtn.disabled = false;
+        captureBtn.textContent = captureBtnDefaultLabel;
+        captureBtn.classList.remove('cursor-wait');
+        isFallbackCaptureMode = false;
         statusEl.textContent = 'Camera ready. Click "Take Photo" to capture your face.';
       }
     }, 1000);
@@ -665,102 +763,118 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
       statusEl.textContent = 'Camera not ready yet. Please try again.';
       return;
     }
-
-    // Stop live detection during capture
-    isLiveDetectionActive = false;
-    if (animationFrameId) {
-      cancelAnimationFrame(animationFrameId);
-      animationFrameId = null;
+    const shouldShowFallbackProcessing = isFallbackCaptureMode;
+    if (shouldShowFallbackProcessing) {
+      showCaptureProcessing('Processing manual capture');
+      captureBtn.disabled = true;
+      captureBtn.textContent = 'Working...';
+      captureBtn.classList.add('cursor-wait');
     }
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    if (ctx) ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL('image/png');
-
-    // Run detection on the captured canvas (not video) to get accurate coordinates
-    console.log('Running face detection on captured canvas...');
-    console.log('Canvas dimensions:', canvas.width, 'x', canvas.height);
-    const predictions = await detectFaces(canvas);
-    console.log('Canvas face detection results:', predictions?.length || 0, 'faces');
-    
-    if (predictions && predictions.length > 0) {
-      console.log('First detected face in canvas:', predictions[0]);
-      console.log('Face topLeft:', predictions[0].topLeft);
-      console.log('Face bottomRight:', predictions[0].bottomRight);
-    }
-    
-    const deduped = (predictions && predictions.length > 0) ? nmsFaces(predictions) : [];
-    if (!deduped || deduped.length === 0) {
-      statusEl.textContent = 'No face detected. Please retake the photo.';
-      confirmBtn.disabled = true;
-      captureBtn.classList.remove('hidden');
-      retakeBtn.classList.add('hidden');
-      lastDetection = null;
-      // Restart live detection
-      isLiveDetectionActive = true;
-      liveFaceDetection();
-      return;
-    }
-
-    // Check if exactly one face is usable among deduped
-    const usableFaces = deduped.filter(face => 
-      isFaceUsable(face, canvas.width, canvas.height)
-    );
-
-    if (usableFaces.length !== 1) {
-      if (usableFaces.length === 0) {
-        // Use the first deduped face as fallback
-        if (deduped.length > 0) {
-          statusEl.textContent = 'Face detected. Proceeding with capture.';
-          const firstFace = deduped[0];
-          lastDetection = { imageDataUrl: dataUrl, detections: [firstFace] };
-          await showPreviewWithCroppedFace(dataUrl, firstFace);
-          confirmBtn.disabled = false;
-          captureBtn.classList.add('hidden');
-          retakeBtn.classList.remove('hidden');
-          cameraSection.classList.add('hidden');
-          previewSection.classList.remove('hidden');
-          faceLegend.classList.add('hidden'); // Hide legend in preview
-          livePreviewPlaceholder.style.display = 'flex'; // Hide live preview
-          return;
-      } else {
-          statusEl.textContent = 'No face detected. Please retake the photo.';
-        }
-      } else if (usableFaces.length > 1) {
-        statusEl.textContent = 'Multiple faces detected. Please ensure only ONE person is in the frame and retake.';
-        // Show visual feedback for multiple faces and force retake
-        feedbackEl.className = 'absolute top-2 right-2 w-4 h-4 rounded-full bg-red-500 border-2 border-white shadow-lg';
-        cameraContainer.className = 'relative w-full aspect-video bg-black rounded-md overflow-hidden border-4 border-red-500 border-opacity-90';
+    try {
+      // Stop live detection during capture
+      isLiveDetectionActive = false;
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
       }
-      confirmBtn.disabled = true;
-      captureBtn.classList.remove('hidden');
-      retakeBtn.classList.add('hidden');
-      lastDetection = null;
-      // Restart live detection
-      isLiveDetectionActive = true;
-      liveFaceDetection();
-      return;
-    }
 
-    // Success - exactly one face usable
-    statusEl.textContent = 'Perfect! Face detected and ready.';
-    lastDetection = { imageDataUrl: dataUrl, detections: usableFaces };
-    
-    console.log('Face detection successful, showing preview...');
-    
-    // Show preview section with original and cropped images
-    await showPreviewWithCroppedFace(dataUrl, usableFaces[0]);
-    
-    confirmBtn.disabled = false;
-    captureBtn.classList.add('hidden');
-    retakeBtn.classList.remove('hidden');
-    cameraSection.classList.add('hidden');
-    previewSection.classList.remove('hidden');
-    faceLegend.classList.add('hidden'); // Hide legend in preview
-    livePreviewPlaceholder.style.display = 'flex'; // Hide live preview
-    
-    console.log('Preview section should now be visible');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      if (ctx) ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/png');
+
+      // Run detection on the captured canvas (not video) to get accurate coordinates
+      console.log('Running face detection on captured canvas...');
+      console.log('Canvas dimensions:', canvas.width, 'x', canvas.height);
+      const predictions = await detectFaces(canvas);
+      console.log('Canvas face detection results:', predictions?.length || 0, 'faces');
+      
+      if (predictions && predictions.length > 0) {
+        console.log('First detected face in canvas:', predictions[0]);
+        console.log('Face topLeft:', predictions[0].topLeft);
+        console.log('Face bottomRight:', predictions[0].bottomRight);
+      }
+      
+      const deduped = (predictions && predictions.length > 0) ? nmsFaces(predictions) : [];
+      if (!deduped || deduped.length === 0) {
+        statusEl.textContent = 'No face detected. Please retake the photo.';
+        confirmBtn.disabled = true;
+        captureBtn.classList.remove('hidden');
+        retakeBtn.classList.add('hidden');
+        lastDetection = null;
+        // Restart live detection
+        isLiveDetectionActive = true;
+        liveFaceDetection();
+        return;
+      }
+
+      // Check if exactly one face is usable among deduped
+      const usableFaces = deduped.filter(face => 
+        isFaceUsable(face, canvas.width, canvas.height)
+      );
+
+      if (usableFaces.length !== 1) {
+        if (usableFaces.length === 0) {
+          // Use the first deduped face as fallback
+          if (deduped.length > 0) {
+            statusEl.textContent = 'Face detected. Proceeding with capture.';
+            const firstFace = deduped[0];
+            lastDetection = { imageDataUrl: dataUrl, detections: [firstFace] };
+            await showPreviewWithCroppedFace(dataUrl, firstFace);
+            confirmBtn.disabled = false;
+            captureBtn.classList.add('hidden');
+            retakeBtn.classList.remove('hidden');
+            cameraSection.classList.add('hidden');
+            previewSection.classList.remove('hidden');
+            faceLegend.classList.add('hidden'); // Hide legend in preview
+            livePreviewPlaceholder.style.display = 'flex'; // Hide live preview
+            return;
+        } else {
+            statusEl.textContent = 'No face detected. Please retake the photo.';
+          }
+        } else if (usableFaces.length > 1) {
+          statusEl.textContent = 'Multiple faces detected. Please ensure only ONE person is in the frame and retake.';
+          // Show visual feedback for multiple faces and force retake
+          feedbackEl.className = 'absolute top-2 right-2 w-4 h-4 rounded-full bg-red-500 border-2 border-white shadow-lg';
+          cameraContainer.className = 'relative w-full aspect-video bg-black rounded-md overflow-hidden border-4 border-red-500 border-opacity-90';
+        }
+        confirmBtn.disabled = true;
+        captureBtn.classList.remove('hidden');
+        retakeBtn.classList.add('hidden');
+        lastDetection = null;
+        // Restart live detection
+        isLiveDetectionActive = true;
+        liveFaceDetection();
+        return;
+      }
+
+      // Success - exactly one face usable
+      statusEl.textContent = 'Perfect! Face detected and ready.';
+      lastDetection = { imageDataUrl: dataUrl, detections: usableFaces };
+      
+      console.log('Face detection successful, showing preview...');
+      
+      // Show preview section with original and cropped images
+      await showPreviewWithCroppedFace(dataUrl, usableFaces[0]);
+      
+      confirmBtn.disabled = false;
+      captureBtn.classList.add('hidden');
+      retakeBtn.classList.remove('hidden');
+      cameraSection.classList.add('hidden');
+      previewSection.classList.remove('hidden');
+      faceLegend.classList.add('hidden'); // Hide legend in preview
+      livePreviewPlaceholder.style.display = 'flex'; // Hide live preview
+      
+      console.log('Preview section should now be visible');
+    } finally {
+      if (shouldShowFallbackProcessing) {
+        hideCaptureProcessing('Manual capture completed');
+        captureBtn.disabled = false;
+        captureBtn.textContent = captureBtnDefaultLabel;
+        captureBtn.classList.remove('cursor-wait');
+      }
+    }
   }
 
   // Function to show preview with cropped face

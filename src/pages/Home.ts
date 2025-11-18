@@ -162,7 +162,7 @@ async function loadWeeklyVisitCount(_userEmail: string) {
       .from('scheduled_visits')
       .select('visit_date, status')
       .or(`visitor_user_id.eq.${user.id},visitor_email.eq.${user.email}`)
-      .in('status', ['pending', 'completed', 'completed_flagged', 'temporary_exit']);
+      .in('status', ['pending', 'in_progress', 'completed', 'completed_flagged', 'temporary_exit']);
 
     if (allUserError) {
       console.error('Error loading all user visits:', allUserError);
@@ -214,7 +214,7 @@ async function loadWeeklyVisitCount(_userEmail: string) {
       .from('scheduled_visits')
       .select('visit_date, status')
       .or(`visitor_user_id.eq.${user.id},visitor_email.eq.${user.email}`)
-      .in('status', ['pending', 'completed', 'completed_flagged', 'temporary_exit'])
+      .in('status', ['pending', 'in_progress', 'completed', 'completed_flagged', 'temporary_exit'])
       .gte('visit_date', prevWeekStart.toISOString())
       .lte('visit_date', prevWeekEnd.toISOString());
 
@@ -246,10 +246,11 @@ async function loadWeeklyVisitCount(_userEmail: string) {
     // Count the pending, completed, and completed_flagged visits for the current week
     const visitCount = visits?.length || 0;
     const pendingCount = visits?.filter(v => v.status === 'pending').length || 0;
+    const inProgressCount = visits?.filter(v => v.status === 'in_progress').length || 0;
     const temporaryExitCount = visits?.filter(v => v.status === 'temporary_exit').length || 0;
     const completedCount = visits?.filter(v => v.status === 'completed').length || 0;
     const completedFlaggedCount = visits?.filter(v => v.status === 'completed_flagged').length || 0;
-    const activeCountThisWeek = pendingCount + temporaryExitCount;
+    const activeCountThisWeek = pendingCount + inProgressCount + temporaryExitCount;
     
     // Debug: Log individual visit details for current week
     if (visits && visits.length > 0) {
@@ -337,7 +338,7 @@ async function loadWeeklyVisitCount(_userEmail: string) {
       
       const currentWeekData = weeklyVisitCounts.get(currentWeekKey);
       visits.forEach(visit => {
-        if (visit.status === 'pending') {
+        if (visit.status === 'pending' || visit.status === 'in_progress') {
           currentWeekData.pending++;
         } else if (visit.status === 'completed') {
           currentWeekData.completed++;
@@ -408,7 +409,7 @@ async function loadWeeklyVisitCount(_userEmail: string) {
     const scheduleNowBtn = document.getElementById('scheduleNowBtn');
     
     // Add debug info to help understand the counts
-    const debugInfo = `[Debug: ${totalWeekVisits} total this week, ${activeCountThisWeek} active (pending + temp exit) this week, ${completedCount} completed this week, ${completedFlaggedCount} flagged this week, ${remainingVisits} remaining]`;
+    const debugInfo = `[Debug: ${totalWeekVisits} total this week, ${activeCountThisWeek} active (pending + in_progress + temp exit) this week, ${completedCount} completed this week, ${completedFlaggedCount} flagged this week, ${remainingVisits} remaining]`;
     console.log(debugInfo);
     
     // Create comprehensive weekly status display
