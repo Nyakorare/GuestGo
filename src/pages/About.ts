@@ -33,18 +33,6 @@ export function AboutPage() {
         </div>
       </div>
 
-      <!-- Animated Counters -->
-      <div class="flex flex-col sm:flex-row justify-center items-center gap-6 sm:gap-8 md:gap-12 mb-8 sm:mb-12 md:mb-16">
-        <div class="text-center animate-fade-in-up" style="animation-delay:0.6s;">
-          <div id="guests-managed" class="text-4xl sm:text-5xl font-bold text-blue-600 dark:text-blue-400 counter transform hover:scale-110 transition-transform duration-300">0</div>
-          <div class="text-base sm:text-lg text-gray-700 dark:text-gray-300 mt-2">Guests Managed</div>
-        </div>
-        <div class="text-center animate-fade-in-up" style="animation-delay:0.8s;">
-          <div id="uptime" class="text-4xl sm:text-5xl font-bold text-blue-600 dark:text-blue-400 counter transform hover:scale-110 transition-transform duration-300">0</div>
-          <div class="text-base sm:text-lg text-gray-700 dark:text-gray-300 mt-2">Uptime (%)</div>
-        </div>
-      </div>
-
       <!-- FAQ Accordion -->
       <div class="mb-8 sm:mb-12 md:mb-16">
         <h2 class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-center animate-fade-in-up px-2" style="animation-delay:1s;">Frequently Asked Questions</h2>

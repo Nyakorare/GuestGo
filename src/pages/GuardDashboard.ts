@@ -1174,7 +1174,7 @@ async function getEntranceFaceImage(visitId: string): Promise<string | null> {
 }
 
 // Function to verify faces using Python AI API
-async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Promise<{ match: boolean; similarity: number; error?: string }> {
+async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Promise<{ match: boolean; similarity: number; error?: string; serviceUnavailable?: boolean }> {
   try {
     // Validate that both images are valid base64 data URLs
     if (!entranceFaceImage || !entranceFaceImage.startsWith('data:image/')) {
@@ -1224,10 +1224,18 @@ async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Pr
     };
   } catch (error) {
     console.error('Error verifying faces:', error);
+    
+    // Check if this is a network/connection error
+    const isConnectionError = error instanceof TypeError && 
+      (error.message.includes('Failed to fetch') || 
+       error.message.includes('ERR_CONNECTION_REFUSED') ||
+       error.message.includes('NetworkError'));
+    
     return { 
       match: false, 
       similarity: 0, 
-      error: error instanceof Error ? error.message : 'Face verification service unavailable' 
+      error: error instanceof Error ? error.message : 'Face verification service unavailable',
+      serviceUnavailable: isConnectionError
     };
   }
 }
@@ -1277,7 +1285,19 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
 
     // Process face image for storage (compress and encrypt)
     const { processFaceImageForStorage } = await import('../utils/imageCompression');
-    const processedFaceImage = await processFaceImageForStorage(faceResult.croppedImageDataUrl);
+    let processedFaceImage: string;
+    try {
+      processedFaceImage = await processFaceImageForStorage(faceResult.croppedImageDataUrl);
+      
+      // Validate that the processed image is not empty
+      if (!processedFaceImage || processedFaceImage.trim().length === 0) {
+        throw new Error('Face image processing resulted in empty data');
+      }
+    } catch (error) {
+      console.error('Error processing face image for storage:', error);
+      showGuardError('Face Image Processing Error', `Failed to process face image: ${error instanceof Error ? error.message : 'Unknown error'}. Please retry face detection.`);
+      return;
+    }
 
     // Prepare face detection metadata
     const faceMetadata = {
@@ -1294,38 +1314,8 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
     if (action === 'entrance') {
       console.log('Logging guard entrance action with face data...');
       
-      // For guards, we don't use the visitor gate scanning functions
-      // Instead, we log the guard action and manually update the visit
-      const { error: guardActionError } = await supabase.rpc('log_guard_action', {
-        p_visit_id: visitData.visitId,
-        p_action: 'entrance',
-        p_guard_id: user.id
-      });
-
-      if (guardActionError) {
-        console.error('Error logging guard action:', guardActionError);
-        showGuardError('Logging Error', `Error logging entrance: ${guardActionError.message}`);
-        return;
-      }
-
-      // Manually update the visit record to mark entrance as scanned
-      const { error: updateError } = await supabase
-        .from('scheduled_visits')
-        .update({
-          gate_entrance_scanned: true,
-          gate_entrance_scanned_at: new Date().toISOString(),
-          gate_entrance_scanned_by: user.id,
-          status: visitData.status === 'temporary_exit' ? 'pending' : 'in_progress'
-        })
-        .eq('id', visitData.visitId);
-
-      if (updateError) {
-        console.error('Error updating visit record:', updateError);
-        showGuardError('Update Error', `Error updating visit: ${updateError.message}`);
-        return;
-      }
-
-      // Store face data in gate_scans table using guard-specific function
+      // Store face data FIRST before marking visit as scanned
+      // This ensures face data is always available when the visit is marked as scanned
       const { error: faceDataError } = await supabase.rpc('insert_guard_gate_scan_with_face', {
         p_visit_id: visitData.visitId,
         p_gate_id: gateId,
@@ -1341,7 +1331,40 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
 
       if (faceDataError) {
         console.error('Error storing face data:', faceDataError);
-        // Non-fatal error, continue
+        showGuardError('Face Data Storage Error', `Failed to store face data: ${faceDataError.message}. Entrance not logged.`);
+        return;
+      }
+
+      // For guards, we don't use the visitor gate scanning functions
+      // Instead, we log the guard action and manually update the visit
+      const { error: guardActionError } = await supabase.rpc('log_guard_action', {
+        p_visit_id: visitData.visitId,
+        p_action: 'entrance',
+        p_guard_id: user.id
+      });
+
+      if (guardActionError) {
+        console.error('Error logging guard action:', guardActionError);
+        showGuardError('Logging Error', `Error logging entrance: ${guardActionError.message}`);
+        return;
+      }
+
+      // Manually update the visit record to mark entrance as scanned
+      // Only do this after face data is successfully stored
+      const { error: updateError } = await supabase
+        .from('scheduled_visits')
+        .update({
+          gate_entrance_scanned: true,
+          gate_entrance_scanned_at: new Date().toISOString(),
+          gate_entrance_scanned_by: user.id,
+          status: visitData.status === 'temporary_exit' ? 'pending' : 'in_progress'
+        })
+        .eq('id', visitData.visitId);
+
+      if (updateError) {
+        console.error('Error updating visit record:', updateError);
+        showGuardError('Update Error', `Error updating visit: ${updateError.message}`);
+        return;
       }
 
       console.log('Guard entrance logged successfully with face data');
@@ -1363,23 +1386,31 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
       // Verify faces match
       const verificationResult = await verifyFaces(entranceFaceImage, compressedExitImage);
 
-      if (verificationResult.error) {
+      // If service is unavailable, allow exit to proceed with a warning
+      if (verificationResult.serviceUnavailable) {
+        console.warn('Face verification service unavailable, proceeding with exit logging');
+        showGuardWarning(
+          'Face Verification Service Unavailable', 
+          'The face verification service is not available. Exit will be logged without verification. Please ensure the Python AI service is running for future scans.'
+        );
+        // Continue to log exit even though verification failed
+      } else if (verificationResult.error) {
+        // For other errors (invalid images, etc.), block the exit
         showGuardError('Face Verification Error', verificationResult.error);
         return;
-      }
-
-      if (!verificationResult.match) {
+      } else if (!verificationResult.match) {
+        // Faces don't match - block exit
         const similarityPercent = (verificationResult.similarity * 100).toFixed(1);
         showGuardError(
           'Face Verification Failed', 
           `Face does not match the entrance picture. Similarity: ${similarityPercent}%`
         );
         return;
+      } else {
+        // Faces match, proceed with exit logging
+        exitSimilarityPercent = (verificationResult.similarity * 100).toFixed(1);
+        console.log(`Face verification successful. Similarity: ${exitSimilarityPercent}%`);
       }
-
-      // Faces match, proceed with exit logging
-      exitSimilarityPercent = (verificationResult.similarity * 100).toFixed(1);
-      console.log(`Face verification successful. Similarity: ${exitSimilarityPercent}%`);
       
       // For guards, we don't use the visitor gate scanning functions
       // Instead, we log the guard action and manually update the visit
@@ -1443,8 +1474,12 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
     }
 
     // Show success message with similarity for exit
-    if (action === 'exit' && exitSimilarityPercent) {
-      showGuardSuccess(`Exit logged successfully for ${visitData.visitorName}! Face verified with ${exitSimilarityPercent}% similarity match.`);
+    if (action === 'exit') {
+      if (exitSimilarityPercent) {
+        showGuardSuccess(`Exit logged successfully for ${visitData.visitorName}! Face verified with ${exitSimilarityPercent}% similarity match.`);
+      } else {
+        showGuardSuccess(`Exit logged successfully for ${visitData.visitorName}! (Face verification was unavailable)`);
+      }
     } else {
       showGuardSuccess(`${action.charAt(0).toUpperCase() + action.slice(1)} logged successfully for ${visitData.visitorName}!`);
     }
@@ -1586,6 +1621,35 @@ function showGuardSuccess(message: string) {
     setTimeout(() => {
       messageSection.classList.add('hidden');
     }, 3000);
+  }
+}
+
+function showGuardWarning(title: string, message: string) {
+  const messageSection = document.getElementById('guardMessageSection');
+  if (messageSection) {
+    messageSection.classList.remove('hidden');
+    messageSection.innerHTML = `
+      <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">${title}</h3>
+            <div class="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
+              <p>${message}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Hide message after 5 seconds
+    setTimeout(() => {
+      messageSection.classList.add('hidden');
+    }, 5000);
   }
 }
 
