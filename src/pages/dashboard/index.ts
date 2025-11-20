@@ -2636,6 +2636,274 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
       }
     };
     
+    const buildVisitHistorySection = async ({
+      parsedDetails,
+      visitorName,
+      historyLabel = 'See History'
+    }: {
+      parsedDetails: any;
+      visitorName: string;
+      historyLabel?: string;
+    }): Promise<string> => {
+      if (!parsedDetails) return '';
+      
+      const visitId = parsedDetails.visit_id;
+      const historyId = `history-${log?.id || Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      let gateScanInfo = '';
+      let hasGateInfo = false;
+      
+      if (visitId) {
+        try {
+          const { data: gateScans, error: gateError } = await supabase.rpc('get_visit_gate_scans', {
+            p_visit_id: visitId
+          });
+          
+          const { data: visitData } = await supabase
+            .from('scheduled_visits')
+            .select('gate_entrance_scanned, gate_entrance_scanned_at, gate_exit_scanned, gate_exit_scanned_at')
+            .eq('id', visitId)
+            .single();
+          
+          if (!gateError && gateScans && gateScans.length > 0) {
+            const entranceScan = gateScans.find((scan: any) => scan.scan_type === 'entrance');
+            const exitScan = gateScans.find((scan: any) => scan.scan_type === 'exit');
+            
+            gateScanInfo = '<div class="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-md">';
+            gateScanInfo += '<div class="font-medium text-blue-800 dark:text-blue-200 mb-1">Gate Scans:</div>';
+            
+            if (entranceScan) {
+              const entranceTime = new Date(entranceScan.scanned_at).toLocaleString();
+              gateScanInfo += `<div class="text-xs text-green-600 dark:text-green-400">✅ Entrance: ${entranceScan.gate_name} at ${entranceTime}</div>`;
+            } else if (visitData && visitData.gate_entrance_scanned) {
+              const entranceTime = visitData.gate_entrance_scanned_at ? new Date(visitData.gate_entrance_scanned_at).toLocaleString() : 'Unknown time';
+              gateScanInfo += `<div class="text-xs text-green-600 dark:text-green-400">✅ Entrance: Scanned at ${entranceTime}</div>`;
+            } else {
+              gateScanInfo += `<div class="text-xs text-gray-500">⏳ Entrance: Not scanned</div>`;
+            }
+            
+            if (exitScan) {
+              const exitTime = new Date(exitScan.scanned_at).toLocaleString();
+              gateScanInfo += `<div class="text-xs text-green-600 dark:text-green-400">✅ Exit: ${exitScan.gate_name} at ${exitTime}</div>`;
+              
+              if (entranceScan) {
+                const entranceDate = new Date(entranceScan.scanned_at);
+                const exitDate = new Date(exitScan.scanned_at);
+                const durationMs = exitDate.getTime() - entranceDate.getTime();
+                const durationMinutes = Math.round(durationMs / (1000 * 60));
+                const durationHours = Math.floor(durationMinutes / 60);
+                const remainingMinutes = durationMinutes % 60;
+                const durationText = durationHours > 0 ? `${durationHours}h ${remainingMinutes}m` : `${durationMinutes}m`;
+                
+                gateScanInfo += `<div class="text-xs text-purple-600 dark:text-purple-400 font-medium mt-1">⏱️ Total Visit Time: ${durationText}</div>`;
+              }
+            } else if (visitData && visitData.gate_exit_scanned) {
+              const exitTime = visitData.gate_exit_scanned_at ? new Date(visitData.gate_exit_scanned_at).toLocaleString() : 'Unknown time';
+              gateScanInfo += `<div class="text-xs text-green-600 dark:text-green-400">✅ Exit: Scanned at ${exitTime}</div>`;
+            } else {
+              gateScanInfo += `<div class="text-xs text-gray-500">⏳ Exit: Not scanned</div>`;
+            }
+            
+            if ((entranceScan || (visitData && visitData.gate_entrance_scanned)) || (exitScan || (visitData && visitData.gate_exit_scanned))) {
+              gateScanInfo += '<div class="mt-2 flex items-center space-x-2">';
+              
+              if (entranceScan || (visitData && visitData.gate_entrance_scanned)) {
+                gateScanInfo += `
+                  <button 
+                    onclick="showFaceDataModal('${visitId}', '${visitorName}', 'entrance')"
+                    class="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full text-xs font-medium hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors duration-200 flex items-center space-x-1"
+                    title="View entrance face data"
+                  >
+                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span>Entrance</span>
+                  </button>
+                `;
+              }
+              
+              if (exitScan || (visitData && visitData.gate_exit_scanned)) {
+                gateScanInfo += `
+                  <button 
+                    onclick="showFaceDataModal('${visitId}', '${visitorName}', 'exit')"
+                    class="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-xs font-medium hover:bg-green-200 dark:hover:bg-green-800 transition-colors duration-200 flex items-center space-x-1"
+                    title="View exit face data"
+                  >
+                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span>Exit</span>
+                  </button>
+                `;
+              }
+              
+              gateScanInfo += '</div>';
+            }
+            
+            gateScanInfo += '</div>';
+            hasGateInfo = true;
+          } else if (visitData && (visitData.gate_entrance_scanned || visitData.gate_exit_scanned)) {
+            gateScanInfo = '<div class="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-md">';
+            gateScanInfo += '<div class="font-medium text-blue-800 dark:text-blue-200 mb-1">Gate Scans:</div>';
+            
+            if (visitData.gate_entrance_scanned) {
+              const entranceTime = visitData.gate_entrance_scanned_at ? new Date(visitData.gate_entrance_scanned_at).toLocaleString() : 'Unknown time';
+              gateScanInfo += `<div class="text-xs text-green-600 dark:text-green-400">✅ Entrance: Scanned at ${entranceTime}</div>`;
+            } else {
+              gateScanInfo += `<div class="text-xs text-gray-500">⏳ Entrance: Not scanned</div>`;
+            }
+            
+            if (visitData.gate_exit_scanned) {
+              const exitTime = visitData.gate_exit_scanned_at ? new Date(visitData.gate_exit_scanned_at).toLocaleString() : 'Unknown time';
+              gateScanInfo += `<div class="text-xs text-green-600 dark:text-green-400">✅ Exit: Scanned at ${exitTime}</div>`;
+            } else {
+              gateScanInfo += `<div class="text-xs text-gray-500">⏳ Exit: Not scanned</div>`;
+            }
+            
+            gateScanInfo += '<div class="mt-2 flex items-center space-x-2">';
+            
+            if (visitData.gate_entrance_scanned) {
+              gateScanInfo += `
+                <button 
+                  onclick="showFaceDataModal('${visitId}', '${visitorName}', 'entrance')"
+                  class="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full text-xs font-medium hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors duration-200 flex items-center space-x-1"
+                  title="View entrance face data"
+                >
+                  <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <span>Entrance</span>
+                </button>
+              `;
+            }
+            
+            if (visitData.gate_exit_scanned) {
+              gateScanInfo += `
+                <button 
+                  onclick="showFaceDataModal('${visitId}', '${visitorName}', 'exit')"
+                  class="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-xs font-medium hover:bg-green-200 dark:hover:bg-green-800 transition-colors duration-200 flex items-center space-x-1"
+                  title="View exit face data"
+                >
+                  <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <span>Exit</span>
+                </button>
+              `;
+            }
+            
+            gateScanInfo += '</div>';
+            gateScanInfo += '</div>';
+            hasGateInfo = true;
+          }
+        } catch (error) {
+          console.error('Error fetching gate scans for history section:', error);
+        }
+      }
+      
+      const baseHistory = Array.isArray(parsedDetails.history) ? parsedDetails.history : [];
+      const historyItemsFromLog = baseHistory
+        .map((event: any) => {
+          try {
+            const eventType = event.event ? event.event.charAt(0).toUpperCase() + event.event.slice(1) : 'Event';
+            const eventTime = event.timestamp ? new Date(event.timestamp).toLocaleString() : '';
+            let details = '';
+            if (event.details) {
+              if (event.details.by) {
+                details += `<span class='text-xs text-gray-500'>(By: ${event.details.by})</span> `;
+              }
+              if (event.details.purpose) {
+                details += `<span class='text-xs text-gray-500'>Purpose: ${event.details.purpose}</span> `;
+              }
+              if (event.details.note) {
+                details += `<span class='text-xs text-gray-500'>Note: ${event.details.note}</span> `;
+              }
+              if (event.details.reason) {
+                details += `<span class='text-xs text-red-500'>Reason: ${event.details.reason}</span> `;
+              }
+              if (event.details.auto_marked) {
+                details += `<span class='text-xs text-orange-500'>(Auto-marked by system)</span> `;
+              }
+              if (event.details.place_name) {
+                details += `<span class='text-xs text-blue-500'>Place: ${event.details.place_name}</span> `;
+              }
+              if (event.details.completed_places) {
+                const completedPlaces = Array.isArray(event.details.completed_places) 
+                  ? event.details.completed_places.join(', ')
+                  : String(event.details.completed_places);
+                details += `<span class='text-xs text-green-500'>Places: ${completedPlaces}</span> `;
+              }
+              if (event.event === 'temporary_exit') {
+                details += `<span class='text-xs text-blue-500'>Temporary exit recorded</span> `;
+              }
+            }
+            return `<li class="py-1 border-b border-gray-100 dark:border-gray-700 last:border-b-0"><span class='font-semibold'>${eventType}</span> <span class='text-xs text-gray-400'>${eventTime}</span> ${details}</li>`;
+          } catch (error) {
+            console.error('Error processing history event:', error, event);
+            return `<li class="py-1 border-b border-gray-100 dark:border-gray-700 last:border-b-0"><span class='font-semibold text-red-600'>Error processing event</span></li>`;
+          }
+        })
+        .filter(item => item);
+      
+      let tempExitItems: string[] = [];
+      if (visitId) {
+        try {
+          const { data: tempExitLogs, error: tempErr } = await supabase
+            .from('logs')
+            .select('created_at, details')
+            .eq('action', 'visit_temporary_exit')
+            .contains('details', { visit_id: visitId });
+          if (!tempErr && Array.isArray(tempExitLogs)) {
+            tempExitItems = await Promise.all(tempExitLogs.map(async (row: any) => {
+              const when = row?.details?.timestamp || row?.created_at;
+              const guardId = row?.details?.guard_id;
+              const guardName = guardId ? await getUserName(guardId) : 'Guard';
+              const timeText = when ? new Date(when).toLocaleString() : 'Unknown time';
+              return `<li class="py-1 border-b border-gray-100 dark:border-gray-700 last:border-b-0"><span class='font-semibold'>Temporary Exit</span> <span class='text-xs text-gray-400'>${timeText}</span> <span class='text-xs text-blue-500'>(By: ${guardName})</span></li>`;
+            }));
+          }
+        } catch (error) {
+          console.error('Error fetching temporary-exit logs:', error);
+        }
+      }
+      
+      const combinedHistoryItems = [...historyItemsFromLog, ...tempExitItems];
+      const hasHistoryItems = combinedHistoryItems.length > 0;
+      
+      if (!hasGateInfo && !hasHistoryItems) {
+        return '';
+      }
+      
+      const itemsHtml = hasHistoryItems
+        ? combinedHistoryItems.join('')
+        : `<li class="py-1 text-sm text-gray-500 dark:text-gray-400">No history events recorded yet.</li>`;
+      
+      const totalCount = combinedHistoryItems.length;
+      const labelText = totalCount > 0
+        ? `${historyLabel} (${totalCount} ${totalCount === 1 ? 'event' : 'events'})`
+        : historyLabel;
+      
+      return `
+        <div class="mt-2">
+          <button 
+            class="text-blue-600 hover:text-blue-800 dark:text-blue-500 dark:hover:text-blue-400 text-sm font-medium flex items-center gap-1 w-full justify-between p-2 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors duration-200 touch-manipulation"
+            id="btn-${historyId}"
+            style="min-height: 44px; -webkit-tap-highlight-color: transparent;"
+          >
+            <span>${labelText}</span>
+            <svg class="w-4 h-4 transition-transform duration-200 flex-shrink-0" id="icon-${historyId}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </button>
+          <div class="hidden mt-2 bg-gray-50 dark:bg-gray-800 rounded-md p-3" id="${historyId}">
+            ${hasGateInfo ? gateScanInfo : ''}
+            <ul class="space-y-1 text-sm">
+              ${itemsHtml}
+            </ul>
+          </div>
+        </div>
+      `;
+    };
+    
     switch (action) {
       case 'password_change':
         return `Password changed for user`;
@@ -3136,9 +3404,22 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
       }
 
 
-      case 'visit_completed':
+      case 'visit_completed': {
+        const visitIdDisplay = parsedDetails.visit_id ? parsedDetails.visit_id.substring(0, 8) + '...' : 'Unknown';
         const completedVisitPlaceName = await getPlaceName(parsedDetails.place_id);
-        return `<div><span class="font-medium">Visit ID:</span> ${parsedDetails.visit_id ? parsedDetails.visit_id.substring(0, 8) + '...' : 'Unknown'}</div><div><span class="font-medium">Place:</span> ${completedVisitPlaceName}</div><div><span class="font-medium">Completed:</span> ${new Date(parsedDetails.completed_at).toLocaleString()}</div>`;
+        const completedAt = parsedDetails.completed_at ? new Date(parsedDetails.completed_at).toLocaleString() : 'Unknown';
+        const visitorName = parsedDetails.visitor_name || 
+          `${parsedDetails.visitor_first_name || ''} ${parsedDetails.visitor_last_name || ''}`.trim() || 
+          'Visitor';
+        const completedBy = parsedDetails.completed_by ? await getUserName(parsedDetails.completed_by) : '';
+        const historyHtml = await buildVisitHistorySection({
+          parsedDetails,
+          visitorName
+        });
+        
+        const completedByHtml = completedBy ? `<div><span class="font-medium">Completed by:</span> ${completedBy}</div>` : '';
+        return `<div><span class="font-medium">Visit ID:</span> ${visitIdDisplay}</div><div><span class="font-medium">Place:</span> ${completedVisitPlaceName}</div>${completedByHtml}<div><span class="font-medium">Completed:</span> ${completedAt}</div>${historyHtml}`;
+      }
       case 'visit_completed_flagged': {
         const completedBy = parsedDetails.completed_by ? await getUserName(parsedDetails.completed_by) : 'System';
         const completedDate = parsedDetails.completed_at ? new Date(parsedDetails.completed_at).toLocaleString() : 'Unknown';
@@ -8100,7 +8381,6 @@ if (typeof window !== 'undefined') {
 
 // Function to toggle history dropdown
 function toggleHistory(historyId: string) {
-  console.log('toggleHistory called with historyId:', historyId);
   const historyDiv = document.getElementById(historyId);
   const button = document.getElementById(`btn-${historyId}`);
   const icon = document.getElementById(`icon-${historyId}`);
@@ -8124,7 +8404,6 @@ function toggleHistory(historyId: string) {
   // Desktop: toggle dropdown
   if (historyDiv && button && icon) {
     const isHidden = historyDiv.classList.contains('hidden');
-    console.log('Current state - isHidden:', isHidden);
     if (isHidden) {
       historyDiv.classList.remove('hidden');
       icon.style.transform = 'rotate(180deg)';
@@ -8132,7 +8411,6 @@ function toggleHistory(historyId: string) {
       if (span) {
         span.textContent = span.textContent?.replace('See History', 'Hide History');
       }
-      console.log('History shown');
     } else {
       historyDiv.classList.add('hidden');
       icon.style.transform = 'rotate(0deg)';
@@ -8140,7 +8418,6 @@ function toggleHistory(historyId: string) {
       if (span) {
         span.textContent = span.textContent?.replace('Hide History', 'See History');
       }
-      console.log('History hidden');
     }
   } else {
     console.error('Could not find required elements for history toggle');
@@ -8932,6 +9209,7 @@ async function processGateScanWithFaceData(visitId: string, gateId: string, face
     // Prepare face image data for storage
     let faceImageData = null;
     let faceDetectionMetadata = null;
+    let faceDetectionConfidence = null;
 
     if (faceResult.croppedImageDataUrl) {
       // Compress the cropped face image for storage
@@ -8939,10 +9217,18 @@ async function processGateScanWithFaceData(visitId: string, gateId: string, face
       const compressedImage = await compressImageDataUrl(faceResult.croppedImageDataUrl, 0.8, 400, 400);
       faceImageData = compressedImage;
       
+      // Set confidence only if face data exists
+      // Handle case where confidence might be an array (extract first element)
+      if (faceResult.confidence !== null && faceResult.confidence !== undefined) {
+        faceDetectionConfidence = Array.isArray(faceResult.confidence) 
+          ? (faceResult.confidence[0] ?? null)
+          : (typeof faceResult.confidence === 'number' ? faceResult.confidence : null);
+      }
+      
       // Prepare metadata
       faceDetectionMetadata = {
         timestamp: new Date().toISOString(),
-        confidence: faceResult.confidence || 0,
+        confidence: faceDetectionConfidence,
         boundingBox: faceResult.detections?.[0] || null,
         originalSize: faceResult.croppedImageDataUrl.length,
         compressedSize: compressedImage.length
@@ -8955,7 +9241,7 @@ async function processGateScanWithFaceData(visitId: string, gateId: string, face
       p_gate_id: gateId,
       p_scanned_by: user.id,
       p_face_image_data: faceImageData,
-      p_face_detection_confidence: faceResult.confidence || 0,
+      p_face_detection_confidence: faceDetectionConfidence,
       p_face_detection_metadata: faceDetectionMetadata,
       p_ip_address: null,
       p_user_agent: navigator.userAgent,
@@ -9314,44 +9600,89 @@ async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Pr
       return { match: false, similarity: 0, error: 'Invalid exit face image format' };
     }
 
-    const { getEffectiveApiUrl } = await import('../../config/python-api');
-    const apiUrl = getEffectiveApiUrl();
+    const { 
+      getEffectiveApiUrl, 
+      LOCAL_API_URL, 
+      DEPLOYED_API_URL, 
+      setApiUrlPreference 
+    } = await import('../../config/python-api');
 
-    const response = await fetch(`${apiUrl}/metrics/verify-images`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        base_image: entranceFaceImage,
-        probe_image: exitFaceImage
-      })
-    });
+    const performVerification = async (apiUrl: string) => {
+      const response = await fetch(`${apiUrl}/metrics/verify-images`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          base_image: entranceFaceImage,
+          probe_image: exitFaceImage
+        })
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-      return { match: false, similarity: 0, error: errorData.error || 'Face verification failed' };
-    }
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || 'Face verification failed');
+      }
 
-    const result = await response.json();
-    
-    // Check if both faces were found
-    if (!result.base?.found || !result.probe?.found) {
-      return { 
-        match: false, 
-        similarity: 0, 
-        error: !result.base?.found ? 'Entrance face not detected' : 'Exit face not detected' 
-      };
-    }
-
-    // Use similarity threshold of 0.75 (same as in compare_face_features)
-    const threshold = 0.75;
-    const isMatch = result.match && result.similarity >= threshold;
-
-    return {
-      match: isMatch,
-      similarity: result.similarity || 0
+      return response.json();
     };
+
+    const handleResult = (result: any) => {
+      if (!result.base?.found || !result.probe?.found) {
+        return { 
+          match: false, 
+          similarity: 0, 
+          error: !result.base?.found ? 'Entrance face not detected' : 'Exit face not detected' 
+        };
+      }
+  
+      const threshold = 0.75;
+      const isMatch = result.match && result.similarity >= threshold;
+  
+      return {
+        match: isMatch,
+        similarity: result.similarity || 0
+      };
+    };
+
+    const primaryApiUrl = getEffectiveApiUrl();
+
+    try {
+      const result = await performVerification(primaryApiUrl);
+      return handleResult(result);
+    } catch (primaryError) {
+      const isLocalApi = primaryApiUrl === LOCAL_API_URL;
+      // When using local API, treat any TypeError (which fetch throws on network errors) as a network issue
+      // This includes connection refused, failed to fetch, etc.
+      let isNetworkError = primaryError instanceof TypeError;
+      
+      // Also check for explicit network error messages
+      if (!isNetworkError && primaryError instanceof Error) {
+        const errorMessage = primaryError.message.toLowerCase();
+        const errorStack = primaryError.stack?.toLowerCase() || '';
+        if (errorMessage.includes('failed to fetch') ||
+            errorMessage.includes('connection refused') ||
+            errorMessage.includes('network') ||
+            errorStack.includes('connection refused') ||
+            errorStack.includes('err_network')) {
+          isNetworkError = true;
+        }
+      }
+
+      if (isLocalApi && isNetworkError) {
+        console.warn('Local AI API unreachable, falling back to deployed endpoint.');
+        try {
+          setApiUrlPreference('deployed');
+          const fallbackResult = await performVerification(DEPLOYED_API_URL);
+          return handleResult(fallbackResult);
+        } catch (fallbackError) {
+          console.error('Fallback AI API verification failed:', fallbackError);
+          throw fallbackError;
+        }
+      }
+
+      throw primaryError;
+    }
   } catch (error) {
     console.error('Error verifying faces:', error);
     return { 
@@ -9423,6 +9754,7 @@ async function processGateExitScanWithFaceVerification(
     // Prepare exit face image data
     let exitFaceImageData = null;
     let faceDetectionMetadata = null;
+    let faceDetectionConfidence = null;
 
     if (faceResult.croppedImageDataUrl) {
       // Compress the cropped face image for storage
@@ -9430,10 +9762,17 @@ async function processGateExitScanWithFaceVerification(
       const compressedImage = await compressImageDataUrl(faceResult.croppedImageDataUrl, 0.8, 400, 400);
       exitFaceImageData = compressedImage;
       
+      // Handle case where confidence might be an array (extract first element)
+      if (faceResult.confidence !== null && faceResult.confidence !== undefined) {
+        faceDetectionConfidence = Array.isArray(faceResult.confidence) 
+          ? (faceResult.confidence[0] ?? null)
+          : (typeof faceResult.confidence === 'number' ? faceResult.confidence : null);
+      }
+      
       // Prepare metadata
       faceDetectionMetadata = {
         timestamp: new Date().toISOString(),
-        confidence: faceResult.confidence || 0,
+        confidence: faceDetectionConfidence,
         boundingBox: faceResult.detections?.[0] || null,
         originalSize: faceResult.croppedImageDataUrl.length,
         compressedSize: compressedImage.length
@@ -9469,7 +9808,7 @@ async function processGateExitScanWithFaceVerification(
         p_gate_id: gateId,
         p_scanned_by: user.id,
         p_face_image_data: exitFaceImageData,
-        p_face_detection_confidence: faceResult.confidence || 0,
+        p_face_detection_confidence: faceDetectionConfidence,
         p_face_detection_metadata: faceDetectionMetadata
       });
 
@@ -11542,8 +11881,6 @@ function handleHistoryButtonClick(event: Event) {
   
   const button = event.currentTarget as HTMLElement;
   const historyId = button.id.replace('btn-', '');
-  
-  console.log('History button clicked via event listener:', historyId);
   toggleHistory(historyId);
 }
 
@@ -11554,8 +11891,6 @@ function handleHistoryButtonTouch(event: TouchEvent) {
   
   const button = event.currentTarget as HTMLElement;
   const historyId = button.id.replace('btn-', '');
-  
-  console.log('History button touched via event listener:', historyId);
   toggleHistory(historyId);
 }
 

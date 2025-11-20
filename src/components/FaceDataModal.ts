@@ -389,44 +389,75 @@ async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Pr
       return { match: false, similarity: 0, error: 'Invalid exit face image format' };
     }
 
-    const { getEffectiveApiUrl } = await import('../config/python-api');
-    const apiUrl = getEffectiveApiUrl();
+    const { 
+      getEffectiveApiUrl, 
+      LOCAL_API_URL, 
+      DEPLOYED_API_URL, 
+      setApiUrlPreference 
+    } = await import('../config/python-api');
 
-    const response = await fetch(`${apiUrl}/metrics/verify-images`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        base_image: entranceFaceImage,
-        probe_image: exitFaceImage
-      })
-    });
+    const performVerification = async (apiUrl: string) => {
+      const response = await fetch(`${apiUrl}/metrics/verify-images`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          base_image: entranceFaceImage,
+          probe_image: exitFaceImage
+        })
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-      return { match: false, similarity: 0, error: errorData.error || 'Face verification failed' };
-    }
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || 'Face verification failed');
+      }
 
-    const result = await response.json();
-    
-    // Check if both faces were found
-    if (!result.base?.found || !result.probe?.found) {
-      return { 
-        match: false, 
-        similarity: 0, 
-        error: !result.base?.found ? 'Entrance face not detected' : 'Exit face not detected' 
-      };
-    }
-
-    // Use similarity threshold of 0.75 (same as in compare_face_features)
-    const threshold = 0.75;
-    const isMatch = result.match && result.similarity >= threshold;
-
-    return {
-      match: isMatch,
-      similarity: result.similarity || 0
+      return response.json();
     };
+
+    const handleResult = (result: any) => {
+      if (!result.base?.found || !result.probe?.found) {
+        return { 
+          match: false, 
+          similarity: 0, 
+          error: !result.base?.found ? 'Entrance face not detected' : 'Exit face not detected' 
+        };
+      }
+  
+      const threshold = 0.75;
+      const isMatch = result.match && result.similarity >= threshold;
+  
+      return {
+        match: isMatch,
+        similarity: result.similarity || 0
+      };
+    };
+
+    const primaryApiUrl = getEffectiveApiUrl();
+
+    try {
+      const result = await performVerification(primaryApiUrl);
+      return handleResult(result);
+    } catch (primaryError) {
+      const isLocalApi = primaryApiUrl === LOCAL_API_URL;
+      const isNetworkError = primaryError instanceof TypeError || 
+        (primaryError instanceof Error && primaryError.message.includes('Failed to fetch'));
+
+      if (isLocalApi && isNetworkError) {
+        console.warn('Local AI API unreachable, falling back to deployed endpoint.');
+        try {
+          setApiUrlPreference('deployed');
+          const fallbackResult = await performVerification(DEPLOYED_API_URL);
+          return handleResult(fallbackResult);
+        } catch (fallbackError) {
+          console.error('Fallback AI API verification failed:', fallbackError);
+          throw fallbackError;
+        }
+      }
+
+      throw primaryError;
+    }
   } catch (error) {
     console.error('Error verifying faces:', error);
     return { 

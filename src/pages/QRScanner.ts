@@ -992,16 +992,25 @@ async function processGateScanWithFaceData(gateId: string, faceResult: FaceDetec
     // Prepare face image data for storage
     let faceImageData = null;
     let faceDetectionMetadata = null;
+    let faceDetectionConfidence = null;
 
     if (faceResult.croppedImageDataUrl) {
       // Compress the cropped face image for storage
       const compressedImage = await compressImageDataUrl(faceResult.croppedImageDataUrl, 0.8, 400, 400);
       faceImageData = compressedImage;
       
+      // Set confidence only if face data exists
+      // Handle case where confidence might be an array (extract first element)
+      if (faceResult.confidence !== null && faceResult.confidence !== undefined) {
+        faceDetectionConfidence = Array.isArray(faceResult.confidence) 
+          ? (faceResult.confidence[0] ?? null)
+          : (typeof faceResult.confidence === 'number' ? faceResult.confidence : null);
+      }
+      
       // Prepare metadata
       faceDetectionMetadata = {
         timestamp: new Date().toISOString(),
-        confidence: faceResult.confidence || 0,
+        confidence: faceDetectionConfidence,
         boundingBox: faceResult.detections?.[0] || null,
         originalSize: faceResult.croppedImageDataUrl.length,
         compressedSize: compressedImage.length
@@ -1014,7 +1023,7 @@ async function processGateScanWithFaceData(gateId: string, faceResult: FaceDetec
       p_gate_id: gateId,
       p_scanned_by: user.id,
       p_face_image_data: faceImageData,
-      p_face_detection_confidence: faceResult.confidence || 0,
+      p_face_detection_confidence: faceDetectionConfidence,
       p_face_detection_metadata: faceDetectionMetadata,
       p_ip_address: null,
       p_user_agent: navigator.userAgent,

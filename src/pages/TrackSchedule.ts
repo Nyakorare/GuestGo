@@ -1411,6 +1411,7 @@ async function processGateScanWithFaceData(visitId: string, gateId: string, face
     // Prepare face image data for storage
     let faceImageData = null;
     let faceDetectionMetadata = null;
+    let faceDetectionConfidence = null;
 
     if (faceResult.croppedImageDataUrl) {
       // Compress the cropped face image for storage
@@ -1418,10 +1419,18 @@ async function processGateScanWithFaceData(visitId: string, gateId: string, face
       const compressedImage = await compressImageDataUrl(faceResult.croppedImageDataUrl, 0.8, 400, 400);
       faceImageData = compressedImage;
       
+      // Set confidence only if face data exists
+      // Handle case where confidence might be an array (extract first element)
+      if (faceResult.confidence !== null && faceResult.confidence !== undefined) {
+        faceDetectionConfidence = Array.isArray(faceResult.confidence) 
+          ? (faceResult.confidence[0] ?? null)
+          : (typeof faceResult.confidence === 'number' ? faceResult.confidence : null);
+      }
+      
       // Prepare metadata
       faceDetectionMetadata = {
         timestamp: new Date().toISOString(),
-        confidence: faceResult.confidence || 0,
+        confidence: faceDetectionConfidence,
         boundingBox: faceResult.detections?.[0] || null,
         originalSize: faceResult.croppedImageDataUrl.length,
         compressedSize: compressedImage.length
@@ -1434,7 +1443,7 @@ async function processGateScanWithFaceData(visitId: string, gateId: string, face
       p_gate_id: gateId,
       p_scanned_by: user.id,
       p_face_image_data: faceImageData,
-      p_face_detection_confidence: faceResult.confidence || 0,
+      p_face_detection_confidence: faceDetectionConfidence,
       p_face_detection_metadata: faceDetectionMetadata,
       p_ip_address: null,
       p_user_agent: navigator.userAgent,
@@ -1512,44 +1521,89 @@ async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Pr
       return { match: false, similarity: 0, error: 'Invalid exit face image format' };
     }
 
-    const { getEffectiveApiUrl } = await import('../config/python-api');
-    const apiUrl = getEffectiveApiUrl();
+    const { 
+      getEffectiveApiUrl, 
+      LOCAL_API_URL, 
+      DEPLOYED_API_URL, 
+      setApiUrlPreference 
+    } = await import('../config/python-api');
 
-    const response = await fetch(`${apiUrl}/metrics/verify-images`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        base_image: entranceFaceImage,
-        probe_image: exitFaceImage
-      })
-    });
+    const performVerification = async (apiUrl: string) => {
+      const response = await fetch(`${apiUrl}/metrics/verify-images`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          base_image: entranceFaceImage,
+          probe_image: exitFaceImage
+        })
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-      return { match: false, similarity: 0, error: errorData.error || 'Face verification failed' };
-    }
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || 'Face verification failed');
+      }
 
-    const result = await response.json();
-    
-    // Check if both faces were found
-    if (!result.base?.found || !result.probe?.found) {
-      return { 
-        match: false, 
-        similarity: 0, 
-        error: !result.base?.found ? 'Entrance face not detected' : 'Exit face not detected' 
-      };
-    }
-
-    // Use similarity threshold of 0.75 (same as in compare_face_features)
-    const threshold = 0.75;
-    const isMatch = result.match && result.similarity >= threshold;
-
-    return {
-      match: isMatch,
-      similarity: result.similarity || 0
+      return response.json();
     };
+
+    const handleResult = (result: any) => {
+      if (!result.base?.found || !result.probe?.found) {
+        return { 
+          match: false, 
+          similarity: 0, 
+          error: !result.base?.found ? 'Entrance face not detected' : 'Exit face not detected' 
+        };
+      }
+  
+      const threshold = 0.75;
+      const isMatch = result.match && result.similarity >= threshold;
+  
+      return {
+        match: isMatch,
+        similarity: result.similarity || 0
+      };
+    };
+
+    const primaryApiUrl = getEffectiveApiUrl();
+
+    try {
+      const result = await performVerification(primaryApiUrl);
+      return handleResult(result);
+    } catch (primaryError) {
+      const isLocalApi = primaryApiUrl === LOCAL_API_URL;
+      // When using local API, treat any TypeError (which fetch throws on network errors) as a network issue
+      // This includes connection refused, failed to fetch, etc.
+      let isNetworkError = primaryError instanceof TypeError;
+      
+      // Also check for explicit network error messages
+      if (!isNetworkError && primaryError instanceof Error) {
+        const errorMessage = primaryError.message.toLowerCase();
+        const errorStack = primaryError.stack?.toLowerCase() || '';
+        if (errorMessage.includes('failed to fetch') ||
+            errorMessage.includes('connection refused') ||
+            errorMessage.includes('network') ||
+            errorStack.includes('connection refused') ||
+            errorStack.includes('err_network')) {
+          isNetworkError = true;
+        }
+      }
+
+      if (isLocalApi && isNetworkError) {
+        console.warn('Local AI API unreachable, falling back to deployed endpoint.');
+        try {
+          setApiUrlPreference('deployed');
+          const fallbackResult = await performVerification(DEPLOYED_API_URL);
+          return handleResult(fallbackResult);
+        } catch (fallbackError) {
+          console.error('Fallback AI API verification failed:', fallbackError);
+          throw fallbackError;
+        }
+      }
+
+      throw primaryError;
+    }
   } catch (error) {
     console.error('Error verifying faces:', error);
     return { 
@@ -1621,6 +1675,7 @@ async function processGateExitScanWithFaceVerification(
     // Prepare exit face image data
     let exitFaceImageData = null;
     let faceDetectionMetadata = null;
+    let faceDetectionConfidence = null;
 
     if (faceResult.croppedImageDataUrl) {
       // Compress the cropped face image for storage
@@ -1628,10 +1683,17 @@ async function processGateExitScanWithFaceVerification(
       const compressedImage = await compressImageDataUrl(faceResult.croppedImageDataUrl, 0.8, 400, 400);
       exitFaceImageData = compressedImage;
       
+      // Handle case where confidence might be an array (extract first element)
+      if (faceResult.confidence !== null && faceResult.confidence !== undefined) {
+        faceDetectionConfidence = Array.isArray(faceResult.confidence) 
+          ? (faceResult.confidence[0] ?? null)
+          : (typeof faceResult.confidence === 'number' ? faceResult.confidence : null);
+      }
+      
       // Prepare metadata
       faceDetectionMetadata = {
         timestamp: new Date().toISOString(),
-        confidence: faceResult.confidence || 0,
+        confidence: faceDetectionConfidence,
         boundingBox: faceResult.detections?.[0] || null,
         originalSize: faceResult.croppedImageDataUrl.length,
         compressedSize: compressedImage.length
@@ -1667,7 +1729,7 @@ async function processGateExitScanWithFaceVerification(
         p_gate_id: gateId,
         p_scanned_by: user.id,
         p_face_image_data: exitFaceImageData,
-        p_face_detection_confidence: faceResult.confidence || 0,
+        p_face_detection_confidence: faceDetectionConfidence,
         p_face_detection_metadata: faceDetectionMetadata
       });
 
