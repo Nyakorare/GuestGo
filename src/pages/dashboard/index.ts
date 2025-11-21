@@ -43,6 +43,7 @@ let currentVisitorSearchTerm = '';
 let currentVisitorStatusFilter = 'all';
 let allVisitorVisits: any[] = [];
 let filteredVisitorVisits: any[] = [];
+let hasShownPendingFeedbackModal = false;
 
 // Visitor past calendar filter state
 let currentVisitorPastStartDate = '';
@@ -10193,6 +10194,9 @@ async function loadVisitorDashboard() {
     // Load visitor's scheduled visits (both current and past)
     await loadVisitorVisits();
 
+    // Check if there are completed visits without feedback surveys
+    await checkPendingFeedbackSurveys();
+
     // Set max dates for visitor past calendar filters
     setMaxDateForVisitorPastFilters();
 
@@ -10256,6 +10260,98 @@ async function loadVisitorVisits() {
   } catch (error) {
     console.error('Error in loadVisitorVisits:', error);
     showNotification('Error loading visits', 'error');
+  }
+}
+
+async function checkPendingFeedbackSurveys(): Promise<void> {
+  if (hasShownPendingFeedbackModal) {
+    return;
+  }
+
+  try {
+    if (!Array.isArray(allVisitorVisits) || allVisitorVisits.length === 0) {
+      return;
+    }
+
+    const completedVisits = allVisitorVisits.filter(visit => visit.status === 'completed');
+
+    if (completedVisits.length === 0) {
+      return;
+    }
+
+    const visitIds = completedVisits
+      .map(visit => visit.id)
+      .filter((id: string | null | undefined): id is string => Boolean(id));
+
+    if (visitIds.length === 0) {
+      return;
+    }
+
+    const visitsWithFeedback = await fetchVisitsWithFeedback(visitIds);
+
+    if (!visitsWithFeedback) {
+      return;
+    }
+
+    const pendingVisits = completedVisits.filter(visit => !visitsWithFeedback.has(visit.id));
+
+    if (pendingVisits.length === 0) {
+      return;
+    }
+
+    const { showPendingFeedbackModal } = await import('../../components/PendingFeedbackModal');
+
+    const modalData = pendingVisits.map(visit => ({
+      visitId: visit.id,
+      visitorName: `${visit.visitor_first_name || ''} ${visit.visitor_last_name || ''}`.trim() || 'Visitor',
+      visitDate: visit.visit_date,
+      purpose: visit.purpose,
+      places: Array.isArray(visit.places)
+        ? visit.places
+            .map((place: any) => place?.place_name)
+            .filter((name: string | undefined) => Boolean(name))
+        : []
+    }));
+
+    showPendingFeedbackModal(modalData);
+    hasShownPendingFeedbackModal = true;
+  } catch (error) {
+    console.error('Error checking pending feedback surveys:', error);
+  }
+}
+
+async function fetchVisitsWithFeedback(visitIds: string[]): Promise<Set<string> | null> {
+  try {
+    const chunkSize = 50;
+    const visitIdsWithFeedback = new Set<string>();
+
+    for (let i = 0; i < visitIds.length; i += chunkSize) {
+      const chunk = visitIds.slice(i, i + chunkSize);
+      if (chunk.length === 0) {
+        continue;
+      }
+
+      const { data, error } = await supabase
+        .from('visit_feedback')
+        .select('visit_id')
+        .in('visit_id', chunk);
+
+      if (error) {
+        console.error('Error fetching visit feedback statuses:', error);
+        return null;
+      }
+
+      data?.forEach((entry: { visit_id: string }) => {
+        if (entry.visit_id) {
+          visitIdsWithFeedback.add(entry.visit_id);
+        }
+      });
+    }
+
+    return visitIdsWithFeedback;
+  } catch (error) {
+    console.error('Unexpected error while fetching visit feedback statuses:', error);
+    return null;
   }
 }
 
