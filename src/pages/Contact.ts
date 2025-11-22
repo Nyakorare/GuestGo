@@ -504,166 +504,14 @@ export function ContactPage() {
       </div>
     </div>
     <script>
-      // Load feedback from database
-      async function loadFeedback() {
-        const feedbackContainer = document.getElementById('feedback-container');
-        const feedbackLoading = document.getElementById('feedback-loading');
-        const feedbackEmpty = document.getElementById('feedback-empty');
-        
-        try {
-          // Use the supabase client from the global scope (set up in App.ts)
-          const supabaseClient = window.supabaseClient;
-          
-          if (!supabaseClient) {
-            console.error('Supabase client not available');
-            if (feedbackLoading) feedbackLoading.classList.add('hidden');
-            if (feedbackEmpty) feedbackEmpty.classList.remove('hidden');
-            return;
-          }
-          
-          // Try RPC function first, fallback to direct query if it fails
-          let feedbackData = null;
-          let error = null;
-          
-          try {
-            const result = await supabaseClient.rpc('get_public_feedback');
-            feedbackData = result.data;
-            error = result.error;
-          } catch (rpcError) {
-            console.log('RPC function not available, trying direct query...', rpcError);
-            // Fallback: query directly from visit_feedback table
-            const { data, error: queryError } = await supabaseClient
-              .from('visit_feedback')
-              .select('id, comments, overall_satisfaction, submitted_at, scheduled_visits(visitor_first_name, visitor_last_name)')
-              .not('comments', 'is', null)
-              .gte('overall_satisfaction', 4)
-              .order('submitted_at', { ascending: false })
-              .limit(100);
-            
-            if (queryError) {
-              error = queryError;
-            } else if (data && data.length > 0) {
-              // Select random feedback based on today's date
-              const today = new Date();
-              const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
-              const randomIndex = dayOfYear % data.length;
-              const selected = data[randomIndex];
-              
-              feedbackData = [{
-                id: selected.id,
-                visitor_name: (selected.scheduled_visits?.visitor_first_name || '') + ' ' + (selected.scheduled_visits?.visitor_last_name || '') || 'Anonymous',
-                comments: selected.comments,
-                overall_satisfaction: selected.overall_satisfaction,
-                submitted_at: selected.submitted_at
-              }];
-            }
-          }
-          
-          if (error) {
-            console.error('Error loading feedback:', error);
-            if (feedbackLoading) feedbackLoading.classList.add('hidden');
-            if (feedbackEmpty) feedbackEmpty.classList.remove('hidden');
-            return;
-          }
-          
-          // Hide loading state
-          if (feedbackLoading) feedbackLoading.classList.add('hidden');
-          
-          // Handle the response
-          let feedback = null;
-          if (Array.isArray(feedbackData)) {
-            feedback = feedbackData.length > 0 ? feedbackData[0] : null;
-          } else if (feedbackData) {
-            feedback = feedbackData;
-          }
-          
-          // If no feedback found, show empty state
-          if (!feedback || !feedback.comments) {
-            if (feedbackEmpty) feedbackEmpty.classList.remove('hidden');
-            return;
-          }
-          
-          // Clear container and render single feedback
-          if (feedbackContainer) {
-            const color = { bg: 'bg-blue-100', darkBg: 'dark:bg-blue-900', text: 'text-blue-600', darkText: 'dark:text-blue-400' };
-            const rating = feedback.overall_satisfaction || 5;
-            const comment = (feedback.comments || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-            const visitorName = feedback.visitor_name || 'Anonymous';
-            const date = new Date(feedback.submitted_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
-            
-            // Create stars HTML - simpler approach
-            let starsHtml = '';
-            for (let i = 0; i < 5; i++) {
-              if (i < rating) {
-                starsHtml += '<span class="text-yellow-400 text-xl">★</span>';
-              } else {
-                starsHtml += '<span class="text-gray-300 dark:text-gray-600 text-xl">★</span>';
-              }
-            }
-            
-            feedbackContainer.innerHTML = '<div class="testimonial-item mb-8 p-6 bg-gray-50 dark:bg-gray-700 rounded-lg">' +
-              '<div class="flex items-start space-x-4">' +
-                '<div class="flex-shrink-0">' +
-                  '<div class="w-12 h-12 ' + color.bg + ' ' + color.darkBg + ' rounded-full flex items-center justify-center">' +
-                    '<svg class="w-6 h-6 ' + color.text + ' ' + color.darkText + '" fill="currentColor" viewBox="0 0 24 24">' +
-                      '<path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h4v10h-10z"/>' +
-                    '</svg>' +
-                  '</div>' +
-                '</div>' +
-                '<div class="flex-1">' +
-                  '<blockquote class="text-lg text-gray-700 dark:text-gray-300 italic mb-4">' +
-                    '"' + comment + '"' +
-                  '</blockquote>' +
-                  '<div class="flex items-center">' +
-                    '<div>' +
-                      '<cite class="text-sm font-semibold text-gray-900 dark:text-white">' + visitorName + '</cite>' +
-                      '<p class="text-sm text-gray-500 dark:text-gray-400">' + date + '</p>' +
-                    '</div>' +
-                    '<div class="ml-auto">' +
-                      '<div class="flex items-center gap-1">' +
-                        starsHtml +
-                      '</div>' +
-                    '</div>' +
-                  '</div>' +
-                '</div>' +
-              '</div>' +
-            '</div>';
-          }
-        } catch (error) {
-          console.error('Error in loadFeedback:', error);
-          if (feedbackLoading) feedbackLoading.classList.add('hidden');
-          if (feedbackEmpty) feedbackEmpty.classList.remove('hidden');
-        }
-      }
-      
       // Contact form validation and submission
       document.addEventListener('DOMContentLoaded', function() {
-        // Load feedback when page loads (with retry mechanism)
-        let retryCount = 0;
-        const maxRetries = 5;
-        
-        function attemptLoadFeedback() {
-          if (window.supabaseClient) {
-            loadFeedback();
-          } else if (retryCount < maxRetries) {
-            retryCount++;
-            setTimeout(attemptLoadFeedback, 200);
-          } else {
-            // Fallback: hide loading and show empty state
-            const feedbackLoading = document.getElementById('feedback-loading');
-            const feedbackEmpty = document.getElementById('feedback-empty');
-            if (feedbackLoading) feedbackLoading.classList.add('hidden');
-            if (feedbackEmpty) feedbackEmpty.classList.remove('hidden');
-            console.error('Supabase client not available after retries');
-          }
-        }
-        
-        attemptLoadFeedback();
-        
         const form = document.getElementById('contact-form');
+        if (!form) return;
+        
         const submitBtn = form.querySelector('button[type="submit"]');
-        const submitText = submitBtn.querySelector('.submit-text');
-        const loadingText = submitBtn.querySelector('.loading-text');
+        const submitText = submitBtn?.querySelector('.submit-text');
+        const loadingText = submitBtn?.querySelector('.loading-text');
         const successMessage = document.getElementById('form-success');
 
         // Form validation
@@ -714,7 +562,7 @@ export function ContactPage() {
             }
           });
 
-          if (isValid) {
+          if (isValid && submitBtn && submitText && loadingText) {
             // Show loading state
             submitBtn.disabled = true;
             submitText.classList.add('hidden');
@@ -725,12 +573,12 @@ export function ContactPage() {
               submitBtn.disabled = false;
               submitText.classList.remove('hidden');
               loadingText.classList.add('hidden');
-              successMessage.classList.remove('hidden');
+              if (successMessage) successMessage.classList.remove('hidden');
               form.reset();
               
               // Hide success message after 5 seconds
               setTimeout(() => {
-                successMessage.classList.add('hidden');
+                if (successMessage) successMessage.classList.add('hidden');
               }, 5000);
             }, 2000);
           }
@@ -747,6 +595,8 @@ export function ContactPage() {
           const statusIndicator = document.getElementById('status-indicator');
           const statusText = document.getElementById('status-text');
           const nextOpening = document.getElementById('next-opening');
+          
+          if (!statusIndicator || !statusText || !nextOpening) return;
           
           let isOpen = false;
           let nextOpen = '';
@@ -785,9 +635,147 @@ export function ContactPage() {
         // Update business status every minute
         updateBusinessStatus();
         setInterval(updateBusinessStatus, 60000);
-
-        // Testimonials are now static - no JavaScript needed
       });
     </script>
   `;
+}
+
+// Load feedback from database
+async function loadFeedback() {
+  const feedbackContainer = document.getElementById('feedback-container');
+  const feedbackLoading = document.getElementById('feedback-loading');
+  const feedbackEmpty = document.getElementById('feedback-empty');
+  
+  if (!feedbackContainer || !feedbackLoading || !feedbackEmpty) {
+    console.error('Feedback container elements not found');
+    return;
+  }
+  
+  try {
+    // Try RPC function first, fallback to direct query if it fails
+    let feedbackData = null;
+    let error = null;
+    
+    // Try RPC function first
+    const rpcResult = await supabase.rpc('get_public_feedback');
+    
+    if (rpcResult.error) {
+      // RPC function failed (possibly due to function overloading conflict), use direct query
+      console.log('RPC function not available, trying direct query...', rpcResult.error);
+    } else if (rpcResult.data && rpcResult.data.length > 0) {
+      // RPC function succeeded
+      feedbackData = rpcResult.data;
+    }
+    
+    // If RPC didn't work or returned no data, use direct query fallback
+    if (!feedbackData) {
+      const { data, error: queryError } = await supabase
+        .from('visit_feedback')
+        .select('id, comments, overall_satisfaction, submitted_at, scheduled_visits(visitor_first_name, visitor_last_name)')
+        .not('comments', 'is', null)
+        .gte('overall_satisfaction', 4)
+        .order('submitted_at', { ascending: false })
+        .limit(100);
+      
+      if (queryError) {
+        error = queryError;
+      } else if (data && data.length > 0) {
+        // Select random feedback based on today's date
+        const today = new Date();
+        const startOfYear = new Date(today.getFullYear(), 0, 1);
+        const dayOfYear = Math.floor((today.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24));
+        const randomIndex = dayOfYear % data.length;
+        const selected = data[randomIndex];
+        
+        feedbackData = [{
+          id: selected.id,
+          visitor_name: (selected.scheduled_visits?.visitor_first_name || '') + ' ' + (selected.scheduled_visits?.visitor_last_name || '') || 'Anonymous',
+          comments: selected.comments,
+          overall_satisfaction: selected.overall_satisfaction,
+          submitted_at: selected.submitted_at
+        }];
+      }
+    }
+    
+    if (error) {
+      console.error('Error loading feedback:', error);
+      feedbackLoading.classList.add('hidden');
+      feedbackEmpty.classList.remove('hidden');
+      return;
+    }
+    
+    // Hide loading state
+    feedbackLoading.classList.add('hidden');
+    
+    // Handle the response
+    let feedback = null;
+    if (Array.isArray(feedbackData)) {
+      feedback = feedbackData.length > 0 ? feedbackData[0] : null;
+    } else if (feedbackData) {
+      feedback = feedbackData;
+    }
+    
+    // If no feedback found, show empty state
+    if (!feedback || !feedback.comments) {
+      feedbackEmpty.classList.remove('hidden');
+      return;
+    }
+    
+    // Clear container and render single feedback
+    const color = { bg: 'bg-blue-100', darkBg: 'dark:bg-blue-900', text: 'text-blue-600', darkText: 'dark:text-blue-400' };
+    const rating = feedback.overall_satisfaction || 5;
+    const comment = (feedback.comments || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    const visitorName = feedback.visitor_name || 'Anonymous';
+    const date = new Date(feedback.submitted_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+    
+    // Create stars HTML
+    let starsHtml = '';
+    for (let i = 0; i < 5; i++) {
+      if (i < rating) {
+        starsHtml += '<span class="text-yellow-400 text-xl">★</span>';
+      } else {
+        starsHtml += '<span class="text-gray-300 dark:text-gray-600 text-xl">★</span>';
+      }
+    }
+    
+    feedbackContainer.innerHTML = '<div class="testimonial-item mb-8 p-6 bg-gray-50 dark:bg-gray-700 rounded-lg">' +
+      '<div class="flex items-start space-x-4">' +
+        '<div class="flex-shrink-0">' +
+          '<div class="w-12 h-12 ' + color.bg + ' ' + color.darkBg + ' rounded-full flex items-center justify-center">' +
+            '<svg class="w-6 h-6 ' + color.text + ' ' + color.darkText + '" fill="currentColor" viewBox="0 0 24 24">' +
+              '<path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h4v10h-10z"/>' +
+            '</svg>' +
+          '</div>' +
+        '</div>' +
+        '<div class="flex-1">' +
+          '<blockquote class="text-lg text-gray-700 dark:text-gray-300 italic mb-4">' +
+            '"' + comment + '"' +
+          '</blockquote>' +
+          '<div class="flex items-center">' +
+            '<div>' +
+              '<cite class="text-sm font-semibold text-gray-900 dark:text-white">' + visitorName + '</cite>' +
+              '<p class="text-sm text-gray-500 dark:text-gray-400">' + date + '</p>' +
+            '</div>' +
+            '<div class="ml-auto">' +
+              '<div class="flex items-center gap-1">' +
+                starsHtml +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  } catch (error) {
+    console.error('Error in loadFeedback:', error);
+    feedbackLoading.classList.add('hidden');
+    feedbackEmpty.classList.remove('hidden');
+  }
+}
+
+// Setup function for Contact page
+export function setupContactPage(): void {
+  // Load feedback when page loads
+  setTimeout(() => {
+    loadFeedback();
+  }, 100);
 }

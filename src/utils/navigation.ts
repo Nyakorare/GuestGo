@@ -1,6 +1,6 @@
 import { HomePage } from '../pages/Home';
 import { AboutPage } from '../pages/About';
-import { ContactPage } from '../pages/Contact';
+import { ContactPage, setupContactPage } from '../pages/Contact';
 import { DashboardPage } from '../pages/dashboard';
 import { QRScannerPage } from '../pages/QRScanner';
 import { GatePage, setupGatePage } from '../pages/GatePage';
@@ -449,6 +449,13 @@ async function setupPageFunctionality(path: string, user: any, role: string | nu
   // Setup page-specific interactivity
   if (path === '/about') {
     setupAboutPageInteractivity();
+  }
+  
+  if (path === '/contact') {
+    // Initialize contact page functionality
+    setTimeout(() => {
+      setupContactPage();
+    }, 100);
   }
   
   if (path === '/qr-scanner') {

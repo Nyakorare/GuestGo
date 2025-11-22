@@ -54,9 +54,68 @@ export function showPendingFeedbackModal(visits: PendingFeedbackVisit[]): void {
   `).join('');
 
   const modalHTML = `
-    <div id="pendingFeedbackModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/70 backdrop-blur-sm p-4">
+    <style>
+      @keyframes modalBounce {
+        0% {
+          transform: scale(0.3);
+          opacity: 0;
+        }
+        50% {
+          transform: scale(1.05);
+        }
+        70% {
+          transform: scale(0.9);
+        }
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes fadeOut {
+        from {
+          opacity: 1;
+        }
+        to {
+          opacity: 0;
+        }
+      }
+      @keyframes modalBounceClose {
+        0% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        30% {
+          transform: scale(1.05);
+        }
+        100% {
+          transform: scale(0.3);
+          opacity: 0;
+        }
+      }
+      .modal-bounce-animation {
+        animation: modalBounce 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+      }
+      .modal-bounce-close-animation {
+        animation: modalBounceClose 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+      }
+      #pendingFeedbackModal {
+        animation: fadeIn 0.3s ease-out forwards;
+      }
+      #pendingFeedbackModal.fade-out {
+        animation: fadeOut 0.4s ease-out forwards;
+      }
+    </style>
+    <div id="pendingFeedbackModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/70 backdrop-blur-sm p-4" style="opacity: 0;">
       <div class="w-full max-w-4xl relative">
-        <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+        <div id="pendingFeedbackModalContent" class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden" style="transform: scale(0.3); opacity: 0;">
           <div class="p-6 sm:p-8">
             <div class="flex items-start justify-between mb-6">
               <div>
@@ -107,6 +166,14 @@ export function showPendingFeedbackModal(visits: PendingFeedbackVisit[]): void {
   document.body.insertAdjacentHTML('beforeend', modalHTML);
   document.body.classList.add('overflow-hidden');
 
+  // Trigger bounce animation after modal is inserted
+  setTimeout(() => {
+    const modalContent = document.getElementById('pendingFeedbackModalContent');
+    if (modalContent) {
+      modalContent.classList.add('modal-bounce-animation');
+    }
+  }, 10);
+
   setupPendingFeedbackModalListeners(visits);
 }
 
@@ -152,11 +219,22 @@ function setupPendingFeedbackModalListeners(visits: PendingFeedbackVisit[]): voi
 
 export function closePendingFeedbackModal(): void {
   const modal = document.getElementById('pendingFeedbackModal');
-  if (modal) {
-    modal.remove();
+  const modalContent = document.getElementById('pendingFeedbackModalContent');
+  
+  if (!modal || !modalContent) {
+    return;
   }
 
-  document.body.classList.remove('overflow-hidden');
+  // Add close animations
+  modalContent.classList.remove('modal-bounce-animation');
+  modalContent.classList.add('modal-bounce-close-animation');
+  modal.classList.add('fade-out');
+
+  // Wait for animation to complete before removing from DOM
+  setTimeout(() => {
+    modal.remove();
+    document.body.classList.remove('overflow-hidden');
+  }, 400); // Match animation duration
 }
 
 function formatVisitDate(dateValue?: string): string {
