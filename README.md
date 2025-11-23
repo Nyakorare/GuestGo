@@ -74,10 +74,13 @@ This section summarizes end-to-end features, steps, and expected results. It als
 
 - **Guard Operations Dashboard**
   - Dedicated QR scanner with adaptive cadence, manual visit ID lookup, and scan telemetry.
+  - Gate selection for entrance/exit processing with face capture enforcement.
+  - Manual visit ID entry for fallback when QR scanning is unavailable.
   - Enforces face capture (Python AI modal) before logging entrance/exit, including temporary exit workflow.
 
 - **Scheduling (Visitor Pre-Registration)**
   - Create/edit schedules for visits, with optional facial data enrollment.
+  - Place-specific visit purposes with required advance notice days (0-6 days).
   - Generates a unique QR for the scheduled visit.
 
 - **Entrance Gate Processing**
@@ -107,12 +110,34 @@ This section summarizes end-to-end features, steps, and expected results. It als
 - **Feedback & Quality Analytics**
   - Post-visit ISO 25010 survey covering functional suitability, security, maintainability, etc.
   - Scores stored via Supabase RPCs (`submit_visit_feedback`, `has_feedback_for_visit`) with repeat-visit lockouts.
+  - Public feedback display on Contact page with daily rotating testimonials (`get_public_feedback`).
 
 - **Audit Logging**
   - Structured logs for schedule CRUD, gate scans, AI decisions, and overrides.
+  - Place deletion logging (`place_delete` action).
+  - Visit limit change and enforcement logging (`visit_limit_enforced`, `place_weekly_visit_limit_update`, `place_monthly_visit_limit_update`).
 
 - **Performance & Monitoring**
   - Basic metrics for scan latency, AI inference time, and error rates.
+
+- **Place Management & Purposes**
+  - Place-specific visit purposes with configurable advance notice requirements (0-6 days).
+  - Personnel can edit place purposes for their assigned places (in addition to admins).
+  - Monthly scheduled dates retrieval function (`get_place_scheduled_dates_in_month`) for calendar views.
+
+- **Personnel Availability Management**
+  - Single-day unavailability system (applies only on selected date, auto-available next day).
+  - Raw availability flag exposure for advanced scheduling logic.
+  - Personnel can view in_progress visits (visits that have been scanned at gate entrance).
+
+- **Visit Status Management**
+  - Enhanced handling of in_progress status visits that are past their visit date.
+  - Automatic status transitions: in_progress → completed_flagged or unsuccessful based on gate scan history.
+  - Improved temporary_exit workflow with proper status resumption on re-entry.
+
+- **Visitor Role Management**
+  - Auto-creation of visitor role when missing during gate entrance scanning.
+  - Prevents gate scan failures due to missing user_roles records.
 
 - **Facial Detection & Verification AI (Python service + client fallback)**
   - Detection via YOLOv8 models hosted in the Python microservice with BlazeFace/TensorFlow.js fallback in-browser.
@@ -159,7 +184,7 @@ This section summarizes end-to-end features, steps, and expected results. It als
 | QR Code Services | Generate/parse visit/gate codes | Scannable codes for flows | QR assets; parsed payloads | Generation/scan events logged |
 | Notifications | Trigger on schedule, flags, completion | Emails/alerts sent | Notification records (optional) | Delivery status logged |
 | Audit Logging | Perform CRUD/gate/AI actions | Immutable audit trail | Log records | Accessible in logs/reporting |
-| Guard Operations Dashboard | Scan visit QR, capture face, log entrance/exit | Visit status updated; face data stored | `gate_scans` + guard action logs | Guard action notifications; face metadata |
+| Guard Operations Dashboard | Scan visit QR or enter manual visit ID, select gate, capture face, log entrance/exit | Visit status updated; face data stored | `gate_scans` + guard action logs | Guard action notifications; face metadata |
 | Feedback & Quality Analytics | Submit ISO 25010 survey | Scores stored per visit; repeat submissions blocked | `visit_feedback` entries | Success/error toast + dashboard metrics |
 
 ## Facial Detection & Verification AI Module
@@ -200,6 +225,8 @@ Scope: Used during schedule enrollment, guard-controlled entrance/exit, and dash
 - Visitor/guard scanners: `src/pages/QRScanner.ts`, `src/pages/GatePage.ts`, `src/pages/dashboard/Gates.ts`, `src/pages/GuardDashboard.ts`.
 - AI workflow: `src/utils/AI-Face-Detection/blazefaceModal.ts`, `src/utils/imageCompression.ts`, Python assets in `src/utils/Python-AI/`.
 - Feedback + face data modals: `src/components/FeedbackSurveyModal.ts`, `src/components/FaceDataModal.ts`, `src/components/FlaggedVisitModal.ts`.
+- Public feedback: `src/pages/Contact.ts` (uses `get_public_feedback` RPC).
+- Place purposes: `src/pages/dashboard/index.ts`, `src/components/ModalFunctions.ts` (place_purposes table integration).
 - Config & services: `src/config/supabase.ts`, `src/config/emailjs.ts`, `src/config/python-api.ts`, QR helpers in `src/utils/qrCode.ts`.
 
 ## Operational Notes

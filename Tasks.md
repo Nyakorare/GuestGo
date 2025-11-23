@@ -20,10 +20,23 @@ Planned:
 
 Completed:
 - Guard dashboard with real-time QR scanning + enforced face detection on entrance/exit
+- Guard dashboard gate selection for entrance/exit processing
+- Guard dashboard manual visit ID lookup (fallback when QR scanning unavailable)
 - Visit feedback survey (ISO 25010 quality scoring + Supabase RPC analytics)
+- Public feedback display on Contact page with daily rotating testimonials
 - Face data modal with encrypted image retrieval + metadata display
 - Python AI microservice (YOLOv8 + BlazeFace hybrid) integrated with front-end modal flow
 - AI face verification baseline (capture, compression, encrypted storage pipeline)
+- Place purposes system with advance notice requirements (0-6 days per purpose)
+- Personnel can edit place purposes for assigned places (in addition to admins)
+- Personnel availability single-day unavailability system (auto-available next day)
+- Personnel can view in_progress visits (visits scanned at gate entrance)
+- Enhanced visit status management for in_progress past visits
+- Visitor role auto-creation when missing during gate scanning
+- Place deletion logging (`place_delete` action)
+- Visit limit change and enforcement logging (comprehensive audit trail)
+- Monthly scheduled dates retrieval function for calendar views
+- Guard permissions to read gate scans with face images for their visits
 - Home/landing page design overhaul
 - GuestGo visit card design and detail overhaul
 - Frontend pages (Home, About, Contact, Dashboard, QR Scanner) *improvement needed

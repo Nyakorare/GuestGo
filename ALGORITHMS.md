@@ -21,6 +21,13 @@ Below is a concise, prioritized summary of the key algorithms and techniques use
 | Log enrichment | Client-side join/denormalization + JSON validation | Custom |
 | Printable composition | String templating for HTML generation | Custom |
 | Feedback scoring | ISO 25010 weighted survey capture + Supabase RPC | `submit_visit_feedback` |
+| Public feedback selection | Daily rotating random selection with date-based seed | `get_public_feedback` |
+| Place purposes management | Purpose-to-place mapping with advance notice days | `place_purposes` table |
+| Visit status transitions | Deterministic date arithmetic + gate scan history analysis | `update_visit_statuses_server` |
+| Visitor role auto-creation | Missing role detection + default role assignment | `scan_gate_entrance_with_face` |
+| Limit enforcement logging | Change tracking + visit blocking event logging | `update_place_limit_settings`, `schedule_visit` |
+| Single-day unavailability | Date-based availability flagging with auto-reset | `get_personnel_availability` |
+| Monthly scheduled dates | Date range filtering + distinct date extraction | `get_place_scheduled_dates_in_month` |
 
 ### 1) Python AI Face Detection & Capture (Primary)
 - Purpose: Enforce face capture for schedule enrollment and guard-controlled entrance/exit flows.
@@ -125,10 +132,77 @@ Below is a concise, prioritized summary of the key algorithms and techniques use
 - Purpose: Non-interactive handoffs (printed cards) while preserving scan reliability.
 - Type: String templating and DOM injection.
 
+### 14) Public Feedback Daily Rotation
+- Files: `src/pages/Contact.ts`, Supabase RPC `get_public_feedback`.
+- Approach:
+  - Uses current date as seed for consistent random selection throughout the day.
+  - Filters feedback with comments and overall_satisfaction >= 4.
+  - Returns one feedback per day that changes daily but remains consistent within the same day.
+- Purpose: Display positive visitor testimonials on public-facing Contact page.
+- Type: Date-seeded pseudo-random selection with quality filtering.
+
+### 15) Place Purposes with Advance Notice
+- Files: `src/pages/dashboard/index.ts`, `src/components/ModalFunctions.ts`, `place_purposes` table.
+- Approach:
+  - Each place can have multiple purposes (e.g., "Meeting", "Tour", "Inspection").
+  - Each purpose has a required_days field (0-6) indicating advance notice needed.
+  - Personnel assigned to a place can edit purposes (in addition to admins).
+- Purpose: Enforce scheduling rules based on visit purpose and place requirements.
+- Type: Relational data model with role-based access control.
+
+### 16) Visit Status Transition Logic (Enhanced)
+- Files: Supabase functions `update_visit_statuses_server`, `fix_pending_past_visits`.
+- Approach:
+  - Analyzes gate scan history (entrance_scanned, exit_scanned) to determine final status.
+  - Handles in_progress visits that are past their visit date.
+  - Transitions: in_progress → completed_flagged (if entrance scanned but no exit) or unsuccessful (if no entrance).
+  - Marks associated places as failed when visit is auto-completed.
+- Purpose: Automatic cleanup and status normalization for past visits.
+- Type: Deterministic date arithmetic + conditional state machine.
+
+### 17) Visitor Role Auto-Creation
+- Files: Supabase function `scan_gate_entrance_with_face`.
+- Approach:
+  - Detects missing user_roles record during gate entrance scanning.
+  - Automatically creates default 'visitor' role if missing.
+  - Prevents gate scan failures due to incomplete user setup.
+- Purpose: Graceful handling of edge cases where user roles are not properly initialized.
+- Type: Exception handling with default value assignment.
+
+### 18) Visit Limit Change & Enforcement Logging
+- Files: Supabase functions `update_place_limit_settings`, `schedule_visit`.
+- Approach:
+  - Logs limit type changes (weekly ↔ monthly) and value changes.
+  - Logs visit blocking events when limits are enforced (`visit_limit_enforced` action).
+  - Tracks old vs new values, visit counts, and enforcement reasons.
+- Purpose: Audit trail for limit management and compliance tracking.
+- Type: Change tracking with before/after state comparison.
+
+### 19) Single-Day Personnel Unavailability
+- Files: Supabase function `get_personnel_availability`.
+- Approach:
+  - Unavailability applies only on the selected date (`unavailable_from`).
+  - Availability automatically restored on next day (no explicit end date needed).
+  - Exposes raw availability flag for advanced scheduling logic.
+- Purpose: Simplified unavailability management without complex date range handling.
+- Type: Date-based boolean flagging with implicit auto-reset.
+
+### 20) Monthly Scheduled Dates Retrieval
+- Files: Supabase function `get_place_scheduled_dates_in_month`.
+- Approach:
+  - Filters scheduled visits by place and month range.
+  - Returns distinct visit dates within the specified month.
+  - Only includes pending, completed, or completed_flagged visits.
+- Purpose: Support calendar views and date picker availability indicators.
+- Type: Date range filtering with distinct aggregation.
+
 ---
 
 Notes
 - Python AI face capture (with encrypted storage) is the primary security-critical component; guard flows block entrance/exit without a successful detection.
 - Feedback survey data provides continual quality signals that influence roadmap prioritization alongside operational metrics.
 - Adaptive scanning heuristics keep the camera loops responsive while limiting CPU usage across common guard devices.
+- Place purposes system enables fine-grained scheduling rules per place and purpose type.
+- Enhanced status management ensures proper cleanup of past visits and accurate reporting.
+- Auto-creation of visitor roles prevents gate scan failures and improves system resilience.
 
