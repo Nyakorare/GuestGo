@@ -228,3 +228,69 @@
   background: #e0e7ff;
   color: #3730a3;
 }
+
+/* Schedule Now Button Animations */
+@keyframes pulse-slow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7), 0 10px 25px -5px rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0), 0 10px 25px -5px rgba(59, 130, 246, 0.5);
+  }
+}
+
+@keyframes bounce-slow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.schedule-now-btn {
+  animation: pulse-slow 3s ease-in-out infinite;
+  position: relative;
+  background-size: 200% 100%;
+}
+
+.schedule-now-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  transition: left 0.5s;
+}
+
+.schedule-now-btn:hover::before {
+  left: 100%;
+}
+
+.schedule-now-btn:hover {
+  animation: pulse-slow 1.5s ease-in-out infinite;
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 2s ease-in-out infinite;
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s ease-in-out infinite;
+}

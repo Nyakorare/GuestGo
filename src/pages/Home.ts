@@ -1,6 +1,7 @@
 import { setupEventListeners, setupConfirmationModalListeners } from '../components/ModalFunctions';
 import supabase from '../config/supabase';
 import { loadPlaces } from './dashboard/index';
+import { FAQ } from '../components/mini-features/home/FAQ';
 
 // Helper function to get current Philippine time
 function getPhilippineTime(): Date {
@@ -992,12 +993,36 @@ export function HomePage() {
       toggle.addEventListener('click', () => {
         const id = (toggle as HTMLElement).dataset.faqToggle;
         if (!id) return;
-        const panel = document.querySelector(`[data-faq-panel="${id}"]`);
-        if (!panel) return;
-        panel.classList.toggle('hidden');
+        const panel = document.querySelector(`[data-faq-panel="${id}"]`) as HTMLElement;
+        const faqItem = (toggle as HTMLElement).closest('.faq-item');
+        if (!panel || !faqItem) return;
+        
+        // Toggle panel visibility with smooth animation
+        const isHidden = panel.classList.contains('hidden');
         const icon = (toggle as HTMLElement).querySelector('[data-faq-icon]');
-        if (icon) {
-          icon.classList.toggle('rotate-180');
+        
+        if (isHidden) {
+          // Open
+          panel.classList.remove('hidden');
+          // Set max-height to scrollHeight for smooth expansion
+          panel.style.maxHeight = panel.scrollHeight + 'px';
+          faqItem.classList.add('active');
+          if (icon) {
+            icon.classList.add('rotate-180');
+          }
+        } else {
+          // Close
+          panel.style.maxHeight = '0';
+          faqItem.classList.remove('active');
+          if (icon) {
+            icon.classList.remove('rotate-180');
+          }
+          // Add hidden class after animation completes
+          setTimeout(() => {
+            if (panel.style.maxHeight === '0px') {
+              panel.classList.add('hidden');
+            }
+          }, 300);
         }
       });
     });
@@ -1424,7 +1449,6 @@ export function HomePage() {
 
   return `    <div class="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8 md:py-12">
       <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-4 sm:space-y-0 mb-8">
-        <img src="/guestgo-logo.png" alt="GuestGo Logo" class="h-14 w-14 sm:h-16 sm:w-16 mx-auto sm:mx-0" />
         <div class="text-center sm:text-left">
           <h1 id="heroTitle" class="text-2xl sm:text-4xl font-bold text-gray-900 dark:text-white transition-colors duration-200">
             Welcome to GuestGo
@@ -1461,10 +1485,20 @@ export function HomePage() {
 
       <button 
         id="scheduleNowBtn"
-        class="w-full sm:w-auto bg-blue-600 text-white px-6 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors duration-200 mb-4"
+        class="schedule-now-btn relative w-full sm:w-auto bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 text-white px-8 py-4 rounded-xl text-lg sm:text-xl font-bold shadow-2xl hover:shadow-blue-500/50 transform hover:scale-105 active:scale-95 transition-all duration-300 mb-4 overflow-hidden group animate-pulse-slow"
         onclick="window.openScheduleModal()"
       >
-        Schedule Now
+        <span class="relative z-10 flex items-center justify-center gap-2">
+          <svg class="w-5 h-5 sm:w-6 sm:h-6 animate-bounce-slow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+          <span>Schedule Now</span>
+          <svg class="w-5 h-5 sm:w-6 sm:h-6 transform group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+          </svg>
+        </span>
+        <div class="absolute inset-0 bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <div class="absolute inset-0 -z-10 bg-white/20 blur-xl transform scale-150 group-hover:scale-200 transition-transform duration-500"></div>
       </button>
 
       <!-- How GuestGo Works -->
@@ -1478,33 +1512,7 @@ export function HomePage() {
         </div>
       </section>
 
-      <!-- FAQ -->
-      <section class="mb-8">
-        <h2 class="text-xl sm:text-2xl font-bold mb-3">Frequently Asked Questions</h2>
-        <div class="divide-y divide-gray-200 dark:divide-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-          <div class="p-4">
-            <button class="w-full flex justify-between items-center text-left" data-faq-toggle="limit">
-              <span class="font-medium">How many visits can I schedule?</span>
-              <svg data-faq-icon class="w-5 h-5 text-gray-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-            </button>
-            <div class="mt-2 text-sm text-gray-600 dark:text-gray-400 hidden" data-faq-panel="limit">Each user can have up to 2 visits per week. The counter resets weekly (Sunday to Saturday, PH time).</div>
-          </div>
-          <div class="p-4">
-            <button class="w-full flex justify-between items-center text-left" data-faq-toggle="email">
-              <span class="font-medium">Why do I need to verify my email?</span>
-              <svg data-faq-icon class="w-5 h-5 text-gray-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-            </button>
-            <div class="mt-2 text-sm text-gray-600 dark:text-gray-400 hidden" data-faq-panel="email">Email verification prevents duplicate or fraudulent bookings and helps us contact you with updates.</div>
-          </div>
-          <div class="p-4">
-            <button class="w-full flex justify-between items-center text-left" data-faq-toggle="resched">
-              <span class="font-medium">Can I reschedule?</span>
-              <svg data-faq-icon class="w-5 h-5 text-gray-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-            </button>
-            <div class="mt-2 text-sm text-gray-600 dark:text-gray-400 hidden" data-faq-panel="resched">Yes. Please notify us at least 24 hours before your visit so we can accommodate changes.</div>
-          </div>
-        </div>
-      </section>
+      ${FAQ()}
 
       <!-- Schedule Modal -->
       <div id="scheduleModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">

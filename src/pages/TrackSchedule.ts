@@ -4,6 +4,13 @@ import { showLoadingOverlay, hideLoadingOverlay } from '../utils/loadingOverlay'
 import { generateSimpleVisitQRCode, openPrintableVisitCard } from '../utils/qrCode';
 import type { VisitQRData } from '../utils/qrCode';
 import jsQR from 'jsqr';
+import { VisitIdInput } from '../components/mini-features/trackschedule/VisitIdInput';
+import { VisitInformation } from '../components/mini-features/trackschedule/VisitInformation';
+import { PlacesToVisit } from '../components/mini-features/trackschedule/PlacesToVisit';
+import { VisitProgress } from '../components/mini-features/trackschedule/VisitProgress';
+import { GateScanningStatus } from '../components/mini-features/trackschedule/GateScanningStatus';
+import { VisitQRCode } from '../components/mini-features/trackschedule/VisitQRCode';
+import { NoVisitFound } from '../components/mini-features/trackschedule/NoVisitFound';
 
 export function TrackSchedulePage() {
   return `
@@ -11,7 +18,7 @@ export function TrackSchedulePage() {
       <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Header -->
         <div class="text-center mb-8">
-          <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2">
             Track Schedule
           </h1>
           <p class="text-gray-600 dark:text-gray-400">
@@ -19,183 +26,46 @@ export function TrackSchedulePage() {
           </p>
         </div>
 
-        <!-- Visit ID Input Section -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-8">
-          <div class="max-w-md mx-auto">
-            <label for="visitIdInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Scheduled Visit ID
-            </label>
-            <div class="flex gap-2">
-              <input
-                type="text"
-                id="visitIdInput"
-                placeholder="Enter your visit ID..."
-                class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              />
-              <button
-                id="trackVisitBtn"
-                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Track Visit
-              </button>
-            </div>
-            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              You can find your visit ID in the confirmation email or the QR code modal after scheduling.
-            </p>
-          </div>
-        </div>
+        ${VisitIdInput()}
 
         <!-- Visit Details Section -->
         <div id="visitDetailsSection" class="hidden">
-          <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-            <div class="flex items-center justify-between mb-6">
-              <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
-                Visit Details
-              </h2>
+          <div class="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900/50 rounded-2xl shadow-xl p-6 sm:p-8 border-2 border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between mb-8 pb-4 border-b-2 border-gray-200 dark:border-gray-700">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                  </svg>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+                  Visit Details
+                </h2>
+              </div>
               <button
                 id="printVisitCardBtn"
-                class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                class="px-5 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-2"
               >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                </svg>
                 Print Visit Card
               </button>
             </div>
 
-            <!-- Visit Information -->
-            <div id="visitInfo" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <!-- Left Column -->
-              <div class="space-y-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Visit ID</label>
-                  <p id="displayVisitId" class="mt-1 text-sm font-mono text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded"></p>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Visitor Name</label>
-                  <p id="displayVisitorName" class="mt-1 text-sm text-gray-900 dark:text-white"></p>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
-                  <p id="displayVisitorEmail" class="mt-1 text-sm text-gray-900 dark:text-white"></p>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Phone</label>
-                  <p id="displayVisitorPhone" class="mt-1 text-sm text-gray-900 dark:text-white"></p>
-                </div>
-              </div>
+            ${VisitInformation()}
 
-              <!-- Right Column -->
-              <div class="space-y-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Visit Date</label>
-                  <p id="displayVisitDate" class="mt-1 text-sm text-gray-900 dark:text-white"></p>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Purpose</label>
-                  <p id="displayPurpose" class="mt-1 text-sm text-gray-900 dark:text-white"></p>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
-                  <span id="displayStatus" class="mt-1 inline-flex px-2 py-1 text-xs font-semibold rounded-full"></span>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Scheduled At</label>
-                  <p id="displayScheduledAt" class="mt-1 text-sm text-gray-900 dark:text-white"></p>
-                </div>
-              </div>
-            </div>
+            ${PlacesToVisit()}
 
-            <!-- Places to Visit -->
-            <div class="mb-6">
-              <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Places to Visit</h3>
-              <div id="visitPlacesList" class="space-y-3">
-                <!-- Places will be populated here -->
-              </div>
-            </div>
+            ${VisitProgress()}
 
-            <!-- Progress Section -->
-            <div class="mb-6">
-              <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Visit Progress</h3>
-              <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
-                <div class="flex items-center justify-between mb-2">
-                  <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Overall Progress</span>
-                  <span id="progressPercentage" class="text-sm font-medium text-gray-900 dark:text-white">0%</span>
-                </div>
-                <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
-                  <div id="progressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
-                </div>
-                <div class="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                  <span id="completedPlaces">0</span> of <span id="totalPlaces">0</span> places completed
-                </div>
-              </div>
-            </div>
+            ${GateScanningStatus()}
 
-            <!-- Gate Scanning Status -->
-            <div class="mb-6">
-              <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Gate Scanning Status</h3>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                  <div class="flex items-center justify-between">
-                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Entrance Scan</span>
-                    <span id="entranceScanStatus" class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"></span>
-                  </div>
-                  <p id="entranceScanTime" class="mt-1 text-xs text-gray-500 dark:text-gray-400"></p>
-                  <div class="mt-3">
-                    <button 
-                      id="scanEntranceBtn"
-                      class="w-full px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                      disabled
-                    >
-                      <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
-                      </svg>
-                      Scan Entrance
-                    </button>
-                  </div>
-                </div>
-                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                  <div class="flex items-center justify-between">
-                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Exit Scan</span>
-                    <span id="exitScanStatus" class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"></span>
-                  </div>
-                  <p id="exitScanTime" class="mt-1 text-xs text-gray-500 dark:text-gray-400"></p>
-                  <div class="mt-3">
-                    <button 
-                      id="scanExitBtn"
-                      class="w-full px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                      disabled
-                    >
-                      <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                      </svg>
-                      Scan Exit
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- QR Code Section -->
-            <div class="text-center">
-              <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Visit QR Code</h3>
-              <div id="qrCodeContainer" class="inline-block p-4 bg-white dark:bg-gray-700 rounded-lg shadow-sm">
-                <!-- QR code will be generated here -->
-              </div>
-              <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                Show this QR code at the gate for scanning
-              </p>
-            </div>
+            ${VisitQRCode()}
           </div>
         </div>
 
-        <!-- No Visit Found Message -->
-        <div id="noVisitFound" class="hidden text-center py-12">
-          <div class="text-gray-500 dark:text-gray-400">
-            <svg class="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.29-1.009-5.824-2.709M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            <p class="text-lg font-medium">Visit not found</p>
-            <p class="text-sm">Please check your visit ID and try again.</p>
-          </div>
-        </div>
+        ${NoVisitFound()}
       </div>
     </div>
   `;
