@@ -2177,6 +2177,9 @@ async function loadLogs() {
   }
 }
 
+// Expose loadLogs globally for use in other components
+(window as any).loadLogs = loadLogs;
+
 // Function to render logs based on current filters
 async function renderLogs(): Promise<void> {
   const logsList = document.getElementById('logsList');
@@ -2228,6 +2231,18 @@ async function renderLogs(): Promise<void> {
             displayAction = 'gate_exit_scan';
           } else if (parsedDetails.action === 'entrance') {
             displayAction = 'gate_entrance_scan';
+          }
+        }
+
+        // Check if visit_completed_flagged log has been resolved
+        if (log.action === 'visit_completed_flagged' && parsedDetails) {
+          if (parsedDetails.resolved === true && parsedDetails.current_status === 'completed') {
+            // If resolved, treat it as completed
+            displayAction = 'visit_completed';
+            overrideDetails = {
+              ...parsedDetails,
+              current_status: 'completed'
+            };
           }
         }
 
@@ -2340,10 +2355,14 @@ async function renderLogs(): Promise<void> {
 
         const details = await formatLogDetails(overrideDetails ?? log.details, displayAction, log);
 
+        // Store parsed details for easy access in template
+        const logDetails = overrideDetails ?? parsedDetails ?? (typeof log.details === 'string' ? JSON.parse(log.details) : log.details);
+
         return {
           ...log,
           formattedDetails: details,
-          displayAction
+          displayAction,
+          parsedDetails: logDetails // Store parsed details for template access
         };
       })
     );
@@ -2396,7 +2415,10 @@ async function renderLogs(): Promise<void> {
                       log.displayAction === 'visit_scheduled' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' :
                       log.displayAction === 'visit_temporary_exit' ? 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200' :
                       log.displayAction === 'visit_completed' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
-                      log.displayAction === 'visit_completed_flagged' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
+                      log.displayAction === 'visit_completed_flagged' 
+                        ? ((log.parsedDetails?.resolved === true || (typeof log.details === 'object' && log.details?.resolved === true))
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                          : 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200') :
                       log.displayAction === 'visit_unsuccessful' ? 'bg-red-200 text-red-900 dark:bg-red-800 dark:text-red-100' :
                       log.displayAction === 'place_visit_limit_update' ? 'bg-blue-200 text-blue-900 dark:bg-blue-800 dark:text-blue-100' :
                       log.displayAction === 'visit_feedback_submitted' ? 'bg-cyan-200 text-cyan-900 dark:bg-cyan-800 dark:text-cyan-100' :
@@ -2409,7 +2431,9 @@ async function renderLogs(): Promise<void> {
                       log.displayAction === 'role_change' ? 'bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200' :
                       'bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200'
                     }">
-                      ${log.displayAction === 'visit_completed_flagged' ? 'Completed (Flagged)' : log.displayAction.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                      ${log.displayAction === 'visit_completed_flagged' 
+                        ? ((log.parsedDetails?.resolved === true || (typeof log.details === 'object' && log.details?.resolved === true)) ? 'Visit Completed' : 'Completed (Flagged)') 
+                        : log.displayAction.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                     </span>
                     ${log.displayAction === 'visit_completed_flagged' ? `
                       <button 
@@ -2474,7 +2498,10 @@ async function renderLogs(): Promise<void> {
                       log.displayAction === 'visit_scheduled' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' :
                       log.displayAction === 'visit_temporary_exit' ? 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200' :
                       log.displayAction === 'visit_completed' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
-                      log.displayAction === 'visit_completed_flagged' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
+                      log.displayAction === 'visit_completed_flagged' 
+                        ? ((log.parsedDetails?.resolved === true || (typeof log.details === 'object' && log.details?.resolved === true))
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                          : 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200') :
                       log.displayAction === 'visit_unsuccessful' ? 'bg-red-200 text-red-900 dark:bg-red-800 dark:text-red-100' :
                       log.displayAction === 'place_visit_limit_update' ? 'bg-blue-200 text-blue-900 dark:bg-blue-800 dark:text-blue-100' :
                       log.displayAction === 'visit_feedback_submitted' ? 'bg-cyan-200 text-cyan-900 dark:bg-cyan-800 dark:text-cyan-100' :
@@ -2487,7 +2514,9 @@ async function renderLogs(): Promise<void> {
                       log.displayAction === 'role_change' ? 'bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200' :
                       'bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200'
                     }">
-                      ${log.displayAction === 'visit_completed_flagged' ? 'Completed (Flagged)' : log.displayAction.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                      ${log.displayAction === 'visit_completed_flagged' 
+                        ? ((log.parsedDetails?.resolved === true || (typeof log.details === 'object' && log.details?.resolved === true)) ? 'Visit Completed' : 'Completed (Flagged)') 
+                        : log.displayAction.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                     </span>
                     ${log.displayAction === 'visit_completed_flagged' ? `
                       <button 
@@ -3425,34 +3454,64 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
         const completedBy = parsedDetails.completed_by ? await getUserName(parsedDetails.completed_by) : 'System';
         const completedDate = parsedDetails.completed_at ? new Date(parsedDetails.completed_at).toLocaleString() : 'Unknown';
 
+        // Check if this visit has been resolved
+        const isResolved = parsedDetails.resolved === true;
+        const resolutionReason = parsedDetails.resolution_reason || null;
+        const resolvedBy = parsedDetails.resolved_by ? await getUserName(parsedDetails.resolved_by) : null;
+        const resolvedAt = parsedDetails.resolved_at ? new Date(parsedDetails.resolved_at).toLocaleString() : null;
+
+        // Build history array including resolution if it exists
+        let historyArray = Array.isArray(parsedDetails.history) ? [...parsedDetails.history] : [];
+        
+        // Add resolution event to history if resolved
+        if (isResolved && resolutionReason) {
+          historyArray.push({
+            event: 'visit_resolved',
+            timestamp: parsedDetails.resolved_at || new Date().toISOString(),
+            details: {
+              by: resolvedBy || 'Unknown',
+              reason: resolutionReason,
+              resolved_from: 'completed_flagged',
+              resolved_to: 'completed'
+            }
+          });
+        }
+
         // If history exists in details, render it similarly to visit_scheduled
         let historyHtml = '';
-        if (Array.isArray(parsedDetails.history) && parsedDetails.history.length > 0) {
+        if (historyArray.length > 0) {
           const historyId = `history-${log?.id || Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-          const historyItems = parsedDetails.history.map((event: any) => {
+          const historyItems = historyArray.map((event: any) => {
             try {
-              const eventType = event.event ? event.event.charAt(0).toUpperCase() + event.event.slice(1) : 'Event';
+              const eventType = event.event ? event.event.charAt(0).toUpperCase() + event.event.slice(1).replace(/_/g, ' ') : 'Event';
               const eventTime = event.timestamp ? new Date(event.timestamp).toLocaleString() : '';
               let details = '';
               if (event.details) {
                 if (event.details.by) {
-                  details += `<span class='text-xs text-gray-500'>(By: ${event.details.by})</span> `;
+                  const byName = typeof event.details.by === 'string' && event.details.by.length > 50 
+                    ? event.details.by.substring(0, 50) + '...' 
+                    : event.details.by;
+                  details += `<span class='text-xs text-gray-500 dark:text-gray-400'>(By: ${byName})</span> `;
                 }
                 if (event.details.note) {
-                  details += `<span class='text-xs text-gray-500'>Note: ${event.details.note}</span> `;
+                  details += `<span class='text-xs text-gray-500 dark:text-gray-400'>Note: ${event.details.note}</span> `;
                 }
                 if (event.details.reason) {
-                  details += `<span class='text-xs text-red-500'>Reason: ${event.details.reason}</span> `;
+                  details += `<span class='text-xs text-red-500 dark:text-red-400'>Reason: ${event.details.reason}</span> `;
                 }
                 if (event.details.auto_marked) {
-                  details += `<span class='text-xs text-orange-500'>(Auto-marked by system)</span> `;
+                  details += `<span class='text-xs text-orange-500 dark:text-orange-400'>(Auto-marked by system)</span> `;
+                }
+                // Special handling for visit_resolved event
+                if (event.event === 'visit_resolved' && event.details.reason) {
+                  details += `<div class='mt-1 p-2 bg-green-50 dark:bg-green-900/20 rounded border-l-4 border-green-400'><span class='text-xs font-medium text-green-800 dark:text-green-200'>Resolution Reason:</span> <span class='text-xs text-green-700 dark:text-green-300'>${event.details.reason}</span></div>`;
                 }
               }
-              return `<li class="py-1 border-b border-gray-100 dark:border-gray-700 last:border-b-0"><span class='font-semibold'>${eventType}</span> <span class='text-xs text-gray-400'>${eventTime}</span> ${details}</li>`;
+              return `<li class="py-2 border-b border-gray-100 dark:border-gray-700 last:border-b-0"><span class='font-semibold'>${eventType}</span> <span class='text-xs text-gray-400'>${eventTime}</span> ${details}</li>`;
             } catch (error) {
               console.error('Error processing history event:', error, event);
-              return `<li class="py-1 border-b border-gray-100 dark:border-gray-700 last:border-b-0"><span class='font-semibold text-red-600'>Error processing event</span></li>`;
+              return `<li class="py-2 border-b border-gray-100 dark:border-gray-700 last:border-b-0"><span class='font-semibold text-red-600'>Error processing event</span></li>`;
             }
           }).filter(item => item).join('');
 
@@ -3462,7 +3521,7 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
                 class="text-blue-600 hover:text-blue-800 dark:text-blue-500 dark:hover:text-blue-400 text-sm font-medium flex items-center gap-1 w-full justify-between p-2 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors duration-200"
                 id="btn-${historyId}"
               >
-                <span>See History (${parsedDetails.history.length} events)</span>
+                <span>See History (${historyArray.length} events)</span>
                 <svg class="w-4 h-4 transition-transform duration-200" id="icon-${historyId}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                 </svg>
@@ -3475,7 +3534,21 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
             </div>`;
         }
 
-        return `<div><span class="font-medium">Visit ID:</span> ${parsedDetails.visit_id ? parsedDetails.visit_id.substring(0, 8) + '...' : 'Unknown'}</div><div><span class="font-medium">Completed by:</span> ${completedBy}</div><div><span class="font-medium">Completed at:</span> ${completedDate}</div><div><span class="font-medium text-orange-600 dark:text-orange-400">Status:</span> <span class="text-orange-600 dark:text-orange-400 font-semibold">Visit completed (flagged) - No exit scan</span></div>${historyHtml}`;
+        // Determine status display based on resolution
+        let statusDisplay = '';
+        if (isResolved) {
+          statusDisplay = `<div><span class="font-medium text-green-600 dark:text-green-400">Status:</span> <span class="text-green-600 dark:text-green-400 font-semibold">Visit completed</span></div>`;
+          if (resolvedAt) {
+            statusDisplay += `<div><span class="font-medium">Resolved at:</span> ${resolvedAt}</div>`;
+          }
+          if (resolvedBy) {
+            statusDisplay += `<div><span class="font-medium">Resolved by:</span> ${resolvedBy}</div>`;
+          }
+        } else {
+          statusDisplay = `<div><span class="font-medium text-orange-600 dark:text-orange-400">Status:</span> <span class="text-orange-600 dark:text-orange-400 font-semibold">Visit completed (flagged) - No exit scan</span></div>`;
+        }
+
+        return `<div><span class="font-medium">Visit ID:</span> ${parsedDetails.visit_id ? parsedDetails.visit_id.substring(0, 8) + '...' : 'Unknown'}</div><div><span class="font-medium">Completed by:</span> ${completedBy}</div><div><span class="font-medium">Completed at:</span> ${completedDate}</div>${statusDisplay}${historyHtml}`;
       }
       case 'visit_unsuccessful': {
         // Show details for unsuccessful visits (system auto-mark or manual mark)
@@ -5933,6 +6006,24 @@ async function applySearchAndFilterForLogs() {
       // Search in user ID
       const userId = log.user_id ? log.user_id.toLowerCase() : '';
       if (userId.includes(searchTerm)) return true;
+      
+      // Parse details if it's a string
+      let parsedDetails: any = null;
+      if (log.details) {
+        if (typeof log.details === 'string') {
+          try {
+            parsedDetails = JSON.parse(log.details);
+          } catch (e) {
+            parsedDetails = null;
+          }
+        } else {
+          parsedDetails = log.details;
+        }
+      }
+      
+      // Search in visit ID
+      const visitId = parsedDetails?.visit_id ? String(parsedDetails.visit_id).toLowerCase() : '';
+      if (visitId.includes(searchTerm)) return true;
       
       // Search in action
       const action = log.action ? log.action.toLowerCase() : '';
@@ -11336,6 +11427,37 @@ async function displayVisitorPastVisits(visits: any[]): Promise<void> {
     const completedPlaces = places.filter((place: any) => place.status === 'completed').length;
     const totalPlaces = places.length;
     
+    // Fetch resolution reason if visit was resolved from flagged status
+    let resolutionReason: string | null = null;
+    if (visit.status === 'completed') {
+      try {
+        // Query all flagged logs and find the one matching this visit
+        const { data: flaggedLogs } = await supabase
+          .from('logs')
+          .select('details')
+          .eq('action', 'visit_completed_flagged')
+          .order('created_at', { ascending: false });
+        
+        if (flaggedLogs && flaggedLogs.length > 0) {
+          // Find the log entry that matches this visit ID
+          const matchingLog = flaggedLogs.find((log: any) => {
+            const logDetails = typeof log.details === 'string' ? JSON.parse(log.details) : log.details;
+            return logDetails?.visit_id === visit.id;
+          });
+          
+          if (matchingLog) {
+            const logDetails = typeof matchingLog.details === 'string' ? JSON.parse(matchingLog.details) : (matchingLog.details as any);
+            // Check if the visit was resolved (has resolution_reason)
+            if (logDetails?.resolved === true && logDetails?.resolution_reason) {
+              resolutionReason = logDetails.resolution_reason;
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching resolution reason:', error);
+      }
+    }
+    
     visitsHtml += `
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300 ease-in-out hover:shadow-lg hover:shadow-blue-500/20 hover:scale-[1.02] hover:border-blue-300 dark:hover:border-blue-600 cursor-pointer transform">
         <div class="p-4 sm:p-6">
@@ -11487,19 +11609,43 @@ async function displayVisitorPastVisits(visits: any[]): Promise<void> {
               ` : ''}
             </div>
             
-            <!-- Feedback Button for Completed Visits -->
+            <!-- Resolution Reason and Feedback Button for Completed Visits -->
             ${visit.status === 'completed' ? `
-              <div class="mt-4 flex justify-end">
-                <button 
-                  id="feedbackBtn_${visit.id}"
-                  class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  onclick="openFeedbackSurvey('${visit.id}', '${visit.visitor_first_name} ${visit.visitor_last_name}', '${visit.visit_date}', ${JSON.stringify(places.map((p: any) => p.place_name)).replace(/"/g, '&quot;')})"
-                >
-                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                  </svg>
-                  Feedback Survey
-                </button>
+              <div class="mt-4 space-y-3">
+                ${resolutionReason ? `
+                  <div class="bg-green-50 dark:bg-green-900/20 border-l-4 border-green-400 p-3 rounded-md">
+                    <div class="flex items-start">
+                      <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                        </svg>
+                      </div>
+                      <div class="ml-3 flex-1">
+                        <h4 class="text-sm font-medium text-green-800 dark:text-green-200">
+                          Visit Resolved - Completion Reason
+                        </h4>
+                        <p class="mt-1 text-sm text-green-700 dark:text-green-300">
+                          This visit was originally flagged but has been resolved and marked as completed.
+                        </p>
+                        <p class="mt-2 text-sm font-medium text-green-800 dark:text-green-200">
+                          Reason: <span class="font-normal">${resolutionReason}</span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ` : ''}
+                <div class="flex justify-end">
+                  <button 
+                    id="feedbackBtn_${visit.id}"
+                    class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onclick="openFeedbackSurvey('${visit.id}', '${visit.visitor_first_name} ${visit.visitor_last_name}', '${visit.visit_date}', ${JSON.stringify(places.map((p: any) => p.place_name)).replace(/"/g, '&quot;')})"
+                  >
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                    </svg>
+                    Feedback Survey
+                  </button>
+                </div>
               </div>
             ` : ''}
           </div>

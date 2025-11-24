@@ -1,4 +1,5 @@
 import supabase from '../config/supabase';
+import { createMarkCompleteButton, showResolveReasonModal } from './MarkCompleteModal';
 
 // Interface for flagged visit details
 interface FlaggedVisitDetails {
@@ -39,10 +40,14 @@ async function getUserName(userId: string | undefined | null): Promise<string> {
     const { data: user, error } = await supabase
       .from('user_roles')
       .select('first_name, last_name, email')
-      .eq('id', userId)
-      .single();
+      .eq('user_id', userId)
+      .maybeSingle();
 
     if (error) throw error;
+    
+    if (!user) {
+      return 'Unknown User';
+    }
     
     if (user?.first_name && user?.last_name) {
       return `${user.first_name} ${user.last_name}`;
@@ -99,7 +104,8 @@ export function createFlaggedVisitModal(): string {
         </div>
 
         <!-- Footer -->
-        <div class="flex justify-end mt-6 pt-4 border-t border-gray-200 dark:border-gray-600">
+        <div class="flex justify-between items-center mt-6 pt-4 border-t border-gray-200 dark:border-gray-600">
+          <div id="flaggedVisitModalMarkCompleteBtn"></div>
           <button 
             id="closeFlaggedVisitModalBtn"
             class="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors duration-200"
@@ -353,6 +359,21 @@ export async function populateFlaggedVisitModal(visitDetails: FlaggedVisitDetail
     `;
 
     modalContent.innerHTML = content;
+
+    // Add mark complete button if visit is in completed_flagged status
+    const markCompleteBtnContainer = document.getElementById('flaggedVisitModalMarkCompleteBtn');
+    if (markCompleteBtnContainer && visitDetails.status === 'completed_flagged') {
+      markCompleteBtnContainer.innerHTML = createMarkCompleteButton(visitDetails.visit_id);
+      // Setup the modal listener when button is added
+      setTimeout(() => {
+        const markCompleteBtn = document.getElementById(`markCompleteBtn-${visitDetails.visit_id}`);
+        if (markCompleteBtn) {
+          markCompleteBtn.addEventListener('click', () => {
+            showResolveReasonModal(visitDetails.visit_id);
+          });
+        }
+      }, 100);
+    }
   } catch (error) {
     console.error('Error populating flagged visit modal:', error);
     modalContent.innerHTML = `

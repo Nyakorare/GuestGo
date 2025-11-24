@@ -1358,6 +1358,14 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
       return;
     }
 
+    // Handle confidence value properly (may be array, number, or null)
+    let faceDetectionConfidence: number | null = null;
+    if (faceResult.confidence !== null && faceResult.confidence !== undefined) {
+      faceDetectionConfidence = Array.isArray(faceResult.confidence) 
+        ? (faceResult.confidence[0] ?? null)
+        : (typeof faceResult.confidence === 'number' ? faceResult.confidence : null);
+    }
+
     // Prepare face detection metadata
     const faceMetadata = {
       boundingBox: faceResult.detections?.[0] ? {
@@ -1367,7 +1375,8 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
       landmarks: faceResult.detections?.[0]?.landmarks || null,
       timestamp: new Date().toISOString(),
       originalSize: faceResult.croppedImageDataUrl.length,
-      compressedSize: processedFaceImage.length
+      compressedSize: processedFaceImage.length,
+      confidence: faceDetectionConfidence
     };
 
     if (action === 'entrance') {
@@ -1381,7 +1390,7 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
         p_guard_id: user.id,
         p_scan_type: 'entrance',
         p_face_image_data: processedFaceImage,
-        p_face_detection_confidence: faceResult.confidence || 0,
+        p_face_detection_confidence: faceDetectionConfidence,
         p_face_detection_metadata: faceMetadata,
         p_ip_address: null,
         p_user_agent: navigator.userAgent,
@@ -1511,7 +1520,7 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
         p_guard_id: user.id,
         p_scan_type: 'exit',
         p_face_image_data: processedFaceImage,
-        p_face_detection_confidence: faceResult.confidence || 0,
+        p_face_detection_confidence: faceDetectionConfidence,
         p_face_detection_metadata: faceMetadata,
         p_ip_address: null,
         p_user_agent: navigator.userAgent,
