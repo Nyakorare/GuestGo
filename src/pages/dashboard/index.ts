@@ -11434,22 +11434,34 @@ async function displayVisitorPastVisits(visits: any[]): Promise<void> {
         // Query all flagged logs and find the one matching this visit
         const { data: flaggedLogs } = await supabase
           .from('logs')
-          .select('details')
-          .eq('action', 'visit_completed_flagged')
+          .select('action, details')
+          .in('action', ['visit_completed_flagged', 'visit_completed', 'visit_scheduled'])
           .order('created_at', { ascending: false });
         
         if (flaggedLogs && flaggedLogs.length > 0) {
           // Find the log entry that matches this visit ID
           const matchingLog = flaggedLogs.find((log: any) => {
             const logDetails = typeof log.details === 'string' ? JSON.parse(log.details) : log.details;
-            return logDetails?.visit_id === visit.id;
+            if (!logDetails) return false;
+            const sameVisit = logDetails.visit_id === visit.id;
+            if (!sameVisit) return false;
+            
+            // Treat as resolved if details say so or current_status completed
+            const isResolved = logDetails.resolved === true || logDetails.current_status === 'completed';
+            const hasHistoryResolution = Array.isArray(logDetails.history) && logDetails.history.some((event: any) => event.event === 'visit_resolved');
+            
+            return isResolved || hasHistoryResolution;
           });
           
           if (matchingLog) {
             const logDetails = typeof matchingLog.details === 'string' ? JSON.parse(matchingLog.details) : (matchingLog.details as any);
-            // Check if the visit was resolved (has resolution_reason)
-            if (logDetails?.resolved === true && logDetails?.resolution_reason) {
+            if (logDetails?.resolution_reason) {
               resolutionReason = logDetails.resolution_reason;
+            } else if (Array.isArray(logDetails?.history)) {
+              const resolutionEvent = logDetails.history.find((event: any) => event.event === 'visit_resolved' && event.details?.reason);
+              if (resolutionEvent?.details?.reason) {
+                resolutionReason = resolutionEvent.details.reason;
+              }
             }
           }
         }
@@ -11634,7 +11646,7 @@ async function displayVisitorPastVisits(visits: any[]): Promise<void> {
                     </div>
                   </div>
                 ` : ''}
-                <div class="flex justify-end">
+                <div class="flex justify-end items-center space-x-2">
                   <button 
                     id="feedbackBtn_${visit.id}"
                     class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -11645,6 +11657,17 @@ async function displayVisitorPastVisits(visits: any[]): Promise<void> {
                     </svg>
                     Feedback Survey
                   </button>
+                  ${resolutionReason ? `
+                    <span 
+                      class="inline-flex items-center px-2 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200 text-xs font-semibold cursor-help"
+                      title="Resolved: ${resolutionReason.replace(/"/g, '&quot;')}"
+                    >
+                      <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                      </svg>
+                      Resolved
+                    </span>
+                  ` : ''}
                 </div>
               </div>
             ` : ''}
