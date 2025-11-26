@@ -14,10 +14,14 @@ import { NoVisitFound } from '../components/mini-features/trackschedule/NoVisitF
 
 export function TrackSchedulePage() {
   return `
-    <div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-6 sm:py-10 relative overflow-hidden">
+      <div class="absolute inset-0 pointer-events-none">
+        <div class="absolute -top-24 -right-16 w-72 h-72 bg-gradient-to-br from-indigo-500/30 via-blue-400/20 to-purple-500/30 blur-3xl animate-pulse-slow"></div>
+        <div class="absolute -bottom-24 -left-16 w-72 h-72 bg-gradient-to-br from-emerald-500/20 via-cyan-400/20 to-blue-500/20 blur-3xl animate-pulse-slow delay-500"></div>
+      </div>
+      <div class="relative z-10 w-full px-4 sm:px-8 lg:px-16 xl:px-24 2xl:px-32 space-y-10">
         <!-- Header -->
-        <div class="text-center mb-8">
+        <div class="text-center mb-4 track-fade-in">
           <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2">
             Track Schedule
           </h1>
@@ -29,11 +33,11 @@ export function TrackSchedulePage() {
         ${VisitIdInput()}
 
         <!-- Visit Details Section -->
-        <div id="visitDetailsSection" class="hidden">
-          <div class="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900/50 rounded-2xl shadow-xl p-6 sm:p-8 border-2 border-gray-200 dark:border-gray-700">
+        <div id="visitDetailsSection" class="hidden track-fade-in track-fade-in-delay-2">
+          <div class="track-card bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900/50 rounded-2xl shadow-xl p-6 sm:p-8 border-2 border-gray-200 dark:border-gray-700">
             <div class="flex items-center justify-between mb-8 pb-4 border-b-2 border-gray-200 dark:border-gray-700">
               <div class="flex items-center gap-3">
-                <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg track-icon-float">
                   <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                   </svg>
@@ -44,7 +48,7 @@ export function TrackSchedulePage() {
               </div>
               <button
                 id="printVisitCardBtn"
-                class="px-5 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-2"
+                class="px-5 py-2.5 bg-gradient-to-r from-green-600 via-emerald-500 to-teal-600 text-white rounded-xl hover:from-green-700 hover:to-teal-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-2 track-button-glow"
               >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
@@ -282,11 +286,11 @@ function displayPlaces(places: any[]) {
   placesList.innerHTML = places.map(place => {
     const statusColor = getStatusColor(place.status);
     return `
-      <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-        <div>
-          <h4 class="font-medium text-gray-900 dark:text-white">${place.places_to_visit?.name || 'Unknown Place'}</h4>
+      <div class="track-card flex flex-col gap-3 sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200/70 dark:border-gray-600/70">
+        <div class="w-full sm:flex-1">
+          <h4 class="font-semibold text-gray-900 dark:text-white">${place.places_to_visit?.name || 'Unknown Place'}</h4>
           <p class="text-sm text-gray-600 dark:text-gray-400">${place.places_to_visit?.location || ''}</p>
-          ${place.places_to_visit?.description ? `<p class="text-xs text-gray-500 dark:text-gray-500 mt-1">${place.places_to_visit.description}</p>` : ''}
+          ${place.places_to_visit?.description ? `<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${place.places_to_visit.description}</p>` : ''}
         </div>
         <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusColor}">
           ${place.status}

@@ -1,8 +1,8 @@
 export function NoVisitFound() {
   return `
-    <div id="noVisitFound" class="hidden text-center py-16">
-      <div class="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-2xl p-12 border-2 border-red-200 dark:border-red-800 max-w-md mx-auto shadow-xl">
-        <div class="text-red-500 dark:text-red-400 mb-6">
+    <div id="noVisitFound" class="hidden text-center py-12 track-fade-in track-fade-in-delay-3">
+      <div class="track-card bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-2xl px-6 py-10 sm:p-12 border-2 border-red-200 dark:border-red-800 max-w-md mx-auto shadow-xl">
+        <div class="text-red-500 dark:text-red-400 mb-6 track-icon-float">
           <svg class="mx-auto h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.29-1.009-5.824-2.709M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>

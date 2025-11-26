@@ -107,7 +107,7 @@ export function FAQ() {
           </button>
           <div class="px-5 sm:px-6 pb-0 text-sm sm:text-base text-gray-600 dark:text-gray-400 hidden max-h-0 overflow-hidden transition-all duration-300 ease-in-out" data-faq-panel="reschedule">
             <div class="pb-4 sm:pb-5 pt-2 border-t border-gray-200 dark:border-gray-700">
-              Yes, you can reschedule or cancel your visit. Please notify us at least 24 hours before your scheduled visit time so we can accommodate changes. Contact the personnel or use the system's rescheduling feature if available. Cancelled visits will free up your weekly visit slots.
+              Yes, you can reschedule but you cannot cancel your visit as we have an automatic system that automatically cancels your schedueld visit if you do not show up at the scheduled date you scheduled. Please notify us at least 24 hours before your scheduled visit time so we can accommodate changes (through the reschedule feature in your visitor dashboard). Not Logged in Users cannot reschedule their visits.
             </div>
           </div>
         </div>

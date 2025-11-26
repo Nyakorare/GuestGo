@@ -15,6 +15,65 @@
   .nav-link:hover::after {
     @apply w-full;
   }
+
+  .track-card {
+    @apply relative overflow-hidden transition-transform duration-300 ease-out;
+  }
+
+  .track-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(130deg, rgba(59,130,246,0.18), rgba(236,72,153,0.18), rgba(16,185,129,0.18));
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .track-card > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .track-card:hover {
+    transform: translateY(-4px);
+  }
+
+  .track-card:hover::after {
+    opacity: 1;
+  }
+
+  .track-button-glow {
+    background-size: 200% 200%;
+    animation: trackGradientShift 6s ease infinite;
+  }
+
+  .track-icon-float {
+    animation: floatIcon 4s ease-in-out infinite;
+  }
+
+  .track-fade-in {
+    opacity: 0;
+    transform: translateY(18px);
+    animation: fadeInUp 0.8s ease forwards;
+  }
+
+  .track-fade-in-delay-1 {
+    animation-delay: 0.05s;
+  }
+
+  .track-fade-in-delay-2 {
+    animation-delay: 0.15s;
+  }
+
+  .track-fade-in-delay-3 {
+    animation-delay: 0.25s;
+  }
+
+  .track-fade-in-delay-4 {
+    animation-delay: 0.35s;
+  }
 }
 
 .page-transition {
@@ -293,4 +352,35 @@
 
 .animate-pulse-slow {
   animation: pulse-slow 3s ease-in-out infinite;
+}
+
+@keyframes trackGradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes floatIcon {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track-card,
+  .track-button-glow,
+  .track-icon-float,
+  .track-fade-in {
+    animation: none !important;
+    transform: none !important;
+  }
 }
