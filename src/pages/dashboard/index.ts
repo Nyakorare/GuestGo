@@ -1,4 +1,5 @@
 import supabase from '../../config/supabase';
+import { requestVisitReschedule, fetchPersonnelRescheduleRequests, processPersonnelRescheduleDecision, type VisitorRescheduleContext, type PersonnelRescheduleRequest } from '../../components/VisitReschedule';
 import { logAction, getLogs } from '../../utils/logging';
 import { generateVisitQRCode, openPrintableVisitCard, type VisitQRData } from '../../utils/qrCode';
 import { generateSimpleVisitQRCode } from '../../utils/qrCode';
@@ -319,9 +320,11 @@ export function DashboardPage() {
     // Personnel tab switching
     const assignmentTab = document.getElementById('assignmentTab');
     const visitsTab = document.getElementById('visitsTab');
+    const requestsTab = document.getElementById('requestsTab');
     const finishedTab = document.getElementById('finishedTab');
     const assignmentContent = document.getElementById('assignmentContent');
     const visitsContent = document.getElementById('visitsContent');
+    const requestsContent = document.getElementById('requestsContent');
     const finishedContent = document.getElementById('finishedContent');
 
     assignmentTab?.addEventListener('click', () => {
@@ -329,10 +332,13 @@ export function DashboardPage() {
       assignmentTab.classList.remove('bg-gray-100', 'text-gray-700');
       visitsTab?.classList.remove('bg-blue-600', 'text-white');
       visitsTab?.classList.add('bg-gray-100', 'text-gray-700');
+      requestsTab?.classList.remove('bg-blue-600', 'text-white');
+      requestsTab?.classList.add('bg-gray-100', 'text-gray-700');
       finishedTab?.classList.remove('bg-blue-600', 'text-white');
       finishedTab?.classList.add('bg-gray-100', 'text-gray-700');
       assignmentContent?.classList.remove('hidden');
       visitsContent?.classList.add('hidden');
+      requestsContent?.classList.add('hidden');
       finishedContent?.classList.add('hidden');
     });
 
@@ -346,15 +352,41 @@ export function DashboardPage() {
       visitsTab.classList.remove('bg-gray-100', 'text-gray-700');
       assignmentTab?.classList.remove('bg-blue-600', 'text-white');
       assignmentTab?.classList.add('bg-gray-100', 'text-gray-700');
+      requestsTab?.classList.remove('bg-blue-600', 'text-white');
+      requestsTab?.classList.add('bg-gray-100', 'text-gray-700');
       finishedTab?.classList.remove('bg-blue-600', 'text-white');
       finishedTab?.classList.add('bg-gray-100', 'text-gray-700');
       visitsContent?.classList.remove('hidden');
       assignmentContent?.classList.add('hidden');
+      requestsContent?.classList.add('hidden');
       finishedContent?.classList.add('hidden');
       
       // Stop auto-refresh for other tabs and start for visits
       stopVisitsAutoRefresh();
       await loadScheduledVisits();
+    });
+
+    requestsTab?.addEventListener('click', async () => {
+      if (requestsTab.disabled) {
+        return;
+      }
+
+      requestsTab.classList.add('bg-blue-600', 'text-white');
+      requestsTab.classList.remove('bg-gray-100', 'text-gray-700');
+      assignmentTab?.classList.remove('bg-blue-600', 'text-white');
+      assignmentTab?.classList.add('bg-gray-100', 'text-gray-700');
+      visitsTab?.classList.remove('bg-blue-600', 'text-white');
+      visitsTab?.classList.add('bg-gray-100', 'text-gray-700');
+      finishedTab?.classList.remove('bg-blue-600', 'text-white');
+      finishedTab?.classList.add('bg-gray-100', 'text-gray-700');
+
+      assignmentContent?.classList.add('hidden');
+      visitsContent?.classList.add('hidden');
+      finishedContent?.classList.add('hidden');
+      requestsContent?.classList.remove('hidden');
+
+      stopVisitsAutoRefresh();
+      await loadRescheduleRequestsForPersonnel();
     });
 
     finishedTab?.addEventListener('click', async () => {
@@ -801,6 +833,12 @@ export function DashboardPage() {
                 Scheduled Visits
               </button>
               <button 
+                id="requestsTab"
+                class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+              >
+                Requests
+              </button>
+              <button 
                 id="finishedTab"
                 class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
               >
@@ -958,6 +996,15 @@ export function DashboardPage() {
             </button>
           </div>
           <div id="scheduledVisitsList" class="space-y-4"></div>
+        </div>
+        <!-- Reschedule Requests Content -->
+        <div id="requestsContent" class="hidden space-y-4">
+          <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4 mb-6">
+            <div class="flex items-center gap-4">
+              <h3 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Reschedule Requests</h3>
+            </div>
+          </div>
+          <div id="requestsList" class="space-y-4"></div>
         </div>
         <!-- Finished Schedules Content -->
         <div id="finishedContent" class="hidden space-y-4">
@@ -7099,6 +7146,7 @@ let currentPastFinishedStartDate = '';
 let currentPastFinishedEndDate = '';
 let visitsRefreshInterval: NodeJS.Timeout | null = null; // For auto-refresh
 let lastVisitsRefresh = 0; // Track last refresh time
+let currentPersonnelRescheduleRequests: PersonnelRescheduleRequest[] = [];
 // Function to load scheduled visits for personnel
 async function loadScheduledVisits() {
   try {
@@ -7955,6 +8003,21 @@ function setupVisitorDashboardEventListeners() {
     console.error('Refresh button not found');
   }
 
+  // Expose helper for inline visitor reschedule button
+  (window as any).requestVisitRescheduleForVisit = async (visitId: string, visitDate: string, purpose?: string) => {
+    const context: VisitorRescheduleContext = {
+      visitId,
+      visitDate,
+      purpose,
+    };
+    await requestVisitReschedule(context);
+    // After a request, refresh visits to reflect updated flags/badges
+    await loadVisitorVisits();
+    await applyVisitorTodayFilters();
+    await applyVisitorFutureFilters();
+    await applyVisitorPastFilters();
+  };
+
   // Tab switching event listeners
   const visitorCurrentTab = document.getElementById('visitorCurrentTab');
   const visitorPastTab = document.getElementById('visitorPastTab');
@@ -8756,6 +8819,152 @@ async function completeVisitPlace(visitId: string, placeId: string) {
       showNotification('Error completing visit place', 'error');
     }
   }
+}
+
+// Load reschedule requests for personnel
+async function loadRescheduleRequestsForPersonnel() {
+  try {
+    const requests = await fetchPersonnelRescheduleRequests();
+    currentPersonnelRescheduleRequests = requests;
+    renderPersonnelRescheduleRequests();
+  } catch (error) {
+    console.error('Error loading reschedule requests:', error);
+  }
+}
+
+function renderPersonnelRescheduleRequests() {
+  const container = document.getElementById('requestsList');
+  if (!container) {
+    console.error('Requests list container not found');
+    return;
+  }
+
+  if (!currentPersonnelRescheduleRequests.length) {
+    container.innerHTML = `
+      <div class="text-center py-8">
+        <div class="text-gray-500 dark:text-gray-400">
+          <svg class="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <p class="text-lg font-medium">No reschedule requests</p>
+          <p class="text-sm">You currently have no pending reschedule requests.</p>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = currentPersonnelRescheduleRequests.map((req, index) => {
+    const currentDate = new Date(req.visit_date);
+    const originalDate = req.original_visit_date ? new Date(req.original_visit_date) : null;
+    const requestedAt = req.reschedule_requested_at ? new Date(req.reschedule_requested_at) : null;
+
+    return `
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="p-4 sm:p-6 space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-300 mb-1">Reschedule Request</p>
+              <h3 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+                ${req.visitor_first_name} ${req.visitor_last_name}
+              </h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                ${req.visitor_email} • ${req.visitor_phone}
+              </p>
+            </div>
+            <div class="flex flex-col items-start sm:items-end gap-1">
+              <span class="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                Pending Review
+              </span>
+              ${requestedAt ? `
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                  Requested: ${requestedAt.toLocaleString('en-US')}
+                </p>
+              ` : ''}
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+            <div>
+              <p class="font-medium text-gray-700 dark:text-gray-300">Current Visit Date</p>
+              <p class="text-gray-600 dark:text-gray-400">
+                ${currentDate.toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </p>
+              ${originalDate ? `
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Original: ${originalDate.toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </p>
+              ` : ''}
+            </div>
+            <div>
+              <p class="font-medium text-gray-700 dark:text-gray-300">Reason</p>
+              <p class="text-gray-600 dark:text-gray-400 text-sm whitespace-pre-line">
+                ${req.reschedule_reason || 'No reason provided'}
+              </p>
+            </div>
+          </div>
+
+          ${req.places && req.places.length ? `
+            <div>
+              <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Places</p>
+              <div class="flex flex-wrap gap-2">
+                ${req.places.map(place => `
+                  <span class="px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200 rounded-full">
+                    ${place.place_name}
+                  </span>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+            <button
+              data-index="${index}"
+              data-action="decline"
+              class="inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100 dark:bg-red-900/40 dark:text-red-200 rounded-lg border border-red-100 dark:border-red-900 cursor-pointer"
+            >
+              Decline
+            </button>
+            <button
+              data-index="${index}"
+              data-action="accept"
+              class="inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg cursor-pointer"
+            >
+              Accept & Choose Date
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Attach button listeners
+  const buttons = container.querySelectorAll<HTMLButtonElement>('button[data-index][data-action]');
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const index = parseInt(btn.getAttribute('data-index') || '0', 10);
+      const action = btn.getAttribute('data-action') as 'accept' | 'decline';
+      const request = currentPersonnelRescheduleRequests[index];
+      if (!request) {
+        return;
+      }
+
+      await processPersonnelRescheduleDecision(request, action);
+      await loadRescheduleRequestsForPersonnel();
+      // Also refresh scheduled visits to reflect updated dates/statuses
+      await loadScheduledVisits();
+    });
+  });
 }
 
 // Make function available globally
@@ -10524,6 +10733,16 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
     } else {
       statusLabel = visit.status.charAt(0).toUpperCase() + visit.status.slice(1);
     }
+
+    // Reschedule badge for visitors
+    let rescheduleBadge = '';
+    if (visit.reschedule_status === 'accepted') {
+      rescheduleBadge = '<span class="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-xs font-medium">Reschedule Accepted</span>';
+    } else if (visit.reschedule_status === 'declined') {
+      rescheduleBadge = '<span class="px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded-full text-xs font-medium">Reschedule Declined</span>';
+    } else if (visit.reschedule_status === 'pending') {
+      rescheduleBadge = '<span class="px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded-full text-xs font-medium">Reschedule Pending</span>';
+    }
     
     visitsHtml += `
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300 ease-in-out hover:shadow-lg hover:shadow-blue-500/20 hover:scale-[1.02] hover:border-blue-300 dark:hover:border-blue-600 cursor-pointer transform">
@@ -10562,6 +10781,7 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
               }">
                 ${statusLabel}
               </span>
+              ${rescheduleBadge}
               ${isToday ? '<span class="px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded-full text-xs font-medium">Today</span>' : ''}
               ${visit.status !== 'unsuccessful' && visit.status !== 'failed' && visit.status !== 'completed' && visit.status !== 'completed_flagged' ? `
                 <button 
@@ -10570,7 +10790,7 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
                   title="Print Visit Card with QR Code"
                 >
                   <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
                   </svg>
                   <span>Print</span>
                 </button>
@@ -10716,6 +10936,45 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
                   </span>
                 </div>
               ` : ''}
+              ${visit.reschedule_status === 'accepted' || visit.reschedule_status === 'declined' ? `
+                <div class="sm:col-span-2 mt-1">
+                  <span class="font-medium text-gray-700 dark:text-gray-300">Reschedule Status:</span>
+                  <span class="ml-2 text-xs px-2 py-1 rounded-full ${
+                    visit.reschedule_status === 'accepted'
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                      : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                  }">
+                    ${visit.reschedule_status === 'accepted' ? 'Accepted' : 'Declined'}
+                  </span>
+                  ${visit.reschedule_decided_at ? `
+                    <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                      on ${new Date(visit.reschedule_decided_at).toLocaleDateString()}
+                    </span>
+                  ` : ''}
+                </div>
+              ` : ''}
+              <div class="flex items-center justify-between sm:col-span-2 mt-1">
+                <span class="font-medium text-gray-700 dark:text-gray-300">Duration</span>
+                ${
+                  userRole === 'visitor' && visit.reschedule_status === 'pending'
+                    ? `
+                      <button
+                        class="px-3 py-1 bg-teal-50 text-teal-700 dark:bg-teal-900/40 dark:text-teal-200 rounded-full text-xs font-medium cursor-default flex items-center space-x-1"
+                        title="Reschedule request sent. Please wait for the personnel of this place to confirm or contact them directly for assistance."
+                      >
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span>Request Sent</span>
+                      </button>
+                    `
+                    : `
+                      <span class="text-xs text-gray-500 dark:text-gray-400">
+                        ${progress.status}
+                      </span>
+                    `
+                }
+              </div>
             </div>
           </div>
 
@@ -10844,7 +11103,16 @@ async function displayVisitorTodayVisits(visits: any[]): Promise<void> {
     } else {
       statusLabel = visit.status.charAt(0).toUpperCase() + visit.status.slice(1);
     }
-    
+    // Reschedule chip for future visits
+    let rescheduleStatusChip = '';
+    if (visit.reschedule_status === 'accepted') {
+      rescheduleStatusChip = '<span class="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-xs font-medium">Reschedule Accepted</span>';
+    } else if (visit.reschedule_status === 'declined') {
+      rescheduleStatusChip = '<span class="px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded-full text-xs font-medium">Reschedule Declined</span>';
+    } else if (visit.reschedule_status === 'pending') {
+      rescheduleStatusChip = '<span class="px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded-full text-xs font-medium">Reschedule Pending</span>';
+    }
+
     visitsHtml += `
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300 ease-in-out hover:shadow-lg hover:shadow-blue-500/20 hover:scale-[1.02] hover:border-blue-300 dark:hover:border-blue-600 cursor-pointer transform">
         <div class="p-4 sm:p-6">
@@ -10964,6 +11232,25 @@ async function displayVisitorTodayVisits(visits: any[]): Promise<void> {
               <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                 <div class="bg-green-600 h-2 rounded-full transition-all duration-300" style="width: ${totalPlaces > 0 ? (completedPlaces / totalPlaces) * 100 : 0}%"></div>
               </div>
+            </div>
+          ` : ''}
+
+          <!-- Reschedule Status (if applicable) -->
+          ${visit.reschedule_status === 'accepted' || visit.reschedule_status === 'declined' ? `
+            <div class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 text-sm">
+              <span class="font-medium text-gray-700 dark:text-gray-300">Reschedule Status:</span>
+              <span class="ml-2 text-xs px-2 py-1 rounded-full ${
+                visit.reschedule_status === 'accepted'
+                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                  : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+              }">
+                ${visit.reschedule_status === 'accepted' ? 'Accepted' : 'Declined'}
+              </span>
+              ${visit.reschedule_decided_at ? `
+                <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                  on ${new Date(visit.reschedule_decided_at).toLocaleDateString()}
+                </span>
+              ` : ''}
             </div>
           ` : ''}
 
@@ -11157,7 +11444,17 @@ async function displayVisitorFutureVisits(visits: any[]): Promise<void> {
     } else {
       statusLabel = visit.status.charAt(0).toUpperCase() + visit.status.slice(1);
     }
-    
+
+    // Reschedule chip for future visits
+    let rescheduleStatusChip = '';
+    if (visit.reschedule_status === 'accepted') {
+      rescheduleStatusChip = '<span class="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-xs font-medium">Reschedule Accepted</span>';
+    } else if (visit.reschedule_status === 'declined') {
+      rescheduleStatusChip = '<span class="px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded-full text-xs font-medium">Reschedule Declined</span>';
+    } else if (visit.reschedule_status === 'pending') {
+      rescheduleStatusChip = '<span class="px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded-full text-xs font-medium">Reschedule Pending</span>';
+    }
+
     visitsHtml += `
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300 ease-in-out hover:shadow-lg hover:shadow-blue-500/20 hover:scale-[1.02] hover:border-blue-300 dark:hover:border-blue-600 cursor-pointer transform">
         <div class="p-4 sm:p-6">
@@ -11198,6 +11495,35 @@ async function displayVisitorFutureVisits(visits: any[]): Promise<void> {
               <span class="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-xs font-medium">
                 Future
               </span>
+              ${rescheduleStatusChip}
+              ${
+                userRole === 'visitor' && visit.reschedule_status === 'pending'
+                  ? `
+                    <button
+                      class="px-3 py-1 bg-teal-50 text-teal-700 dark:bg-teal-900/40 dark:text-teal-200 rounded-full text-xs font-medium cursor-default flex items-center space-x-1"
+                      title="Reschedule request sent. Please wait for the personnel of this place to confirm or contact them directly for assistance."
+                    >
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      </svg>
+                      <span>Request Sent</span>
+                    </button>
+                  `
+                  : userRole === 'visitor' && visit.status === 'pending' && !visit.reschedule_attempted
+                    ? `
+                      <button
+                        class="px-3 py-1 bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200 rounded-full text-xs font-medium hover:bg-teal-200 dark:hover:bg-teal-800 transition-colors duration-200 flex items-center space-x-1"
+                        title="Request reschedule for this visit"
+                        onclick="window.requestVisitRescheduleForVisit && window.requestVisitRescheduleForVisit('${visit.id}', '${visit.visit_date}', '${(visit.purpose || '').replace(/'/g, '&#39;')}')"
+                      >
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span>Request Reschedule</span>
+                      </button>
+                    `
+                    : ''
+              }
               ${visit.status !== 'unsuccessful' && visit.status !== 'failed' && visit.status !== 'completed' && visit.status !== 'completed_flagged' ? `
                 <button 
                   onclick="printVisitCard('${visit.id}')"
@@ -11617,6 +11943,23 @@ async function displayVisitorPastVisits(visits: any[]): Promise<void> {
                       </button>
                     ` : ''}
                   </div>
+                </div>
+              ` : ''}
+              ${visit.reschedule_status === 'accepted' || visit.reschedule_status === 'declined' ? `
+                <div class="sm:col-span-2 mt-1">
+                  <span class="font-medium text-gray-700 dark:text-gray-300">Reschedule Status:</span>
+                  <span class="ml-2 text-xs px-2 py-1 rounded-full ${
+                    visit.reschedule_status === 'accepted'
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                      : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                  }">
+                    ${visit.reschedule_status === 'accepted' ? 'Accepted' : 'Declined'}
+                  </span>
+                  ${visit.reschedule_decided_at ? `
+                    <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                      on ${new Date(visit.reschedule_decided_at).toLocaleDateString()}
+                    </span>
+                  ` : ''}
                 </div>
               ` : ''}
             </div>
