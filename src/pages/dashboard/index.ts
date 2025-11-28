@@ -45,6 +45,7 @@ let currentVisitorStatusFilter = 'all';
 let allVisitorVisits: any[] = [];
 let filteredVisitorVisits: any[] = [];
 let hasShownPendingFeedbackModal = false;
+let hasShownPendingRescheduleModal = false;
 
 // Visitor past calendar filter state
 let currentVisitorPastStartDate = '';
@@ -6492,6 +6493,11 @@ async function loadPersonnelDashboard() {
     const isAssigned = availabilityData && availabilityData.length > 0;
     updatePersonnelButtonStates(isAssigned);
 
+    // If personnel has assigned places, check for any pending reschedule requests
+    if (isAssigned) {
+      await checkPendingRescheduleRequestsForPersonnel();
+    }
+
     // Show popup for places that are back to available after the chosen unavailable date
     try {
       const today = new Date();
@@ -10617,6 +10623,26 @@ async function checkPendingFeedbackSurveys(): Promise<void> {
     hasShownPendingFeedbackModal = true;
   } catch (error) {
     console.error('Error checking pending feedback surveys:', error);
+  }
+}
+
+async function checkPendingRescheduleRequestsForPersonnel(): Promise<void> {
+  if (hasShownPendingRescheduleModal) {
+    return;
+  }
+
+  try {
+    const requests = await fetchPersonnelRescheduleRequests();
+
+    if (!Array.isArray(requests) || requests.length === 0) {
+      return;
+    }
+
+    const { showPendingRescheduleModal } = await import('../../components/PendingRescheduleModal');
+    showPendingRescheduleModal(requests);
+    hasShownPendingRescheduleModal = true;
+  } catch (error) {
+    console.error('Error checking pending reschedule requests:', error);
   }
 }
 
