@@ -59,6 +59,7 @@ let currentLogsEndDate = '';
 // Logs pagination variables
 let currentLogsPage = 1;
 const logsPageSize = 10;
+let autoAdvanceLogs = true; // Flag to control auto-advance through pages
 
 // Mapping of available actions for each logs tab
 const LOGS_TAB_ACTIONS = {
@@ -84,6 +85,9 @@ const LOGS_TAB_ACTIONS = {
     { value: 'gate_exit_scan', label: 'Gate Exit Scan' },
     { value: 'visit_temporary_exit', label: 'Visit Temporary Exit' },
     { value: 'visit_feedback_submitted', label: 'Visit Feedback Submitted' },
+    { value: 'visit_reschedule_requested', label: 'Visit Reschedule Requested' },
+    { value: 'visit_reschedule_accepted', label: 'Visit Reschedule Accepted' },
+    { value: 'visit_reschedule_declined', label: 'Visit Reschedule Declined' },
     { value: 'role_change', label: 'Role Change' },
   ],
   gate: [
@@ -121,6 +125,9 @@ const LOGS_TAB_ACTIONS = {
     { value: 'gate_exit_scan', label: 'Gate Exit Scan' },
     { value: 'visit_temporary_exit', label: 'Visit Temporary Exit' },
     { value: 'visit_feedback_submitted', label: 'Visit Feedback Submitted' },
+    { value: 'visit_reschedule_requested', label: 'Visit Reschedule Requested' },
+    { value: 'visit_reschedule_accepted', label: 'Visit Reschedule Accepted' },
+    { value: 'visit_reschedule_declined', label: 'Visit Reschedule Declined' },
   ],
   personnel: [
     { value: 'all', label: 'All Actions' },
@@ -2206,20 +2213,49 @@ function applySearchAndFilterForAccounts() {
 
 // Function to load logs from the database
 async function loadLogs() {
+  const logsList = document.getElementById('logsList');
+  const logsPageInfo = document.getElementById('logsPageInfo');
+  
   try {
+    // Reset pagination and enable auto-advance
+    currentLogsPage = 1;
+    autoAdvanceLogs = true;
+    
+    // Show loading indicator
+    if (logsList) {
+      logsList.innerHTML = `
+        <div class="text-center py-8">
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100"></div>
+          <p class="mt-4 text-gray-600 dark:text-gray-300">Loading logs...</p>
+        </div>
+      `;
+    }
+    if (logsPageInfo) {
+      logsPageInfo.textContent = 'Loading...';
+    }
+    
     const logs = await getLogs();
     allLogs = logs || [];
     filteredLogs = [...allLogs];
+    
+    // Update count while loading
+    if (logsPageInfo && allLogs.length > 0) {
+      const totalPages = Math.max(1, Math.ceil(allLogs.length / logsPageSize));
+      logsPageInfo.textContent = `Loading ${allLogs.length} logs (${totalPages} pages)...`;
+    }
+    
     await renderLogs();
     // Update action filter options after loading logs
     updateLogsActionFilterOptions();
   } catch (error) {
     console.error('Error loading logs:', error);
-    const logsList = document.getElementById('logsList');
     if (logsList) {
       logsList.innerHTML = `
         <p class="text-red-600 dark:text-red-400">Error loading logs. Please try again.</p>
       `;
+    }
+    if (logsPageInfo) {
+      logsPageInfo.textContent = 'Error loading logs';
     }
     throw error; // Re-throw the error so it can be caught by the calling function
   }
@@ -2243,9 +2279,15 @@ async function renderLogs(): Promise<void> {
         </div>
       `;
       // Update pagination controls for empty state
-      if (logsPageInfo) logsPageInfo.textContent = 'Page 1 of 1';
-      if (logsPrevBtn) logsPrevBtn.disabled = true;
-      if (logsNextBtn) logsNextBtn.disabled = true;
+      if (logsPageInfo) logsPageInfo.textContent = 'Page 1 of 1 (0 logs)';
+      if (logsPrevBtn) {
+        logsPrevBtn.style.display = 'inline-flex';
+        logsPrevBtn.disabled = true;
+      }
+      if (logsNextBtn) {
+        logsNextBtn.style.display = 'inline-flex';
+        logsNextBtn.disabled = true;
+      }
       return;
     }
 
@@ -2477,6 +2519,9 @@ async function renderLogs(): Promise<void> {
                       log.displayAction === 'gate_exit_scan' ? 'bg-orange-200 text-orange-900 dark:bg-orange-800 dark:text-orange-100' :
                       log.displayAction === 'visit_flagged_no_exit' ? 'bg-stone-100 text-stone-800 dark:bg-stone-900 dark:text-stone-200' :
                       log.displayAction === 'role_change' ? 'bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200' :
+                      log.displayAction === 'visit_reschedule_requested' ? 'bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-200' :
+                      log.displayAction === 'visit_reschedule_accepted' ? 'bg-emerald-200 text-emerald-900 dark:bg-emerald-800 dark:text-emerald-100' :
+                      log.displayAction === 'visit_reschedule_declined' ? 'bg-rose-200 text-rose-900 dark:bg-rose-800 dark:text-rose-100' :
                       'bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200'
                     }">
                       ${log.displayAction === 'visit_completed_flagged' 
@@ -2560,6 +2605,9 @@ async function renderLogs(): Promise<void> {
                       log.displayAction === 'gate_exit_scan' ? 'bg-orange-200 text-orange-900 dark:bg-orange-800 dark:text-orange-100' :
                       log.displayAction === 'visit_flagged_no_exit' ? 'bg-stone-100 text-stone-800 dark:bg-stone-900 dark:text-stone-200' :
                       log.displayAction === 'role_change' ? 'bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200' :
+                      log.displayAction === 'visit_reschedule_requested' ? 'bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-200' :
+                      log.displayAction === 'visit_reschedule_accepted' ? 'bg-emerald-200 text-emerald-900 dark:bg-emerald-800 dark:text-emerald-100' :
+                      log.displayAction === 'visit_reschedule_declined' ? 'bg-rose-200 text-rose-900 dark:bg-rose-800 dark:text-rose-100' :
                       'bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200'
                     }">
                       ${log.displayAction === 'visit_completed_flagged' 
@@ -2594,9 +2642,27 @@ async function renderLogs(): Promise<void> {
     `;
     
     // Update pagination controls
-    if (logsPageInfo) logsPageInfo.textContent = `Page ${currentLogsPage} of ${totalPages}`;
-    if (logsPrevBtn) logsPrevBtn.disabled = currentLogsPage <= 1;
-    if (logsNextBtn) logsNextBtn.disabled = currentLogsPage >= totalPages;
+    const totalLogs = filteredLogs.length;
+    if (logsPageInfo) logsPageInfo.textContent = `Page ${currentLogsPage} of ${totalPages} (${totalLogs} ${totalLogs === 1 ? 'log' : 'logs'} total)`;
+    if (logsPrevBtn) {
+      logsPrevBtn.style.display = 'inline-flex';
+      logsPrevBtn.disabled = currentLogsPage <= 1;
+    }
+    if (logsNextBtn) {
+      logsNextBtn.style.display = 'inline-flex';
+      logsNextBtn.disabled = currentLogsPage >= totalPages;
+    }
+    
+    // Auto-advance to next page if not at the end and auto-advance is enabled
+    if (autoAdvanceLogs && currentLogsPage < totalPages) {
+      // Wait a bit before auto-advancing (gives user time to see the page)
+      setTimeout(() => {
+        if (autoAdvanceLogs && currentLogsPage < totalPages) {
+          currentLogsPage++;
+          renderLogs();
+        }
+      }, 2000); // 2 second delay between pages
+    }
   }
   
   // Set up history button event listeners after rendering
@@ -3804,6 +3870,36 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
                 <div><span class="font-medium">Feedback ID:</span> ${feedbackId}</div>
                 <div><span class="font-medium">Overall Satisfaction:</span> ${satisfactionDisplay}</div>
                 <div><span class="font-medium">Has Comments:</span> <span class="${hasComments === 'Yes' ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}">${hasComments}</span></div>`;
+      }
+      case 'visit_reschedule_requested': {
+        const visitId = parsedDetails.visit_id ? parsedDetails.visit_id.substring(0, 8) + '...' : 'Unknown';
+        const originalDate = parsedDetails.original_date ? new Date(parsedDetails.original_date).toLocaleDateString() : 'Unknown date';
+        const reason = parsedDetails.reason || 'No reason provided';
+        return `<div><span class="font-medium">Visit ID:</span> ${visitId}</div>
+                <div><span class="font-medium">Original Date:</span> ${originalDate}</div>
+                <div><span class="font-medium">Reason:</span> <span class="text-gray-700 dark:text-gray-300">${reason}</span></div>`;
+      }
+      case 'visit_reschedule_accepted': {
+        const visitId = parsedDetails.visit_id ? parsedDetails.visit_id.substring(0, 8) + '...' : 'Unknown';
+        const originalDate = parsedDetails.original_date ? new Date(parsedDetails.original_date).toLocaleDateString() : 'Unknown date';
+        const newDate = parsedDetails.new_date ? new Date(parsedDetails.new_date).toLocaleDateString() : 'Unknown date';
+        const reason = parsedDetails.reason || 'No reason provided';
+        const note = parsedDetails.note || 'No note provided';
+        return `<div><span class="font-medium">Visit ID:</span> ${visitId}</div>
+                <div><span class="font-medium">Original Date:</span> <span class="text-red-600 dark:text-red-400">${originalDate}</span></div>
+                <div><span class="font-medium">New Date:</span> <span class="text-green-600 dark:text-green-400 font-semibold">${newDate}</span></div>
+                <div><span class="font-medium">Reason:</span> <span class="text-gray-700 dark:text-gray-300">${reason}</span></div>
+                <div><span class="font-medium">Note:</span> <span class="text-gray-700 dark:text-gray-300">${note}</span></div>`;
+      }
+      case 'visit_reschedule_declined': {
+        const visitId = parsedDetails.visit_id ? parsedDetails.visit_id.substring(0, 8) + '...' : 'Unknown';
+        const originalDate = parsedDetails.original_date ? new Date(parsedDetails.original_date).toLocaleDateString() : 'Unknown date';
+        const reason = parsedDetails.reason || 'No reason provided';
+        const note = parsedDetails.note || 'No note provided';
+        return `<div><span class="font-medium">Visit ID:</span> ${visitId}</div>
+                <div><span class="font-medium">Original Date:</span> ${originalDate}</div>
+                <div><span class="font-medium">Request Reason:</span> <span class="text-gray-700 dark:text-gray-300">${reason}</span></div>
+                <div><span class="font-medium">Decline Note:</span> <span class="text-red-600 dark:text-red-400">${note}</span></div>`;
       }
       default:
         return `<pre class="text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto">${JSON.stringify(parsedDetails, null, 2)}</pre>`;
@@ -5134,6 +5230,7 @@ function setupDashboardEventListeners() {
   if (logsPrevBtn) {
     logsPrevBtn.addEventListener('click', () => {
       if (currentLogsPage > 1) {
+        autoAdvanceLogs = false; // Pause auto-advance when user manually navigates
         currentLogsPage--;
         renderLogs();
       }
@@ -5144,6 +5241,7 @@ function setupDashboardEventListeners() {
     logsNextBtn.addEventListener('click', () => {
       const totalPages = Math.max(1, Math.ceil(filteredLogs.length / logsPageSize));
       if (currentLogsPage < totalPages) {
+        autoAdvanceLogs = false; // Pause auto-advance when user manually navigates
         currentLogsPage++;
         renderLogs();
       }
@@ -6040,6 +6138,7 @@ async function applySearchAndFilterForLogs() {
 
   // Reset pagination to first page when filters change
   currentLogsPage = 1;
+  autoAdvanceLogs = true; // Re-enable auto-advance when filters change
 
   // Update global date filter state
   currentLogsStartDate = startDate;
@@ -8540,6 +8639,50 @@ if (typeof window !== 'undefined') {
   });
 }
 
+// Function to check if dropdown would be clipped by viewport or scrollable container
+function wouldDropdownBeClipped(button: HTMLElement, estimatedHeight: number = 250): boolean {
+  const buttonRect = button.getBoundingClientRect();
+  const viewportHeight = window.innerHeight;
+  const spaceBelowViewport = viewportHeight - buttonRect.bottom;
+  
+  // Check viewport space first - if not enough space in viewport, use modal
+  if (spaceBelowViewport < estimatedHeight) {
+    return true;
+  }
+  
+  // Check if inside a scrollable container that would clip it
+  let current: HTMLElement | null = button.parentElement;
+  
+  while (current && current !== document.body) {
+    const style = window.getComputedStyle(current);
+    const overflowY = style.overflowY;
+    const overflow = style.overflow;
+    
+    // Check if this container has overflow constraints
+    if (overflowY === 'auto' || overflowY === 'scroll' || overflow === 'auto' || overflow === 'scroll') {
+      const containerRect = current.getBoundingClientRect();
+      const scrollTop = current.scrollTop;
+      const scrollHeight = current.scrollHeight;
+      const clientHeight = current.clientHeight;
+      
+      // Calculate visible space below button within the container's viewport
+      const spaceBelowInContainerViewport = containerRect.bottom - buttonRect.bottom;
+      
+      // Check if we're near the bottom of the scrollable content
+      const isNearBottom = (scrollTop + clientHeight) >= scrollHeight - 50;
+      
+      // If there's not enough visible space below AND we're near the bottom of scrollable content
+      if (spaceBelowInContainerViewport < estimatedHeight && isNearBottom) {
+        return true;
+      }
+    }
+    
+    current = current.parentElement;
+  }
+  
+  return false;
+}
+
 // Function to toggle history dropdown
 function toggleHistory(historyId: string) {
   const historyDiv = document.getElementById(historyId);
@@ -8566,6 +8709,26 @@ function toggleHistory(historyId: string) {
   if (historyDiv && button && icon) {
     const isHidden = historyDiv.classList.contains('hidden');
     if (isHidden) {
+      // Temporarily show dropdown to measure its actual height
+      historyDiv.classList.remove('hidden');
+      const dropdownHeight = historyDiv.offsetHeight;
+      historyDiv.classList.add('hidden');
+      
+      // Check if dropdown would be clipped
+      if (wouldDropdownBeClipped(button, dropdownHeight + 20)) {
+        // Use modal approach when dropdown would be clipped
+        ensureHistoryModalExists();
+        const modal = document.getElementById('historyModal');
+        const modalContent = document.getElementById('historyModalContent');
+        if (modal && modalContent) {
+          const ul = historyDiv.querySelector('ul');
+          modalContent.innerHTML = ul ? ul.outerHTML : '<div class="text-gray-500">No history events.</div>';
+          modal.classList.remove('hidden');
+        }
+        return;
+      }
+      
+      // Show dropdown normally
       historyDiv.classList.remove('hidden');
       icon.style.transform = 'rotate(180deg)';
       const span = button.querySelector('span');

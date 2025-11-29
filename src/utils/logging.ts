@@ -73,8 +73,8 @@ export async function getLogs(): Promise<any[]> {
     const { data: logs, error } = await supabase
       .from('logs')
       .select('*')
-      .order('created_at', { ascending: false })
-      .limit(100); // Limit to last 100 logs
+      .order('created_at', { ascending: false });
+      // Removed limit to fetch all logs
 
     if (error) {
       console.error('Error fetching logs:', error);
