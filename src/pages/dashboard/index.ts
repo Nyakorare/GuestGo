@@ -6,6 +6,7 @@ import { generateSimpleVisitQRCode } from '../../utils/qrCode';
 import jsQR from 'jsqr';
 import { addNotificationToActionBadge, addNotificationToLogContainer, shouldShowNotification, getNotificationConfig } from '../../utils/notification.js';
 import { createFlaggedVisitModal, setupFlaggedVisitModalListeners, displayFlaggedVisitDetails } from '../../components/FlaggedVisitModal';
+import { createLogsPagination, setupLogsPaginationListeners } from '../../components/LogsPagination';
 
 interface Place {
   id: string;
@@ -781,30 +782,10 @@ export function DashboardPage() {
             </div>
           </div>
         </div>
-        <div id="logsList" class="overflow-x-auto space-y-4"></div>
+        <div id="logsList" class="logs-container space-y-4"></div>
         
         <!-- Logs Pagination Controls -->
-        <div id="logsPagination" class="flex items-center justify-between mt-6 px-4 py-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-          <div class="flex items-center text-sm text-gray-700 dark:text-gray-300">
-            <span id="logsPageInfo">Page 1 of 1</span>
-          </div>
-          <div class="flex items-center space-x-2">
-            <button 
-              id="logsPrevBtn"
-              class="px-3 py-1 text-sm font-medium text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled
-            >
-              Previous
-            </button>
-            <button 
-              id="logsNextBtn"
-              class="px-3 py-1 text-sm font-medium text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled
-            >
-              Next
-            </button>
-          </div>
-        </div>
+        <div id="logsPagination"></div>
       </div>
 
       <div id="gatesContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
@@ -2214,7 +2195,7 @@ function applySearchAndFilterForAccounts() {
 // Function to load logs from the database
 async function loadLogs() {
   const logsList = document.getElementById('logsList');
-  const logsPageInfo = document.getElementById('logsPageInfo');
+  const logsPagination = document.getElementById('logsPagination');
   
   try {
     // Reset pagination and enable auto-advance
@@ -2230,19 +2211,13 @@ async function loadLogs() {
         </div>
       `;
     }
-    if (logsPageInfo) {
-      logsPageInfo.textContent = 'Loading...';
+    if (logsPagination) {
+      logsPagination.innerHTML = '<div class="text-sm text-gray-600 dark:text-gray-300">Loading...</div>';
     }
     
     const logs = await getLogs();
     allLogs = logs || [];
     filteredLogs = [...allLogs];
-    
-    // Update count while loading
-    if (logsPageInfo && allLogs.length > 0) {
-      const totalPages = Math.max(1, Math.ceil(allLogs.length / logsPageSize));
-      logsPageInfo.textContent = `Loading ${allLogs.length} logs (${totalPages} pages)...`;
-    }
     
     await renderLogs();
     // Update action filter options after loading logs
@@ -2254,8 +2229,8 @@ async function loadLogs() {
         <p class="text-red-600 dark:text-red-400">Error loading logs. Please try again.</p>
       `;
     }
-    if (logsPageInfo) {
-      logsPageInfo.textContent = 'Error loading logs';
+    if (logsPagination) {
+      logsPagination.innerHTML = '<div class="text-sm text-red-600 dark:text-red-400">Error loading logs</div>';
     }
     throw error; // Re-throw the error so it can be caught by the calling function
   }
@@ -2267,9 +2242,6 @@ async function loadLogs() {
 // Function to render logs based on current filters
 async function renderLogs(): Promise<void> {
   const logsList = document.getElementById('logsList');
-  const logsPageInfo = document.getElementById('logsPageInfo');
-  const logsPrevBtn = document.getElementById('logsPrevBtn') as HTMLButtonElement;
-  const logsNextBtn = document.getElementById('logsNextBtn') as HTMLButtonElement;
   
   if (logsList) {
     if (filteredLogs.length === 0) {
@@ -2279,14 +2251,18 @@ async function renderLogs(): Promise<void> {
         </div>
       `;
       // Update pagination controls for empty state
-      if (logsPageInfo) logsPageInfo.textContent = 'Page 1 of 1 (0 logs)';
-      if (logsPrevBtn) {
-        logsPrevBtn.style.display = 'inline-flex';
-        logsPrevBtn.disabled = true;
-      }
-      if (logsNextBtn) {
-        logsNextBtn.style.display = 'inline-flex';
-        logsNextBtn.disabled = true;
+      const logsPagination = document.getElementById('logsPagination');
+      if (logsPagination) {
+        logsPagination.innerHTML = createLogsPagination({
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: 0,
+          pageSize: logsPageSize,
+          onPageChange: (page: number) => {
+            currentLogsPage = page;
+            renderLogs();
+          }
+        });
       }
       return;
     }
@@ -2459,7 +2435,7 @@ async function renderLogs(): Promise<void> {
 
     logsList.innerHTML = `
       <!-- Desktop Table View (hidden on mobile) -->
-      <div class="hidden lg:block overflow-x-auto">
+      <div class="hidden lg:block overflow-x-auto logs-table-container">
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead class="bg-gray-50 dark:bg-gray-800">
             <tr>
@@ -2553,7 +2529,7 @@ async function renderLogs(): Promise<void> {
       </div>
 
       <!-- Mobile Card View (visible on mobile and tablet) -->
-      <div class="lg:hidden space-y-4">
+      <div class="lg:hidden space-y-4 logs-mobile-container">
         ${(formattedDetails as any[]).map((log: any) => `
           <div class="relative bg-white dark:bg-gray-700 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 p-4 pl-8 hover:shadow-md hover:border-gray-300 dark:hover:border-gray-500 transition-all duration-200 ease-in-out transform hover:scale-[1.02] hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer group">
             ${shouldShowNotification(log.displayAction) ? `
@@ -2641,16 +2617,41 @@ async function renderLogs(): Promise<void> {
       </div>
     `;
     
-    // Update pagination controls
+    // Update pagination controls using new component
     const totalLogs = filteredLogs.length;
-    if (logsPageInfo) logsPageInfo.textContent = `Page ${currentLogsPage} of ${totalPages} (${totalLogs} ${totalLogs === 1 ? 'log' : 'logs'} total)`;
-    if (logsPrevBtn) {
-      logsPrevBtn.style.display = 'inline-flex';
-      logsPrevBtn.disabled = currentLogsPage <= 1;
-    }
-    if (logsNextBtn) {
-      logsNextBtn.style.display = 'inline-flex';
-      logsNextBtn.disabled = currentLogsPage >= totalPages;
+    const logsPagination = document.getElementById('logsPagination');
+    if (logsPagination) {
+      logsPagination.innerHTML = createLogsPagination({
+        currentPage: currentLogsPage,
+        totalPages: totalPages,
+        totalItems: totalLogs,
+        pageSize: logsPageSize,
+        onPageChange: (page: number) => {
+          autoAdvanceLogs = false; // Pause auto-advance when user manually navigates
+          currentLogsPage = page;
+          renderLogs();
+        }
+      });
+      
+      // Setup pagination event listeners
+      setupLogsPaginationListeners(
+        {
+          currentPage: currentLogsPage,
+          totalPages: totalPages,
+          totalItems: totalLogs,
+          pageSize: logsPageSize,
+          onPageChange: (page: number) => {
+            autoAdvanceLogs = false; // Pause auto-advance when user manually navigates
+            currentLogsPage = page;
+            renderLogs();
+          }
+        },
+        (page: number) => {
+          autoAdvanceLogs = false; // Pause auto-advance when user manually navigates
+          currentLogsPage = page;
+          renderLogs();
+        }
+      );
     }
     
     // Auto-advance to next page if not at the end and auto-advance is enabled
@@ -2665,10 +2666,40 @@ async function renderLogs(): Promise<void> {
     }
   }
   
-  // Set up history button event listeners after rendering
-  setTimeout(() => {
-    setupHistoryButtonListeners();
-  }, 100);
+    // Set up history button event listeners after rendering
+    setTimeout(() => {
+      setupHistoryButtonListeners();
+    }, 100);
+    
+    // Prevent scrollwheel on hover for logs containers
+    const logsTableContainer = logsList.querySelector('.logs-table-container');
+    const logsMobileContainer = logsList.querySelector('.logs-mobile-container');
+    
+    const preventWheelOnHover = (element: HTMLElement | null) => {
+      if (!element) return;
+      
+      let isHovering = false;
+      
+      element.addEventListener('mouseenter', () => {
+        isHovering = true;
+        element.style.overflow = 'hidden';
+      });
+      
+      element.addEventListener('mouseleave', () => {
+        isHovering = false;
+        element.style.overflow = '';
+      });
+      
+      element.addEventListener('wheel', (e) => {
+        if (isHovering) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }, { passive: false });
+    };
+    
+    preventWheelOnHover(logsTableContainer as HTMLElement);
+    preventWheelOnHover(logsMobileContainer as HTMLElement);
 }
 // Function to format log details for display
 async function formatLogDetails(details: any, action: string, log?: any): Promise<string> {
@@ -5223,30 +5254,8 @@ function setupDashboardEventListeners() {
     await applySearchAndFilterForLogs();
   });
 
-  // Logs pagination event listeners
-  const logsPrevBtn = document.getElementById('logsPrevBtn') as HTMLButtonElement;
-  const logsNextBtn = document.getElementById('logsNextBtn') as HTMLButtonElement;
-
-  if (logsPrevBtn) {
-    logsPrevBtn.addEventListener('click', () => {
-      if (currentLogsPage > 1) {
-        autoAdvanceLogs = false; // Pause auto-advance when user manually navigates
-        currentLogsPage--;
-        renderLogs();
-      }
-    });
-  }
-
-  if (logsNextBtn) {
-    logsNextBtn.addEventListener('click', () => {
-      const totalPages = Math.max(1, Math.ceil(filteredLogs.length / logsPageSize));
-      if (currentLogsPage < totalPages) {
-        autoAdvanceLogs = false; // Pause auto-advance when user manually navigates
-        currentLogsPage++;
-        renderLogs();
-      }
-    });
-  }
+  // Logs pagination event listeners are now handled by the LogsPagination component
+  // No need for separate event listeners here as they're set up in renderLogs()
 
   // Logs filters dropdown toggle
   if (logsFiltersDropdownBtn && logsFiltersDropdown) {

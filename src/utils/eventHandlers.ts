@@ -1,6 +1,111 @@
 import supabase from '../config/supabase';
 import { logAction } from './logging';
 
+// Function to show logout modal after password change
+function showPasswordChangeLogoutModal() {
+  // Remove any existing modal
+  const existingModal = document.getElementById('password-change-logout-modal');
+  if (existingModal) {
+    existingModal.remove();
+  }
+
+  // Create modal HTML
+  const modalHTML = `
+    <div id="password-change-logout-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+      <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 transform transition-all duration-300">
+        <!-- Header with gradient background -->
+        <div class="bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 rounded-t-2xl p-6">
+          <div class="flex items-center space-x-3">
+            <div class="bg-white/20 backdrop-blur-sm p-2 rounded-lg">
+              <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 class="text-2xl font-bold text-white">Password Changed</h3>
+          </div>
+        </div>
+
+        <!-- Content -->
+        <div class="p-6">
+          <div class="mb-6">
+            <div class="flex items-start space-x-4">
+              <div class="flex-shrink-0">
+                <div class="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-full">
+                  <svg class="h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+              </div>
+              <div class="flex-1">
+                <p class="text-gray-700 dark:text-gray-300 leading-relaxed">
+                  Your password has been successfully changed. For security reasons, you have been logged out. Please log in again with your new password.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Button -->
+          <div class="flex justify-end">
+            <button 
+              id="passwordChangeLogoutOkBtn"
+              class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transform hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl"
+            >
+              OK, Log Me Out
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Add modal to page
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+  // Lock body scroll while modal is open
+  document.body.classList.add('overflow-hidden');
+
+  // Setup event listeners
+  const modal = document.getElementById('password-change-logout-modal');
+  const okBtn = document.getElementById('passwordChangeLogoutOkBtn');
+
+  const handleLogout = async () => {
+    if (modal) {
+      modal.remove();
+    }
+    // Restore body scroll
+    document.body.classList.remove('overflow-hidden');
+    
+    // Log out the user
+    await supabase.auth.signOut();
+    
+    // Redirect to home page
+    window.location.hash = '/';
+    
+    // Reload after a short delay
+    setTimeout(() => {
+      window.location.reload();
+    }, 50);
+  };
+
+  okBtn?.addEventListener('click', handleLogout);
+
+  // Close on background click
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      handleLogout();
+    }
+  });
+
+  // Close on escape key
+  const escapeHandler = (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && modal) {
+      handleLogout();
+      document.removeEventListener('keydown', escapeHandler);
+    }
+  };
+  document.addEventListener('keydown', escapeHandler);
+}
+
 export function setupModalListeners(modalId: string, openButtonClass: string) {
   const modal = document.getElementById(modalId);
   const openButtons = document.querySelectorAll(`.${openButtonClass}`);
@@ -152,21 +257,66 @@ export function setupEventListeners() {
       const passwordError = document.getElementById('passwordError');
       const passwordSuccess = document.getElementById('passwordSuccess');
       const submitBtn = passwordChangeForm?.querySelector('button[type="submit"]') as HTMLButtonElement;
+      const confirmPasswordInput = document.getElementById('confirmPassword') as HTMLInputElement;
+      const passwordMatchIcon = document.getElementById('passwordMatchIcon');
+      const passwordMismatchIcon = document.getElementById('passwordMismatchIcon');
+      const passwordMatchFeedback = document.getElementById('passwordMatchFeedback');
       
       if (passwordChangeForm) {
         passwordChangeForm.reset();
       }
       if (passwordError) {
         passwordError.classList.add('hidden');
-        passwordError.textContent = '';
+        const errorSpan = passwordError.querySelector('span');
+        if (errorSpan) errorSpan.textContent = '';
       }
       if (passwordSuccess) {
         passwordSuccess.classList.add('hidden');
-        passwordSuccess.textContent = '';
+        const successSpan = passwordSuccess.querySelector('span');
+        if (successSpan) successSpan.textContent = '';
       }
       if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Change Password';
+      }
+      // Reset password match feedback
+      const currentPasswordInput = document.getElementById('currentPassword') as HTMLInputElement;
+      const currentPasswordLoadingIcon = document.getElementById('currentPasswordLoadingIcon');
+      const currentPasswordCorrectIcon = document.getElementById('currentPasswordCorrectIcon');
+      const currentPasswordIncorrectIcon = document.getElementById('currentPasswordIncorrectIcon');
+      const currentPasswordFeedback = document.getElementById('currentPasswordFeedback');
+      const newPasswordInput = document.getElementById('newPassword') as HTMLInputElement;
+
+      if (passwordMatchIcon) passwordMatchIcon.classList.add('hidden');
+      if (passwordMismatchIcon) passwordMismatchIcon.classList.add('hidden');
+      if (passwordMatchFeedback) {
+        passwordMatchFeedback.textContent = '';
+        passwordMatchFeedback.classList.remove('text-green-600', 'text-red-600', 'dark:text-green-400', 'dark:text-red-400');
+      }
+      if (confirmPasswordInput) {
+        confirmPasswordInput.classList.remove('border-green-500', 'border-red-500', 'focus:border-green-500', 'focus:border-red-500');
+        confirmPasswordInput.classList.add('border-gray-300', 'dark:border-gray-600');
+      }
+      // Reset current password verification state
+      if (currentPasswordLoadingIcon) currentPasswordLoadingIcon.classList.add('hidden');
+      if (currentPasswordCorrectIcon) currentPasswordCorrectIcon.classList.add('hidden');
+      if (currentPasswordIncorrectIcon) currentPasswordIncorrectIcon.classList.add('hidden');
+      if (currentPasswordFeedback) {
+        currentPasswordFeedback.textContent = '';
+        currentPasswordFeedback.classList.remove('text-green-600', 'text-red-600', 'dark:text-green-400', 'dark:text-red-400');
+      }
+      if (currentPasswordInput) {
+        currentPasswordInput.classList.remove('border-green-500', 'border-red-500', 'focus:border-green-500', 'focus:border-red-500');
+        currentPasswordInput.classList.add('border-gray-300', 'dark:border-gray-600');
+        // Re-enable the input when modal is closed/reset
+        currentPasswordInput.disabled = false;
+      }
+      // Disable new password fields
+      if (newPasswordInput) {
+        newPasswordInput.disabled = true;
+      }
+      if (confirmPasswordInput) {
+        confirmPasswordInput.disabled = true;
       }
     }
   };
@@ -188,14 +338,15 @@ export function setupEventListeners() {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
-        // Get user's role
+        // Get user's role and name
         const { data: roleData } = await supabase
           .from('user_roles')
-          .select('role')
+          .select('role, first_name, last_name')
           .eq('user_id', user.id)
           .single();
 
         const modalUserRole = document.getElementById('modalUserRole');
+        const modalUserName = document.getElementById('modalUserName');
         const modalUserId = document.getElementById('modalUserId');
         
         if (modalUserRole) {
@@ -205,6 +356,23 @@ export function setupEventListeners() {
             modalUserRole.textContent = role;
           } else {
             modalUserRole.textContent = 'User';
+          }
+        }
+
+        // Set user full name
+        if (modalUserName) {
+          if (roleData && roleData.first_name && roleData.last_name) {
+            modalUserName.textContent = `${roleData.first_name} ${roleData.last_name}`;
+          } else if (roleData && roleData.first_name) {
+            modalUserName.textContent = roleData.first_name;
+          } else if (user.user_metadata?.first_name && user.user_metadata?.last_name) {
+            modalUserName.textContent = `${user.user_metadata.first_name} ${user.user_metadata.last_name}`;
+          } else if (user.user_metadata?.first_name) {
+            modalUserName.textContent = user.user_metadata.first_name;
+          } else if (user.email) {
+            modalUserName.textContent = user.email;
+          } else {
+            modalUserName.textContent = 'User';
           }
         }
 
@@ -248,6 +416,241 @@ export function setupEventListeners() {
   // Handle password change form
   const passwordChangeForm = document.getElementById('passwordChangeForm') as HTMLFormElement;
   if (passwordChangeForm) {
+    // Get all password-related elements
+    const currentPasswordInput = document.getElementById('currentPassword') as HTMLInputElement;
+    const newPasswordInput = document.getElementById('newPassword') as HTMLInputElement;
+    const confirmPasswordInput = document.getElementById('confirmPassword') as HTMLInputElement;
+    const passwordMatchIcon = document.getElementById('passwordMatchIcon');
+    const passwordMismatchIcon = document.getElementById('passwordMismatchIcon');
+    const passwordMatchFeedback = document.getElementById('passwordMatchFeedback');
+    const currentPasswordLoadingIcon = document.getElementById('currentPasswordLoadingIcon');
+    const currentPasswordCorrectIcon = document.getElementById('currentPasswordCorrectIcon');
+    const currentPasswordIncorrectIcon = document.getElementById('currentPasswordIncorrectIcon');
+    const currentPasswordFeedback = document.getElementById('currentPasswordFeedback');
+
+    // Track current password verification state
+    let isCurrentPasswordValid = false;
+    let passwordVerificationTimeout: NodeJS.Timeout | null = null;
+    let currentUserEmail: string | null = null;
+
+    // Get current user email
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        currentUserEmail = user.email;
+      }
+    })();
+
+    // Function to verify current password
+    const verifyCurrentPassword = async (password: string) => {
+      if (!password || !currentUserEmail) {
+        isCurrentPasswordValid = false;
+        updatePasswordFieldsState();
+        return;
+      }
+
+      // Show loading icon
+      if (currentPasswordLoadingIcon) currentPasswordLoadingIcon.classList.remove('hidden');
+      if (currentPasswordCorrectIcon) currentPasswordCorrectIcon.classList.add('hidden');
+      if (currentPasswordIncorrectIcon) currentPasswordIncorrectIcon.classList.add('hidden');
+      if (currentPasswordFeedback) {
+        currentPasswordFeedback.textContent = '';
+        currentPasswordFeedback.classList.remove('text-green-600', 'text-red-600', 'dark:text-green-400', 'dark:text-red-400');
+      }
+
+      try {
+        // Try to sign in with the current password to verify it
+        const { error } = await supabase.auth.signInWithPassword({
+          email: currentUserEmail,
+          password: password
+        });
+
+        if (error) {
+          // Password is incorrect
+          isCurrentPasswordValid = false;
+          if (currentPasswordLoadingIcon) currentPasswordLoadingIcon.classList.add('hidden');
+          if (currentPasswordCorrectIcon) currentPasswordCorrectIcon.classList.add('hidden');
+          if (currentPasswordIncorrectIcon) currentPasswordIncorrectIcon.classList.remove('hidden');
+          if (currentPasswordInput) {
+            currentPasswordInput.classList.remove('border-green-500', 'focus:border-green-500', 'border-gray-300', 'dark:border-gray-600');
+            currentPasswordInput.classList.add('border-red-500', 'focus:border-red-500');
+          }
+          if (currentPasswordFeedback) {
+            currentPasswordFeedback.textContent = 'Incorrect password';
+            currentPasswordFeedback.classList.remove('text-green-600', 'dark:text-green-400');
+            currentPasswordFeedback.classList.add('text-red-600', 'dark:text-red-400');
+          }
+        } else {
+          // Password is correct
+          isCurrentPasswordValid = true;
+          if (currentPasswordLoadingIcon) currentPasswordLoadingIcon.classList.add('hidden');
+          if (currentPasswordCorrectIcon) currentPasswordCorrectIcon.classList.remove('hidden');
+          if (currentPasswordIncorrectIcon) currentPasswordIncorrectIcon.classList.add('hidden');
+          if (currentPasswordInput) {
+            currentPasswordInput.classList.remove('border-red-500', 'focus:border-red-500', 'border-gray-300', 'dark:border-gray-600');
+            currentPasswordInput.classList.add('border-green-500', 'focus:border-green-500');
+            // Disable the input but keep the value visible
+            currentPasswordInput.disabled = true;
+          }
+          if (currentPasswordFeedback) {
+            currentPasswordFeedback.textContent = 'Password verified';
+            currentPasswordFeedback.classList.remove('text-red-600', 'dark:text-red-400');
+            currentPasswordFeedback.classList.add('text-green-600', 'dark:text-green-400');
+          }
+        }
+      } catch (err) {
+        // Error verifying password
+        isCurrentPasswordValid = false;
+        if (currentPasswordLoadingIcon) currentPasswordLoadingIcon.classList.add('hidden');
+        if (currentPasswordCorrectIcon) currentPasswordCorrectIcon.classList.add('hidden');
+        if (currentPasswordIncorrectIcon) currentPasswordIncorrectIcon.classList.remove('hidden');
+        if (currentPasswordInput) {
+          currentPasswordInput.classList.remove('border-green-500', 'focus:border-green-500', 'border-gray-300', 'dark:border-gray-600');
+          currentPasswordInput.classList.add('border-red-500', 'focus:border-red-500');
+        }
+        if (currentPasswordFeedback) {
+          currentPasswordFeedback.textContent = 'Error verifying password';
+          currentPasswordFeedback.classList.remove('text-green-600', 'dark:text-green-400');
+          currentPasswordFeedback.classList.add('text-red-600', 'dark:text-red-400');
+        }
+      } finally {
+        updatePasswordFieldsState();
+      }
+    };
+
+    // Function to update password fields state
+    const updatePasswordFieldsState = () => {
+      if (isCurrentPasswordValid) {
+        // Enable new password fields
+        if (newPasswordInput) {
+          newPasswordInput.disabled = false;
+        }
+        if (confirmPasswordInput) {
+          confirmPasswordInput.disabled = false;
+        }
+      } else {
+        // Disable new password fields
+        if (newPasswordInput) {
+          newPasswordInput.disabled = true;
+          newPasswordInput.value = '';
+        }
+        if (confirmPasswordInput) {
+          confirmPasswordInput.disabled = true;
+          confirmPasswordInput.value = '';
+        }
+        // Reset password match feedback
+        if (passwordMatchIcon) passwordMatchIcon.classList.add('hidden');
+        if (passwordMismatchIcon) passwordMismatchIcon.classList.add('hidden');
+        if (passwordMatchFeedback) {
+          passwordMatchFeedback.textContent = '';
+          passwordMatchFeedback.classList.remove('text-green-600', 'text-red-600', 'dark:text-green-400', 'dark:text-red-400');
+        }
+        if (confirmPasswordInput) {
+          confirmPasswordInput.classList.remove('border-green-500', 'border-red-500', 'focus:border-green-500', 'focus:border-red-500');
+          confirmPasswordInput.classList.add('border-gray-300', 'dark:border-gray-600');
+        }
+      }
+    };
+
+    // Debounced password verification
+    const debouncedVerifyPassword = (password: string) => {
+      if (passwordVerificationTimeout) {
+        clearTimeout(passwordVerificationTimeout);
+      }
+      passwordVerificationTimeout = setTimeout(() => {
+        verifyCurrentPassword(password);
+      }, 500); // Wait 500ms after user stops typing
+    };
+
+    // Add event listeners for current password verification
+    currentPasswordInput?.addEventListener('input', (e) => {
+      const password = (e.target as HTMLInputElement).value;
+      // Don't verify if input is disabled (already verified)
+      if (currentPasswordInput?.disabled) {
+        return;
+      }
+      if (password.length === 0) {
+        // Reset state when field is empty
+        isCurrentPasswordValid = false;
+        if (currentPasswordLoadingIcon) currentPasswordLoadingIcon.classList.add('hidden');
+        if (currentPasswordCorrectIcon) currentPasswordCorrectIcon.classList.add('hidden');
+        if (currentPasswordIncorrectIcon) currentPasswordIncorrectIcon.classList.add('hidden');
+        if (currentPasswordFeedback) {
+          currentPasswordFeedback.textContent = '';
+          currentPasswordFeedback.classList.remove('text-green-600', 'text-red-600', 'dark:text-green-400', 'dark:text-red-400');
+        }
+        if (currentPasswordInput) {
+          currentPasswordInput.classList.remove('border-green-500', 'border-red-500', 'focus:border-green-500', 'focus:border-red-500');
+          currentPasswordInput.classList.add('border-gray-300', 'dark:border-gray-600');
+        }
+        updatePasswordFieldsState();
+      } else {
+        debouncedVerifyPassword(password);
+      }
+    });
+
+    // Initialize fields as disabled
+    updatePasswordFieldsState();
+
+    const checkPasswordMatch = () => {
+      const newPassword = newPasswordInput?.value || '';
+      const confirmPassword = confirmPasswordInput?.value || '';
+
+      if (confirmPassword.length === 0) {
+        // No feedback if confirm password is empty
+        if (passwordMatchIcon) passwordMatchIcon.classList.add('hidden');
+        if (passwordMismatchIcon) passwordMismatchIcon.classList.add('hidden');
+        if (passwordMatchFeedback) {
+          passwordMatchFeedback.textContent = '';
+          passwordMatchFeedback.classList.remove('text-green-600', 'text-red-600', 'dark:text-green-400', 'dark:text-red-400');
+        }
+        // Reset border to default
+        if (confirmPasswordInput) {
+          confirmPasswordInput.classList.remove('border-green-500', 'border-red-500', 'focus:border-green-500', 'focus:border-red-500');
+          confirmPasswordInput.classList.add('border-gray-300', 'dark:border-gray-600');
+        }
+        return;
+      }
+
+      if (newPassword.length > 0 && confirmPassword.length > 0) {
+        if (newPassword === confirmPassword) {
+          // Passwords match
+          if (passwordMatchIcon) passwordMatchIcon.classList.remove('hidden');
+          if (passwordMismatchIcon) passwordMismatchIcon.classList.add('hidden');
+          if (passwordMatchFeedback) {
+            passwordMatchFeedback.textContent = 'Passwords match';
+            passwordMatchFeedback.classList.remove('text-red-600', 'dark:text-red-400');
+            passwordMatchFeedback.classList.add('text-green-600', 'dark:text-green-400');
+          }
+          // Update border color to green
+          if (confirmPasswordInput) {
+            confirmPasswordInput.classList.remove('border-red-500', 'focus:border-red-500', 'border-gray-300', 'dark:border-gray-600');
+            confirmPasswordInput.classList.add('border-green-500', 'focus:border-green-500');
+          }
+        } else {
+          // Passwords don't match
+          if (passwordMatchIcon) passwordMatchIcon.classList.add('hidden');
+          if (passwordMismatchIcon) passwordMismatchIcon.classList.remove('hidden');
+          if (passwordMatchFeedback) {
+            passwordMatchFeedback.textContent = 'Passwords do not match';
+            passwordMatchFeedback.classList.remove('text-green-600', 'dark:text-green-400');
+            passwordMatchFeedback.classList.add('text-red-600', 'dark:text-red-400');
+          }
+          // Update border color to red
+          if (confirmPasswordInput) {
+            confirmPasswordInput.classList.remove('border-green-500', 'focus:border-green-500', 'border-gray-300', 'dark:border-gray-600');
+            confirmPasswordInput.classList.add('border-red-500', 'focus:border-red-500');
+          }
+        }
+      }
+    };
+
+    // Add event listeners for live feedback
+    newPasswordInput?.addEventListener('input', checkPasswordMatch);
+    newPasswordInput?.addEventListener('keyup', checkPasswordMatch);
+    confirmPasswordInput?.addEventListener('input', checkPasswordMatch);
+    confirmPasswordInput?.addEventListener('keyup', checkPasswordMatch);
+
     passwordChangeForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       
@@ -261,17 +664,30 @@ export function setupEventListeners() {
       // Reset messages
       if (passwordError) {
         passwordError.classList.add('hidden');
-        passwordError.textContent = '';
+        const errorSpan = passwordError.querySelector('span');
+        if (errorSpan) errorSpan.textContent = '';
       }
       if (passwordSuccess) {
         passwordSuccess.classList.add('hidden');
-        passwordSuccess.textContent = '';
+        const successSpan = passwordSuccess.querySelector('span');
+        if (successSpan) successSpan.textContent = '';
       }
 
       // Validate current password is provided
       if (!currentPassword) {
         if (passwordError) {
-          passwordError.textContent = 'Current password is required';
+          const errorSpan = passwordError.querySelector('span');
+          if (errorSpan) errorSpan.textContent = 'Current password is required';
+          passwordError.classList.remove('hidden');
+        }
+        return;
+      }
+
+      // Validate that current password has been verified
+      if (!isCurrentPasswordValid) {
+        if (passwordError) {
+          const errorSpan = passwordError.querySelector('span');
+          if (errorSpan) errorSpan.textContent = 'Please verify your current password first';
           passwordError.classList.remove('hidden');
         }
         return;
@@ -280,7 +696,8 @@ export function setupEventListeners() {
       // Validate new password is provided
       if (!newPassword) {
         if (passwordError) {
-          passwordError.textContent = 'New password is required';
+          const errorSpan = passwordError.querySelector('span');
+          if (errorSpan) errorSpan.textContent = 'New password is required';
           passwordError.classList.remove('hidden');
         }
         return;
@@ -289,7 +706,8 @@ export function setupEventListeners() {
       // Validate new password length
       if (newPassword.length < 6) {
         if (passwordError) {
-          passwordError.textContent = 'New password must be at least 6 characters long';
+          const errorSpan = passwordError.querySelector('span');
+          if (errorSpan) errorSpan.textContent = 'New password must be at least 6 characters long';
           passwordError.classList.remove('hidden');
         }
         return;
@@ -298,7 +716,8 @@ export function setupEventListeners() {
       // Validate passwords match
       if (newPassword !== confirmPassword) {
         if (passwordError) {
-          passwordError.textContent = 'New passwords do not match';
+          const errorSpan = passwordError.querySelector('span');
+          if (errorSpan) errorSpan.textContent = 'New passwords do not match';
           passwordError.classList.remove('hidden');
         }
         return;
@@ -322,25 +741,17 @@ export function setupEventListeners() {
           timestamp: new Date().toISOString()
         });
 
-        if (passwordSuccess) {
-          passwordSuccess.textContent = 'Password updated successfully';
-          passwordSuccess.classList.remove('hidden');
+        // Close the profile settings modal
+        if (profileSettingsModal) {
+          profileSettingsModal.classList.add('hidden');
         }
-        if (passwordError) {
-          passwordError.classList.add('hidden');
-        }
-        passwordChangeForm.reset();
 
-        // Hide success message after 3 seconds
-        setTimeout(() => {
-          if (passwordSuccess) {
-            passwordSuccess.classList.add('hidden');
-            passwordSuccess.textContent = '';
-          }
-        }, 3000);
+        // Show logout modal and sign out
+        showPasswordChangeLogoutModal();
       } catch (err: any) {
         if (passwordError) {
-          passwordError.textContent = err.message || 'Failed to update password';
+          const errorSpan = passwordError.querySelector('span');
+          if (errorSpan) errorSpan.textContent = err.message || 'Failed to update password';
           passwordError.classList.remove('hidden');
         }
         if (passwordSuccess) {
