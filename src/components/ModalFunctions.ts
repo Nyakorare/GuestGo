@@ -2089,9 +2089,19 @@ export async function setupEventListeners() {
       const minAllowedDate = new Date(currentPhilippineDate);
       minAllowedDate.setDate(minAllowedDate.getDate() + maxRequiredDays);
 
-      // Clear previous validation
-      visitDateInput.classList.remove('border-red-500', 'border-green-500', 'border-yellow-500', 'focus:border-red-500', 'focus:border-green-500', 'focus:border-yellow-500');
-      if (dateValidationStatus) dateValidationStatus.className = 'mt-1 text-sm';
+      // Clear previous validation so feedback fully refreshes on every date change
+      visitDateInput.classList.remove(
+        'border-red-500',
+        'border-green-500',
+        'border-yellow-500',
+        'focus:border-red-500',
+        'focus:border-green-500',
+        'focus:border-yellow-500'
+      );
+      if (dateValidationStatus) {
+        dateValidationStatus.textContent = '';
+        dateValidationStatus.className = 'mt-1 text-sm';
+      }
 
       // Check if date meets required advance notice (must be at least the required days away)
       // Allow dates that are >= minAllowedDate (i.e., on or after the required days)
@@ -2304,6 +2314,8 @@ export async function setupEventListeners() {
             }
           }
           
+          const weeklyWarning = '⚠️ You have 1 visit scheduled this week. You can schedule 1 more visit.';
+          
           if (weeklyVisitCount >= 2) {
             visitDateInput.classList.add('border-red-500', 'focus:border-red-500');
             if (dateValidationStatus) {
@@ -2318,10 +2330,27 @@ export async function setupEventListeners() {
             // Warning: one more visit allowed
             if (dateValidationStatus && !dateValidationStatus.textContent.includes('❌')) {
               const existingText = dateValidationStatus.textContent || '';
-              if (!existingText.includes('weekly visit limit')) {
+              
+              // Avoid appending the same weekly warning multiple times
+              if (!existingText.includes(weeklyWarning)) {
                 visitDateInput.classList.add('border-yellow-500', 'focus:border-yellow-500');
-                dateValidationStatus.textContent = `${existingText ? existingText + ' ' : ''}⚠️ You have 1 visit scheduled this week. You can schedule 1 more visit.`;
+                dateValidationStatus.textContent = existingText
+                  ? `${existingText} ${weeklyWarning}`
+                  : weeklyWarning;
                 dateValidationStatus.className = 'mt-1 text-sm text-yellow-600 font-medium';
+              }
+            }
+          } else {
+            // weeklyVisitCount === 0 → remove any stale weekly warning text and yellow border
+            visitDateInput.classList.remove('border-yellow-500', 'focus:border-yellow-500');
+            if (dateValidationStatus && dateValidationStatus.textContent) {
+              if (dateValidationStatus.textContent.includes(weeklyWarning)) {
+                const cleaned = dateValidationStatus.textContent.replace(weeklyWarning, '').trim();
+                dateValidationStatus.textContent = cleaned;
+                // If only the weekly warning was present, reset to neutral style
+                if (!cleaned) {
+                  dateValidationStatus.className = 'mt-1 text-sm';
+                }
               }
             }
           }

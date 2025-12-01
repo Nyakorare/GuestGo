@@ -6,6 +6,7 @@ import { QRScannerPage } from '../pages/QRScanner';
 import { GatePage, setupGatePage } from '../pages/GatePage';
 import { GuardDashboardPage } from '../pages/GuardDashboard';
 import { TrackSchedulePage, initTrackSchedulePage } from '../pages/TrackSchedule';
+import { DocumentationsPage, setupDocumentationsPage } from '../pages/DocumentationsPage';
 import { setupAboutPageInteractivity } from './eventHandlers';
 import { performanceMonitor } from './performance';
 import { showLoadingOverlay, hideLoadingOverlay } from './loadingOverlay';
@@ -145,6 +146,8 @@ export function renderPage(path: string): string {
       return QRScannerPage();
     case '/track-schedule':
       return TrackSchedulePage();
+    case '/documentations':
+      return DocumentationsPage();
     default:
       return HomePage();
   }
@@ -455,6 +458,14 @@ async function setupPageFunctionality(path: string, user: any, role: string | nu
   } catch (error) {
     console.error('Error setting up legal modals:', error);
   }
+
+  // Setup documentation launcher (used by footer button)
+  try {
+    const { setupDocumentationLauncher } = await import('../components/mini-features/DocumentationLauncher');
+    setupDocumentationLauncher();
+  } catch (error) {
+    console.error('Error setting up documentation launcher:', error);
+  }
   
   // Setup page-specific interactivity
   if (path === '/about') {
@@ -484,6 +495,12 @@ async function setupPageFunctionality(path: string, user: any, role: string | nu
         setupGatePage(gateId);
       }, 100);
     }
+  }
+
+  if (path === '/documentations') {
+    setTimeout(() => {
+      setupDocumentationsPage();
+    }, 100);
   }
   
   if (path === '/guard-dashboard') {

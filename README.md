@@ -20,14 +20,6 @@ Visitor Management and Gate Access Control system with QR flows and AI-powered f
 
    - npm run dev
 
-3) Build for production
-
-   - npm run build
-
-4) Preview production build
-
-   - npm run preview
-
 > Face detection/verification requires the Python AI service. See **Python AI Microservice** below for setup instructions.
 
 ### Python AI Microservice
@@ -530,20 +522,28 @@ This section summarizes end-to-end features, steps, and expected results. It als
 
 ## Connected Modules, Steps, and Expected Results
 
+This table ties together the major modules listed above with their concrete flows, data effects, and logging/notification behavior.
+
 | Module | Steps to Be Taken | Expected Results | Data Created/Updated | Notifications/Logs |
 | --- | --- | --- | --- | --- |
-| Authentication & Access Control | Sign in via Supabase | Session established; role resolved | Session token | Login success/failure logged |
-| Scheduling (Visitor Pre-Registration) | Enter visitor details, date/time, purpose; optionally enroll face | Schedule saved; visit QR generated | `visit` record; QR asset; optional biometric template | Email to visitor (optional); audit log |
-| Facial Enrollment (Schedule) | Detect face (YOLO); capture best frame; confirm | Enrollment template saved for later verification | Encrypted biometric template linked to visitor/visit | AI enrollment decision logged |
-| Entrance Gate Processing | Scan gate/visit QR or verify face | Admission granted; visit marked entered | Visit status → entered | Gate entry log; flagged alert if any |
-| Flagged Visits & Alerts | System finds flags on visitor/visit | Guard sees flagged modal; can override | Flag incident/override record | Alert log; optional email/SMS |
-| Exit Gate Processing | Scan gate/visit QR or verify face | Exit recorded; visit closed | Visit status → exited | Gate exit log |
-| Dashboard & Reporting | Open dashboard; filter views | KPIs, active visits, history visible | None (read-only) | View events logged |
-| QR Code Services | Generate/parse visit/gate codes | Scannable codes for flows | QR assets; parsed payloads | Generation/scan events logged |
-| Notifications | Trigger on schedule, flags, completion | Emails/alerts sent | Notification records (optional) | Delivery status logged |
-| Audit Logging | Perform CRUD/gate/AI actions | Immutable audit trail | Log records | Accessible in logs/reporting |
-| Guard Operations Dashboard | Scan visit QR or enter manual visit ID, select gate, capture face, log entrance/exit | Visit status updated; face data stored | `gate_scans` + guard action logs | Guard action notifications; face metadata |
-| Feedback & Quality Analytics | Submit ISO 25010 survey | Scores stored per visit; repeat submissions blocked | `visit_feedback` entries | Success/error toast + dashboard metrics |
+| Authentication & Access Control | User signs in/signs out via Supabase auth modals | Session established; role (Admin/Guard/Personnel/Visitor/Guest) resolved | Supabase session; `user_roles` checked/updated | Login success/failure + role resolution logged |
+| Scheduling (Visitor Pre-Registration) | Enter visitor details, select place/purpose, date/time; pass visit-limit checks | Schedule saved; visit QR generated; visit status starts as `pending` | `visits`, `visit_places`; QR asset; optional `visit_face_data` | Visitor email (optional); schedule creation log; limit enforcement log (if blocked) |
+| Facial Enrollment (Schedule) | Open face modal; detect face (YOLO/MediaPipe/BlazeFace); user confirms best frame | Enrollment template saved for future verification/analytics | Encrypted biometric template in `visit_face_data` or related table | AI enrollment decision + errors logged |
+| Guard Operations Dashboard | Guard opens dashboard, selects gate, scans QR or enters visit ID, confirms action | Guard sees visit details, flags, and live scan telemetry | `gate_scans` preview data (on capture), guard action context | Guard dashboard actions + view events logged |
+| Entrance Gate Processing | From guard dashboard: scan QR/ID → capture face → call entrance RPC | Visit transitions `pending` → `in_progress`; entrance scan stored | `gate_scans` (entrance), `visits.status`, `visit_places` progress | Gate entry log, AI detection log, flagged alert (if any) |
+| Temporary Exit Processing | From guard dashboard: choose temporary-exit action after entrance | Visit transitions `in_progress` → `temporary_exit` | `visits.status`, `gate_scans` (temporary exit event) | Temporary-exit guard action + status change logged |
+| Exit Gate Processing | From guard dashboard: rescan QR/ID → capture face → call exit RPC | Visit transitions `in_progress`/`temporary_exit` → `completed` or `completed_flagged` | `gate_scans` (exit), `visits.status`, place completion records | Gate exit log; verification similarity + override decisions logged |
+| Visit Tracking (Visitor View) | Visitor opens Track Schedule, enters Visit ID, views progress | Visit details, QR, places, and face data (if allowed) displayed read-only | No primary data changes (read-only), optional local view prefs | Page views + errors logged in client logs; audit logs for data access |
+| Dashboard & Reporting | Admin/Staff open dashboard, filter/search visits/logs/places/personnel | Global view of operations, statuses, feedback, AI status, and gates | Read-only for visits/logs; may trigger config updates (see rows below) | Dashboard view/filter usage; configuration changes audited |
+| Place Management | Admin edits/creates/deletes places and visit purposes | Places and purposes updated; advance notice rules enforced | `places`, `place_purposes`, `visit_limits` | Place CRUD + purpose changes + deletions logged |
+| Personnel Management & Availability | Admin assigns personnel to places; personnel set single-day unavailability | Personnel-place links and availability flags updated | `personnel_places`, `personnel_availability` | Assignment/unassignment + availability changes logged |
+| Visit Status Management | Nightly/periodic jobs run status-fix RPCs; dashboard views status timeline | Past `pending`/`in_progress` visits normalized to `unsuccessful`/`completed_flagged` | `visits.status`, related place status fields | Status auto-fix actions logged with reasons (no entrance/exit) |
+| Flagged Visits & Alerts | System detects flags on visitor/visit during schedule or gate scan | Guard/admin sees flagged modal with context and override options | Flag records + override incident entries | Flag alerts, overrides, and reasons logged; optional notifications |
+| QR Code Services | Generate QR during scheduling; scan QR on Guard Dashboard/QR Scanner page | Stable, scannable codes for visit/gate flows | QR image assets (printable cards) + decoded payloads in memory | QR generation events + successful/failed scans logged |
+| Notifications (EmailJS) | System triggers on schedule creation, status changes, flags, feedback nudges | Visitor/guard/admin receive transaction emails/alerts | Notification history (if stored) + EmailJS delivery metadata | Notification attempts, successes, and failures logged |
+| Feedback & Quality Analytics | Visitor submits ISO 25010 survey after visit; dashboard loads analytics | Feedback stored per visit; repeat submissions blocked; analytics updated | `visit_feedback` rows (scores + comments) | Submission success/failure toasts; feedback ingestion + analytics queries logged |
+| Audit Logging | Any CRUD, gate, AI, or config action occurs | Centralized audit trail available from dashboard | `logs`/`audit_logs` (action, actor, context, timestamp) | All significant actions appended; filter/search usage logged |
+| Facial Detection & Verification (AI Module) | Detection called from schedule enrollment or guard flows; verification called on exit/FaceDataModal | Faces detected, cropped, compressed, encrypted; similarity scores produced | Encrypted JPEG crops in `gate_scans`/`visit_face_data`; verification metrics | Detection/verification success, failures, thresholds, and overrides logged |
 
 ## Facial Detection & Verification AI Module
 
