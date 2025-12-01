@@ -4,6 +4,7 @@ import { FindUs } from '../components/mini-features/FindUs';
 import { BusinessHours } from '../components/mini-features/BusinessHours';
 import { FollowUs } from '../components/mini-features/FollowUs';
 import { UserFeedback } from '../components/mini-features/UserFeedback';
+import { Footer } from '../components/mini-features/Footer';
 
 export function ContactPage() {
   return `    <div class="w-full py-12 -mx-4 sm:-mx-6 lg:-mx-8">
@@ -307,6 +308,8 @@ export function ContactPage() {
       ${FollowUs()}
 
       ${UserFeedback()}
+      
+      ${Footer()}
     </div>
     <script>
       // Contact form validation and submission

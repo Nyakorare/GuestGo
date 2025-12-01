@@ -60,11 +60,369 @@ Create a `.env` (or `.env.local`) with at least:
 
 ### Documentation
 
-- Algorithms overview: see `ALGORITHMS.md`
+- **Algorithms overview**: see `ALGORITHMS.md`
+- **Face Detection & Verification**: see `FACE_DETECTION_VERIFICATION.md` (detailed technical analysis)
 
 ## Feature Modules, Steps, and Expected Results
 
 This section summarizes end-to-end features, steps, and expected results. It also specifies where and how facial detection and verification AI is integrated.
+
+## Complete Feature Inventory
+
+### Main Features
+
+#### 1. Authentication & Access Control
+**Location**: `src/components/AuthModals.ts`, `src/utils/sessionManager.ts`
+
+**Features**:
+- Sign up with email/password
+- Sign in with Supabase authentication
+- Session management with automatic token refresh
+- Role-based access control (Admin, Guard, Personnel, Visitor, Guest)
+- Password reset functionality
+- Profile settings management (`src/components/ProfileSettingsModal.ts`)
+
+**Connections**:
+- → All pages: Session required for protected routes
+- → Dashboard: Role determines available features
+- → Guard Dashboard: Guard role required
+- → Scheduling: Visitor/Guest roles can schedule visits
+
+#### 2. Home Page & Landing
+**Location**: `src/pages/Home.ts`
+
+**Features**:
+- Welcome page with role-based personalization
+- Schedule visit modal (quick access)
+- Weekly visit count display for logged-in users
+- Feature cards (Smart Scheduling, Secure Verification, Real-time Tracking)
+- Workflow steps guide (role-specific)
+- FAQ section (`src/components/mini-features/home/FAQ.ts`)
+
+**Mini-Features**:
+- **FAQ Component**: `src/components/mini-features/home/FAQ.ts` - Frequently asked questions with expandable answers
+
+**Connections**:
+- → Scheduling: Opens schedule modal
+- → Authentication: Shows sign up/sign in options
+- → Dashboard: Links to role-specific dashboards
+- → Track Schedule: Links to visit tracking
+
+#### 3. About Page
+**Location**: `src/pages/About.ts`
+
+**Features**:
+- Company/organization information
+- Mission and vision
+- Team member profiles
+- Technology stack showcase (`src/components/mini-features/TechnologyStack.ts`)
+- Company culture (`src/components/mini-features/OurCulture.ts`)
+- Company values (`src/components/mini-features/OurValues.ts`)
+- Thesis timeline (`src/components/mini-features/ThesisTimeline.ts`)
+- By the numbers statistics (`src/components/mini-features/ByTheNumbers.ts`)
+
+**Mini-Features**:
+- **TechnologyStack**: Displays tech stack used in GuestGo
+- **OurCulture**: Company culture information
+- **OurValues**: Core company values
+- **ThesisTimeline**: Project development timeline
+- **ByTheNumbers**: Key statistics and metrics
+
+**Connections**:
+- → Home: Navigation link
+- → Contact: Related page link
+
+#### 4. Contact Page
+**Location**: `src/pages/Contact.ts`
+
+**Features**:
+- Contact form (`src/components/mini-features/SendUsMessage.ts`)
+- Business hours display (`src/components/mini-features/BusinessHours.ts`)
+- Location/find us (`src/components/mini-features/FindUs.ts`)
+- Social media links (`src/components/mini-features/FollowUs.ts`)
+- Public feedback testimonials (daily rotating, from `get_public_feedback` RPC)
+- User feedback component (`src/components/mini-features/UserFeedback.ts`)
+
+**Mini-Features**:
+- **SendUsMessage**: Contact form for sending messages
+- **BusinessHours**: Operating hours display
+- **FindUs**: Location and map information
+- **FollowUs**: Social media links and follow buttons
+- **UserFeedback**: User feedback display component
+
+**Connections**:
+- → Feedback System: Displays public feedback
+- → Email Service: Sends contact form messages via EmailJS
+
+#### 5. Scheduling System (Visitor Pre-Registration)
+**Location**: `src/pages/dashboard/index.ts`, `src/pages/GatePage.ts`, `src/pages/Home.ts`
+
+**Features**:
+- Multi-place visit scheduling
+- Place-specific visit purposes with advance notice requirements (0-6 days)
+- Email verification for guest scheduling (Gmail OTP)
+- Visit date selection with Philippine timezone
+- Weekly visit limit enforcement (max 2 visits per week)
+- Optional face enrollment during scheduling
+- QR code generation for scheduled visits
+- Visit confirmation modal with terms agreement
+- Visit reschedule support (`src/components/VisitReschedule.ts`)
+
+**Connections**:
+- → Place Management: Fetches available places and purposes
+- → Personnel Availability: Checks personnel availability
+- → Visit Limits: Enforces weekly/monthly visit limits
+- → Face Detection: Optional enrollment during scheduling
+- → QR Code Services: Generates visit QR codes
+- → Email Notifications: Sends confirmation emails
+- → Audit Logging: Logs schedule creation
+
+#### 6. Guard Operations Dashboard
+**Location**: `src/pages/GuardDashboard.ts`
+
+**Features**:
+- Real-time QR code scanning with adaptive cadence
+- Manual visit ID lookup (fallback when QR unavailable)
+- Gate selection (entrance/exit/temporary exit)
+- **Enforced face capture** before entrance/exit processing
+- Live scan telemetry (FPS, interval metrics)
+- Visit status display and management
+- Flagged visit alerts (`src/components/FlaggedVisitModal.ts`)
+- Face data review (`src/components/FaceDataModal.ts`)
+
+**Connections**:
+- → QR Scanner: Uses QR scanning utilities
+- → Face Detection: Enforces face capture via `openFaceDetectionModal()`
+- → Gate Processing: Calls entrance/exit RPCs with face data
+- → Visit Status: Updates visit status after scans
+- → Audit Logging: Logs all guard actions
+- → Flagged Visits: Shows alerts for flagged visitors
+
+#### 7. Gate Processing (Entrance/Exit)
+**Location**: `src/pages/GuardDashboard.ts`, `src/pages/dashboard/Gates.ts`, `src/pages/QRScanner.ts`
+
+**Entrance Processing**:
+- QR scan or manual visit ID entry
+- Face capture (enforced)
+- Visit validation (status, date, flags)
+- Gate selection
+- Status update: `pending` → `in_progress`
+- Face data storage in `gate_scans` table
+
+**Exit Processing**:
+- QR scan or manual visit ID entry
+- Face capture (enforced)
+- Face verification (compares entrance vs exit faces)
+- Place completion validation
+- Status update: `in_progress` → `completed`
+- Visit closure
+
+**Temporary Exit**:
+- Allows visitor to exit temporarily
+- Status: `in_progress` → `temporary_exit`
+- Re-entry restores `in_progress` status
+
+**Connections**:
+- → Face Detection: Captures face images
+- → Face Verification: Compares entrance/exit faces
+- → Visit Status Management: Updates visit status
+- → Place Completion: Validates all places visited
+- → Audit Logging: Logs gate scans
+
+#### 8. QR Code Services
+**Location**: `src/utils/qrCode.ts`, `src/pages/QRScanner.ts`
+
+**Features**:
+- QR code generation (visit IDs, gate IDs)
+- QR code scanning (camera-based)
+- QR code validation
+- Printable visit cards
+- Adaptive scan scheduling (dynamic interval adjustment)
+- Pre-detection QR pattern heuristic
+
+**Connections**:
+- → Scheduling: Generates QR for scheduled visits
+- → Guard Dashboard: Scans QR codes
+- → Gate Processing: Validates QR codes
+- → Visit Cards: Generates printable QR cards
+
+#### 9. Visit Tracking & Schedule Management
+**Location**: `src/pages/TrackSchedule.ts`
+
+**Features**:
+- Visit ID input (`src/components/mini-features/trackschedule/VisitIdInput.ts`)
+- Visit information display (`src/components/mini-features/trackschedule/VisitInformation.ts`)
+- Visit progress tracking (`src/components/mini-features/trackschedule/VisitProgress.ts`)
+- Places to visit list (`src/components/mini-features/trackschedule/PlacesToVisit.ts`)
+- Gate scanning status (`src/components/mini-features/trackschedule/GateScanningStatus.ts`)
+- Visit QR code display (`src/components/mini-features/trackschedule/VisitQRCode.ts`)
+- No visit found handling (`src/components/mini-features/trackschedule/NoVisitFound.ts`)
+- Face data viewing with verification similarity
+
+**Mini-Features**:
+- **VisitIdInput**: Input field for entering visit ID
+- **VisitInformation**: Displays visit details (name, date, places, etc.)
+- **VisitProgress**: Progress bar showing visit completion status
+- **PlacesToVisit**: List of places with completion status
+- **GateScanningStatus**: Shows entrance/exit scan status
+- **VisitQRCode**: Displays QR code for the visit
+- **NoVisitFound**: Error message when visit not found
+
+**Connections**:
+- → Visit Status: Fetches visit status from database
+- → Face Data: Displays face images and verification results
+- → Place Completion: Shows place completion status
+
+#### 10. Dashboard & Reporting
+**Location**: `src/pages/dashboard/index.ts`
+
+**Features**:
+- Overview of active visits
+- Historical entries/exits
+- Flagged incidents display
+- Visit filtering and search
+- Place management
+- Personnel management
+- Account management
+- Visit limit management (`src/components/VisitLimitModal.ts`)
+- Place purposes management
+- AI status monitoring (`src/pages/dashboard/AIStatus.ts`)
+- Feedback analytics (`src/pages/dashboard/Feedback.ts`)
+- Gates management (`src/pages/dashboard/Gates.ts`)
+
+**Connections**:
+- → Visit Status: Displays all visit statuses
+- → Face Data: Allows viewing face images
+- → Audit Logging: Shows action logs
+- → Place Management: CRUD operations for places
+- → Personnel Management: Assign/unassign personnel
+- → Visit Limits: Configure place visit limits
+
+#### 11. Feedback & Quality Analytics
+**Location**: `src/components/FeedbackSurveyModal.ts`, `src/pages/dashboard/Feedback.ts`, `src/pages/Contact.ts`
+
+**Features**:
+- ISO 25010 survey (8 quality characteristics + overall satisfaction)
+- Post-visit feedback collection
+- Repeat submission prevention
+- Public feedback display (daily rotating testimonials)
+- Feedback analytics dashboard
+- Pending feedback notifications (`src/components/PendingFeedbackModal.ts`)
+
+**Connections**:
+- → Visit Completion: Triggers feedback survey
+- → Database: Stores feedback via `submit_visit_feedback` RPC
+- → Contact Page: Displays public feedback
+- → Dashboard: Shows feedback analytics
+
+#### 12. Flagged Visits & Alerts
+**Location**: `src/components/FlaggedVisitModal.ts`
+
+**Features**:
+- Flag management on visitors/visits
+- Alert modals for guards
+- Override functionality (with logging)
+- Flag incident logging
+
+**Connections**:
+- → Guard Dashboard: Shows alerts during gate scans
+- → Visit Status: Flags affect visit processing
+- → Audit Logging: Logs flag overrides
+
+#### 13. Place Management
+**Location**: `src/pages/dashboard/index.ts`, `src/components/ModalFunctions.ts`
+
+**Features**:
+- Place CRUD operations
+- Place purposes with advance notice requirements
+- Personnel assignment to places
+- Visit limits (weekly/monthly) per place
+- Place deletion with logging
+
+**Connections**:
+- → Scheduling: Provides places for visit selection
+- → Personnel Management: Assigns personnel to places
+- → Visit Limits: Enforces limits per place
+- → Audit Logging: Logs place changes
+
+#### 14. Personnel Management
+**Location**: `src/pages/dashboard/index.ts`
+
+**Features**:
+- Personnel assignment to places
+- Availability management (single-day unavailability)
+- In-progress visit viewing
+- Place purpose editing (for assigned places)
+
+**Connections**:
+- → Place Management: Assigns personnel to places
+- → Scheduling: Checks personnel availability
+- → Visit Status: Shows in-progress visits
+
+#### 15. Visit Status Management
+**Location**: Supabase RPCs, `src/pages/dashboard/index.ts`
+
+**Status Flow**:
+- `pending` → `in_progress` (entrance scan)
+- `in_progress` → `temporary_exit` (temporary exit)
+- `temporary_exit` → `in_progress` (re-entry)
+- `in_progress` → `completed` (exit scan)
+- `in_progress` → `completed_flagged` (past date, no exit)
+- `pending` → `unsuccessful` (past date, no entrance)
+
+**Connections**:
+- → Gate Processing: Updates status on scans
+- → Dashboard: Displays status
+- → Visit Tracking: Shows status to visitors
+
+#### 16. Audit Logging
+**Location**: `src/utils/logging.ts`, Supabase RPCs
+
+**Features**:
+- Action logging (CRUD operations)
+- Gate scan logging
+- AI decision logging
+- Override logging
+- Place deletion logging
+- Visit limit enforcement logging
+- Log pagination (`src/components/LogsPagination.ts`)
+
+**Connections**:
+- → All Features: Logs all significant actions
+- → Dashboard: Displays logs
+- → Analytics: Provides audit trail
+
+#### 17. Notifications
+**Location**: `src/config/emailjs.ts`
+
+**Features**:
+- Email notifications for schedule creation
+- Email notifications for status changes
+- Optional alerts for flagged events
+- Email verification codes (Gmail OTP)
+
+**Connections**:
+- → Scheduling: Sends confirmation emails
+- → Authentication: Sends verification codes
+- → Visit Status: Sends status update emails
+
+#### 18. Face Detection & Verification
+**Location**: `src/utils/AI-Face-Detection/blazefaceModal.ts`, `src/utils/Python-AI/app.py`, `src/components/FaceDataModal.ts`
+
+**Features**:
+- Face detection (YOLOv8 primary, MediaPipe secondary, BlazeFace fallback)
+- Face verification (entrance vs exit comparison)
+- Face image compression and encryption
+- Face data storage and retrieval
+- Face data modal for viewing
+
+**Detailed Documentation**: See `FACE_DETECTION_VERIFICATION.md`
+
+**Connections**:
+- → Scheduling: Optional enrollment
+- → Guard Dashboard: Enforced capture
+- → Gate Processing: Entrance/exit capture
+- → Visit Tracking: Face data viewing
 
 ## System Modules
 
@@ -236,9 +594,102 @@ Scope: Used during schedule enrollment, guard-controlled entrance/exit, and dash
 - Performance: Track inference timings via `src/utils/performance.ts`; guard dashboard displays live FPS/interval metrics.
 - Face storage: `processFaceImageForStorage` compresses/encrypts crops before Supabase insert; `processFaceImageForDisplay` decrypts on demand.
 
+## Feature Interconnections & Data Flow
+
+### Complete Feature Connection Map
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    AUTHENTICATION LAYER                         │
+│  (AuthModals, SessionManager) → All Protected Features         │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                    SCHEDULING WORKFLOW                          │
+│                                                                  │
+│  Home Page → Schedule Modal → Place Selection → Purpose       │
+│       ↓              ↓              ↓              ↓            │
+│  Email Verify → Date Selection → Face Enrollment → QR Gen      │
+│       ↓              ↓              ↓              ↓            │
+│  EmailJS → Visit Limits → Face Detection → QR Code Service     │
+│       ↓              ↓              ↓              ↓            │
+│  Notification → Audit Log → Image Compression → Visit Record  │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                    GATE PROCESSING WORKFLOW                     │
+│                                                                  │
+│  Guard Dashboard → QR Scan → Gate Selection → Face Capture      │
+│       ↓              ↓              ↓              ↓            │
+│  Visit Lookup → Validation → Entrance/Exit → Face Detection    │
+│       ↓              ↓              ↓              ↓            │
+│  Visit Status → Flag Check → Face Storage → Face Verification  │
+│       ↓              ↓              ↓              ↓            │
+│  Status Update → Alert Modal → Image Encryption → Similarity   │
+│       ↓              ↓              ↓              ↓            │
+│  Audit Log → Override Log → Database Storage → Display Result  │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                    VISIT TRACKING WORKFLOW                       │
+│                                                                  │
+│  Track Schedule → Visit ID Input → Visit Lookup → Status       │
+│       ↓              ↓              ↓              ↓            │
+│  Visit Info → Progress Display → Places List → Gate Status     │
+│       ↓              ↓              ↓              ↓            │
+│  QR Display → Face Data View → Verification → Feedback         │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                    DASHBOARD & ANALYTICS                        │
+│                                                                  │
+│  Dashboard → Visit List → Filter/Search → View Details         │
+│       ↓              ↓              ↓              ↓            │
+│  Place Mgmt → Personnel Mgmt → Visit Limits → Face Data         │
+│       ↓              ↓              ↓              ↓            │
+│  Audit Logs → Feedback Analytics → AI Status → Gates Mgmt       │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Key Integration Points
+
+1. **Scheduling → Gate Processing**
+   - Scheduled visits appear in Guard Dashboard
+   - QR codes generated during scheduling are scanned at gates
+   - Face enrollment (optional) can be used for verification
+
+2. **Gate Processing → Visit Status**
+   - Entrance scan: `pending` → `in_progress`
+   - Exit scan: `in_progress` → `completed`
+   - Temporary exit: `in_progress` → `temporary_exit`
+
+3. **Face Detection → All Gate Operations**
+   - Entrance: Face capture required before entrance RPC
+   - Exit: Face capture required before exit RPC
+   - Verification: Compares entrance vs exit faces
+
+4. **Visit Status → Visit Tracking**
+   - Visitors can track their visit status
+   - Status updates trigger notifications
+   - Progress displayed in Track Schedule page
+
+5. **Feedback → Analytics**
+   - Feedback collected after visit completion
+   - Stored in database via RPC
+   - Displayed in dashboard analytics
+   - Public feedback shown on Contact page
+
+6. **Audit Logging → All Features**
+   - All significant actions logged
+   - Logs accessible in dashboard
+   - Provides complete audit trail
+
 ## Future Enhancements
 
 - Multi-face handling and crowd detection at gates.
 - Liveness checks to mitigate spoofing.
 - Model quantization and GPU acceleration options.
 - Automated feedback analytics dashboards and scheduled exports.
+- Real-time visit status updates via WebSocket.
+- Mobile app for guards and visitors.
+- Advanced analytics and reporting dashboards.

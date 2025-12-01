@@ -2,6 +2,7 @@ import { setupEventListeners, setupConfirmationModalListeners } from '../compone
 import supabase from '../config/supabase';
 import { loadPlaces } from './dashboard/index';
 import { FAQ } from '../components/mini-features/home/FAQ';
+import { Footer } from '../components/mini-features/Footer';
 
 // Helper function to get current Philippine time
 function getPhilippineTime(): Date {
@@ -1858,6 +1859,8 @@ export function HomePage() {
           </div>
         </div>
       </div>
+      
+      ${Footer()}
     </div>
   `;
 }

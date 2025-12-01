@@ -25,19 +25,34 @@ export function showLoadingOverlay(message: string = 'Loading...') {
 	overlay.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm';
 
 	const container = document.createElement('div');
-	container.className = 'flex flex-col items-center space-y-6 p-8 rounded-xl bg-white shadow-2xl dark:bg-gray-800 border border-gray-200 dark:border-gray-700';
+	container.className = 'flex flex-col items-center space-y-10 p-12 min-w-[320px] rounded-xl bg-white shadow-2xl dark:bg-gray-800 border border-gray-200 dark:border-gray-700';
 
+	// Create logo element with animation
+	const logoContainer = document.createElement('div');
+	logoContainer.className = 'flex items-center justify-center';
+	
+	const logo = document.createElement('img');
+	logo.src = '/guestgo-logo.png';
+	logo.alt = 'GuestGo Logo';
+	logo.className = 'h-32 w-auto animate-pulse';
+	// Add custom animation for a more dynamic effect
+	logo.style.animation = 'logoFloat 2s ease-in-out infinite';
+	
+	logoContainer.appendChild(logo);
+
+	// Create smaller loading spinner
 	const spinner = document.createElement('div');
-	spinner.className = 'h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin';
+	spinner.className = 'h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin';
 
 	const text = document.createElement('div');
 	text.id = 'globalLoadingOverlayText';
-	text.className = 'text-gray-800 dark:text-gray-100 text-base font-medium text-center';
+	text.className = 'text-gray-800 dark:text-gray-100 text-lg font-semibold text-center';
 	text.textContent = message;
 
 	// Add a subtle pulse animation to the container
 	container.style.animation = 'pulse 2s ease-in-out infinite';
 
+	container.appendChild(logoContainer);
 	container.appendChild(spinner);
 	container.appendChild(text);
 	overlay.appendChild(container);

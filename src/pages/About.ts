@@ -3,6 +3,7 @@ import { OurValues } from '../components/mini-features/OurValues';
 import { TechnologyStack } from '../components/mini-features/TechnologyStack';
 import { OurCulture } from '../components/mini-features/OurCulture';
 import { ByTheNumbers } from '../components/mini-features/ByTheNumbers';
+import { Footer } from '../components/mini-features/Footer';
 
 export function AboutPage() {
   return `
@@ -41,7 +42,7 @@ export function AboutPage() {
 
       <!-- FAQ Accordion -->
       <div class="mb-8 sm:mb-12 md:mb-16">
-        <h2 class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-center animate-fade-in-up px-2" style="animation-delay:1s;">Frequently Asked Questions</h2>
+        <h2 class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-center animate-fade-in-up px-2" style="animation-delay:1s;">GuestGo Experience</h2>
         <div class="space-y-3 sm:space-y-4 max-w-2xl mx-auto px-2">
           <div class="faq-item border rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300">
             <button class="w-full flex justify-between items-center px-4 sm:px-6 py-3 sm:py-4 bg-gray-100 dark:bg-gray-700 font-semibold focus:outline-none faq-question hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200 text-sm sm:text-base">
@@ -115,6 +116,8 @@ export function AboutPage() {
       ${ByTheNumbers()}
 
       ${OurCulture()}
+      
+      ${Footer()}
     </div>
     <style>
       .animate-fade-in { 

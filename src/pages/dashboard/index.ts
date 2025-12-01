@@ -7,6 +7,7 @@ import jsQR from 'jsqr';
 import { addNotificationToActionBadge, addNotificationToLogContainer, shouldShowNotification, getNotificationConfig } from '../../utils/notification.js';
 import { createFlaggedVisitModal, setupFlaggedVisitModalListeners, displayFlaggedVisitDetails } from '../../components/FlaggedVisitModal';
 import { createLogsPagination, setupLogsPaginationListeners } from '../../components/LogsPagination';
+import { initializeLogsLoadingModal, showLogsLoadingModal, hideLogsLoadingModal } from '../../components/LogsLoadingModal';
 
 interface Place {
   id: string;
@@ -2202,7 +2203,10 @@ async function loadLogs() {
     currentLogsPage = 1;
     autoAdvanceLogs = true;
     
-    // Show loading indicator
+    // Show loading modal
+    showLogsLoadingModal();
+    
+    // Show loading indicator in list (as fallback)
     if (logsList) {
       logsList.innerHTML = `
         <div class="text-center py-8">
@@ -2219,11 +2223,52 @@ async function loadLogs() {
     allLogs = logs || [];
     filteredLogs = [...allLogs];
     
+    // Ensure we're on page 1 and disable auto-advance during initial load
+    currentLogsPage = 1;
+    autoAdvanceLogs = false; // Disable auto-advance during initial load
+    
+    // Render logs and wait for it to complete
     await renderLogs();
+    
+    // Wait for all async operations to complete and DOM to be fully updated
+    // This ensures all async operations in renderLogs (like formatLogDetails, database queries) are complete
+    // Use requestAnimationFrame to ensure browser has painted the changes
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Verify logs are actually rendered by checking if the logs list has content
+    const logsListContent = logsList?.querySelector('table, .logs-mobile-container > div');
+    if (!logsListContent && filteredLogs.length > 0) {
+      // If logs should be shown but aren't, wait a bit more and re-render
+      await new Promise(resolve => setTimeout(resolve, 300));
+      await renderLogs();
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+    
+    // Re-enable auto-advance after initial load is complete (if desired)
+    // For now, keep it disabled so user stays on page 1
+    // autoAdvanceLogs = true;
+    
+    // Final check: ensure we're on page 1
+    if (currentLogsPage !== 1) {
+      currentLogsPage = 1;
+      await renderLogs();
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+    
     // Update action filter options after loading logs
     updateLogsActionFilterOptions();
+    
+    // Hide loading modal after everything is fully loaded and rendered
+    hideLogsLoadingModal();
   } catch (error) {
     console.error('Error loading logs:', error);
+    
+    // Hide loading modal even on error
+    hideLogsLoadingModal();
+    
     if (logsList) {
       logsList.innerHTML = `
         <p class="text-red-600 dark:text-red-400">Error loading logs. Please try again.</p>
@@ -5586,6 +5631,9 @@ function setupDashboardEventListeners() {
 
   // Setup flagged visit modal event listeners
   setupFlaggedVisitModalListeners();
+
+  // Initialize logs loading modal
+  initializeLogsLoadingModal();
 
   // Logs tab filter event listeners
   const logsTabAll = document.getElementById('logsTabAll');

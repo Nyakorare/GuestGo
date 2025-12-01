@@ -446,6 +446,16 @@ function showNavbar() {
 }
 
 async function setupPageFunctionality(path: string, user: any, role: string | null) {
+  // Setup legal modals (footer is on all pages)
+  try {
+    const { setupLegalModals } = await import('../components/mini-features/LegalModals');
+    setTimeout(() => {
+      setupLegalModals();
+    }, 100);
+  } catch (error) {
+    console.error('Error setting up legal modals:', error);
+  }
+  
   // Setup page-specific interactivity
   if (path === '/about') {
     setupAboutPageInteractivity();
