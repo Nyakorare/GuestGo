@@ -1,10 +1,10 @@
-Ongoing:
-- Production hardening for the Python AI service (Render uptime monitors, health-check fallbacks, env rotation)
-- Guard workflow polish (dashboard UX, manual visit ID validation, shift hand-off checklist)
-- Feedback survey analytics and reporting (ISO 25010 trends, export templates)
-- Finalize complete documentation (members section + thesis paper deliverables)
+Ongoing (current focus – core features complete):
+- Bug fixing and stability pass across all existing features and flows
+- UI/UX polish (transitions/animations, spacing, responsive edge cases, popup modal behavior)
+- Documentation improvements (README, `ALGORITHMS.md`, deployment steps, thesis write-up/members section)
+- Light refactors to simplify complex components and reduce tech debt
 
-Planned:
+Planned (nice-to-have / post-defense enhancements):
 
 - Email notification improvements for scheduled visits (guard + visitor digests)
 - Smooth transition and animation on all pages, popup modals, and interactables
