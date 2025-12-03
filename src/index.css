@@ -163,6 +163,99 @@
   }
 }
 
+/* Auth Modal Animations */
+.auth-modal-backdrop {
+  opacity: 0;
+  transition: opacity 0.3s ease-out;
+}
+
+.auth-modal-backdrop:not(.hidden) {
+  opacity: 1;
+}
+
+.auth-modal-backdrop.auth-modal-backdrop-close {
+  opacity: 0 !important;
+}
+
+.auth-modal-content {
+  opacity: 0;
+  transform: scale(0.9) translateY(20px);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.auth-modal-content.auth-modal-content-open {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+.auth-modal-content.auth-modal-content-close {
+  opacity: 0;
+  transform: scale(0.9) translateY(20px);
+}
+
+/* Input animations */
+.auth-input-group {
+  animation: fadeInUp 0.4s ease-out backwards;
+}
+
+.auth-input-group:nth-child(1) { animation-delay: 0.1s; }
+.auth-input-group:nth-child(2) { animation-delay: 0.15s; }
+.auth-input-group:nth-child(3) { animation-delay: 0.2s; }
+.auth-input-group:nth-child(4) { animation-delay: 0.25s; }
+.auth-input-group:nth-child(5) { animation-delay: 0.3s; }
+
+.auth-input {
+  transition: all 0.2s ease;
+}
+
+.auth-input:focus {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+/* Submit button animations */
+.auth-submit-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-submit-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.auth-submit-btn:hover::before {
+  left: 100%;
+}
+
+.auth-submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: scale(1) !important;
+}
+
+/* Error/Success message animations */
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}
+
 /* Loading overlay animations */
 @keyframes pulse {
   0%, 100% {

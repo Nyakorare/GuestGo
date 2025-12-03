@@ -1,5 +1,6 @@
 import supabase from '../config/supabase';
 import { logAction } from './logging';
+import { openModal } from '../components/AuthModals';
 
 // Function to show logout modal after password change
 function showPasswordChangeLogoutModal() {
@@ -180,18 +181,16 @@ function updateAuthMenu(isLoggedIn: boolean) {
 function setupAuthButtonListeners() {
   // Login button click handler
   const loginButton = document.getElementById('login-button');
-  const loginModal = document.getElementById('login-modal');
   loginButton?.addEventListener('click', () => {
-    loginModal?.classList.remove('hidden');
+    openModal('login-modal');
     const authDropdown = document.getElementById('auth-dropdown');
     authDropdown?.classList.add('hidden');
   });
 
   // Signup button click handler
   const signupButton = document.getElementById('signup-button');
-  const signupModal = document.getElementById('signup-modal');
   signupButton?.addEventListener('click', () => {
-    signupModal?.classList.remove('hidden');
+    openModal('signup-modal');
     const authDropdown = document.getElementById('auth-dropdown');
     authDropdown?.classList.add('hidden');
   });
@@ -214,7 +213,7 @@ function setupAuthButtonListeners() {
   // Mobile login button click handler
   const mobileLoginButton = document.querySelector('.mobile-login-button');
   mobileLoginButton?.addEventListener('click', () => {
-    loginModal?.classList.remove('hidden');
+    openModal('login-modal');
     const mobileMenu = document.getElementById('mobile-menu');
     mobileMenu?.classList.add('hidden');
   });
@@ -222,7 +221,7 @@ function setupAuthButtonListeners() {
   // Mobile signup button click handler
   const mobileSignupButton = document.querySelector('.mobile-signup-button');
   mobileSignupButton?.addEventListener('click', () => {
-    signupModal?.classList.remove('hidden');
+    openModal('signup-modal');
     const mobileMenu = document.getElementById('mobile-menu');
     mobileMenu?.classList.add('hidden');
   });

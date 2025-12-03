@@ -536,8 +536,16 @@ function updateNavigationState(path: string) {
   const mobileAuthButtons = document.getElementById('mobile-auth-buttons');
   
   if (authMenuContainer && mobileAuthButtons) {
+    // Check if we're on mobile (below md breakpoint, which is 768px in Tailwind)
+    const isMobile = window.innerWidth < 768;
+    
     if (path === '/' || path === '') {
-      authMenuContainer.style.display = 'flex';
+      // Only show desktop auth menu on desktop screens
+      if (!isMobile) {
+        authMenuContainer.style.display = 'flex';
+      } else {
+        authMenuContainer.style.display = 'none';
+      }
       mobileAuthButtons.style.display = 'block';
     } else {
       authMenuContainer.style.display = 'none';
@@ -557,6 +565,19 @@ function updateNavigationState(path: string) {
     if (profileSettingsBtn) profileSettingsBtn.classList.remove('hidden');
   }
 }
+
+// Handle window resize to update auth menu visibility
+let resizeTimeout: number | null = null;
+window.addEventListener('resize', () => {
+  // Debounce resize events
+  if (resizeTimeout) {
+    clearTimeout(resizeTimeout);
+  }
+  resizeTimeout = window.setTimeout(() => {
+    const path = window.location.hash.slice(1) || '/';
+    updateNavigationState(path);
+  }, 150);
+});
 
 // Track previous hash for transition detection
 let previousHash = window.location.hash;
