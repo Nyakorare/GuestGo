@@ -1185,7 +1185,6 @@ async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Pr
     }
 
     const { 
-      getEffectiveApiUrl, 
       LOCAL_API_URL, 
       DEPLOYED_API_URL, 
       setApiUrlPreference 
@@ -1229,38 +1228,43 @@ async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Pr
       };
     };
 
-    const primaryApiUrl = getEffectiveApiUrl();
-
-    try {
-      const result = await performVerification(primaryApiUrl);
-      return handleResult(result);
-    } catch (primaryError) {
-      const isLocalApi = primaryApiUrl === LOCAL_API_URL;
-      // When using local API, treat any TypeError (which fetch throws on network errors) as a network issue
-      // This includes connection refused, failed to fetch, etc.
-      let isNetworkError = primaryError instanceof TypeError;
-      
-      // Also check for explicit network error messages
-      if (!isNetworkError && primaryError instanceof Error) {
-        const errorMessage = primaryError.message.toLowerCase();
-        const errorStack = primaryError.stack?.toLowerCase() || '';
-        if (errorMessage.includes('failed to fetch') ||
-            errorMessage.includes('connection refused') ||
-            errorMessage.includes('network') ||
-            errorStack.includes('connection refused') ||
-            errorStack.includes('err_network')) {
-          isNetworkError = true;
-        }
+    // Helper function to check if an error is a network error
+    const isNetworkError = (error: any): boolean => {
+      if (error instanceof TypeError) {
+        return true;
       }
+      
+      if (error instanceof Error) {
+        const errorMessage = error.message.toLowerCase();
+        const errorStack = error.stack?.toLowerCase() || '';
+        return errorMessage.includes('failed to fetch') ||
+               errorMessage.includes('connection refused') ||
+               errorMessage.includes('network') ||
+               errorStack.includes('connection refused') ||
+               errorStack.includes('err_network');
+      }
+      
+      return false;
+    };
 
-      if (isLocalApi && isNetworkError) {
-        console.warn('Local AI API unreachable, falling back to deployed endpoint.');
+    // Always check local API first, regardless of preferences
+    try {
+      console.log('Guard Dashboard: Checking local AI service first...');
+      const result = await performVerification(LOCAL_API_URL);
+      console.log('Guard Dashboard: Local AI service responded successfully');
+      setApiUrlPreference('local');
+      return handleResult(result);
+    } catch (localError) {
+      // If local API fails with a network error, try deployed API
+      if (isNetworkError(localError)) {
+        console.warn('Guard Dashboard: Local AI API unreachable, falling back to deployed endpoint.');
         try {
-          setApiUrlPreference('deployed');
           const fallbackResult = await performVerification(DEPLOYED_API_URL);
+          console.log('Guard Dashboard: Deployed AI service responded successfully');
+          setApiUrlPreference('deployed');
           return handleResult(fallbackResult);
         } catch (fallbackError) {
-          console.error('Fallback AI API verification failed:', fallbackError);
+          console.error('Guard Dashboard: Both local and deployed AI API verification failed:', fallbackError);
           // Return service unavailable flag for guard dashboard
           return {
             match: false,
@@ -1269,17 +1273,10 @@ async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Pr
             serviceUnavailable: true
           };
         }
+      } else {
+        // If local API fails with a non-network error (e.g., invalid response), throw it
+        throw localError;
       }
-
-      // Check if this is a network/connection error
-      const isConnectionError = primaryError instanceof TypeError || 
-        errorMessage.includes('Failed to fetch') || 
-        errorMessage.includes('ERR_CONNECTION_REFUSED') ||
-        errorMessage.includes('NetworkError') ||
-        errorStack.includes('ERR_CONNECTION_REFUSED') ||
-        errorStack.includes('ERR_NETWORK');
-      
-      throw primaryError;
     }
   } catch (error) {
     console.error('Error verifying faces:', error);

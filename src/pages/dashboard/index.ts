@@ -11268,12 +11268,36 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
               </div>
             </div>
           ` : ''}
+
+          <!-- Feedback Survey Button for Completed Visits -->
+          ${visit.status === 'completed' ? `
+            <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div class="flex justify-end items-center">
+                <button 
+                  id="feedbackBtn_${visit.id}"
+                  class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onclick="openFeedbackSurvey('${visit.id}', '${visit.visitor_first_name} ${visit.visitor_last_name}', '${visit.visit_date}', ${JSON.stringify(places.map((p: any) => p.place_name)).replace(/"/g, '&quot;')})"
+                >
+                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                  </svg>
+                  Feedback Survey
+                </button>
+              </div>
+            </div>
+          ` : ''}
         </div>
       </div>
     `;
   }
 
   visitorCurrentVisitsList.innerHTML = visitsHtml;
+  
+  // Update feedback button states for completed visits
+  const completedVisits = visits.filter(visit => visit.status === 'completed');
+  for (const visit of completedVisits) {
+    updateFeedbackButtonState(visit.id);
+  }
 }
 
 // Function to display visitor's today visits
@@ -11608,6 +11632,24 @@ async function displayVisitorTodayVisits(visits: any[]): Promise<void> {
                 </div>
               </div>
             </div>
+
+            <!-- Feedback Survey Button for Completed Visits -->
+            ${visit.status === 'completed' ? `
+              <div class="mt-4 space-y-3">
+                <div class="flex justify-end items-center">
+                  <button 
+                    id="feedbackBtn_${visit.id}"
+                    class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onclick="openFeedbackSurvey('${visit.id}', '${visit.visitor_first_name} ${visit.visitor_last_name}', '${visit.visit_date}', ${JSON.stringify(places.map((p: any) => p.place_name)).replace(/"/g, '&quot;')})"
+                  >
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                    </svg>
+                    Feedback Survey
+                  </button>
+                </div>
+              </div>
+            ` : ''}
           </div>
         </div>
       </div>
@@ -11615,6 +11657,12 @@ async function displayVisitorTodayVisits(visits: any[]): Promise<void> {
   }
 
   visitorTodayVisitsList.innerHTML = visitsHtml;
+  
+  // Update feedback button states for completed visits
+  const completedVisits = visits.filter(visit => visit.status === 'completed');
+  for (const visit of completedVisits) {
+    updateFeedbackButtonState(visit.id);
+  }
 }
 
 // Function to display visitor's future visits

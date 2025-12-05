@@ -20,8 +20,27 @@ export function showPendingFeedbackModal(visits: PendingFeedbackVisit[]): void {
 
   const visitLabel = visits.length === 1 ? 'visit' : 'visits';
 
-  const visitsList = visits.map(visit => `
-    <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow duration-200">
+  // Sort visits by date to find the most recent one
+  const sortedVisits = [...visits].sort((a, b) => {
+    const dateA = new Date(a.visitDate).getTime();
+    const dateB = new Date(b.visitDate).getTime();
+    return dateB - dateA; // Most recent first
+  });
+
+  const mostRecentVisitId = sortedVisits[0]?.visitId;
+
+  const visitsList = visits.map((visit) => {
+    const isMostRecent = visit.visitId === mostRecentVisitId;
+    const recentClass = isMostRecent ? 'latest-visit-item' : '';
+    const recentBadge = isMostRecent ? `
+      <div class="absolute -top-2 -right-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg animate-pulse-badge">
+        Latest
+      </div>
+    ` : '';
+    
+    return `
+    <div class="relative border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow duration-200 ${recentClass}">
+      ${recentBadge}
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Completed on</p>
@@ -51,7 +70,8 @@ export function showPendingFeedbackModal(visits: PendingFeedbackVisit[]): void {
         </div>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   const modalHTML = `
     <style>
@@ -100,6 +120,69 @@ export function showPendingFeedbackModal(visits: PendingFeedbackVisit[]): void {
           opacity: 0;
         }
       }
+      /* Encircling border animation - pulsing rings */
+      @keyframes encirclePulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7),
+                      0 0 0 0 rgba(147, 51, 234, 0.5),
+                      0 0 0 0 rgba(59, 130, 246, 0.3);
+        }
+        50% {
+          box-shadow: 0 0 0 6px rgba(59, 130, 246, 0),
+                      0 0 0 10px rgba(147, 51, 234, 0),
+                      0 0 0 14px rgba(59, 130, 246, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(59, 130, 246, 0),
+                      0 0 0 0 rgba(147, 51, 234, 0),
+                      0 0 0 0 rgba(59, 130, 246, 0);
+        }
+      }
+      /* Glow animation */
+      @keyframes glowPulse {
+        0%, 100% {
+          box-shadow: 0 0 20px rgba(59, 130, 246, 0.4),
+                      0 0 40px rgba(147, 51, 234, 0.2),
+                      inset 0 0 20px rgba(59, 130, 246, 0.1);
+        }
+        50% {
+          box-shadow: 0 0 30px rgba(59, 130, 246, 0.6),
+                      0 0 60px rgba(147, 51, 234, 0.4),
+                      inset 0 0 30px rgba(59, 130, 246, 0.2);
+        }
+      }
+      /* Scale pulse animation */
+      @keyframes scalePulse {
+        0%, 100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.01);
+        }
+      }
+      /* Rotating border animation */
+      @keyframes rotateBorder {
+        0% {
+          background-position: 0% 50%;
+        }
+        50% {
+          background-position: 100% 50%;
+        }
+        100% {
+          background-position: 0% 50%;
+        }
+      }
+      /* Badge pulse animation */
+      @keyframes pulseBadge {
+        0%, 100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1.1);
+          opacity: 0.9;
+        }
+      }
       .modal-bounce-animation {
         animation: modalBounce 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
       }
@@ -111,6 +194,55 @@ export function showPendingFeedbackModal(visits: PendingFeedbackVisit[]): void {
       }
       #pendingFeedbackModal.fade-out {
         animation: fadeOut 0.4s ease-out forwards;
+      }
+      /* Latest visit item styling */
+      .latest-visit-item {
+        position: relative;
+        border: 2px solid rgba(59, 130, 246, 0.5) !important;
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(147, 51, 234, 0.05) 100%) !important;
+        animation: encirclePulse 2s ease-in-out infinite,
+                   glowPulse 3s ease-in-out infinite,
+                   scalePulse 4s ease-in-out infinite;
+        overflow: visible;
+      }
+      .latest-visit-item::before {
+        content: '';
+        position: absolute;
+        top: -4px;
+        left: -4px;
+        right: -4px;
+        bottom: -4px;
+        border-radius: 0.875rem;
+        background: linear-gradient(90deg, 
+          rgba(59, 130, 246, 0.8) 0%,
+          rgba(147, 51, 234, 0.8) 50%,
+          rgba(59, 130, 246, 0.8) 100%
+        );
+        background-size: 200% 100%;
+        animation: rotateBorder 3s linear infinite;
+        z-index: -1;
+        opacity: 0.8;
+      }
+      .latest-visit-item::after {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        right: -2px;
+        bottom: -2px;
+        border-radius: 0.75rem;
+        background: inherit;
+        z-index: -1;
+      }
+      .dark .latest-visit-item {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%) !important;
+        border-color: rgba(59, 130, 246, 0.7) !important;
+      }
+      .dark .latest-visit-item::before {
+        opacity: 1;
+      }
+      .animate-pulse-badge {
+        animation: pulseBadge 2s ease-in-out infinite;
       }
     </style>
     <div id="pendingFeedbackModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/70 backdrop-blur-sm p-4" style="opacity: 0;">
