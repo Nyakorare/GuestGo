@@ -52,8 +52,6 @@ async function loadWeeklyVisitCount(_userEmail: string) {
     // Check if user has visitor role
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    
-    console.log('Current user:', { id: user.id, email: user.email });
 
     try {
       const { data: roleData } = await supabase
@@ -62,11 +60,8 @@ async function loadWeeklyVisitCount(_userEmail: string) {
         .eq('user_id', user.id)
         .single();
       
-      console.log('User role data:', roleData);
-      
       // Only show weekly visit count for visitor roles
       if (roleData?.role !== 'visitor') {
-        console.log('User is not a visitor, hiding weekly visit count');
         weeklyVisitCountDiv.classList.add('hidden');
         return;
       }
@@ -106,21 +101,6 @@ async function loadWeeklyVisitCount(_userEmail: string) {
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
     weekEnd.setHours(23, 59, 59, 999);
-    
-    console.log('Week calculation debug:', {
-      philippineToday: philippineToday.toISOString(),
-      dayOfWeek,
-      daysToSubtract,
-      weekStart: weekStart.toISOString(),
-      weekEnd: weekEnd.toISOString()
-    });
-    
-    console.log('Date ranges:', {
-      philippineToday: philippineToday.toISOString().split('T')[0],
-      weekStart: weekStart.toISOString().split('T')[0],
-      weekEnd: weekEnd.toISOString().split('T')[0],
-      queryEndDate: philippineToday.toISOString().split('T')[0]
-    });
 
     // Calculate previous week boundaries
     const prevWeekStart = new Date(weekStart);
@@ -151,13 +131,6 @@ async function loadWeeklyVisitCount(_userEmail: string) {
     const weekStartStr = weekStart.toISOString().split('T')[0];
     const weekEndStr = weekEnd.toISOString().split('T')[0];
     
-    console.log('Database query boundaries:', {
-      weekStartStr,
-      weekEndStr,
-      weekStartISO: weekStart.toISOString(),
-      weekEndISO: weekEnd.toISOString()
-    });
-    
     // DEBUGGING APPROACH: Get all visits first, then filter in JavaScript
     // This helps us see exactly what dates are being returned and why the filtering might be failing
     // The issue might be timezone differences between database storage and query comparison
@@ -178,15 +151,6 @@ async function loadWeeklyVisitCount(_userEmail: string) {
       const visitDate = new Date(visit.visit_date);
       const isInCurrentWeek = visitDate >= weekStart && visitDate <= weekEnd;
       
-      console.log('Visit date filtering:', {
-        visitDate: visit.visit_date,
-        visitDateParsed: visitDate.toISOString(),
-        weekStart: weekStart.toISOString(),
-        weekEnd: weekEnd.toISOString(),
-        isInCurrentWeek,
-        visitStatus: visit.status
-      });
-      
       return isInCurrentWeek;
     }) || [];
 
@@ -203,14 +167,6 @@ async function loadWeeklyVisitCount(_userEmail: string) {
       .select('visit_date, status, visitor_first_name, visitor_last_name, visitor_email, visitor_user_id')
       .or(`visitor_user_id.eq.${user.id},visitor_email.eq.${user.email}`)
       .order('visit_date', { ascending: true });
-    
-    console.log('All visits for user (ID or email):', allVisits);
-    console.log('Current week visits (filtered):', visits);
-    console.log('Week boundaries:', {
-      weekStart: weekStart.toISOString().split('T')[0],
-      weekEnd: weekEnd.toISOString().split('T')[0],
-      philippineToday: philippineToday.toISOString().split('T')[0]
-    });
 
     // Query the database for all pending, completed, and completed_flagged visits for the previous week
     const { data: _prevWeekVisits, error: prevWeekError } = await supabase
@@ -254,15 +210,6 @@ async function loadWeeklyVisitCount(_userEmail: string) {
     const completedCount = visits?.filter(v => v.status === 'completed').length || 0;
     const completedFlaggedCount = visits?.filter(v => v.status === 'completed_flagged').length || 0;
     const activeCountThisWeek = pendingCount + inProgressCount + temporaryExitCount;
-    
-    // Debug: Log individual visit details for current week
-    if (visits && visits.length > 0) {
-      console.log('Current week visit details:', visits.map(v => ({
-        date: v.visit_date,
-        status: v.status,
-        isCurrentWeek: new Date(v.visit_date) >= weekStart && new Date(v.visit_date) <= weekEnd
-      })));
-    }
 
     // Count ALL pending visits (including future weeks)
     const totalPendingCount = allPendingVisits?.length || 0;
@@ -351,36 +298,6 @@ async function loadWeeklyVisitCount(_userEmail: string) {
         currentWeekData.total++;
       });
     }
-    
-    // Debug logging to understand the counts
-    console.log('Weekly Visit Count Debug:', {
-      currentWeek: {
-        visitCount,
-        pendingCount,
-        completedCount,
-        completedFlaggedCount
-      },
-      allPending: {
-        totalPendingCount
-      },
-      future: {
-        futureVisitCount
-      },
-      totals: {
-        totalPendingSchedules,
-        totalCompletedSchedules,
-        totalWeekVisits
-      },
-      weeklyVisitCounts: Array.from(weeklyVisitCounts.entries()).map(([weekKey, data]) => ({
-        week: weekKey,
-        ...data
-      })),
-      weekBoundaries: {
-        philippineToday: philippineToday.toISOString().split('T')[0],
-        weekStart: weekStart.toISOString().split('T')[0],
-        weekEnd: weekEnd.toISOString().split('T')[0]
-      }
-    });
 
     // NEW LOGIC: Current week visits determine the limit, previous week visits don't affect current week
     // Calculate remaining visits for this week (based on current week visits only)
@@ -410,10 +327,6 @@ async function loadWeeklyVisitCount(_userEmail: string) {
     let statusHtml = '';
     let additionalInfo = '';
     const scheduleNowBtn = document.getElementById('scheduleNowBtn');
-    
-    // Add debug info to help understand the counts
-    const debugInfo = `[Debug: ${totalWeekVisits} total this week, ${activeCountThisWeek} active (pending + in_progress + temp exit) this week, ${completedCount} completed this week, ${completedFlaggedCount} flagged this week, ${remainingVisits} remaining]`;
-    console.log(debugInfo);
     
     // Create comprehensive weekly status display
     // removed unused weeklyStatusHtml
@@ -613,22 +526,14 @@ async function loadWeeklyVisitCount(_userEmail: string) {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      console.log('No user found');
       return;
     }
-
-    console.log('=== VISITS COUNT TEST ===');
-    console.log('User ID:', user.id);
-    console.log('User Email:', user.email);
 
     // Test 1: Get all visits for this user
     const { data: allVisits, error: _allError } = await supabase
       .from('scheduled_visits')
       .select('*')
       .eq('visitor_user_id', user.id);
-
-    console.log('All visits for user:', allVisits);
-    console.log('All visits count:', allVisits?.length || 0);
 
     // Test 2: Get pending and completed visits for this user
     const { data: activeVisits, error: _activeError } = await supabase
@@ -637,18 +542,12 @@ async function loadWeeklyVisitCount(_userEmail: string) {
       .eq('visitor_user_id', user.id)
       .in('status', ['pending', 'completed', 'completed_flagged']);
 
-    console.log('Active visits (pending + completed):', activeVisits);
-    console.log('Active visits count:', activeVisits?.length || 0);
-
     // Test 3: Get pending visits for this user
     const { data: pendingVisits, error: _pendingError } = await supabase
       .from('scheduled_visits')
       .select('*')
       .eq('visitor_user_id', user.id)
       .eq('status', 'pending');
-
-    console.log('Pending visits:', pendingVisits);
-    console.log('Pending visits count:', pendingVisits?.length || 0);
 
     // Test 4: Get completed visits for this user
     const { data: completedVisits, error: _completedError } = await supabase
@@ -657,33 +556,17 @@ async function loadWeeklyVisitCount(_userEmail: string) {
       .eq('visitor_user_id', user.id)
       .eq('status', 'completed');
 
-    console.log('Completed visits:', completedVisits);
-    console.log('Completed visits count:', completedVisits?.length || 0);
-
     // Test 5: Check if there are any visits at all in the database
     const { data: anyVisits, error: _anyError } = await supabase
       .from('scheduled_visits')
       .select('*')
       .limit(5);
 
-    console.log('Any visits in database:', anyVisits);
-    console.log('Any visits count:', anyVisits?.length || 0);
-
     // Test 6: Calculate remaining visits
     const activeCount = activeVisits?.length || 0;
     const pendingCount = pendingVisits?.length || 0;
     const completedCount = completedVisits?.length || 0;
     const remainingVisits = Math.max(0, 2 - activeCount);
-    
-    console.log('Active visits (pending + completed):', activeCount);
-    console.log('Pending visits:', pendingCount);
-    console.log('Completed visits:', completedCount);
-    console.log('Remaining visits:', remainingVisits);
-    console.log('Status:', activeCount === 0 ? '2 visits remaining' : 
-                       activeCount === 1 ? '1 visit remaining' : 
-                       'No visits remaining');
-
-    console.log('=== END TEST ===');
 
   } catch (error) {
     console.error('Error in test:', error);
@@ -692,42 +575,19 @@ async function loadWeeklyVisitCount(_userEmail: string) {
 
 // Test function to manually trigger schedule modal
 (window as any).testScheduleModal = () => {
-  console.log('=== SCHEDULE MODAL TEST ===');
-  
   const scheduleNowBtn = document.getElementById('scheduleNowBtn');
   const scheduleModal = document.getElementById('scheduleModal');
-  
-  console.log('Schedule button found:', !!scheduleNowBtn);
-  console.log('Schedule modal found:', !!scheduleModal);
-  
-  if (scheduleNowBtn) {
-    console.log('Button classes:', scheduleNowBtn.className);
-    console.log('Button hidden:', scheduleNowBtn.classList.contains('hidden'));
-    console.log('Button visible:', scheduleNowBtn.offsetParent !== null);
-  }
-  
-  if (scheduleModal) {
-    console.log('Modal classes:', scheduleModal.className);
-    console.log('Modal hidden:', scheduleModal.classList.contains('hidden'));
-  }
   
   // Try to manually open the modal
   if (scheduleModal) {
     scheduleModal.classList.remove('hidden');
-    console.log('Modal should now be visible');
   }
-  
-  console.log('=== END SCHEDULE MODAL TEST ===');
 };
 
 // Test function to debug week boundary calculation
 (window as any).testWeekBoundaries = () => {
-  console.log('=== WEEK BOUNDARY TEST ===');
-  
   // Test with a known date (e.g., August 20, 2025 - a Wednesday)
   const testDate = new Date('2025-08-20');
-  console.log('Test date:', testDate.toISOString());
-  console.log('Day of week:', testDate.getDay()); // Should be 3 (Wednesday)
   
   // Calculate week boundaries
   const dayOfWeek = testDate.getDay();
@@ -740,28 +600,15 @@ async function loadWeeklyVisitCount(_userEmail: string) {
   weekEnd.setDate(weekStart.getDate() + 6);
   weekEnd.setHours(23, 59, 59, 999);
   
-  console.log('Calculated week boundaries:', {
-    weekStart: weekStart.toISOString().split('T')[0], // Should be 2025-08-17 (Sunday)
-    weekEnd: weekEnd.toISOString().split('T')[0],   // Should be 2025-08-23 (Saturday)
-    weekStartFull: weekStart.toISOString(),
-    weekEndFull: weekEnd.toISOString()
-  });
-  
   // Test if August 16 (previous week) falls outside current week
   const aug16 = new Date('2025-08-16');
   const isInCurrentWeek = aug16 >= weekStart && aug16 <= weekEnd;
-  console.log('August 16 in current week?', isInCurrentWeek); // Should be false
-  
-  console.log('=== END WEEK BOUNDARY TEST ===');
 };
 
 // Test function to debug the specific issue with August 16 visit
 (window as any).testAugust16Issue = () => {
-  console.log('=== AUGUST 16 ISSUE TEST ===');
-  
   // Simulate the exact scenario: today is August 20, 2025
   const today = new Date('2025-08-20');
-  console.log('Today (simulated):', today.toISOString());
   
   // Calculate week boundaries for August 17-23
   const dayOfWeek = today.getDay(); // 3 (Wednesday)
@@ -774,32 +621,9 @@ async function loadWeeklyVisitCount(_userEmail: string) {
   weekEnd.setDate(weekStart.getDate() + 6);
   weekEnd.setHours(23, 59, 59, 999);
   
-  console.log('Current week boundaries:', {
-    weekStart: weekStart.toISOString().split('T')[0], // Should be 2025-08-17
-    weekEnd: weekEnd.toISOString().split('T')[0],   // Should be 2025-08-23
-  });
-  
   // Test the problematic date: August 16
   const aug16 = new Date('2025-08-16');
   const aug16Str = aug16.toISOString().split('T')[0];
-  
-  console.log('August 16 test:', {
-    august16: aug16Str,
-    august16ISO: aug16.toISOString(),
-    weekStartStr: weekStart.toISOString().split('T')[0],
-    weekEndStr: weekEnd.toISOString().split('T')[0],
-    isAfterWeekStart: aug16 >= weekStart,
-    isBeforeWeekEnd: aug16 <= weekEnd,
-    isInCurrentWeek: aug16 >= weekStart && aug16 <= weekEnd
-  });
-  
-  // Test database query format
-  console.log('Database query would use:', {
-    gte: weekStart.toISOString().split('T')[0],
-    lte: weekEnd.toISOString().split('T')[0]
-  });
-  
-  console.log('=== END AUGUST 16 ISSUE TEST ===');
 };
 
 // Global function to open schedule modal (called from inline onclick)
@@ -929,13 +753,6 @@ export function HomePage() {
           visitDateInput.value = currentMaxDate.toISOString().split('T')[0];
           return;
         }
-        
-        // If we reach here, the date is valid (today or future within 1 month)
-        console.log('Date validation passed:', {
-          selected: philippineSelectedDate.toISOString(),
-          current: currentPhilippineDate.toISOString(),
-          isToday: philippineSelectedDate.getTime() === currentPhilippineDate.getTime()
-        });
 
         // Update place availability based on the selected date
         try {

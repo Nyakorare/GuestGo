@@ -1,4 +1,5 @@
 import { sendVerificationEmail } from '../config/emailjs';
+import { sendVisitConfirmationEmail } from '../config/email';
 import supabase from '../config/supabase';
 import { showNotification } from '../pages/dashboard/index';
 import { showLoadingOverlay, updateLoadingOverlay, hideLoadingOverlay } from '../utils/loadingOverlay';
@@ -3358,6 +3359,67 @@ async function scheduleVisitFromConfirmation(data: VisitConfirmationData) {
     }
     if (scheduleModal) {
       scheduleModal.classList.add('hidden');
+    }
+
+    // Fetch full visit details with places for email
+    try {
+      const { data: fullVisitData, error: fetchError } = await supabase
+        .from('scheduled_visits')
+        .select(`
+          id,
+          visitor_first_name,
+          visitor_last_name,
+          visitor_email,
+          visitor_phone,
+          visit_date,
+          purpose,
+          status,
+          scheduled_at,
+          scheduled_visit_places (
+            place_id,
+            status,
+            places_to_visit (
+              id,
+              name,
+              location
+            )
+          )
+        `)
+        .eq('id', visitData)
+        .single();
+
+      if (!fetchError && fullVisitData) {
+        // Transform places data for email
+        const places = (fullVisitData.scheduled_visit_places || []).map((svp: any) => ({
+          placeId: svp.places_to_visit?.id || svp.place_id,
+          placeName: svp.places_to_visit?.name || 'Unknown Place',
+          placeLocation: svp.places_to_visit?.location || null,
+          status: svp.status || 'pending'
+        }));
+
+        // Prepare email data
+        const emailData = {
+          visitId: fullVisitData.id,
+          visitorFirstName: fullVisitData.visitor_first_name,
+          visitorLastName: fullVisitData.visitor_last_name,
+          visitorEmail: fullVisitData.visitor_email,
+          visitorPhone: fullVisitData.visitor_phone || '',
+          visitDate: fullVisitData.visit_date,
+          purpose: fullVisitData.purpose,
+          places: places,
+          status: fullVisitData.status,
+          scheduledAt: fullVisitData.scheduled_at
+        };
+
+        // Send confirmation email (don't fail if email fails)
+        const emailSent = await sendVisitConfirmationEmail(emailData);
+        if (!emailSent) {
+          console.warn('Failed to send confirmation email, but visit was created successfully');
+        }
+      }
+    } catch (emailError) {
+      // Log error but don't fail the visit creation
+      console.error('Error sending confirmation email:', emailError);
     }
 
     // Show visit ID and QR code modal
