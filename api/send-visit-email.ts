@@ -74,7 +74,7 @@ export default async function handler(
 
     // Format scheduled date
     const scheduledDateObj = new Date(scheduledAt);
-    const formattedScheduledDate = scheduledDateObj.toLocaleDateString('en-US', {
+    const formattedScheduledDate = scheduledDateObj.toLocaleString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -116,7 +116,7 @@ export default async function handler(
             <div style="padding: 30px; text-align: center; border-bottom: 1px solid #e5e7eb;">
               <h2 style="color: #374151; margin-top: 0; font-size: 20px;">Your Visit QR Code</h2>
               <div style="display: inline-block; padding: 15px; background-color: white; border: 2px solid #e5e7eb; border-radius: 8px; margin: 20px 0;">
-                <img src="data:image/png;base64,${qrCodeBase64}" alt="Visit QR Code" style="width: 200px; height: 200px; display: block;" />
+                <img src="cid:qrcode" alt="Visit QR Code" style="width: 200px; height: 200px; display: block;" />
               </div>
               <p style="color: #6b7280; font-size: 14px; margin: 15px 0 0 0;">
                 Scan this QR code at the gate entrance to check in for your visit.
@@ -210,11 +210,23 @@ export default async function handler(
       return;
     }
     
+    // Convert base64 to Buffer for attachment
+    const qrCodeBuffer = Buffer.from(qrCodeBase64, 'base64');
+    
     const sendSmtpEmail = new brevo.SendSmtpEmail();
     sendSmtpEmail.subject = `Visit Confirmation - ${visitId} | GuestGo`;
     sendSmtpEmail.htmlContent = htmlContent;
     sendSmtpEmail.sender = { name: fromName, email: fromEmail };
     sendSmtpEmail.to = [{ email: visitorEmail }];
+    
+    // Add QR code as inline attachment
+    sendSmtpEmail.attachment = [
+      {
+        name: 'qrcode.png',
+        content: qrCodeBuffer.toString('base64'),
+        contentId: 'qrcode',
+      },
+    ];
 
     try {
       const data = await brevoApiInstance.sendTransacEmail(sendSmtpEmail);

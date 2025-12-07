@@ -41,6 +41,22 @@ Create a `.env` (or `.env.local`) with at least:
 - VITE_EMAILJS_PUBLIC_KEY=...
 - VITE_PYTHON_API_URL=... *(Render deployment URL or local Flask server)*
 
+**For Email Service (Brevo) - Required for visit confirmation emails:**
+
+- BREVO_API_KEY=... *(Brevo API key for sending transactional emails)*
+- BREVO_FROM_EMAIL=... *(Verified sender email address in Brevo)*
+- BREVO_FROM_NAME=... *(Optional, defaults to 'GuestGo')*
+
+**Vercel Deployment:**
+
+When deploying to Vercel, make sure to add these environment variables in your Vercel project settings:
+1. Go to your Vercel project → Settings → Environment Variables
+2. Add `BREVO_API_KEY` (server-side only, not exposed to client)
+3. Add `BREVO_FROM_EMAIL` (server-side only)
+4. Add `BREVO_FROM_NAME` (optional, server-side only)
+
+These are server-side environment variables (not prefixed with `VITE_`) and are used by the `/api/send-visit-email` serverless function.
+
 ### Tech Stack
 
 - Vite + TypeScript

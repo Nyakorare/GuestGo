@@ -1433,7 +1433,7 @@ export function DashboardPage() {
       </div>
 
       <!-- Edit Place Modal -->
-      <div id="editPlaceModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
+      <div id="editPlaceModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-[9999]">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white dark:bg-gray-800">
           <div class="mt-3">
             <div class="flex justify-between items-center mb-4">
@@ -4541,6 +4541,11 @@ async function editPlacePurposes(placeId: string, placeName: string) {
     return;
   }
 
+  // Move modal to document.body if it's not already there to ensure it's outside any container constraints
+  if (modal.parentElement !== document.body) {
+    document.body.appendChild(modal);
+  }
+
   // Set the place ID
   idInput.value = placeId;
 
@@ -7322,8 +7327,6 @@ async function loadScheduledVisits() {
       return;
     }
 
-    console.log('Loading scheduled visits for user:', user.id);
-
     // First, check if the user has personnel role
     const { data: roleData, error: roleError } = await supabase
       .from('user_roles')
@@ -7481,7 +7484,6 @@ function startAutomaticStatusUpdates() {
   // Also run an immediate update when starting
   setTimeout(async () => {
     try {
-      console.log('Running initial status update...');
       await updateVisitStatuses();
     } catch (error) {
       console.error('Error in initial status update:', error);
@@ -7502,8 +7504,6 @@ function stopAutomaticStatusUpdates() {
 // Function to automatically update visit statuses (runs the consolidated status system)
 async function updateVisitStatuses() {
   try {
-    console.log('Calling status update function...');
-    
     // Try the simple fix function first
     const { data: fixData, error: fixError } = await supabase.rpc('fix_pending_past_visits');
     
@@ -7979,8 +7979,6 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
 
     // Use strict YYYY-MM-DD string comparison for visit date and Philippine date
     const todayStr = philippineTodayStr || '';
-    // Debug log
-    console.log('[DATE DEBUG] visitDateStr:', visitDateStr, 'currentDateStr:', todayStr);
 
     // Check gate entrance scan requirements for today's visits
     const gateEntranceScanned = visit.gate_entrance_scanned || false;
