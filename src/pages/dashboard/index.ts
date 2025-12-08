@@ -9357,6 +9357,14 @@ async function completeVisit(visitId: string) {
 
     showNotification('Visit completed successfully!', 'success');
     
+    // Send completion email (don't fail if email sending fails)
+    try {
+      await sendVisitCompletionEmail(visitId);
+    } catch (emailError) {
+      console.error('Error sending completion email:', emailError);
+      // Don't show error to user - email failure shouldn't block visit completion
+    }
+    
     // Reload the visits to reflect the changes
     await loadScheduledVisits();
     await loadFinishedSchedules();
@@ -9364,6 +9372,63 @@ async function completeVisit(visitId: string) {
   } catch (error) {
     console.error('Error in completeVisit:', error);
     showNotification('Error completing visit', 'error');
+  }
+}
+
+// Function to send visit completion email
+async function sendVisitCompletionEmail(visitId: string): Promise<void> {
+  try {
+    // Fetch visit data with places
+    const { data: visitData, error: visitError } = await supabase
+      .from('scheduled_visits')
+      .select(`
+        id,
+        visitor_first_name,
+        visitor_last_name,
+        visitor_email,
+        visitor_role,
+        visit_date,
+        purpose,
+        scheduled_visit_places (
+          place_id,
+          places_to_visit (
+            id,
+            name,
+            location
+          )
+        )
+      `)
+      .eq('id', visitId)
+      .single();
+
+    if (visitError || !visitData) {
+      console.error('Error fetching visit data for email:', visitError);
+      return;
+    }
+
+    // Transform places data
+    const places = (visitData.scheduled_visit_places || []).map((svp: any) => ({
+      placeId: svp.places_to_visit?.id || svp.place_id,
+      placeName: svp.places_to_visit?.name || 'Unknown Place',
+      placeLocation: svp.places_to_visit?.location || null,
+    }));
+
+    // Import and send completion email
+    const { sendVisitCompletionEmail } = await import('../../config/completionEmail');
+    
+    await sendVisitCompletionEmail({
+      visitId: visitData.id,
+      visitorFirstName: visitData.visitor_first_name,
+      visitorLastName: visitData.visitor_last_name,
+      visitorEmail: visitData.visitor_email,
+      visitorRole: visitData.visitor_role as 'guest' | 'visitor',
+      visitDate: visitData.visit_date,
+      purpose: visitData.purpose,
+      places: places,
+    });
+  } catch (error) {
+    console.error('Error in sendVisitCompletionEmail:', error);
+    // Don't throw - email failure shouldn't block visit completion
   }
 }
 
@@ -10345,6 +10410,14 @@ async function processGateExitScanWithFaceVerification(
         console.error('Error scanning gate exit:', error);
         showGateExitScanError(`Error scanning gate exit: ${error.message}`);
         return;
+      }
+
+      // Send completion email (don't fail if email sending fails)
+      try {
+        await sendVisitCompletionEmail(visitId);
+      } catch (emailError) {
+        console.error('Error sending completion email:', emailError);
+        // Don't show error to user - email failure shouldn't block exit scan
       }
 
       // Show success message with similarity percentage

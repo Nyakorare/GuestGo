@@ -1,6 +1,7 @@
 import supabase from '../config/supabase';
 import { type VisitQRData } from '../utils/qrCode';
 import jsQR from 'jsqr';
+import { showErrorToast } from '../utils/toastNotification';
 
 export function GuardDashboardPage() {
   return `
@@ -661,11 +662,14 @@ function showGuardVisitConfirmationModal(visitData: VisitQRData) {
   // Gate state (from fetched visit)
   const gateEntranceScanned = (visitData as any).gateEntranceScanned === true;
 
+  // Check if visit is completed - if so, disable all action buttons except cancel
+  const isVisitCompleted = visitData.status === 'completed' || visitData.status === 'completed_flagged';
+
   const isTemporaryExit = (visitData.status === 'temporary_exit');
-  const shouldEnableEntrance = (isToday && !gateEntranceScanned && noneStarted) || isTemporaryExit;
-  const shouldEnableExit = isToday && gateEntranceScanned && allPlacesCompleted;
-  const shouldEnableTemporaryExit = isToday && gateEntranceScanned && visitData.status !== 'temporary_exit' && !allPlacesCompleted;
-  const shouldDisableBoth = isFuture || isPast || (gateEntranceScanned && !allPlacesCompleted) || midProgress || (!shouldEnableEntrance && !shouldEnableExit && !shouldEnableTemporaryExit);
+  const shouldEnableEntrance = !isVisitCompleted && ((isToday && !gateEntranceScanned && noneStarted) || isTemporaryExit);
+  const shouldEnableExit = !isVisitCompleted && (isToday && gateEntranceScanned && allPlacesCompleted);
+  const shouldEnableTemporaryExit = !isVisitCompleted && (isToday && gateEntranceScanned && visitData.status !== 'temporary_exit' && !allPlacesCompleted);
+  const shouldDisableBoth = isVisitCompleted || isFuture || isPast || (gateEntranceScanned && !allPlacesCompleted) || midProgress || (!shouldEnableEntrance && !shouldEnableExit && !shouldEnableTemporaryExit);
 
   // Create modal HTML
   const modalHTML = `
@@ -825,8 +829,12 @@ function showGuardVisitConfirmationModal(visitData: VisitQRData) {
           </div>
 
           <!-- Status Message -->
-          <div id="guardModalStatus" class="mt-4 text-center ${shouldDisableBoth && !isFuture && !isPast ? '' : 'hidden'}">
-            ${shouldDisableBoth && !isFuture && !isPast ? `
+          <div id="guardModalStatus" class="mt-4 text-center ${(shouldDisableBoth && !isFuture && !isPast) || isVisitCompleted ? '' : 'hidden'}">
+            ${isVisitCompleted ? `
+              <div class="p-3 rounded-md bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-200">
+                <p class="text-sm font-medium">This visit has been completed. No further actions can be taken.</p>
+              </div>
+            ` : shouldDisableBoth && !isFuture && !isPast ? `
               <div class="p-3 rounded-md bg-yellow-50 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200">
                 <p class="text-sm font-medium">${gateEntranceScanned && !allPlacesCompleted ? 'Place to visit still pending' : 'Finish the scheduled places first'}</p>
               </div>
@@ -856,6 +864,20 @@ function showGuardVisitConfirmationModal(visitData: VisitQRData) {
     // Reset scanner
     resetGuardScanner();
   };
+
+  // Disable action buttons if visit is completed
+  if (isVisitCompleted) {
+    if (entranceBtn) {
+      entranceBtn.disabled = true;
+    }
+    if (tempExitBtn) {
+      tempExitBtn.disabled = true;
+    }
+    if (exitBtn) {
+      exitBtn.disabled = true;
+    }
+    // Cancel button should remain enabled
+  }
 
   const refreshModal = async () => {
     if (refreshBtn) {
@@ -1114,6 +1136,14 @@ async function logGuardAction(action: 'entrance' | 'exit' | 'temporary_exit', vi
         if (updateExitError) {
           console.error('Error updating exit scanned/status fields:', updateExitError);
           // Non-fatal; continue
+        } else if (finalStatus === 'completed') {
+          // Send completion email only if status is 'completed' (not 'completed_flagged')
+          try {
+            await sendVisitCompletionEmailForGuard(activeVisit.visitId);
+          } catch (emailError) {
+            console.error('Error sending completion email after guard exit:', emailError);
+            // Don't fail the exit logging if email fails
+          }
         }
       } catch (e) {
         console.error('Unexpected error updating gate exit scanned/status:', e);
@@ -1137,6 +1167,63 @@ async function logGuardAction(action: 'entrance' | 'exit' | 'temporary_exit', vi
   } catch (error) {
     console.error('Error in logGuardAction:', error);
     showGuardError('Error', `Error logging ${action}.`);
+  }
+}
+
+// Function to send visit completion email after guard logs exit
+async function sendVisitCompletionEmailForGuard(visitId: string): Promise<void> {
+  try {
+    // Fetch visit data with places
+    const { data: visitData, error: visitError } = await supabase
+      .from('scheduled_visits')
+      .select(`
+        id,
+        visitor_first_name,
+        visitor_last_name,
+        visitor_email,
+        visitor_role,
+        visit_date,
+        purpose,
+        scheduled_visit_places (
+          place_id,
+          places_to_visit (
+            id,
+            name,
+            location
+          )
+        )
+      `)
+      .eq('id', visitId)
+      .single();
+
+    if (visitError || !visitData) {
+      console.error('Error fetching visit data for email:', visitError);
+      return;
+    }
+
+    // Transform places data
+    const places = (visitData.scheduled_visit_places || []).map((svp: any) => ({
+      placeId: svp.places_to_visit?.id || svp.place_id,
+      placeName: svp.places_to_visit?.name || 'Unknown Place',
+      placeLocation: svp.places_to_visit?.location || null,
+    }));
+
+    // Import and send completion email
+    const { sendVisitCompletionEmail } = await import('../config/completionEmail');
+    
+    await sendVisitCompletionEmail({
+      visitId: visitData.id,
+      visitorFirstName: visitData.visitor_first_name,
+      visitorLastName: visitData.visitor_last_name,
+      visitorEmail: visitData.visitor_email,
+      visitorRole: (visitData.visitor_role as 'guest' | 'visitor') || 'guest',
+      visitDate: visitData.visit_date,
+      purpose: visitData.purpose,
+      places: places,
+    });
+  } catch (error) {
+    console.error('Error in sendVisitCompletionEmailForGuard:', error);
+    // Don't throw - email failure shouldn't block exit logging
   }
 }
 
@@ -1191,27 +1278,55 @@ async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Pr
     } = await import('../config/python-api');
 
     const performVerification = async (apiUrl: string) => {
-      const response = await fetch(`${apiUrl}/metrics/verify-images`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          base_image: entranceFaceImage,
-          probe_image: exitFaceImage
-        })
-      });
+      try {
+        const response = await fetch(`${apiUrl}/metrics/verify-images`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            base_image: entranceFaceImage,
+            probe_image: exitFaceImage
+          })
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || 'Face verification failed');
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+          throw new Error(errorData.error || 'Face verification failed');
+        }
+
+        return response.json();
+      } catch (fetchError) {
+        // Re-throw network errors as TypeError so they can be identified by isNetworkError
+        if (fetchError instanceof TypeError || 
+            (fetchError instanceof Error && 
+             (fetchError.message.includes('Failed to fetch') || 
+              fetchError.message.includes('ERR_CONNECTION_REFUSED') ||
+              fetchError.message.includes('NetworkError')))) {
+          throw new TypeError('Network error: Connection refused or service unavailable');
+        }
+        // Re-throw other errors as-is
+        throw fetchError;
       }
-
-      return response.json();
     };
 
     const handleResult = (result: any) => {
+      console.log('handleResult called with:', JSON.stringify(result, null, 2));
+      
+      if (!result) {
+        console.error('handleResult: result is null or undefined');
+        return {
+          match: false,
+          similarity: 0,
+          error: 'Invalid response from face verification service'
+        };
+      }
+
       if (!result.base?.found || !result.probe?.found) {
+        console.warn('handleResult: Face not detected', {
+          baseFound: result.base?.found,
+          probeFound: result.probe?.found
+        });
         return { 
           match: false, 
           similarity: 0, 
@@ -1220,11 +1335,19 @@ async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Pr
       }
   
       const threshold = 0.75;
-      const isMatch = result.match && result.similarity >= threshold;
+      const similarity = result.similarity || 0;
+      const isMatch = result.match && similarity >= threshold;
+      
+      console.log('handleResult: Verification details', {
+        match: result.match,
+        similarity: similarity,
+        threshold: threshold,
+        isMatch: isMatch
+      });
   
       return {
         match: isMatch,
-        similarity: result.similarity || 0
+        similarity: similarity
       };
     };
 
@@ -1261,16 +1384,26 @@ async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Pr
         try {
           const fallbackResult = await performVerification(DEPLOYED_API_URL);
           console.log('Guard Dashboard: Deployed AI service responded successfully');
+          console.log('Guard Dashboard: Deployed API result:', JSON.stringify(fallbackResult, null, 2));
           setApiUrlPreference('deployed');
-          return handleResult(fallbackResult);
+          const handledResult = handleResult(fallbackResult);
+          console.log('Guard Dashboard: Handled result:', handledResult);
+          return handledResult;
         } catch (fallbackError) {
-          console.error('Guard Dashboard: Both local and deployed AI API verification failed:', fallbackError);
+          // Only log as warning for network errors, not as error since we handle it gracefully
+          if (isNetworkError(fallbackError)) {
+            console.warn('Guard Dashboard: Face verification service unavailable. Exit will proceed without verification.');
+          } else {
+            console.error('Guard Dashboard: Deployed AI API verification failed with non-network error:', fallbackError);
+          }
           // Return service unavailable flag for guard dashboard
           return {
             match: false,
             similarity: 0,
-            error: fallbackError instanceof Error ? fallbackError.message : 'Face verification service unavailable',
-            serviceUnavailable: true
+            error: isNetworkError(fallbackError) 
+              ? 'Face verification service unavailable' 
+              : (fallbackError instanceof Error ? fallbackError.message : 'Face verification service unavailable'),
+            serviceUnavailable: isNetworkError(fallbackError)
           };
         }
       } else {
@@ -1279,18 +1412,26 @@ async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Pr
       }
     }
   } catch (error) {
-    console.error('Error verifying faces:', error);
+    // Only log non-network errors as errors
+    const isConnectionError = error instanceof TypeError || 
+      (error instanceof Error && 
+       (error.message.includes('Failed to fetch') || 
+        error.message.includes('ERR_CONNECTION_REFUSED') ||
+        error.message.includes('NetworkError') ||
+        error.message.includes('Connection refused')));
     
-    // Check if this is a network/connection error
-    const isConnectionError = error instanceof TypeError && 
-      (error.message.includes('Failed to fetch') || 
-       error.message.includes('ERR_CONNECTION_REFUSED') ||
-       error.message.includes('NetworkError'));
+    if (!isConnectionError) {
+      console.error('Error verifying faces:', error);
+    } else {
+      console.warn('Face verification service unavailable. Exit will proceed without verification.');
+    }
     
     return { 
       match: false, 
       similarity: 0, 
-      error: error instanceof Error ? error.message : 'Face verification service unavailable',
+      error: isConnectionError 
+        ? 'Face verification service unavailable'
+        : (error instanceof Error ? error.message : 'Face verification service unavailable'),
       serviceUnavailable: isConnectionError
     };
   }
@@ -1449,23 +1590,40 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
       const compressedExitImage = await compressImageDataUrl(faceResult.croppedImageDataUrl, 0.8, 400, 400);
 
       // Verify faces match
-      const verificationResult = await verifyFaces(entranceFaceImage, compressedExitImage);
+      let verificationResult;
+      try {
+        verificationResult = await verifyFaces(entranceFaceImage, compressedExitImage);
+        console.log('Face verification result:', verificationResult);
+      } catch (verifyError) {
+        console.error('Error during face verification:', verifyError);
+        showGuardError('Face Verification Error', 'An error occurred during face verification. Please try again.');
+        return;
+      }
 
       // If service is unavailable, allow exit to proceed with a warning
+      // Check this FIRST before checking error, since serviceUnavailable also sets error
       if (verificationResult.serviceUnavailable) {
         console.warn('Face verification service unavailable, proceeding with exit logging');
         showGuardWarning(
           'Face Verification Service Unavailable', 
           'The face verification service is not available. Exit will be logged without verification. Please ensure the Python AI service is running for future scans.'
         );
-        // Continue to log exit even though verification failed
+        // Continue to log exit even though verification failed - leave similarity as null
+        // This will trigger the fallback success message
       } else if (verificationResult.error) {
         // For other errors (invalid images, etc.), block the exit
+        console.error('Face verification error:', verificationResult.error);
         showGuardError('Face Verification Error', verificationResult.error);
         return;
       } else if (!verificationResult.match) {
         // Faces don't match - block exit
         const similarityPercent = (verificationResult.similarity * 100).toFixed(1);
+        console.warn(`Face verification failed: similarity ${similarityPercent}%`);
+        // Show toast notification in top right
+        showErrorToast(
+          `Face verification failed: Face does not match entrance picture. Similarity: ${similarityPercent}%`,
+          5000
+        );
         showGuardError(
           'Face Verification Failed', 
           `Face does not match the entrance picture. Similarity: ${similarityPercent}%`
@@ -1508,6 +1666,14 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
         console.error('Error updating visit record:', updateError);
         showGuardError('Update Error', `Error updating visit: ${updateError.message}`);
         return;
+      }
+
+      // Send completion email after successful exit logging
+      try {
+        await sendVisitCompletionEmailForGuard(visitData.visitId);
+      } catch (emailError) {
+        console.error('Error sending completion email after guard exit with face:', emailError);
+        // Don't fail the exit logging if email fails
       }
 
       // Store face data in gate_scans table using guard-specific function

@@ -7,6 +7,7 @@ import { GatePage, setupGatePage } from '../pages/GatePage';
 import { GuardDashboardPage } from '../pages/GuardDashboard';
 import { TrackSchedulePage, initTrackSchedulePage } from '../pages/TrackSchedule';
 import { DocumentationsPage, setupDocumentationsPage } from '../pages/DocumentationsPage';
+import { FeedbackSurveyPage, setupFeedbackSurveyPage } from '../pages/FeedbackSurvey';
 import { setupAboutPageInteractivity } from './eventHandlers';
 import { performanceMonitor } from './performance';
 import { showLoadingOverlay, hideLoadingOverlay } from './loadingOverlay';
@@ -128,6 +129,14 @@ export function renderPage(path: string): string {
     const gateId = path.split('/')[2];
     if (gateId) {
       return GatePage(gateId);
+    }
+  }
+
+  // Handle feedback survey routes
+  if (path.startsWith('/feedback/')) {
+    const visitId = path.split('/')[2];
+    if (visitId) {
+      return FeedbackSurveyPage(visitId);
     }
   }
 
@@ -493,6 +502,15 @@ async function setupPageFunctionality(path: string, user: any, role: string | nu
     if (gateId) {
       setTimeout(() => {
         setupGatePage(gateId);
+      }, 100);
+    }
+  }
+
+  if (path.startsWith('/feedback/')) {
+    const visitId = path.split('/')[2];
+    if (visitId) {
+      setTimeout(() => {
+        setupFeedbackSurveyPage(visitId);
       }, 100);
     }
   }
