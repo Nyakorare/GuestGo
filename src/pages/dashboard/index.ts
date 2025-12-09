@@ -10376,7 +10376,18 @@ async function processGateExitScanWithFaceVerification(
       const verificationResult = await verifyFaces(entranceFaceImage, compressedImage);
 
       if (verificationResult.error) {
-        showGateExitScanError('Face Verification Error', verificationResult.error);
+        showGateExitScanError('Face Verification Error', `${verificationResult.error}. Please retake the photo.`);
+        
+        // Reopen face detection modal to allow retry
+        setTimeout(async () => {
+          try {
+            await showFaceDetectionForExitGateScan(visitId, gateId);
+          } catch (error) {
+            console.error('Error reopening face detection modal:', error);
+            showGateExitScanError('Error', 'Failed to reopen face detection. Please try again.');
+          }
+        }, 1000); // Wait 1 second before reopening to let user see the error message
+        
         return;
       }
 
@@ -10384,8 +10395,19 @@ async function processGateExitScanWithFaceVerification(
         const similarityPercent = (verificationResult.similarity * 100).toFixed(1);
         showGateExitScanError(
           'Face Verification Failed', 
-          `Face does not match the entrance picture. Similarity: ${similarityPercent}%`
+          `Face does not match the entrance picture. Similarity: ${similarityPercent}%. Please retake the photo.`
         );
+        
+        // Reopen face detection modal to allow retry
+        setTimeout(async () => {
+          try {
+            await showFaceDetectionForExitGateScan(visitId, gateId);
+          } catch (error) {
+            console.error('Error reopening face detection modal:', error);
+            showGateExitScanError('Error', 'Failed to reopen face detection. Please try again.');
+          }
+        }, 1000); // Wait 1 second before reopening to let user see the error message
+        
         return;
       }
 
@@ -11085,9 +11107,9 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
               <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono flex items-center space-x-2">
                 <span>Visit ID: ${visit.id}</span>
                 <button 
-                  class="px-2 py-0.5 bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  class="px-2 py-0.5 bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors copy-btn"
                   title="Copy Visit ID"
-                  onclick="copyVisitId('${visit.id}')"
+                  onclick="copyVisitId('${visit.id}', this)"
                 >Copy</button>
               </p>
             </div>
@@ -11479,9 +11501,9 @@ async function displayVisitorTodayVisits(visits: any[]): Promise<void> {
               <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono flex items-center space-x-2">
                 <span>Visit ID: ${visit.id}</span>
                 <button 
-                  class="px-2 py-0.5 bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  class="px-2 py-0.5 bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors copy-btn"
                   title="Copy Visit ID"
-                  onclick="copyVisitId('${visit.id}')"
+                  onclick="copyVisitId('${visit.id}', this)"
                 >Copy</button>
               </p>
             </div>
@@ -11845,9 +11867,9 @@ async function displayVisitorFutureVisits(visits: any[]): Promise<void> {
               <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono flex items-center space-x-2">
                 <span>Visit ID: ${visit.id}</span>
                 <button 
-                  class="px-2 py-0.5 bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  class="px-2 py-0.5 bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors copy-btn"
                   title="Copy Visit ID"
-                  onclick="copyVisitId('${visit.id}')"
+                  onclick="copyVisitId('${visit.id}', this)"
                 >Copy</button>
               </p>
             </div>
@@ -13158,16 +13180,21 @@ function ensureHistoryModalExists() {
 setupPrintVisitCard();
 
 // Global function to copy visit ID to clipboard
-(window as any).copyVisitId = async function(visitId: string) {
+(window as any).copyVisitId = async function(visitId: string, buttonElement?: HTMLElement) {
   try {
     await navigator.clipboard.writeText(visitId);
-    const target = (event?.target as HTMLElement) || null;
-    const originalText = target?.textContent;
+    const target = buttonElement || (event?.target as HTMLElement) || null;
     if (target) {
-      target.textContent = 'Copied!';
+      const originalText = target.textContent || 'Copy';
+      // Change text to "Copied"
+      target.textContent = 'Copied';
+      // Add animation class
+      target.classList.add('copy-animation');
+      // Remove animation class after animation completes
       setTimeout(() => {
-        target.textContent = originalText || 'Copy';
-      }, 1200);
+        target.classList.remove('copy-animation');
+        target.textContent = originalText;
+      }, 2000);
     }
   } catch (err) {
     console.error('Failed to copy Visit ID:', err);

@@ -1,5 +1,4 @@
 // Face detection using Python API with BlazeFace fallback
-import { PYTHON_API_URL } from '../../config/python-api';
 import { safeJsonParse } from '../safe-json-parse';
 import * as blazeface from '@tensorflow-models/blazeface';
 import * as tf from '@tensorflow/tfjs';
@@ -152,7 +151,7 @@ function createModal(): HTMLElement {
 
   // close interactions
   wrapper.addEventListener('click', (e) => {
-    if (e.target === wrapper) hideModal();
+    if (e.target === wrapper) hideModal(); // Refresh when clicking outside if face detected
   });
   wrapper.querySelector('#closeFaceModalBtn')?.addEventListener('click', () => hideModal());
 
@@ -261,18 +260,14 @@ function stopCamera() {
   }
 }
 
-function hideModal(shouldRefreshIfFaceDetected: boolean = true) {
+function hideModal(shouldRefresh: boolean = true) {
   const wrapper = document.getElementById('faceDetectionModal');
   if (wrapper) {
-    // Check if a face has been detected by checking if preview section is visible
-    const previewSection = wrapper.querySelector('#previewSection') as HTMLElement;
-    const hasFaceDetected = previewSection && !previewSection.classList.contains('hidden');
-    
     wrapper.classList.add('hidden');
     stopCamera();
     
-    // Refresh the page if a face was detected and we should refresh (i.e., closing via close button, not confirming)
-    if (hasFaceDetected && shouldRefreshIfFaceDetected) {
+    // Refresh the page when closing the modal (unless explicitly told not to, e.g., when confirming)
+    if (shouldRefresh) {
       window.location.reload();
     }
   } else {
@@ -407,8 +402,8 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
   
   // API state management
   const isLocalDev = isLocalDevelopment();
-  // Start with deployed, but will check local first and switch if available
-  let currentApiUrl: string = PYTHON_API_URL;
+  // Start with local API - always check local first before deployed
+  let currentApiUrl: string = LOCAL_API_URL;
   let localApiAvailable: boolean = false;
   let deployedApiAvailable: boolean = false;
   
@@ -1112,40 +1107,50 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
     // Only check once unless forced (to avoid repeated checks during face detection)
     if (hasCheckedBothApis && !force) return;
     
-    // Check APIs with individual error handling to prevent one failure from blocking the other
-    // Suppress errors for local API if we're already using deployed (to reduce console noise)
+    // Check local API first - this is the priority
     const suppressLocalErrors = currentApiUrl === DEPLOYED_API_URL;
-    const checkLocal = checkApiHealth(LOCAL_API_URL, suppressLocalErrors).catch(() => false);
-    const checkDeployed = checkApiHealth(DEPLOYED_API_URL, false).catch(() => false);
-    
-    const [localAvailable, deployedAvailable] = await Promise.allSettled([
-      checkLocal,
-      checkDeployed
-    ]).then(results => [
-      results[0].status === 'fulfilled' ? results[0].value : false,
-      results[1].status === 'fulfilled' ? results[1].value : false
-    ]);
+    let localAvailable = false;
+    try {
+      localAvailable = await checkApiHealth(LOCAL_API_URL, suppressLocalErrors);
+    } catch {
+      localAvailable = false;
+    }
     
     localApiAvailable = localAvailable;
+    
+    // Always prefer local if available, regardless of environment
+    if (localApiAvailable) {
+      if (currentApiUrl !== LOCAL_API_URL) {
+        currentApiUrl = LOCAL_API_URL;
+        if (isLocalDev) {
+          updateServiceStatus(true, 'Using local AI service');
+        }
+      }
+      // Update UI immediately when local is available
+      updateApiSelectionUI();
+    }
+    
+    // Only check deployed API if local is not available (or if we want to know both statuses for UI)
+    // We still check deployed to show its status in the UI, but we prioritize local
+    let deployedAvailable = false;
+    try {
+      deployedAvailable = await checkApiHealth(DEPLOYED_API_URL, false);
+    } catch {
+      deployedAvailable = false;
+    }
+    
     deployedApiAvailable = deployedAvailable;
+    
+    // If local is not available but deployed is, switch to deployed
+    if (!localApiAvailable && deployedApiAvailable && currentApiUrl === LOCAL_API_URL) {
+      currentApiUrl = DEPLOYED_API_URL;
+      updateServiceStatus(true, 'Using deployed AI service (local unavailable)');
+    }
+    
     hasCheckedBothApis = true;
     
-      // Always prefer local if available, regardless of environment
-      if (localApiAvailable) {
-        if (currentApiUrl !== LOCAL_API_URL) {
-          currentApiUrl = LOCAL_API_URL;
-          if (isLocalDev) {
-            updateServiceStatus(true, 'Using local AI service');
-          }
-        }
-      } else if (!localApiAvailable && deployedApiAvailable && currentApiUrl === LOCAL_API_URL) {
-        // If local is not available but deployed is, switch to deployed
-        currentApiUrl = DEPLOYED_API_URL;
-        updateServiceStatus(true, 'Using deployed AI service (local unavailable)');
-      }
-      
-      // Always update API selection UI (works in both local and deployed)
-      updateApiSelectionUI();
+    // Always update API selection UI (works in both local and deployed)
+    updateApiSelectionUI();
   }
 
   // Switch between local and deployed APIs

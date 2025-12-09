@@ -1611,23 +1611,61 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
         // Continue to log exit even though verification failed - leave similarity as null
         // This will trigger the fallback success message
       } else if (verificationResult.error) {
-        // For other errors (invalid images, etc.), block the exit
+        // For other errors (invalid images, etc.), block the exit and reopen face detection modal
         console.error('Face verification error:', verificationResult.error);
-        showGuardError('Face Verification Error', verificationResult.error);
+        showGuardError('Face Verification Error', `${verificationResult.error}. Please retake the photo.`);
+        
+        // Reopen face detection modal to allow retry
+        setTimeout(async () => {
+          try {
+            const { openFaceDetectionModal } = await import('../utils/AI-Face-Detection/blazefaceModal');
+            const retryResult = await openFaceDetectionModal();
+            
+            if (retryResult && retryResult.success && retryResult.croppedImageDataUrl) {
+              // Retry verification with new face image
+              await logGuardActionWithFaceImage('exit', visitData, retryResult);
+            } else {
+              console.log('Face detection cancelled or failed on retry');
+            }
+          } catch (error) {
+            console.error('Error reopening face detection modal:', error);
+            showGuardError('Error', 'Failed to reopen face detection. Please try again.');
+          }
+        }, 1000); // Wait 1 second before reopening to let user see the error message
+        
         return;
       } else if (!verificationResult.match) {
-        // Faces don't match - block exit
+        // Faces don't match - block exit and reopen face detection modal
         const similarityPercent = (verificationResult.similarity * 100).toFixed(1);
         console.warn(`Face verification failed: similarity ${similarityPercent}%`);
         // Show toast notification in top right
         showErrorToast(
-          `Face verification failed: Face does not match entrance picture. Similarity: ${similarityPercent}%`,
+          `Face verification failed: Face does not match entrance picture. Similarity: ${similarityPercent}%. Please try again.`,
           5000
         );
         showGuardError(
           'Face Verification Failed', 
-          `Face does not match the entrance picture. Similarity: ${similarityPercent}%`
+          `Face does not match the entrance picture. Similarity: ${similarityPercent}%. Please retake the photo.`
         );
+        
+        // Reopen face detection modal to allow retry
+        setTimeout(async () => {
+          try {
+            const { openFaceDetectionModal } = await import('../utils/AI-Face-Detection/blazefaceModal');
+            const retryResult = await openFaceDetectionModal();
+            
+            if (retryResult && retryResult.success && retryResult.croppedImageDataUrl) {
+              // Retry verification with new face image
+              await logGuardActionWithFaceImage('exit', visitData, retryResult);
+            } else {
+              console.log('Face detection cancelled or failed on retry');
+            }
+          } catch (error) {
+            console.error('Error reopening face detection modal:', error);
+            showGuardError('Error', 'Failed to reopen face detection. Please try again.');
+          }
+        }, 1000); // Wait 1 second before reopening to let user see the error message
+        
         return;
       } else {
         // Faces match, proceed with exit logging

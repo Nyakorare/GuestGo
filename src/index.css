@@ -584,3 +584,25 @@
     transition: none !important;
   }
 }
+
+/* Copy button animation */
+.copy-btn.copy-animation {
+  animation: copySuccess 0.6s ease-out;
+  background-color: #10b981 !important; /* green-500 */
+  color: white !important;
+}
+
+@keyframes copySuccess {
+  0% {
+    transform: scale(1);
+    background-color: inherit;
+  }
+  50% {
+    transform: scale(1.1);
+    background-color: #10b981; /* green-500 */
+  }
+  100% {
+    transform: scale(1);
+    background-color: #10b981; /* green-500 */
+  }
+}

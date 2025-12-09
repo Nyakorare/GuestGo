@@ -1577,7 +1577,18 @@ async function processGateExitScanWithFaceVerification(
       const verificationResult = await verifyFaces(entranceFaceImage, compressedImage);
 
       if (verificationResult.error) {
-        showGateExitScanError('Face Verification Error', verificationResult.error);
+        showGateExitScanError('Face Verification Error', `${verificationResult.error}. Please retake the photo.`);
+        
+        // Reopen face detection modal to allow retry
+        setTimeout(async () => {
+          try {
+            await showFaceDetectionForExitGateScan(visitId, gateId);
+          } catch (error) {
+            console.error('Error reopening face detection modal:', error);
+            showGateExitScanError('Error', 'Failed to reopen face detection. Please try again.');
+          }
+        }, 1000); // Wait 1 second before reopening to let user see the error message
+        
         return;
       }
 
@@ -1585,8 +1596,19 @@ async function processGateExitScanWithFaceVerification(
         const similarityPercent = (verificationResult.similarity * 100).toFixed(1);
         showGateExitScanError(
           'Face Verification Failed', 
-          `Face does not match the entrance picture. Similarity: ${similarityPercent}%`
+          `Face does not match the entrance picture. Similarity: ${similarityPercent}%. Please retake the photo.`
         );
+        
+        // Reopen face detection modal to allow retry
+        setTimeout(async () => {
+          try {
+            await showFaceDetectionForExitGateScan(visitId, gateId);
+          } catch (error) {
+            console.error('Error reopening face detection modal:', error);
+            showGateExitScanError('Error', 'Failed to reopen face detection. Please try again.');
+          }
+        }, 1000); // Wait 1 second before reopening to let user see the error message
+        
         return;
       }
 
