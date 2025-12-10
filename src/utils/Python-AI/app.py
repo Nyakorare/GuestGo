@@ -49,11 +49,13 @@ def _get_yolo_model():
         # Try local models first to avoid API calls
         # Prefer smaller models (nano) to save memory
         local_models = [
+            os.path.join('models', 'best.pt'),  # Custom trained model (highest priority)
             os.path.join('models', 'yolov8n-face.pt'),  # Nano model first (smallest)
             os.path.join('models', 'yolo11n-face.pt'),  # YOLO11 nano
             os.path.join('models', 'yolov8s-face.pt'),  # Small model
             os.path.join('models', 'yolo11s-face.pt'),   # YOLO11 small
             os.path.join('models', 'yolov5s-face.pt'),
+            'best.pt',  # Custom trained model in root directory
             'yolov8n-face.pt',  # Nano model first (smallest)
             'yolo11n-face.pt',  # YOLO11 nano
             'yolov8s-face.pt',  # Small model
