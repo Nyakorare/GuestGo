@@ -15,47 +15,88 @@ from typing import Dict
 # Cache YOLO model to avoid reloading on each request
 _YOLO_MODEL = None
 _YOLO_MODEL_NAME = None
+_YOLO_MODEL_EXPLICITLY_LOADED = False  # Track if model was explicitly loaded via reload endpoint
 
-def _get_yolo_model():
+def _get_yolo_model(model_name=None):
+    """Get YOLO model, optionally loading a specific model name"""
     global _YOLO_MODEL
     global _YOLO_MODEL_NAME
+    # If a specific model is requested and it's different from current, reset cache
+    if model_name and model_name != _YOLO_MODEL_NAME:
+        _YOLO_MODEL = None
+        _YOLO_MODEL_NAME = None
     if _YOLO_MODEL is not None:
         return _YOLO_MODEL
     try:
         print("Attempting to import ultralytics...")
         
-        # Temporarily disable PyTorch security restrictions for trusted models
-        original_env = os.environ.get('TORCH_WEIGHTS_ONLY', None)
-        os.environ['TORCH_WEIGHTS_ONLY'] = 'False'
+        # Set PyTorch weights_only=False BEFORE importing and KEEP IT SET
+        # PyTorch 2.6+ defaults to weights_only=True, but Ultralytics models need weights_only=False
+        # We keep this False for the entire session since our models are trusted
+        if 'TORCH_WEIGHTS_ONLY' not in os.environ or os.environ.get('TORCH_WEIGHTS_ONLY', 'True') != 'False':
+            os.environ['TORCH_WEIGHTS_ONLY'] = 'False'
+            print("✅ Set TORCH_WEIGHTS_ONLY=False for model loading")
         
         try:
             from ultralytics import YOLO
             print("✅ Ultralytics imported successfully")
-        finally:
-            # Restore original environment
-            if original_env is not None:
-                os.environ['TORCH_WEIGHTS_ONLY'] = original_env
-            elif 'TORCH_WEIGHTS_ONLY' in os.environ:
-                del os.environ['TORCH_WEIGHTS_ONLY']
+            
+            # Also configure torch.serialization for PyTorch 2.6+ compatibility
+            try:
+                import torch
+                if hasattr(torch.serialization, 'add_safe_globals'):
+                    # Add Ultralytics classes to safe globals for PyTorch 2.6+
+                    try:
+                        from ultralytics.nn.tasks import DetectionModel
+                        torch.serialization.add_safe_globals([DetectionModel])
+                        print("✅ Added Ultralytics to PyTorch safe globals")
+                    except ImportError:
+                        print("⚠️  Could not import DetectionModel for safe globals, using env var")
+            except ImportError:
+                print("⚠️  torch not available, relying on environment variable")
+        except Exception as import_error:
+            print(f"❌ Error importing ultralytics: {import_error}")
+            raise
         
         # Resolve model path; allow override via env var (generic YOLO)
         # Prefer well-known YOLO-FACE checkpoints, try multiple options
         candidates = []
+        
+        # If a specific model is requested, prioritize it but prepare fallbacks
+        requested_model_paths = []
+        if model_name:
+            # Try both models/ directory and root directory
+            model_paths = [
+                os.path.join('models', model_name),
+                model_name
+            ]
+            for path in model_paths:
+                if os.path.isfile(path):
+                    requested_model_paths.append(path)
+                    print(f"Found requested model: {path}")
+                    break
+            # If not found locally, try downloading it
+            if not requested_model_paths:
+                requested_model_paths.append(model_name)
+                print(f"Requested model not found locally, will try to download: {model_name}")
+        
         env_model = os.getenv('YOLO_MODEL') or os.getenv('YOLO_FACE_MODEL')
-        if env_model:
+        if env_model and not model_name:
             candidates.append(env_model)
             print(f"Using environment model: {env_model}")
         
-        # Try local models first to avoid API calls
-        # Prefer smaller models (nano) to save memory
+        # Always prepare fallback models in priority order: best.pt → best-lite.pt → others
+        # This ensures if requested model fails, we fall back properly
         local_models = [
             os.path.join('models', 'best.pt'),  # Custom trained model (highest priority)
+            os.path.join('models', 'best-lite.pt'),  # Custom trained lite model (second priority)
             os.path.join('models', 'yolov8n-face.pt'),  # Nano model first (smallest)
             os.path.join('models', 'yolo11n-face.pt'),  # YOLO11 nano
             os.path.join('models', 'yolov8s-face.pt'),  # Small model
             os.path.join('models', 'yolo11s-face.pt'),   # YOLO11 small
             os.path.join('models', 'yolov5s-face.pt'),
             'best.pt',  # Custom trained model in root directory
+            'best-lite.pt',  # Custom trained lite model in root directory
             'yolov8n-face.pt',  # Nano model first (smallest)
             'yolo11n-face.pt',  # YOLO11 nano
             'yolov8s-face.pt',  # Small model
@@ -63,19 +104,31 @@ def _get_yolo_model():
             'yolov5s-face.pt'
         ]
         
-        # Add local models that exist
-        for model in local_models:
-            if os.path.isfile(model):
-                candidates.append(model)
-        
-        # Only try downloading models if no local models found
-        if not any(os.path.isfile(c) for c in local_models):
-            print("No local models found, trying to download...")
-            # Try general YOLO models (prefer nano to save memory)
-            candidates.extend([
-                'yolov8n.pt',  # General YOLOv8 nano model (smallest, ~6MB)
-                # Don't add larger models to save memory
-            ])
+        # If specific model requested, try it first, then fallbacks
+        if model_name and requested_model_paths:
+            candidates.extend(requested_model_paths)
+            # Add fallback models (excluding the requested one to avoid duplicates)
+            for model in local_models:
+                # Check if this model is different from requested
+                model_name_only = os.path.basename(model) if os.path.sep in model or '/' in model or '\\' in model else model
+                requested_name_only = os.path.basename(model_name) if os.path.sep in model_name or '/' in model_name or '\\' in model_name else model_name
+                if model_name_only != requested_name_only and os.path.isfile(model):
+                    candidates.append(model)
+        else:
+            # No specific model requested, use default priority order
+            # Add local models that exist
+            for model in local_models:
+                if os.path.isfile(model):
+                    candidates.append(model)
+            
+            # Only try downloading models if no local models found
+            if not any(os.path.isfile(c) for c in local_models):
+                print("No local models found, trying to download...")
+                # Try general YOLO models (prefer nano to save memory)
+                candidates.extend([
+                    'yolov8n.pt',  # General YOLOv8 nano model (smallest, ~6MB)
+                    # Don't add larger models to save memory
+                ])
         
         print(f"Trying {len(candidates)} model candidates...")
         last_error = None
@@ -90,43 +143,99 @@ def _get_yolo_model():
                     continue
                 
                 # Try loading with different strategies
+                # TORCH_WEIGHTS_ONLY should already be False from import time
                 try:
+                    print(f"    🔄 Loading model: {cand}")
+                    # Ensure environment is set (should already be set, but double-check)
+                    os.environ['TORCH_WEIGHTS_ONLY'] = 'False'
+                    
                     _YOLO_MODEL = YOLO(cand)
+                    
                     # Test the model with a small dummy image to ensure it works
+                    print(f"    🧪 Testing model with dummy image...")
                     import numpy as np
                     test_img = np.zeros((100, 100, 3), dtype=np.uint8)
                     _ = _YOLO_MODEL.predict(test_img, verbose=False)
                     _YOLO_MODEL_NAME = cand
-                    print(f"    ✅ Successfully loaded: {cand}")
+                    print(f"    ✅ Successfully loaded and tested: {cand}")
                     return _YOLO_MODEL
+                            
                 except Exception as load_error:
-                    # If it's a weights-only error, try loading with different approach
-                    if "weights only" in str(load_error).lower():
-                        print(f"    ⚠️  Weights-only error, trying alternative loading...")
+                    error_str = str(load_error)
+                    error_lower = error_str.lower()
+                    
+                    # Print full error for debugging
+                    print(f"    ❌ Load error: {error_str[:300]}...")
+                    
+                    # If it's a weights-only error, try additional fixes
+                    if "weights only" in error_lower or "weights_only" in error_lower or "weightsonly" in error_lower:
+                        print(f"    ⚠️  PyTorch weights_only error detected")
+                        print(f"    💡 Attempting fix with torch.serialization context...")
+                        
                         try:
-                            # Try loading with specific model type
-                            if 'yolov8' in cand:
-                                _YOLO_MODEL = YOLO('yolov8n.pt')  # Load base model first
-                            else:
-                                raise load_error
-                            _YOLO_MODEL_NAME = cand
-                            print(f"    ✅ Successfully loaded fallback: {cand}")
-                            return _YOLO_MODEL
-                        except:
-                            raise load_error
-                    else:
-                        raise load_error
+                            import torch
+                            # Try to patch torch.load to use weights_only=False
+                            # This is a workaround for PyTorch 2.6+ strict loading
+                            original_load = torch.load
+                            
+                            def patched_load(*args, **kwargs):
+                                kwargs['weights_only'] = False
+                                return original_load(*args, **kwargs)
+                            
+                            torch.load = patched_load
+                            
+                            try:
+                                _YOLO_MODEL = YOLO(cand)
+                                import numpy as np
+                                test_img = np.zeros((100, 100, 3), dtype=np.uint8)
+                                _ = _YOLO_MODEL.predict(test_img, verbose=False)
+                                _YOLO_MODEL_NAME = cand
+                                print(f"    ✅ Successfully loaded with patched torch.load: {cand}")
+                                return _YOLO_MODEL
+                            finally:
+                                torch.load = original_load
+                        except Exception as patch_error:
+                            print(f"    ❌ Patch attempt failed: {str(patch_error)[:200]}...")
+                            # Fall through to raise original error
+                    
+                    # Re-raise the error to continue to next candidate
+                    raise load_error
                         
             except Exception as e:
                 last_error = e
-                error_msg = str(e)[:100]
-                if "rate limit" in error_msg.lower():
-                    print(f"    ❌ Failed: GitHub API rate limit exceeded")
+                error_msg = str(e)
+                error_msg_lower = error_msg.lower()
+                
+                # Print full error for debugging
+                print(f"    ❌ Failed to load {cand}")
+                print(f"       Error type: {type(e).__name__}")
+                print(f"       Error message: {error_msg[:500]}")  # Show more of the error
+                
+                if "rate limit" in error_msg_lower:
+                    print(f"    ⚠️  GitHub API rate limit exceeded")
+                elif "weights only" in error_msg_lower or "weights_only" in error_msg_lower:
+                    print(f"    ⚠️  PyTorch weights_only security error")
+                    print(f"    💡 This model requires weights_only=False. Check if TORCH_WEIGHTS_ONLY is set correctly.")
+                elif "file" in error_msg_lower and "not found" in error_msg_lower:
+                    print(f"    ⚠️  Model file not found")
+                elif "permission" in error_msg_lower or "access" in error_msg_lower:
+                    print(f"    ⚠️  Permission/access error")
                 else:
-                    print(f"    ❌ Failed: {error_msg}...")
+                    print(f"    ⚠️  Unknown error - see full message above")
                 continue
         
-        print(f"❌ Failed to load any YOLO model. Last error: {last_error}")
+        if last_error:
+            print(f"❌ Failed to load any YOLO model after trying {len(candidates)} candidates")
+            print(f"   Last error: {str(last_error)[:500]}")
+            print(f"   💡 Troubleshooting:")
+            print(f"      - Check if model files exist: models/best.pt, models/best-lite.pt")
+            print(f"      - Verify PyTorch version: python -c 'import torch; print(torch.__version__)'")
+            print(f"      - Check TORCH_WEIGHTS_ONLY setting: {os.environ.get('TORCH_WEIGHTS_ONLY', 'not set')}")
+            if "weights only" in str(last_error).lower() or "weights_only" in str(last_error).lower():
+                print(f"      - PyTorch 2.6+ requires weights_only=False for custom models")
+                print(f"      - Try: export TORCH_WEIGHTS_ONLY=False (Linux/Mac) or set TORCH_WEIGHTS_ONLY=False (Windows)")
+        else:
+            print(f"❌ Failed to load any YOLO model. No models found to try.")
         return None
     except ImportError as e:
         print(f"❌ Error importing ultralytics: {e}")
@@ -233,6 +342,8 @@ if enable_yolo_on_startup:
     try:
         _get_yolo_model()
         if _YOLO_MODEL is not None:
+            # Mark as explicitly loaded (via startup, not Step 1, but still counts)
+            _YOLO_MODEL_EXPLICITLY_LOADED = True
             print(f"✅ YOLO model loaded successfully: {_YOLO_MODEL_NAME}")
         else:
             print("⚠️  YOLO model failed to load, will use MediaPipe fallback")
@@ -242,6 +353,7 @@ if enable_yolo_on_startup:
 else:
     print("⚠️  YOLO model loading deferred (lazy loading) to save memory")
     print("    Models will be loaded on first use. Set ENABLE_YOLO_ON_STARTUP=true to load on startup.")
+    print("    For Step 1 testing: Select and reload a model to use YOLO, otherwise MediaPipe will be used.")
 
 def process_image(image_data, max_size=1280):
     """Process image data from base64 string with memory optimization"""
@@ -385,10 +497,12 @@ def detect_faces_yolo(image: np.ndarray) -> Dict[str, dict]:
         return {}
 
 def detect_faces(image: np.ndarray) -> Dict[str, dict]:
-    """Try YOLO first, then fall back to MediaPipe if no face is found."""
+    """Try YOLO first if model is loaded, then fall back to MediaPipe if no face is found.
+    In production: If ENABLE_YOLO_ON_STARTUP=true, models load automatically and YOLO is tried first.
+    In local dev: Only tries YOLO if model was explicitly loaded via Step 1."""
     print("🔍 Starting face detection...")
     
-    # Try YOLO first if available
+    # Try YOLO if model is loaded (either via startup or Step 1 reload)
     if _YOLO_MODEL is not None:
         try:
             print("  Trying YOLO detection...")
@@ -401,9 +515,21 @@ def detect_faces(image: np.ndarray) -> Dict[str, dict]:
         except Exception as e:
             print(f"  ❌ YOLO error: {e}")
     else:
-        print("  ⚠️  YOLO model not available, using MediaPipe")
+        # Check if we're in production and should try loading models
+        is_production = os.getenv('RENDER', '').lower() == 'true' or \
+                       (os.getenv('FRONTEND_URL', '') and 'localhost' not in os.getenv('FRONTEND_URL', ''))
+        
+        if is_production and not _YOLO_MODEL_EXPLICITLY_LOADED:
+            # In production, if ENABLE_YOLO_ON_STARTUP was false but models exist, try lazy loading once
+            enable_startup = os.getenv('ENABLE_YOLO_ON_STARTUP', 'false').lower() == 'true'
+            if not enable_startup:
+                print("  ℹ️  No YOLO model loaded, using MediaPipe directly")
+            else:
+                print("  ℹ️  YOLO model not available, using MediaPipe")
+        else:
+            print("  ℹ️  No YOLO model loaded, using MediaPipe directly")
     
-    # Fallback to MediaPipe (more permissive for uploads/metrics)
+    # Use MediaPipe (more permissive for uploads/metrics)
     try:
         print("  Trying MediaPipe detection...")
         # Use a slightly lower confidence and looser area gating
@@ -710,6 +836,7 @@ def api_status():
                 '/metrics/analyze-image - Analyze image quality metrics',
                 '/metrics/verify-images - Verify image quality for face detection',
                 '/reload-model - Manually reload the YOLO model',
+                '/list-models - List available YOLO models',
                 '/download-model - Download and cache YOLO models'
             ],
             'connectivity': {
@@ -822,32 +949,149 @@ def test_bidirectional_connection(frontend_port):
 
 @app.route('/reload-model', methods=['POST'])
 def reload_model():
-    """Manually reload the YOLO model"""
-    global _YOLO_MODEL, _YOLO_MODEL_NAME
+    """Manually reload the YOLO model, optionally with a specific model name.
+    If specific model fails, falls back to priority order: best.pt → best-lite.pt → others"""
+    global _YOLO_MODEL, _YOLO_MODEL_NAME, _YOLO_MODEL_EXPLICITLY_LOADED
     try:
+        data = request.get_json() or {}
+        model_name = data.get('model_name')
+        
         # Reset model cache
         _YOLO_MODEL = None
         _YOLO_MODEL_NAME = None
+        _YOLO_MODEL_EXPLICITLY_LOADED = False
         
-        # Try to load model
-        model = _get_yolo_model()
+        # Try to load model (with optional specific model name)
+        # If specific model fails, _get_yolo_model will fall back to priority order
+        model = _get_yolo_model(model_name=model_name)
         if model is not None:
-            return jsonify({
-                'success': True,
-                'message': f'Model reloaded successfully: {_YOLO_MODEL_NAME}',
-                'model_name': _YOLO_MODEL_NAME
-            })
+            loaded_model = _YOLO_MODEL_NAME
+            # Mark that a model was explicitly loaded via Step 1
+            _YOLO_MODEL_EXPLICITLY_LOADED = True
+            # Check if the loaded model matches what was requested
+            if model_name and loaded_model and model_name not in loaded_model:
+                return jsonify({
+                    'success': True,
+                    'message': f'Requested model "{model_name}" failed to load. Loaded fallback model: {loaded_model}',
+                    'model_name': loaded_model,
+                    'fallback_used': True,
+                    'requested_model': model_name
+                })
+            else:
+                return jsonify({
+                    'success': True,
+                    'message': f'Model reloaded successfully: {loaded_model}',
+                    'model_name': loaded_model,
+                    'fallback_used': False
+                })
         else:
+            # Get more details about why loading failed
+            error_details = ""
+            if _YOLO_MODEL_NAME is None:
+                # Check if models directory exists and has files
+                models_dir = 'models'
+                if os.path.exists(models_dir):
+                    model_files = [f for f in os.listdir(models_dir) if f.endswith('.pt')]
+                    if model_files:
+                        error_details = f" Found {len(model_files)} model file(s) but failed to load them. Check server logs for details."
+                    else:
+                        error_details = " No .pt files found in models/ directory."
+                else:
+                    error_details = " models/ directory does not exist."
+            
             return jsonify({
                 'success': False,
-                'message': 'Failed to load YOLO model, will use MediaPipe fallback',
-                'model_name': ''
+                'message': f'Failed to load YOLO model, will use MediaPipe fallback.{error_details}',
+                'model_name': '',
+                'suggestion': 'Check server console logs for detailed error messages. Common issues: PyTorch weights_only error (PyTorch 2.6+), missing model files, or incompatible model format.'
             })
+    except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e),
+                'message': 'Error reloading model'
+            }), 500
+
+@app.route('/clear-model', methods=['POST'])
+def clear_model():
+    """Clear/unload the YOLO model to use MediaPipe instead"""
+    global _YOLO_MODEL, _YOLO_MODEL_NAME, _YOLO_MODEL_EXPLICITLY_LOADED
+    try:
+        previous_model = _YOLO_MODEL_NAME
+        _YOLO_MODEL = None
+        _YOLO_MODEL_NAME = None
+        _YOLO_MODEL_EXPLICITLY_LOADED = False
+        
+        return jsonify({
+            'success': True,
+            'message': f'Model cleared successfully. MediaPipe will be used for face detection.',
+            'previous_model': previous_model
+        })
     except Exception as e:
         return jsonify({
             'success': False,
             'error': str(e),
-            'message': 'Error reloading model'
+            'message': 'Error clearing model'
+        }), 500
+
+@app.route('/list-models', methods=['GET'])
+def list_models():
+    """List available models in the models directory and root"""
+    try:
+        available_models = []
+        
+        # Check models directory
+        models_dir = 'models'
+        if os.path.exists(models_dir):
+            try:
+                for file in os.listdir(models_dir):
+                    if file.endswith('.pt'):
+                        full_path = os.path.join(models_dir, file)
+                        if os.path.isfile(full_path):
+                            available_models.append({
+                                'name': file,
+                                'path': full_path,
+                                'location': 'models/'
+                            })
+            except Exception as e:
+                print(f"Error reading models directory: {e}")
+        
+        # Check root directory
+        try:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            for file in os.listdir(current_dir):
+                if file.endswith('.pt'):
+                    full_path = os.path.join(current_dir, file)
+                    if os.path.isfile(full_path):
+                        # Avoid duplicates
+                        if not any(m['name'] == file for m in available_models):
+                            available_models.append({
+                                'name': file,
+                                'path': file,  # Use relative path for consistency
+                                'location': 'root'
+                            })
+        except Exception as e:
+            print(f"Error reading root directory: {e}")
+        
+        # Get current model
+        current_model = _YOLO_MODEL_NAME if _YOLO_MODEL_NAME else None
+        
+        return jsonify({
+            'success': True,
+            'models': available_models,
+            'current_model': current_model,
+            'count': len(available_models)
+        })
+    except Exception as e:
+        print(f"Error in list_models endpoint: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'models': [],
+            'current_model': None,
+            'count': 0
         }), 500
 
 @app.route('/ping', methods=['GET', 'POST'])
@@ -892,6 +1136,7 @@ def test_connection():
                 '/metrics/analyze-image - Analyze image quality metrics',
                 '/metrics/verify-images - Verify image quality for face detection',
                 '/reload-model - Manually reload the YOLO model',
+                '/list-models - List available YOLO models',
                 '/download-model - Download and cache YOLO models'
             ]
         })
