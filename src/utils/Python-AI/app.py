@@ -85,18 +85,18 @@ def _get_yolo_model(model_name=None):
             candidates.append(env_model)
             print(f"Using environment model: {env_model}")
         
-        # Always prepare fallback models in priority order: best.pt → best-lite.pt → others
+        # Always prepare fallback models in priority order: best(yolov8n).pt → best-lite(yolov8n).pt → others
         # This ensures if requested model fails, we fall back properly
         local_models = [
-            os.path.join('models', 'best.pt'),  # Custom trained model (highest priority)
-            os.path.join('models', 'best-lite.pt'),  # Custom trained lite model (second priority)
+            os.path.join('models', 'best(yolov8n).pt'),  # Custom trained model (highest priority)
+            os.path.join('models', 'best-lite(yolov8n).pt'),  # Custom trained lite model (second priority)
             os.path.join('models', 'yolov8n-face.pt'),  # Nano model first (smallest)
             os.path.join('models', 'yolo11n-face.pt'),  # YOLO11 nano
             os.path.join('models', 'yolov8s-face.pt'),  # Small model
             os.path.join('models', 'yolo11s-face.pt'),   # YOLO11 small
             os.path.join('models', 'yolov5s-face.pt'),
-            'best.pt',  # Custom trained model in root directory
-            'best-lite.pt',  # Custom trained lite model in root directory
+            'best(yolov8n).pt',  # Custom trained model in root directory
+            'best-lite(yolov8n).pt',  # Custom trained lite model in root directory
             'yolov8n-face.pt',  # Nano model first (smallest)
             'yolo11n-face.pt',  # YOLO11 nano
             'yolov8s-face.pt',  # Small model
@@ -228,7 +228,7 @@ def _get_yolo_model(model_name=None):
             print(f"❌ Failed to load any YOLO model after trying {len(candidates)} candidates")
             print(f"   Last error: {str(last_error)[:500]}")
             print(f"   💡 Troubleshooting:")
-            print(f"      - Check if model files exist: models/best.pt, models/best-lite.pt")
+            print(f"      - Check if model files exist: models/best(yolov8n).pt, models/best-lite(yolov8n).pt")
             print(f"      - Verify PyTorch version: python -c 'import torch; print(torch.__version__)'")
             print(f"      - Check TORCH_WEIGHTS_ONLY setting: {os.environ.get('TORCH_WEIGHTS_ONLY', 'not set')}")
             if "weights only" in str(last_error).lower() or "weights_only" in str(last_error).lower():
@@ -950,7 +950,7 @@ def test_bidirectional_connection(frontend_port):
 @app.route('/reload-model', methods=['POST'])
 def reload_model():
     """Manually reload the YOLO model, optionally with a specific model name.
-    If specific model fails, falls back to priority order: best.pt → best-lite.pt → others"""
+    If specific model fails, falls back to priority order: best(yolov8n).pt → best-lite(yolov8n).pt → others"""
     global _YOLO_MODEL, _YOLO_MODEL_NAME, _YOLO_MODEL_EXPLICITLY_LOADED
     try:
         data = request.get_json() or {}
