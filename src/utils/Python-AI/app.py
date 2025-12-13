@@ -85,21 +85,23 @@ def _get_yolo_model(model_name=None):
             candidates.append(env_model)
             print(f"Using environment model: {env_model}")
         
-        # Always prepare fallback models in priority order: best(yolov8n).pt → best-lite(yolov8n).pt → others
+        # Always prepare fallback models in priority order: yolov8s → best(yolov8n).pt → best-lite(yolov8n).pt → others → yolov8n.pt (fallback)
         # This ensures if requested model fails, we fall back properly
         local_models = [
-            os.path.join('models', 'best(yolov8n).pt'),  # Custom trained model (highest priority)
-            os.path.join('models', 'best-lite(yolov8n).pt'),  # Custom trained lite model (second priority)
-            os.path.join('models', 'yolov8n-face.pt'),  # Nano model first (smallest)
+            os.path.join('models', 'yolov8s.pt'),  # YOLOv8 small model (highest priority)
+            os.path.join('models', 'best(yolov8n).pt'),  # Custom trained model (second priority)
+            os.path.join('models', 'best-lite(yolov8n).pt'),  # Custom trained lite model (third priority)
+            os.path.join('models', 'yolov8n-face.pt'),  # Nano model
             os.path.join('models', 'yolo11n-face.pt'),  # YOLO11 nano
-            os.path.join('models', 'yolov8s-face.pt'),  # Small model
+            os.path.join('models', 'yolov8s-face.pt'),  # Small face model
             os.path.join('models', 'yolo11s-face.pt'),   # YOLO11 small
             os.path.join('models', 'yolov5s-face.pt'),
+            'yolov8s.pt',  # YOLOv8 small model in root directory
             'best(yolov8n).pt',  # Custom trained model in root directory
             'best-lite(yolov8n).pt',  # Custom trained lite model in root directory
-            'yolov8n-face.pt',  # Nano model first (smallest)
+            'yolov8n-face.pt',  # Nano model
             'yolo11n-face.pt',  # YOLO11 nano
-            'yolov8s-face.pt',  # Small model
+            'yolov8s-face.pt',  # Small face model
             'yolo11s-face.pt',  # YOLO11 small
             'yolov5s-face.pt'
         ]
@@ -124,10 +126,9 @@ def _get_yolo_model(model_name=None):
             # Only try downloading models if no local models found
             if not any(os.path.isfile(c) for c in local_models):
                 print("No local models found, trying to download...")
-                # Try general YOLO models (prefer nano to save memory)
+                # Try general YOLO models (yolov8n.pt as final fallback)
                 candidates.extend([
-                    'yolov8n.pt',  # General YOLOv8 nano model (smallest, ~6MB)
-                    # Don't add larger models to save memory
+                    'yolov8n.pt',  # General YOLOv8 nano model (final fallback, ~6MB)
                 ])
         
         print(f"Trying {len(candidates)} model candidates...")
@@ -195,7 +196,15 @@ def _get_yolo_model(model_name=None):
                             finally:
                                 torch.load = original_load
                         except Exception as patch_error:
-                            print(f"    ❌ Patch attempt failed: {str(patch_error)[:200]}...")
+                            patch_error_str = str(patch_error)
+                            patch_error_lower = patch_error_str.lower()
+                            print(f"    ❌ Patch attempt failed: {patch_error_str[:200]}...")
+                            
+                            # Check if it's a model architecture compatibility issue
+                            if "object has no attribute" in patch_error_lower or "attributeerror" in patch_error_lower:
+                                print(f"    ⚠️  Model architecture compatibility issue detected")
+                                print(f"    💡 This model may be incompatible with the current Ultralytics/PyTorch version")
+                                print(f"    💡 Try: Update ultralytics (pip install --upgrade ultralytics) or use a different model")
                             # Fall through to raise original error
                     
                     # Re-raise the error to continue to next candidate
@@ -216,6 +225,10 @@ def _get_yolo_model(model_name=None):
                 elif "weights only" in error_msg_lower or "weights_only" in error_msg_lower:
                     print(f"    ⚠️  PyTorch weights_only security error")
                     print(f"    💡 This model requires weights_only=False. Check if TORCH_WEIGHTS_ONLY is set correctly.")
+                elif "object has no attribute" in error_msg_lower or "attributeerror" in error_msg_lower:
+                    print(f"    ⚠️  Model architecture compatibility issue")
+                    print(f"    💡 This model may be incompatible with the current Ultralytics/PyTorch version")
+                    print(f"    💡 Try: Update ultralytics (pip install --upgrade ultralytics) or use a different model")
                 elif "file" in error_msg_lower and "not found" in error_msg_lower:
                     print(f"    ⚠️  Model file not found")
                 elif "permission" in error_msg_lower or "access" in error_msg_lower:
@@ -234,6 +247,10 @@ def _get_yolo_model(model_name=None):
             if "weights only" in str(last_error).lower() or "weights_only" in str(last_error).lower():
                 print(f"      - PyTorch 2.6+ requires weights_only=False for custom models")
                 print(f"      - Try: export TORCH_WEIGHTS_ONLY=False (Linux/Mac) or set TORCH_WEIGHTS_ONLY=False (Windows)")
+            elif "object has no attribute" in str(last_error).lower() or "attributeerror" in str(last_error).lower():
+                print(f"      - Model architecture compatibility issue detected")
+                print(f"      - Try updating ultralytics: pip install --upgrade ultralytics")
+                print(f"      - Or try using a different model file")
         else:
             print(f"❌ Failed to load any YOLO model. No models found to try.")
         return None
@@ -950,7 +967,7 @@ def test_bidirectional_connection(frontend_port):
 @app.route('/reload-model', methods=['POST'])
 def reload_model():
     """Manually reload the YOLO model, optionally with a specific model name.
-    If specific model fails, falls back to priority order: best(yolov8n).pt → best-lite(yolov8n).pt → others"""
+    If specific model fails, falls back to priority order: yolov8s → best(yolov8n).pt → best-lite(yolov8n).pt → others → yolov8n.pt (fallback)"""
     global _YOLO_MODEL, _YOLO_MODEL_NAME, _YOLO_MODEL_EXPLICITLY_LOADED
     try:
         data = request.get_json() or {}
