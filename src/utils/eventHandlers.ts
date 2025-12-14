@@ -1063,6 +1063,18 @@ export function setupAboutPageInteractivity() {
     }
     update();
   }
+
+  // Setup QR Share Modal
+  import('../components/mini-features/QRShareModal').then(({ setupQRShareModal, openQRShareModal }) => {
+    setupQRShareModal().then(() => {
+      const qrShareBtn = document.getElementById('qr-share-btn');
+      qrShareBtn?.addEventListener('click', () => {
+        openQRShareModal();
+      });
+    });
+  }).catch(error => {
+    console.error('Error setting up QR share modal:', error);
+  });
 }
 
 // Function to update navigation based on user role

@@ -460,53 +460,17 @@ async function loadFeedback() {
   }
   
   try {
-    // Try RPC function first, fallback to direct query if it fails
-    let feedbackData = null;
-    let error = null;
+    // Fetch all available feedbacks with comments and positive ratings
+    const { data, error: queryError } = await supabase
+      .from('visit_feedback')
+      .select('id, comments, overall_satisfaction, submitted_at, scheduled_visits(visitor_first_name, visitor_last_name)')
+      .not('comments', 'is', null)
+      .gte('overall_satisfaction', 4)
+      .order('submitted_at', { ascending: false })
+      .limit(100);
     
-    // Try RPC function first
-    const rpcResult = await supabase.rpc('get_public_feedback');
-    
-    if (rpcResult.error) {
-      // RPC function failed (possibly due to function overloading conflict), use direct query
-      console.log('RPC function not available, trying direct query...', rpcResult.error);
-    } else if (rpcResult.data && rpcResult.data.length > 0) {
-      // RPC function succeeded
-      feedbackData = rpcResult.data;
-    }
-    
-    // If RPC didn't work or returned no data, use direct query fallback
-    if (!feedbackData) {
-      const { data, error: queryError } = await supabase
-        .from('visit_feedback')
-        .select('id, comments, overall_satisfaction, submitted_at, scheduled_visits(visitor_first_name, visitor_last_name)')
-        .not('comments', 'is', null)
-        .gte('overall_satisfaction', 4)
-        .order('submitted_at', { ascending: false })
-        .limit(100);
-      
-      if (queryError) {
-        error = queryError;
-      } else if (data && data.length > 0) {
-        // Select random feedback based on today's date
-        const today = new Date();
-        const startOfYear = new Date(today.getFullYear(), 0, 1);
-        const dayOfYear = Math.floor((today.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24));
-        const randomIndex = dayOfYear % data.length;
-        const selected = data[randomIndex];
-        
-        feedbackData = [{
-          id: selected.id,
-          visitor_name: (selected.scheduled_visits?.visitor_first_name || '') + ' ' + (selected.scheduled_visits?.visitor_last_name || '') || 'Anonymous',
-          comments: selected.comments,
-          overall_satisfaction: selected.overall_satisfaction,
-          submitted_at: selected.submitted_at
-        }];
-      }
-    }
-    
-    if (error) {
-      console.error('Error loading feedback:', error);
+    if (queryError) {
+      console.error('Error loading feedback:', queryError);
       feedbackLoading.classList.add('hidden');
       feedbackEmpty.classList.remove('hidden');
       return;
@@ -515,64 +479,97 @@ async function loadFeedback() {
     // Hide loading state
     feedbackLoading.classList.add('hidden');
     
-    // Handle the response
-    let feedback = null;
-    if (Array.isArray(feedbackData)) {
-      feedback = feedbackData.length > 0 ? feedbackData[0] : null;
-    } else if (feedbackData) {
-      feedback = feedbackData;
-    }
-    
     // If no feedback found, show empty state
-    if (!feedback || !feedback.comments) {
+    if (!data || data.length === 0) {
       feedbackEmpty.classList.remove('hidden');
       return;
     }
     
-    // Clear container and render single feedback
-    const color = { bg: 'bg-blue-100', darkBg: 'dark:bg-blue-900', text: 'text-blue-600', darkText: 'dark:text-blue-400' };
-    const rating = feedback.overall_satisfaction || 5;
-    const comment = (feedback.comments || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-    const visitorName = feedback.visitor_name || 'Anonymous';
-    const date = new Date(feedback.submitted_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+    // Process feedback data
+    const processedFeedback = data.map(item => ({
+      id: item.id,
+      visitor_name: (item.scheduled_visits?.visitor_first_name || '') + ' ' + (item.scheduled_visits?.visitor_last_name || '') || 'Anonymous',
+      comments: item.comments,
+      overall_satisfaction: item.overall_satisfaction,
+      submitted_at: item.submitted_at
+    })).filter(fb => fb.comments && fb.comments.trim().length > 0);
     
-    // Create stars HTML
-    let starsHtml = '';
-    for (let i = 0; i < 5; i++) {
-      if (i < rating) {
-        starsHtml += '<span class="text-yellow-400 text-xl">★</span>';
-      } else {
-        starsHtml += '<span class="text-gray-300 dark:text-gray-600 text-xl">★</span>';
+    if (processedFeedback.length === 0) {
+      feedbackEmpty.classList.remove('hidden');
+      return;
+    }
+    
+    // Randomly select 3-5 feedbacks (or all if less than 3 available)
+    const numToShow = Math.min(Math.max(3, Math.floor(Math.random() * 3) + 3), processedFeedback.length);
+    const selectedFeedbacks: typeof processedFeedback = [];
+    const usedIndices = new Set<number>();
+    
+    // Randomly select feedbacks without duplicates
+    while (selectedFeedbacks.length < numToShow && usedIndices.size < processedFeedback.length) {
+      const randomIndex = Math.floor(Math.random() * processedFeedback.length);
+      if (!usedIndices.has(randomIndex)) {
+        usedIndices.add(randomIndex);
+        selectedFeedbacks.push(processedFeedback[randomIndex]);
       }
     }
     
-    feedbackContainer.innerHTML = '<div class="testimonial-item mb-8 p-6 bg-gray-50 dark:bg-gray-700 rounded-lg">' +
-      '<div class="flex items-start space-x-4">' +
-        '<div class="flex-shrink-0">' +
-          '<div class="w-12 h-12 ' + color.bg + ' ' + color.darkBg + ' rounded-full flex items-center justify-center">' +
-            '<svg class="w-6 h-6 ' + color.text + ' ' + color.darkText + '" fill="currentColor" viewBox="0 0 24 24">' +
-              '<path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h4v10h-10z"/>' +
-            '</svg>' +
-          '</div>' +
-        '</div>' +
-        '<div class="flex-1">' +
-          '<blockquote class="text-lg text-gray-700 dark:text-gray-300 italic mb-4">' +
-            '"' + comment + '"' +
-          '</blockquote>' +
-          '<div class="flex items-center">' +
-            '<div>' +
-              '<cite class="text-sm font-semibold text-gray-900 dark:text-white">' + visitorName + '</cite>' +
-              '<p class="text-sm text-gray-500 dark:text-gray-400">' + date + '</p>' +
+    // Clear container and render multiple feedbacks
+    const colors = [
+      { bg: 'bg-blue-100', darkBg: 'dark:bg-blue-900', text: 'text-blue-600', darkText: 'dark:text-blue-400' },
+      { bg: 'bg-purple-100', darkBg: 'dark:bg-purple-900', text: 'text-purple-600', darkText: 'dark:text-purple-400' },
+      { bg: 'bg-green-100', darkBg: 'dark:bg-green-900', text: 'text-green-600', darkText: 'dark:text-green-400' },
+      { bg: 'bg-orange-100', darkBg: 'dark:bg-orange-900', text: 'text-orange-600', darkText: 'dark:text-orange-400' },
+      { bg: 'bg-pink-100', darkBg: 'dark:bg-pink-900', text: 'text-pink-600', darkText: 'dark:text-pink-400' }
+    ];
+    
+    let feedbacksHtml = '';
+    selectedFeedbacks.forEach((feedback, index) => {
+      const color = colors[index % colors.length];
+      const rating = feedback.overall_satisfaction || 5;
+      const comment = (feedback.comments || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      const visitorName = feedback.visitor_name || 'Anonymous';
+      const date = new Date(feedback.submitted_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      
+      // Create stars HTML
+      let starsHtml = '';
+      for (let i = 0; i < 5; i++) {
+        if (i < rating) {
+          starsHtml += '<span class="text-yellow-400 text-xl">★</span>';
+        } else {
+          starsHtml += '<span class="text-gray-300 dark:text-gray-600 text-xl">★</span>';
+        }
+      }
+      
+      feedbacksHtml += '<div class="testimonial-item mb-8 p-6 bg-gray-50 dark:bg-gray-700 rounded-lg">' +
+        '<div class="flex items-start space-x-4">' +
+          '<div class="flex-shrink-0">' +
+            '<div class="w-12 h-12 ' + color.bg + ' ' + color.darkBg + ' rounded-full flex items-center justify-center">' +
+              '<svg class="w-6 h-6 ' + color.text + ' ' + color.darkText + '" fill="currentColor" viewBox="0 0 24 24">' +
+                '<path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h4v10h-10z"/>' +
+              '</svg>' +
             '</div>' +
-            '<div class="ml-auto">' +
-              '<div class="flex items-center gap-1">' +
-                starsHtml +
+          '</div>' +
+          '<div class="flex-1">' +
+            '<blockquote class="text-lg text-gray-700 dark:text-gray-300 italic mb-4">' +
+              '"' + comment + '"' +
+            '</blockquote>' +
+            '<div class="flex items-center">' +
+              '<div>' +
+                '<cite class="text-sm font-semibold text-gray-900 dark:text-white">' + visitorName + '</cite>' +
+                '<p class="text-sm text-gray-500 dark:text-gray-400">' + date + '</p>' +
+              '</div>' +
+              '<div class="ml-auto">' +
+                '<div class="flex items-center gap-1">' +
+                  starsHtml +
+                '</div>' +
               '</div>' +
             '</div>' +
           '</div>' +
         '</div>' +
-      '</div>' +
-    '</div>';
+      '</div>';
+    });
+    
+    feedbackContainer.innerHTML = feedbacksHtml;
   } catch (error) {
     console.error('Error in loadFeedback:', error);
     feedbackLoading.classList.add('hidden');

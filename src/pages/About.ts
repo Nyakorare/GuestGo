@@ -12,7 +12,15 @@ export function AboutPage() {
       <div class="text-center mb-8 sm:mb-12">
         <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-blue-600 dark:text-blue-400 mb-3 sm:mb-4 animate-slide-down">About GuestGo</h1>
         <p class="text-base sm:text-lg md:text-xl text-gray-700 dark:text-gray-300 mb-4 sm:mb-6 px-2 animate-fade-in-delay">Revolutionizing guest management for modern businesses.</p>
-        <a href="#/contact" class="inline-block bg-blue-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg shadow-lg hover:bg-blue-700 hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 ease-out animate-bounce text-sm sm:text-base">Contact Us</a>
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+          <a href="#/contact" class="inline-block bg-blue-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg shadow-lg hover:bg-blue-700 hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 ease-out animate-bounce text-sm sm:text-base">Contact Us</a>
+          <button id="qr-share-btn" class="inline-flex items-center gap-2 bg-green-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg shadow-lg hover:bg-green-700 hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 ease-out animate-pulse hover:animate-none text-sm sm:text-base qr-share-btn">
+            <svg class="w-5 h-5 qr-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
+            </svg>
+            Share QR
+          </button>
+        </div>
       </div>
 
       <!-- Features Section -->
@@ -315,6 +323,55 @@ export function AboutPage() {
       .culture-card:hover .h-48 {
         transform: scale(1.05);
         transition: transform 0.3s ease-out;
+      }
+      
+      /* QR Share Button Animations */
+      .qr-share-btn {
+        animation: qrButtonPulse 2s ease-in-out infinite;
+      }
+      
+      .qr-share-btn:hover {
+        animation: qrButtonHover 0.3s ease-out forwards;
+      }
+      
+      .qr-share-btn:hover .qr-icon {
+        animation: qrIconRotate 0.5s ease-out;
+      }
+      
+      @keyframes qrButtonPulse {
+        0%, 100% {
+          box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+        }
+        50% {
+          box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
+        }
+      }
+      
+      @keyframes qrButtonHover {
+        0% {
+          transform: translateY(0) scale(1);
+        }
+        50% {
+          transform: translateY(-4px) scale(1.05);
+        }
+        100% {
+          transform: translateY(-2px) scale(1.02);
+        }
+      }
+      
+      @keyframes qrIconRotate {
+        0% {
+          transform: rotate(0deg);
+        }
+        25% {
+          transform: rotate(-10deg) scale(1.1);
+        }
+        75% {
+          transform: rotate(10deg) scale(1.1);
+        }
+        100% {
+          transform: rotate(0deg) scale(1);
+        }
       }
     </style>
     <script>
