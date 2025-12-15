@@ -96,6 +96,15 @@ export function getQRShareModalHTML(): string {
   `;
 }
 
+// Store handler references for cleanup
+const handlerStorage = new WeakMap<HTMLElement, {
+  closeHandler: () => void;
+  printHandler: () => void;
+  copyHandler: (e: Event) => void;
+  backgroundClickHandler: (e: MouseEvent) => void;
+  escapeHandler: (e: KeyboardEvent) => void;
+}>();
+
 /**
  * Setup QR Share Modal functionality
  */
@@ -116,6 +125,16 @@ export async function setupQRShareModal(): Promise<void> {
   const copyBtn = document.getElementById('copy-url-btn');
   const printBtn = document.getElementById('print-qr-btn');
   const qrContainer = document.getElementById('qr-code-container');
+  
+  // Remove existing event listeners if they exist
+  const existingHandlers = handlerStorage.get(modal);
+  if (existingHandlers) {
+    closeBtn?.removeEventListener('click', existingHandlers.closeHandler);
+    printBtn?.removeEventListener('click', existingHandlers.printHandler);
+    copyBtn?.removeEventListener('click', existingHandlers.copyHandler);
+    modal.removeEventListener('click', existingHandlers.backgroundClickHandler);
+    document.removeEventListener('keydown', existingHandlers.escapeHandler);
+  }
   
   // Generate QR code
   if (qrContainer) {
@@ -356,12 +375,8 @@ export async function setupQRShareModal(): Promise<void> {
     };
   };
   
-  // Event listeners
-  closeBtn?.addEventListener('click', closeModal);
-  
-  printBtn?.addEventListener('click', printModal);
-  
-  copyBtn?.addEventListener('click', async (e) => {
+  // Copy handler function
+  const copyHandler = async (e: Event) => {
     e.preventDefault();
     
     // Ensure the document is focused
@@ -465,23 +480,37 @@ export async function setupQRShareModal(): Promise<void> {
         alert('Please copy the URL manually from the text above, or use Ctrl+C (Cmd+C on Mac)');
       }
     }
-  });
+  };
   
-  // Close on background click
-  modal.addEventListener('click', (e) => {
+  // Background click handler
+  const backgroundClickHandler = (e: MouseEvent) => {
     if (e.target === modal) {
       closeModal();
     }
-  });
+  };
   
-  // Close on Escape key
-  const handleEscape = (e: KeyboardEvent) => {
+  // Escape key handler
+  const escapeHandler = (e: KeyboardEvent) => {
     if (e.key === 'Escape' && !modal?.classList.contains('hidden')) {
       closeModal();
     }
   };
   
-  document.addEventListener('keydown', handleEscape);
+  // Store handlers for future cleanup
+  handlerStorage.set(modal, {
+    closeHandler: closeModal,
+    printHandler: printModal,
+    copyHandler: copyHandler,
+    backgroundClickHandler: backgroundClickHandler,
+    escapeHandler: escapeHandler
+  });
+  
+  // Add event listeners
+  closeBtn?.addEventListener('click', closeModal);
+  printBtn?.addEventListener('click', printModal);
+  copyBtn?.addEventListener('click', copyHandler);
+  modal.addEventListener('click', backgroundClickHandler);
+  document.addEventListener('keydown', escapeHandler);
 }
 
 /**

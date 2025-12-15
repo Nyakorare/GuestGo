@@ -4,6 +4,7 @@ import { loadPlaces } from './dashboard/index';
 import { FAQ } from '../components/mini-features/home/FAQ';
 import { Footer } from '../components/mini-features/Footer';
 import { initWorkflowTabAnimation } from '../components/mini-features/home/WorkflowTabAnimation';
+import { VisitorWorkflow, GuestWorkflow } from '../components/mini-features/home/VisitorWorkflow';
 
 // Helper function to get current Philippine time
 function getPhilippineTime(): Date {
@@ -1105,30 +1106,9 @@ export function HomePage() {
         let panelsHtml = '';
         
         if (user && userRole === 'visitor') {
-          stepsHtml = `
-            <button class="rounded-lg px-3 py-2 text-sm bg-blue-600 text-white" data-workflow-step="1">1. Schedule</button>
-            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="2">2. Verify</button>
-            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="3">3. Approve</button>
-            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="4">4. Check-in</button>
-          `;
-          panelsHtml = `
-            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800" data-workflow-panel="1">
-              <p class="font-semibold mb-1">Schedule an Appointment</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Fill out the appointment form with your details, select your preferred date and time (PH timezone), and choose the place you'd like to visit. The system enforces a maximum of 2 appointments per week per user.</p>
-            </div>
-            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="2">
-              <p class="font-semibold mb-1">Verify Your Email</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">We send a one-time verification code to your Gmail address. Enter the code to confirm your identity and proceed with your appointment booking.</p>
-            </div>
-            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="3">
-              <p class="font-semibold mb-1">Approval & Confirmation</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Our personnel review your appointment booking. You'll receive updates and can track the status of your appointment in your weekly visit tracker dashboard.</p>
-            </div>
-            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="4">
-              <p class="font-semibold mb-1">On-site Check-in</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Arrive at your scheduled appointment time with a valid ID. Staff will scan your QR code to confirm your appointment and log your visit.</p>
-            </div>
-          `;
+          const visitorWorkflow = VisitorWorkflow();
+          stepsHtml = visitorWorkflow.steps;
+          panelsHtml = visitorWorkflow.panels;
         } else if (user && userRole === 'personnel') {
           stepsHtml = `
             <button class="rounded-lg px-3 py-2 text-sm bg-blue-600 text-white" data-workflow-step="1">1. Scan QR</button>
@@ -1205,31 +1185,10 @@ export function HomePage() {
             </div>
           `;
         } else {
-          // Default workflow for non-logged in users
-          stepsHtml = `
-            <button class="rounded-lg px-3 py-2 text-sm bg-blue-600 text-white" data-workflow-step="1">1. Schedule</button>
-            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="2">2. Verify</button>
-            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="3">3. Approve</button>
-            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="4">4. Check-in</button>
-          `;
-          panelsHtml = `
-            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800" data-workflow-panel="1">
-              <p class="font-semibold mb-1">Schedule an Appointment</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Fill out the appointment form with your details, select your preferred date and time (PH timezone), and choose the place you'd like to visit. The system enforces a maximum of 2 appointments per week per user.</p>
-            </div>
-            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="2">
-              <p class="font-semibold mb-1">Verify Your Email</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">We send a one-time verification code to your Gmail address. Enter the code to confirm your identity and proceed with your appointment booking.</p>
-            </div>
-            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="3">
-              <p class="font-semibold mb-1">Approval & Confirmation</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Our personnel review your appointment booking. You'll receive updates and can track the status of your appointment in your weekly visit tracker dashboard.</p>
-            </div>
-            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="4">
-              <p class="font-semibold mb-1">On-site Check-in</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Arrive at your scheduled appointment time with a valid ID. Staff will scan your QR code to confirm your appointment and log your visit.</p>
-            </div>
-          `;
+          // Default workflow for non-logged in users (guests)
+          const guestWorkflow = GuestWorkflow();
+          stepsHtml = guestWorkflow.steps;
+          panelsHtml = guestWorkflow.panels;
         }
         
         workflowStepsContainer.innerHTML = stepsHtml;
@@ -1326,7 +1285,7 @@ export function HomePage() {
       <!-- How GuestGo Works -->
       <section class="mb-10">
         <h2 class="text-xl sm:text-2xl font-bold mb-3">How GuestGo Works</h2>
-        <div id="workflowSteps" class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+        <div id="workflowSteps" class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-3">
           <!-- Workflow steps will be populated dynamically based on role -->
         </div>
         <div id="workflowPanels" class="space-y-2">

@@ -24,7 +24,7 @@ export function ContactPage() {
               </div>
               <h3 class="text-lg font-semibold text-gray-900 dark:text-white text-center">Glenn R. Galbadores I</h3>
               <p class="text-gray-600 dark:text-gray-300 text-center">CEO</p>
-              <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">john@example.com</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">glenn@guestgo.com</p>
             </div>
             <!-- Right Side - New Design -->
             <div class="w-1/2 p-6 bg-gradient-to-br from-blue-500 to-blue-700 dark:from-blue-600 dark:to-blue-800 flex flex-col justify-center items-center text-white relative overflow-hidden">
@@ -64,7 +64,7 @@ export function ContactPage() {
               </div>
               <h3 class="text-lg font-semibold text-gray-900 dark:text-white text-center">Kurt Angelo F. Ballarta</h3>
               <p class="text-gray-600 dark:text-gray-300 text-center">CTO</p>
-              <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">jane@example.com</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">kurt@guestgo.com</p>
             </div>
             <!-- Right Side - New Design -->
             <div class="w-1/2 p-6 bg-gradient-to-br from-purple-500 to-purple-700 dark:from-purple-600 dark:to-purple-800 flex flex-col justify-center items-center text-white relative overflow-hidden">
@@ -104,7 +104,7 @@ export function ContactPage() {
               </div>
               <h3 class="text-lg font-semibold text-gray-900 dark:text-white text-center">Justine B. Mantilla</h3>
               <p class="text-gray-600 dark:text-gray-300 text-center">COO</p>
-              <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">mike@example.com</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">justine@guestgo.com</p>
             </div>
             <!-- Right Side - New Design -->
             <div class="w-1/2 p-6 bg-gradient-to-br from-green-500 to-green-700 dark:from-green-600 dark:to-green-800 flex flex-col justify-center items-center text-white relative overflow-hidden">
@@ -144,7 +144,7 @@ export function ContactPage() {
               </div>
               <h3 class="text-lg font-semibold text-gray-900 dark:text-white text-center">John Walter D. Marquez</h3>
               <p class="text-gray-600 dark:text-gray-300 text-center">CFO</p>
-              <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">sarah@example.com</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">walter@guestgo.com</p>
             </div>
             <!-- Right Side - New Design -->
             <div class="w-1/2 p-6 bg-gradient-to-br from-orange-500 to-orange-700 dark:from-orange-600 dark:to-orange-800 flex flex-col justify-center items-center text-white relative overflow-hidden">
@@ -184,7 +184,7 @@ export function ContactPage() {
               </div>
               <h3 class="text-lg font-semibold text-gray-900 dark:text-white text-center">Ken Zedrick E. Montano</h3>
               <p class="text-gray-600 dark:text-gray-300 text-center">CMO</p>
-              <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">david@example.com</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">ken@guestgo.com</p>
             </div>
             <!-- Right Side - New Design -->
             <div class="w-1/2 p-6 bg-gradient-to-br from-pink-500 to-pink-700 dark:from-pink-600 dark:to-pink-800 flex flex-col justify-center items-center text-white relative overflow-hidden">
@@ -226,7 +226,7 @@ export function ContactPage() {
               </div>
               <h3 class="text-lg font-semibold text-gray-900 dark:text-white text-center">Glenn R. Galbadores I</h3>
               <p class="text-gray-600 dark:text-gray-300 text-center">CEO</p>
-              <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">john@example.com</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">glenn@guestgo.com</p>
             </div>
             <!-- Right Side - New Design -->
             <div class="w-1/2 p-6 bg-gradient-to-br from-blue-500 to-blue-700 dark:from-blue-600 dark:to-blue-800 flex flex-col justify-center items-center text-white relative overflow-hidden">
@@ -266,7 +266,7 @@ export function ContactPage() {
               </div>
               <h3 class="text-lg font-semibold text-gray-900 dark:text-white text-center">Kurt Angelo F. Ballarta</h3>
               <p class="text-gray-600 dark:text-gray-300 text-center">CTO</p>
-              <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">jane@example.com</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400 text-center mt-2">kurt@guestgo.com</p>
             </div>
             <!-- Right Side - New Design -->
             <div class="w-1/2 p-6 bg-gradient-to-br from-purple-500 to-purple-700 dark:from-purple-600 dark:to-purple-800 flex flex-col justify-center items-center text-white relative overflow-hidden">
