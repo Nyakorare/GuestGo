@@ -5,6 +5,10 @@ import { FAQ } from '../components/mini-features/home/FAQ';
 import { Footer } from '../components/mini-features/Footer';
 import { initWorkflowTabAnimation } from '../components/mini-features/home/WorkflowTabAnimation';
 import { VisitorWorkflow, GuestWorkflow } from '../components/mini-features/home/VisitorWorkflow';
+import { PersonnelWorkflow } from '../components/mini-features/home/PersonnelWorkflow';
+import { AdminWorkflow } from '../components/mini-features/home/AdminWorkflow';
+import { LogsWorkflow } from '../components/mini-features/home/LogsWorkflow';
+import { GuardWorkflow } from '../components/mini-features/home/GuardWorkflow';
 
 // Helper function to get current Philippine time
 function getPhilippineTime(): Date {
@@ -1110,80 +1114,21 @@ export function HomePage() {
           stepsHtml = visitorWorkflow.steps;
           panelsHtml = visitorWorkflow.panels;
         } else if (user && userRole === 'personnel') {
-          stepsHtml = `
-            <button class="rounded-lg px-3 py-2 text-sm bg-blue-600 text-white" data-workflow-step="1">1. Scan QR</button>
-            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="2">2. Verify</button>
-            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="3">3. Check-in</button>
-            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="4">4. Log Visit</button>
-          `;
-          panelsHtml = `
-            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800" data-workflow-panel="1">
-              <p class="font-semibold mb-1">Scan QR Code</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Use the QR scanner to scan the visitor's QR code from their appointment confirmation email or mobile device.</p>
-            </div>
-            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="2">
-              <p class="font-semibold mb-1">Verify Appointment Details</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Check the visitor's information, appointment date and time, and approval status before allowing entry.</p>
-            </div>
-            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="3">
-              <p class="font-semibold mb-1">Check-in Visitor</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Confirm the visitor's arrival for their scheduled appointment and update their visit status in the system.</p>
-            </div>
-            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="4">
-              <p class="font-semibold mb-1">Log Appointment Visit</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Record the appointment visit details, arrival time, and any notes for tracking and reporting purposes.</p>
-            </div>
-          `;
+          const personnelWorkflow = PersonnelWorkflow();
+          stepsHtml = personnelWorkflow.steps;
+          panelsHtml = personnelWorkflow.panels;
+        } else if (user && userRole === 'guard') {
+          const guardWorkflow = GuardWorkflow();
+          stepsHtml = guardWorkflow.steps;
+          panelsHtml = guardWorkflow.panels;
         } else if (user && userRole === 'admin') {
-          stepsHtml = `
-            <button class="rounded-lg px-3 py-2 text-sm bg-blue-600 text-white" data-workflow-step="1">1. Monitor</button>
-            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="2">2. Manage</button>
-            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="3">3. Configure</button>
-            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="4">4. Report</button>
-          `;
-          panelsHtml = `
-            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800" data-workflow-panel="1">
-              <p class="font-semibold mb-1">Monitor System</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Track all appointments, visitor activities, and system performance in real-time through the dashboard.</p>
-            </div>
-            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="2">
-              <p class="font-semibold mb-1">Manage Users</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Oversee user roles, permissions, and access levels for visitors and personnel in the appointment system.</p>
-            </div>
-            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="3">
-              <p class="font-semibold mb-1">Configure Settings</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Set up gates, places, appointment limits, scheduling rules, and other system parameters.</p>
-            </div>
-            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="4">
-              <p class="font-semibold mb-1">Generate Reports</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Create detailed reports on appointment statistics, visitor activities, and system usage patterns.</p>
-            </div>
-          `;
+          const adminWorkflow = AdminWorkflow();
+          stepsHtml = adminWorkflow.steps;
+          panelsHtml = adminWorkflow.panels;
         } else if (user && userRole === 'logs') {
-          stepsHtml = `
-            <button class="rounded-lg px-3 py-2 text-sm bg-blue-600 text-white" data-workflow-step="1">1. View Logs</button>
-            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="2">2. Filter</button>
-            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="3">3. Analyze</button>
-            <button class="rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-gray-700" data-workflow-step="4">4. Export</button>
-          `;
-          panelsHtml = `
-            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800" data-workflow-panel="1">
-              <p class="font-semibold mb-1">View System Logs</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Access comprehensive system logs including user activities, appointment records, and system events in real-time.</p>
-            </div>
-            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="2">
-              <p class="font-semibold mb-1">Filter & Search</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Use advanced filters to search logs by date, user, action type, appointment status, or specific events for detailed analysis.</p>
-            </div>
-            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="3">
-              <p class="font-semibold mb-1">Analyze Patterns</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Review log patterns to identify trends, anomalies, or potential issues in appointment scheduling, system usage, and user behavior.</p>
-            </div>
-            <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="4">
-              <p class="font-semibold mb-1">Export Reports</p>
-              <p class="text-sm text-gray-600 dark:text-gray-400">Generate and export detailed log reports for compliance, auditing, appointment tracking, or further analysis purposes.</p>
-            </div>
-          `;
+          const logsWorkflow = LogsWorkflow();
+          stepsHtml = logsWorkflow.steps;
+          panelsHtml = logsWorkflow.panels;
         } else {
           // Default workflow for non-logged in users (guests)
           const guestWorkflow = GuestWorkflow();

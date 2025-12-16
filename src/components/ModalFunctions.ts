@@ -1574,8 +1574,15 @@ export async function setupEventListeners() {
     let isScheduling = false;
     scheduleForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      // Prevent multiple submissions if user double-clicks or the browser lags
       if (isScheduling) return;
       isScheduling = true;
+
+      // Immediately disable the submit button to block further clicks
+      if (scheduleSubmitBtn) {
+        scheduleSubmitBtn.disabled = true;
+        scheduleSubmitBtn.textContent = 'Validating...';
+      }
       
       try {
         // Get form data
@@ -1753,9 +1760,6 @@ export async function setupEventListeners() {
           visitorUserId,
           placePurposes: placeToVisit === 'multiple' ? placePurposes : undefined
         });
-
-        // Reset scheduling flag since we're not actually scheduling yet
-        isScheduling = false;
       } catch (error: any) {
         if (error && (error.message === '__SILENT_SUCCESS__' || error === '__SILENT_SUCCESS__')) return;
         console.error('Error scheduling visit:', error);
@@ -1800,11 +1804,11 @@ export async function setupEventListeners() {
         // (REMOVED: do not reload page after error)
         return;
       } finally {
-        // Only reset button state if still scheduling (not after a successful schedule)
-        if (isScheduling && scheduleSubmitBtn) {
+        // Re-enable the button for future use (e.g., if user closes confirmation and edits form)
+        isScheduling = false;
+        if (scheduleSubmitBtn) {
           scheduleSubmitBtn.disabled = false;
           scheduleSubmitBtn.textContent = 'Schedule Visit';
-          isScheduling = false;
         }
       }
     });
@@ -3575,27 +3579,38 @@ async function handleAgreementChangeWithFace(e: Event) {
   }
 }
 
+let isConfirmScheduling = false;
+
 async function handleConfirmSchedule() {
   
   
+  // Prevent multiple confirmations if the user double-clicks
+  if (isConfirmScheduling) {
+    return;
+  }
+  isConfirmScheduling = true;
+
   // Get the stored data from the modal instead of reading from form fields
   const modal = document.getElementById('visitConfirmationModal');
   if (!modal || !(modal as any).visitData) {
     console.error('No visit data found in modal');
+    isConfirmScheduling = false;
     return;
   }
 
   const visitData = (modal as any).visitData as VisitConfirmationData;
   
-
   // Ensure visitorUserId is properly handled - convert empty string to null
   if (visitData.visitorUserId && visitData.visitorUserId.trim() === '') {
     visitData.visitorUserId = null;
   }
-
   
-
-  await scheduleVisitFromConfirmation(visitData);
+  try {
+    await scheduleVisitFromConfirmation(visitData);
+  } finally {
+    // Allow another attempt only after the previous scheduling flow finishes
+    isConfirmScheduling = false;
+  }
 }
 
 // Set up confirmation modal event listeners (legacy function for initial setup)
@@ -3958,3 +3973,4 @@ export async function updatePlaceAvailabilityForDate(visitDate: string) {
     }
   }
 } 
+
