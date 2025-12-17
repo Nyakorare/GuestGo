@@ -3582,18 +3582,28 @@ async function handleAgreementChangeWithFace(e: Event) {
 let isConfirmScheduling = false;
 
 async function handleConfirmSchedule() {
-  
-  
   // Prevent multiple confirmations if the user double-clicks
   if (isConfirmScheduling) {
     return;
   }
   isConfirmScheduling = true;
 
+  // Immediately disable the confirm button to prevent multiple clicks
+  const confirmBtn = document.getElementById('confirmScheduleBtn') as HTMLButtonElement;
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Processing...';
+  }
+
   // Get the stored data from the modal instead of reading from form fields
   const modal = document.getElementById('visitConfirmationModal');
   if (!modal || !(modal as any).visitData) {
     console.error('No visit data found in modal');
+    // Re-enable button if there's an error before scheduling
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'Confirm & Schedule Visit';
+    }
     isConfirmScheduling = false;
     return;
   }
@@ -3607,8 +3617,12 @@ async function handleConfirmSchedule() {
   
   try {
     await scheduleVisitFromConfirmation(visitData);
+  } catch (error) {
+    // Error handling is done in scheduleVisitFromConfirmation, which will re-enable the button
+    // The flag will be reset in the finally block
   } finally {
-    // Allow another attempt only after the previous scheduling flow finishes
+    // Reset flag - button re-enabling is handled in scheduleVisitFromConfirmation's error handler
+    // On success, the modal closes so button state doesn't matter
     isConfirmScheduling = false;
   }
 }
