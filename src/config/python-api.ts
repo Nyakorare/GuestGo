@@ -26,6 +26,15 @@ export function setApiUrlPreference(preference: 'local' | 'deployed'): void {
   }
 }
 
+// Helper to detect if we're running on localhost
+function isLocalhost(): boolean {
+  if (typeof window === 'undefined') return false;
+  const hostname = window.location.hostname;
+  return hostname === 'localhost' || 
+         hostname === '127.0.0.1' || 
+         hostname.includes('localhost');
+}
+
 // Get the effective API URL based on preference and availability
 export function getEffectiveApiUrl(): string {
   const preference = getApiUrlPreference();
@@ -44,13 +53,12 @@ export function getEffectiveApiUrl(): string {
     return DEPLOYED_API_URL;
   }
   
-  // Default: use local in development, deployed in production
-  const isLocalDev = typeof window !== 'undefined' && 
-    (window.location.hostname === 'localhost' || 
-     window.location.hostname === '127.0.0.1' ||
-     window.location.hostname.includes('localhost'));
-  
-  return isLocalDev ? LOCAL_API_URL : DEPLOYED_API_URL;
+  // Default: always try local first, then fall back to deployed if local is unavailable
+  // This allows both localhost and deployed sites to use a local model if available
+  // The fallback logic in verification functions will handle switching to deployed if local fails
+  // On localhost: local API is expected to be available
+  // On deployed site: local API might be available if user has it running locally
+  return LOCAL_API_URL;
 }
 
 // Export constants for use in other files

@@ -1729,8 +1729,8 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
     const facePixelW = (xMax - xMin) * video.videoWidth;
     const facePixelH = (yMax - yMin) * video.videoHeight;
 
-    // Create a square crop centered on the face with generous padding
-    const padding = 0.3; // 30% padding around the face
+    // Create a square crop centered on the face with padding (matches entrance/exit cropping)
+    const padding = 0.4; // 40% padding around the face (same as cropFaceFromImage)
     const faceSize = Math.max(facePixelW, facePixelH);
     const cropSize = faceSize * (1 + padding * 2);
 
