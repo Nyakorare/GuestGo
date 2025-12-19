@@ -9,6 +9,7 @@ import { createFlaggedVisitModal, setupFlaggedVisitModalListeners, displayFlagge
 import { createLogsPagination, setupLogsPaginationListeners } from '../../components/LogsPagination';
 import { initializeLogsLoadingModal, showLogsLoadingModal, hideLogsLoadingModal } from '../../components/LogsLoadingModal';
 import { setupPrintVisitCard } from '../../Visitor/printVisitCard';
+import { showTodayPendingVisitsModal } from '../../components/TodayPendingVisitsModal';
 
 interface Place {
   id: string;
@@ -6865,6 +6866,9 @@ async function loadPersonnelDashboard() {
       }
     }
     // Note: Scheduled visits will be loaded when the visits tab is clicked
+    
+    // Show today's pending visits notification modal
+    await showTodayPendingVisitsModal();
     
     // Start automatic status updates for personnel
     startAutomaticStatusUpdates();
