@@ -11,6 +11,7 @@ import { VisitProgress } from '../components/mini-features/trackschedule/VisitPr
 import { GateScanningStatus } from '../components/mini-features/trackschedule/GateScanningStatus';
 import { VisitQRCode } from '../components/mini-features/trackschedule/VisitQRCode';
 import { NoVisitFound } from '../components/mini-features/trackschedule/NoVisitFound';
+import { checkAndShowPlaceOnHoldNotification } from '../components/PlaceOnHoldNotificationModal';
 
 export function TrackSchedulePage() {
   return `
@@ -266,6 +267,11 @@ async function displayVisitDetails(visitData: any) {
 
   // Display gate scanning status
   await displayGateScanningStatus(visitData);
+
+  // Check and show on-hold notification if any places are on-hold
+  if (visitData.scheduled_visit_places && visitData.scheduled_visit_places.length > 0) {
+    checkAndShowPlaceOnHoldNotification(visitData.id, visitData.scheduled_visit_places);
+  }
 
   // Handle invalid statuses (unsuccessful or completed_flagged)
   if (visitData.status === 'unsuccessful' || visitData.status === 'completed_flagged') {

@@ -10,6 +10,8 @@ import { createLogsPagination, setupLogsPaginationListeners } from '../../compon
 import { initializeLogsLoadingModal, showLogsLoadingModal, hideLogsLoadingModal } from '../../components/LogsLoadingModal';
 import { setupPrintVisitCard } from '../../Visitor/printVisitCard';
 import { showTodayPendingVisitsModal } from '../../components/TodayPendingVisitsModal';
+import { initializePlaceOnHold, isPlaceOnHold, createOnHoldButton, modifyMarkCompleteButton, getOnHoldExpiration } from '../../components/PlaceOnHold';
+import { checkAndShowPlaceOnHoldNotification } from '../../components/PlaceOnHoldNotificationModal';
 
 interface Place {
   id: string;
@@ -148,6 +150,9 @@ const LOGS_TAB_ACTIONS = {
 export function DashboardPage() {
   // Initialize the page
   setTimeout(async () => {
+    // Initialize place on-hold functionality
+    initializePlaceOnHold();
+    
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
@@ -5891,6 +5896,7 @@ setTimeout(() => {
 // Make functions available globally
 (window as any).forceUpdateVisitStatuses = forceUpdateVisitStatuses;
 (window as any).debugSpecificVisit = debugSpecificVisit;
+(window as any).loadScheduledVisits = loadScheduledVisits;
 
 // Cleanup auto-refresh when page is unloaded
 window.addEventListener('beforeunload', () => {
@@ -8092,16 +8098,23 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
               ⚠️ Gate entrance scan required by visitor before completion
             </div>
           </div>
-        ` : canComplete ? `
-          <div class="flex justify-end">
-            <button 
-              onclick="showCompletePlaceConfirmModal('${visit.visit_id}', '${visit.place_id}')"
-              class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-sm font-medium transition-all duration-200 hover:scale-105 hover:shadow-md"
-            >
-              Mark Place Complete
-            </button>
-          </div>
-        ` : meetsBasicRequirements && isFutureVisit ? `
+        ` : canComplete ? (() => {
+          const onHold = isPlaceOnHold(visit.visit_id, visit.place_id);
+          let expirationTime = '';
+          if (onHold) {
+            const exp = getOnHoldExpiration(visit.visit_id, visit.place_id);
+            if (exp) {
+              expirationTime = new Date(exp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+          }
+          const markCompleteBtn = onHold 
+            ? `<button disabled class="px-4 py-2 bg-gray-300 text-gray-500 rounded-md cursor-not-allowed text-sm font-medium" title="On-hold until ${expirationTime}">Mark Place Complete (On-Hold)</button>`
+            : `<button onclick="showCompletePlaceConfirmModal('${visit.visit_id}', '${visit.place_id}')" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-sm font-medium transition-all duration-200 hover:scale-105 hover:shadow-md">Mark Place Complete</button>`;
+          const onHoldBtn = createOnHoldButton(visit.visit_id, visit.place_id, () => {
+            loadScheduledVisits();
+          });
+          return `<div class="flex justify-end space-x-2">${markCompleteBtn}${onHoldBtn}</div>`;
+        })() : meetsBasicRequirements && isFutureVisit ? `
           <div class="flex justify-end">
             <div class="px-4 py-2 bg-gray-100 text-gray-600 rounded-md text-sm font-medium">
               Cannot complete - scheduled for future date (${scheduledDate})
@@ -11395,6 +11408,14 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
   for (const visit of completedVisits) {
     updateFeedbackButtonState(visit.id);
   }
+  
+  // Check and show on-hold notification for each visit
+  for (const visit of visits) {
+    const places = Array.isArray(visit.places) ? visit.places : [];
+    if (places.length > 0) {
+      checkAndShowPlaceOnHoldNotification(visit.id, places);
+    }
+  }
 }
 
 // Function to display visitor's today visits
@@ -11759,6 +11780,14 @@ async function displayVisitorTodayVisits(visits: any[]): Promise<void> {
   const completedVisits = visits.filter(visit => visit.status === 'completed');
   for (const visit of completedVisits) {
     updateFeedbackButtonState(visit.id);
+  }
+  
+  // Check and show on-hold notification for each visit
+  for (const visit of visits) {
+    const places = Array.isArray(visit.places) ? visit.places : [];
+    if (places.length > 0) {
+      checkAndShowPlaceOnHoldNotification(visit.id, places);
+    }
   }
 }
 

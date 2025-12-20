@@ -270,20 +270,37 @@ frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
 # Normalize frontend URL (remove trailing slash)
 frontend_url = frontend_url.rstrip('/')
 
-# Always include localhost for local development, even if FRONTEND_URL is set to deployed URL
-default_origins = [
-    'https://guest-go.vercel.app',
+# Always include deployed frontend and localhost for local development
+# Base origins (normalized, no trailing slashes)
+base_origins = [
+    'https://guest-go.vercel.app',  # Deployed frontend - always included
     'http://localhost:5173',
     'http://127.0.0.1:5173',
-    frontend_url  # Include the FRONTEND_URL as well
+    frontend_url.rstrip('/')  # Include the FRONTEND_URL as well (normalized)
 ]
 
 # Get allowed origins from environment or use defaults
-cors_origins_env = os.getenv('CORS_ORIGINS', ','.join(default_origins))
-# Parse and combine with defaults to ensure localhost is always included
-env_origins = [origin.strip() for origin in cors_origins_env.split(',') if origin.strip()]
-# Merge and deduplicate
-allowed_origins = list(set(env_origins + default_origins))
+cors_origins_env = os.getenv('CORS_ORIGINS', '')
+if cors_origins_env:
+    # Parse environment origins and normalize them
+    env_origins = [origin.strip().rstrip('/') for origin in cors_origins_env.split(',') if origin.strip()]
+    # Merge with base origins
+    base_origins.extend(env_origins)
+
+# Remove duplicates while preserving order
+seen = set()
+allowed_origins_normalized = []
+for origin in base_origins:
+    if origin and origin not in seen:
+        seen.add(origin)
+        allowed_origins_normalized.append(origin)
+
+# Create final list with both versions (with and without trailing slash) for compatibility
+allowed_origins = []
+for origin in allowed_origins_normalized:
+    allowed_origins.append(origin)  # Without trailing slash
+    if not origin.endswith('/'):
+        allowed_origins.append(origin + '/')  # With trailing slash
 
 CORS(app, 
      origins=allowed_origins,
@@ -292,16 +309,41 @@ CORS(app,
      supports_credentials=True,
      expose_headers=['Content-Type'])
 
+# Print CORS configuration on startup for debugging
+print("=" * 60)
+print("🌐 CORS Configuration:")
+print(f"   Allowed Origins: {', '.join(sorted(allowed_origins))}")
+print(f"   Frontend URL: {frontend_url}")
+print("=" * 60)
+
+# Helper function to normalize and check origin
+def is_origin_allowed(origin):
+    """Check if origin is allowed, handling variations with/without trailing slashes"""
+    if not origin:
+        return False
+    # Normalize origin (remove trailing slash for comparison)
+    origin_normalized = origin.rstrip('/')
+    # Check both normalized and original versions
+    for allowed in allowed_origins:
+        allowed_normalized = allowed.rstrip('/')
+        if origin_normalized == allowed_normalized or origin == allowed:
+            return True
+    return False
+
 # Add after_request handler to ensure CORS headers are always sent, even on errors
 @app.after_request
 def after_request(response):
     """Ensure CORS headers are always present, even on error responses"""
     origin = request.headers.get('Origin')
-    if origin and origin in allowed_origins:
+    if origin and is_origin_allowed(origin):
         response.headers.add('Access-Control-Allow-Origin', origin)
         response.headers.add('Access-Control-Allow-Credentials', 'true')
         response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    elif origin:
+        # Log blocked origins for debugging (only in debug mode to avoid spam)
+        if os.getenv('FLASK_DEBUG', 'False').lower() == 'true':
+            print(f"⚠️  CORS: Origin '{origin}' not in allowed origins")
     elif not origin and request.method == 'OPTIONS':
         # Handle preflight requests - allow from any origin for OPTIONS
         response.headers.add('Access-Control-Allow-Origin', '*')
@@ -315,7 +357,7 @@ def internal_error(error):
     """Handle 500 errors with CORS headers"""
     origin = request.headers.get('Origin')
     response = jsonify({'error': 'Internal server error', 'message': str(error)})
-    if origin and origin in allowed_origins:
+    if origin and is_origin_allowed(origin):
         response.headers.add('Access-Control-Allow-Origin', origin)
         response.headers.add('Access-Control-Allow-Credentials', 'true')
     return response, 500
@@ -325,7 +367,7 @@ def not_found(error):
     """Handle 404 errors with CORS headers"""
     origin = request.headers.get('Origin')
     response = jsonify({'error': 'Not found', 'message': str(error)})
-    if origin and origin in allowed_origins:
+    if origin and is_origin_allowed(origin):
         response.headers.add('Access-Control-Allow-Origin', origin)
         response.headers.add('Access-Control-Allow-Credentials', 'true')
     return response, 404
@@ -335,7 +377,7 @@ def bad_request(error):
     """Handle 400 errors with CORS headers"""
     origin = request.headers.get('Origin')
     response = jsonify({'error': 'Bad request', 'message': str(error)})
-    if origin and origin in allowed_origins:
+    if origin and is_origin_allowed(origin):
         response.headers.add('Access-Control-Allow-Origin', origin)
         response.headers.add('Access-Control-Allow-Credentials', 'true')
     return response, 400
