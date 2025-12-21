@@ -4,6 +4,7 @@ import { setupEventListeners } from './utils/eventHandlers';
 import { createLoginModal, createSignupModal, setupAuthEventListeners } from './components/AuthModals';
 import { createProfileSettingsModal } from './components/ProfileSettingsModal';
 import { initializeSessionManager } from './utils/sessionManager';
+import { initLogoHoverAnimations } from './utils/logoHoverAnimations';
 import supabase from './config/supabase';
 
 // Cache for DOM elements to avoid repeated queries
@@ -83,7 +84,7 @@ export default function setupApp() {
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div class="flex justify-between items-center h-16"><!-- Logo, brand name and theme toggle -->
           <div class="flex items-center space-x-2">
-            <img src="/guestgo-logo-no_word.png" alt="GuestGo Logo" class="h-8 w-auto">
+            <img id="guestgo-logo" src="/guestgo-logo-no_word.png" alt="GuestGo Logo" class="h-8 w-auto">
             <div class="flex items-center space-x-2">
               <div class="flex-shrink-0 text-2xl font-bold text-blue-600 dark:text-blue-500">
                 GuestGo
@@ -214,6 +215,9 @@ export default function setupApp() {
   
   // Initialize session management
   initializeSessionManager();
+  
+  // Initialize logo hover animations
+  initLogoHoverAnimations();
   
   // Theme toggle functionality
   const themeToggleButton = getCachedElement('theme-toggle');

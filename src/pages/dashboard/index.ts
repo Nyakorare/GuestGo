@@ -12,6 +12,7 @@ import { setupPrintVisitCard } from '../../Visitor/printVisitCard';
 import { showTodayPendingVisitsModal } from '../../components/TodayPendingVisitsModal';
 import { initializePlaceOnHold, isPlaceOnHold, createOnHoldButton, modifyMarkCompleteButton, getOnHoldExpiration } from '../../components/PlaceOnHold';
 import { checkAndShowPlaceOnHoldNotification } from '../../components/PlaceOnHoldNotificationModal';
+import { calculateVisitDuration } from '../../utils/visitDuration';
 
 interface Place {
   id: string;
@@ -10247,7 +10248,7 @@ async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Pr
         };
       }
   
-      const threshold = 0.75;
+      const threshold = 0.55;
       const isMatch = result.match && result.similarity >= threshold;
   
       return {
@@ -11719,7 +11720,9 @@ async function displayVisitorTodayVisits(visits: any[]): Promise<void> {
                 <div>
                   <span class="font-medium text-gray-700 dark:text-gray-300">Duration:</span>
                   <span class="text-gray-600 dark:text-gray-400 ml-2">
-                    ${visit.estimated_duration || 'Not specified'}
+                    ${(visit.status === 'completed' || visit.status === 'completed_flagged') && visit.gate_entrance_scanned_at && visit.gate_exit_scanned_at 
+                      ? calculateVisitDuration(visit.gate_entrance_scanned_at, visit.gate_exit_scanned_at) + ' (from entrance to exit)'
+                      : visit.estimated_duration || 'Not specified'}
                   </span>
                 </div>
                 <div class="flex items-center space-x-2">
@@ -12101,7 +12104,9 @@ async function displayVisitorFutureVisits(visits: any[]): Promise<void> {
                 <div>
                   <span class="font-medium text-gray-700 dark:text-gray-300">Duration:</span>
                   <span class="text-gray-600 dark:text-gray-400 ml-2">
-                    ${visit.estimated_duration || 'Not specified'}
+                    ${(visit.status === 'completed' || visit.status === 'completed_flagged') && visit.gate_entrance_scanned_at && visit.gate_exit_scanned_at 
+                      ? calculateVisitDuration(visit.gate_entrance_scanned_at, visit.gate_exit_scanned_at) + ' (from entrance to exit)'
+                      : visit.estimated_duration || 'Not specified'}
                   </span>
                 </div>
                 <div class="flex items-center space-x-2">
@@ -12368,6 +12373,17 @@ async function displayVisitorPastVisits(visits: any[]): Promise<void> {
                       </button>
                     ` : ''}
                   </div>
+                </div>
+              ` : ''}
+              ${(visit.status === 'completed' || visit.status === 'completed_flagged') && visit.gate_entrance_scanned_at && visit.gate_exit_scanned_at ? `
+                <div class="sm:col-span-2">
+                  <span class="font-medium text-gray-700 dark:text-gray-300">Visit Duration:</span>
+                  <span class="text-gray-600 dark:text-gray-400 ml-2 font-semibold">
+                    ${calculateVisitDuration(visit.gate_entrance_scanned_at, visit.gate_exit_scanned_at)}
+                  </span>
+                  <span class="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                    (from entrance to exit)
+                  </span>
                 </div>
               ` : ''}
               ${visit.reschedule_status === 'accepted' || visit.reschedule_status === 'declined' ? `

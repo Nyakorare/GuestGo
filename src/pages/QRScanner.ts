@@ -3,6 +3,7 @@ import { parseQRCodeData, type VisitQRData } from '../utils/qrCode';
 import { openFaceDetectionModal, type FaceDetectionOutcome } from '../utils/AI-Face-Detection/blazefaceModal';
 import { compressImageDataUrl } from '../utils/imageCompression';
 import jsQR from 'jsqr';
+import { isPlaceOnHold, getOnHoldExpiration, createOnHoldButton, initializePlaceOnHold } from '../components/PlaceOnHold';
 
 export function QRScannerPage() {
   return `
@@ -1405,14 +1406,23 @@ function showPersonnelVisitModal(visitData: VisitQRData & { places: any[] }, cur
                             >
                               Mark Complete
                             </button>
-                          ` : `
-                            <button 
-                              onclick="completeVisitPlace('${visitData.visitId}', '${place.placeId}')"
-                              class="ml-2 px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200 text-xs font-medium"
-                            >
-                              Mark Complete
-                            </button>
-                          `}
+                          ` : (() => {
+                            const onHold = isPlaceOnHold(visitData.visitId, place.placeId);
+                            let expirationTime = '';
+                            if (onHold) {
+                              const exp = getOnHoldExpiration(visitData.visitId, place.placeId);
+                              if (exp) {
+                                expirationTime = new Date(exp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                              }
+                            }
+                            const markCompleteBtn = onHold 
+                              ? `<button disabled class="ml-2 px-3 py-1 bg-gray-300 text-gray-500 rounded-md cursor-not-allowed text-xs font-medium" title="On-hold until ${expirationTime}">Mark Complete (On-Hold)</button>`
+                              : `<button onclick="completeVisitPlace('${visitData.visitId}', '${place.placeId}')" class="ml-2 px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200 text-xs font-medium">Mark Complete</button>`;
+                            const onHoldBtn = createOnHoldButton(visitData.visitId, place.placeId, () => {
+                              refreshPersonnelModal(visitData.visitId, currentUserId);
+                            });
+                            return `<div class="flex items-center space-x-2">${markCompleteBtn}${onHoldBtn}</div>`;
+                          })()}
                         ` : ''}
                       </div>
                     </div>
@@ -1452,6 +1462,14 @@ function showPersonnelVisitModal(visitData: VisitQRData & { places: any[] }, cur
   // Add modal to page
   document.body.insertAdjacentHTML('beforeend', modalHTML);
 
+  // Set up global refresh function for on-hold button callback
+  (window as any).refreshPersonnelView = async () => {
+    await refreshPersonnelModal(visitData.visitId, currentUserId);
+  };
+
+  // Initialize on-hold functionality
+  initializePlaceOnHold();
+
   // Add event listeners
   const modal = document.getElementById('personnelVisitModal');
   const closeBtn1 = document.getElementById('closePersonnelModalBtn');
@@ -1462,6 +1480,8 @@ function showPersonnelVisitModal(visitData: VisitQRData & { places: any[] }, cur
     if (modal) {
       modal.remove();
     }
+    // Clean up global function
+    delete (window as any).refreshPersonnelView;
     // Refresh the page when modal is closed
     window.location.reload();
   };

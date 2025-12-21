@@ -19,6 +19,8 @@ Planned (nice-to-have / post-defense enhancements):
 - Multi-face handling at gates (crowd detection roadmap)
 
 Completed:
+- Visit reschedule system (visitor request + personnel accept/decline workflow with date validation and limit checks)
+- Brevo email integration for professional visit confirmation and completion emails (replaces EmailJS for transactional emails)
 - Guard dashboard with real-time QR scanning + enforced face detection on entrance/exit
 - Guard dashboard gate selection for entrance/exit processing
 - Guard dashboard manual visit ID lookup (fallback when QR scanning unavailable)

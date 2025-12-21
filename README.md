@@ -175,6 +175,10 @@ This section summarizes end-to-end features, steps, and expected results. It als
 - QR code generation for scheduled visits
 - Visit confirmation modal with terms agreement
 - Visit reschedule support (`src/components/VisitReschedule.ts`)
+  - Visitors can request one reschedule per visit with reason
+  - Personnel can accept/decline reschedule requests
+  - Date validation and visit limit checks on reschedule
+  - Pending reschedule notification modal for personnel (`src/components/PendingRescheduleModal.ts`)
 
 **Connections**:
 - → Place Management: Fetches available places and purposes
@@ -182,8 +186,8 @@ This section summarizes end-to-end features, steps, and expected results. It als
 - → Visit Limits: Enforces weekly/monthly visit limits
 - → Face Detection: Optional enrollment during scheduling
 - → QR Code Services: Generates visit QR codes
-- → Email Notifications: Sends confirmation emails
-- → Audit Logging: Logs schedule creation
+- → Email Notifications: Sends confirmation emails via Brevo
+- → Audit Logging: Logs schedule creation and reschedule requests
 
 #### 6. Guard Operations Dashboard
 **Location**: `src/pages/GuardDashboard.ts`
@@ -361,11 +365,16 @@ This section summarizes end-to-end features, steps, and expected results. It als
 - Availability management (single-day unavailability)
 - In-progress visit viewing
 - Place purpose editing (for assigned places)
+- Reschedule request management (`src/components/VisitReschedule.ts`)
+  - View pending reschedule requests for assigned places
+  - Accept/decline reschedule requests with new date selection
+  - Automatic notification modal for pending requests (`src/components/PendingRescheduleModal.ts`)
 
 **Connections**:
 - → Place Management: Assigns personnel to places
 - → Scheduling: Checks personnel availability
 - → Visit Status: Shows in-progress visits
+- → Reschedule System: Personnel can process visitor reschedule requests
 
 #### 15. Visit Status Management
 **Location**: Supabase RPCs, `src/pages/dashboard/index.ts`
@@ -393,26 +402,35 @@ This section summarizes end-to-end features, steps, and expected results. It als
 - Override logging
 - Place deletion logging
 - Visit limit enforcement logging
+- Visit reschedule logging (`visit_reschedule_requested`, `visit_reschedule_accepted`, `visit_reschedule_declined`)
 - Log pagination (`src/components/LogsPagination.ts`)
 
 **Connections**:
 - → All Features: Logs all significant actions
 - → Dashboard: Displays logs
 - → Analytics: Provides audit trail
+- → Reschedule System: Logs all reschedule requests and decisions
 
-#### 17. Notifications
-**Location**: `src/config/emailjs.ts`
+#### 17. Notifications & Email Services
+**Location**: `src/config/emailjs.ts`, `api/send-visit-email.ts`, `api/send-completion-email.ts`, `src/config/email.ts`, `src/config/completionEmail.ts`
 
 **Features**:
-- Email notifications for schedule creation
-- Email notifications for status changes
+- **Brevo Email Integration**: Professional transactional email service for visit confirmations and completions
+  - Visit confirmation emails with embedded QR codes (`api/send-visit-email.ts`)
+  - Visit completion emails with feedback survey links (`api/send-completion-email.ts`)
+  - HTML email templates with responsive design
+  - Serverless function support (Vercel) and local development server support
+- **EmailJS Integration**: Used for contact form submissions and email verification codes (Gmail OTP)
+- Email notifications for schedule creation (via Brevo)
+- Email notifications for visit completion (via Brevo)
 - Optional alerts for flagged events
-- Email verification codes (Gmail OTP)
+- Email verification codes (Gmail OTP via EmailJS)
 
 **Connections**:
-- → Scheduling: Sends confirmation emails
-- → Authentication: Sends verification codes
-- → Visit Status: Sends status update emails
+- → Scheduling: Sends confirmation emails via Brevo API
+- → Visit Completion: Sends completion emails via Brevo API
+- → Authentication: Sends verification codes via EmailJS
+- → Contact Page: Sends contact form messages via EmailJS
 
 #### 18. Face Detection & Verification
 **Location**: `src/utils/AI-Face-Detection/blazefaceModal.ts`, `src/utils/Python-AI/app.py`, `src/components/FaceDataModal.ts`
@@ -469,14 +487,17 @@ This section summarizes end-to-end features, steps, and expected results. It als
   - Overview of gate activity, active visits, flagged entries.
   - Time-based summaries for operations.
 
-- **Notifications**
-  - Email notifications for schedule creation and status changes.
+- **Notifications & Email Services**
+  - Brevo integration for professional visit confirmation and completion emails with embedded QR codes.
+  - EmailJS for contact form submissions and email verification codes.
+  - Email notifications for schedule creation and visit completion.
   - Optional alerts for flagged events.
 
 - **Feedback & Quality Analytics**
   - Post-visit ISO 25010 survey covering functional suitability, security, maintainability, etc.
   - Scores stored via Supabase RPCs (`submit_visit_feedback`, `has_feedback_for_visit`) with repeat-visit lockouts.
   - Public feedback display on Contact page with daily rotating testimonials (`get_public_feedback`).
+  - Visit completion emails include feedback survey links for guests.
 
 - **Audit Logging**
   - Structured logs for schedule CRUD, gate scans, AI decisions, and overrides.
@@ -490,6 +511,13 @@ This section summarizes end-to-end features, steps, and expected results. It als
   - Place-specific visit purposes with configurable advance notice requirements (0-6 days).
   - Personnel can edit place purposes for their assigned places (in addition to admins).
   - Monthly scheduled dates retrieval function (`get_place_scheduled_dates_in_month`) for calendar views.
+
+- **Visit Reschedule System**
+  - Visitors can request one reschedule per visit with reason explanation.
+  - Personnel can accept/decline reschedule requests with new date selection.
+  - Full validation: weekly visit limits, place limits, and date constraints.
+  - Pending reschedule notification modal for personnel on dashboard login.
+  - Complete audit trail for all reschedule requests and decisions.
 
 - **Personnel Availability Management**
   - Single-day unavailability system (applies only on selected date, auto-available next day).
@@ -535,6 +563,14 @@ This section summarizes end-to-end features, steps, and expected results. It als
 5) **Feedback Survey (Visitor/Guest)**
    - Guests receive an ISO 25010 survey covering eight quality characteristics plus overall satisfaction.
    - Responses are stored via Supabase RPCs and surfaced in dashboards/exports.
+   - Visit completion emails include direct links to feedback surveys for guests.
+
+6) **Visit Reschedule (Visitor → Personnel)**
+   - Visitors can request one reschedule per visit with a reason explanation.
+   - Personnel receive notification modals and can view pending requests in dashboard.
+   - Personnel can accept (with new date selection) or decline reschedule requests.
+   - System validates weekly visit limits, place limits, and date constraints on acceptance.
+   - All reschedule actions are logged in audit trail.
 
 ## Connected Modules, Steps, and Expected Results
 
@@ -556,8 +592,9 @@ This table ties together the major modules listed above with their concrete flow
 | Visit Status Management | Nightly/periodic jobs run status-fix RPCs; dashboard views status timeline | Past `pending`/`in_progress` visits normalized to `unsuccessful`/`completed_flagged` | `visits.status`, related place status fields | Status auto-fix actions logged with reasons (no entrance/exit) |
 | Flagged Visits & Alerts | System detects flags on visitor/visit during schedule or gate scan | Guard/admin sees flagged modal with context and override options | Flag records + override incident entries | Flag alerts, overrides, and reasons logged; optional notifications |
 | QR Code Services | Generate QR during scheduling; scan QR on Guard Dashboard/QR Scanner page | Stable, scannable codes for visit/gate flows | QR image assets (printable cards) + decoded payloads in memory | QR generation events + successful/failed scans logged |
-| Notifications (EmailJS) | System triggers on schedule creation, status changes, flags, feedback nudges | Visitor/guard/admin receive transaction emails/alerts | Notification history (if stored) + EmailJS delivery metadata | Notification attempts, successes, and failures logged |
+| Notifications (Brevo + EmailJS) | System triggers on schedule creation, visit completion, flags, feedback nudges | Visitor/guard/admin receive professional HTML emails with QR codes and feedback links | Brevo delivery metadata + EmailJS delivery metadata | Notification attempts, successes, and failures logged |
 | Feedback & Quality Analytics | Visitor submits ISO 25010 survey after visit; dashboard loads analytics | Feedback stored per visit; repeat submissions blocked; analytics updated | `visit_feedback` rows (scores + comments) | Submission success/failure toasts; feedback ingestion + analytics queries logged |
+| Visit Reschedule | Visitor requests reschedule → Personnel reviews → Accept/decline with date validation | Visit date updated (if accepted) or original date maintained (if declined) | `scheduled_visits` reschedule fields updated; visit date changed if accepted | Reschedule request, acceptance, and decline actions logged with reasons |
 | Audit Logging | Any CRUD, gate, AI, or config action occurs | Centralized audit trail available from dashboard | `logs`/`audit_logs` (action, actor, context, timestamp) | All significant actions appended; filter/search usage logged |
 | Facial Detection & Verification (AI Module) | Detection called from schedule enrollment or guard flows; verification called on exit/FaceDataModal | Faces detected, cropped, compressed, encrypted; similarity scores produced | Encrypted JPEG crops in `gate_scans`/`visit_face_data`; verification metrics | Detection/verification success, failures, thresholds, and overrides logged |
 
@@ -601,12 +638,14 @@ Scope: Used during schedule enrollment, guard-controlled entrance/exit, and dash
 - Feedback + face data modals: `src/components/FeedbackSurveyModal.ts`, `src/components/FaceDataModal.ts`, `src/components/FlaggedVisitModal.ts`.
 - Public feedback: `src/pages/Contact.ts` (uses `get_public_feedback` RPC).
 - Place purposes: `src/pages/dashboard/index.ts`, `src/components/ModalFunctions.ts` (place_purposes table integration).
-- Config & services: `src/config/supabase.ts`, `src/config/emailjs.ts`, `src/config/python-api.ts`, QR helpers in `src/utils/qrCode.ts`.
+- Config & services: `src/config/supabase.ts`, `src/config/emailjs.ts`, `src/config/email.ts`, `src/config/completionEmail.ts`, `src/config/python-api.ts`, QR helpers in `src/utils/qrCode.ts`.
+- Reschedule system: `src/components/VisitReschedule.ts`, `src/components/PendingRescheduleModal.ts`, `supabase/migrations/37_visit_reschedule_support.sql`.
+- Email services: `api/send-visit-email.ts`, `api/send-completion-email.ts` (Vercel serverless functions), `server.js` (local development).
 
 ## Operational Notes
 
 - Logging: `src/utils/logging.ts` handles AI decisions/thresholds; guard actions flow through `log_guard_action` + `insert_guard_gate_scan_with_face` RPCs.
-- Notifications: Trigger via `src/config/emailjs.ts` on schedule creation, flags, and survey nudges.
+- Notifications: Visit confirmations and completions via Brevo (`api/send-visit-email.ts`, `api/send-completion-email.ts`). Contact forms and OTP via EmailJS (`src/config/emailjs.ts`).
 - Performance: Track inference timings via `src/utils/performance.ts`; guard dashboard displays live FPS/interval metrics.
 - Face storage: `processFaceImageForStorage` compresses/encrypts crops before Supabase insert; `processFaceImageForDisplay` decrypts on demand.
 

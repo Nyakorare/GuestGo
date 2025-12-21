@@ -1334,7 +1334,7 @@ async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Pr
         };
       }
   
-      const threshold = 0.75;
+      const threshold = 0.55;
       const similarity = result.similarity || 0;
       const isMatch = result.match && similarity >= threshold;
       
