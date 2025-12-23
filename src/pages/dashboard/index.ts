@@ -419,9 +419,12 @@ export function DashboardPage() {
       assignmentTab?.classList.add('bg-gray-100', 'text-gray-700');
       visitsTab?.classList.remove('bg-blue-600', 'text-white');
       visitsTab?.classList.add('bg-gray-100', 'text-gray-700');
+      requestsTab?.classList.remove('bg-blue-600', 'text-white');
+      requestsTab?.classList.add('bg-gray-100', 'text-gray-700');
       finishedContent?.classList.remove('hidden');
       assignmentContent?.classList.add('hidden');
       visitsContent?.classList.add('hidden');
+      requestsContent?.classList.add('hidden');
       
       // Stop auto-refresh for visits tab
       stopVisitsAutoRefresh();

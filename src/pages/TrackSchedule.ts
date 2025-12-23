@@ -12,6 +12,7 @@ import { GateScanningStatus } from '../components/mini-features/trackschedule/Ga
 import { VisitQRCode } from '../components/mini-features/trackschedule/VisitQRCode';
 import { NoVisitFound } from '../components/mini-features/trackschedule/NoVisitFound';
 import { checkAndShowPlaceOnHoldNotification } from '../components/PlaceOnHoldNotificationModal';
+import { Footer } from '../components/mini-features/Footer';
 
 export function TrackSchedulePage() {
   return `
@@ -72,6 +73,7 @@ export function TrackSchedulePage() {
 
         ${NoVisitFound()}
       </div>
+      ${Footer()}
     </div>
   `;
 }
