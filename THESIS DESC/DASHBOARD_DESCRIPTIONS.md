@@ -101,6 +101,8 @@ The Track Schedule page provides the same functionality for guests as for visito
 
 ## Navigation Summary by Role
 
+Table 6 presents a consolidated summary of each user role, highlighting which dashboard views they can access, which navigation links are exclusive to them, and which pages are hidden from their interface.
+
 | Role | Dashboard Access | Exclusive Pages | Hidden Pages |
 |------|-----------------|-----------------|--------------|
 | **Admin** | Full admin dashboard (Places, Accounts, Gates, Feedback, AI Status) | None (full access) | None |

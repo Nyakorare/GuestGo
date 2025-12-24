@@ -1443,8 +1443,8 @@ export function DashboardPage() {
       </div>
 
       <!-- Edit Place Modal -->
-      <div id="editPlaceModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-[9999]">
-        <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white dark:bg-gray-800">
+      <div id="editPlaceModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-[9999] flex items-center justify-center p-4">
+        <div class="relative mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white dark:bg-gray-800 max-h-[90vh] overflow-y-auto">
           <div class="mt-3">
             <div class="flex justify-between items-center mb-4">
               <h3 class="text-lg font-medium text-gray-900 dark:text-white">Edit Place</h3>
@@ -4055,6 +4055,11 @@ async function editPlace(placeId: string) {
   const modalTitle = modal?.querySelector('h3') as HTMLHeadingElement;
 
   if (modal && form && idInput && nameInput && descriptionInput && locationInput) {
+    // Move modal to document.body if it's not already there to ensure it's outside any container constraints
+    if (modal.parentElement !== document.body) {
+      document.body.appendChild(modal);
+    }
+
     idInput.value = place.id;
     nameInput.value = place.name;
     descriptionInput.value = place.description || '';
@@ -4345,6 +4350,9 @@ function switchEditPlaceTab(tab: 'details' | 'purpose') {
     purposeTab?.classList.remove('text-blue-600', 'border-blue-600', 'dark:text-blue-400', 'dark:border-blue-400');
     purposeTab?.classList.add('text-gray-500', 'border-transparent', 'dark:text-gray-400');
     detailsContent?.classList.remove('hidden');
+    if (detailsContent) {
+      (detailsContent as HTMLElement).style.display = '';
+    }
     purposeContent?.classList.add('hidden');
   } else {
     purposeTab?.classList.add('text-blue-600', 'border-blue-600', 'dark:text-blue-400', 'dark:border-blue-400');
@@ -4352,12 +4360,17 @@ function switchEditPlaceTab(tab: 'details' | 'purpose') {
     detailsTab?.classList.remove('text-blue-600', 'border-blue-600', 'dark:text-blue-400', 'dark:border-blue-400');
     detailsTab?.classList.add('text-gray-500', 'border-transparent', 'dark:text-gray-400');
     purposeContent?.classList.remove('hidden');
+    if (purposeContent) {
+      (purposeContent as HTMLElement).style.display = '';
+      (purposeContent as HTMLElement).style.visibility = 'visible';
+      (purposeContent as HTMLElement).style.opacity = '1';
+    }
     detailsContent?.classList.add('hidden');
   }
 }
 
 // Function to load purposes for a place
-async function loadPlacePurposes(placeId: string) {
+async function loadPlacePurposes(placeId: string, shouldRender: boolean = true) {
   const { data: purposes, error } = await supabase
     .from('place_purposes')
     .select('*')
@@ -4367,11 +4380,16 @@ async function loadPlacePurposes(placeId: string) {
   if (error) {
     console.error('Error loading purposes:', error);
     currentPlacePurposes = [];
+    if (shouldRender) {
+      renderPurposeList();
+    }
     return;
   }
 
   currentPlacePurposes = purposes || [];
-  renderPurposeList();
+  if (shouldRender) {
+    renderPurposeList();
+  }
 }
 
 // Function to validate purpose names for duplicates
@@ -4440,7 +4458,10 @@ function updatePurposeValidation(index: number) {
 // Function to render the purpose list
 function renderPurposeList() {
   const purposeList = document.getElementById('purposeList');
-  if (!purposeList) return;
+  if (!purposeList) {
+    console.error('purposeList element not found!');
+    return;
+  }
 
   if (currentPlacePurposes.length === 0) {
     purposeList.innerHTML = `
@@ -4569,14 +4590,61 @@ async function editPlacePurposes(placeId: string, placeName: string) {
     detailsTab.classList.add('hidden');
   }
 
-  // Load purposes for this place
-  await loadPlacePurposes(placeId);
+  // Show the modal first so elements are in the DOM
+  modal.classList.remove('hidden');
 
-  // Switch directly to Purpose tab
+  // Switch directly to Purpose tab (this removes 'hidden' from purposeContent)
   switchEditPlaceTab('purpose');
 
-  // Show the modal
-  modal.classList.remove('hidden');
+  // Small delay to ensure DOM is updated
+  await new Promise(resolve => setTimeout(resolve, 50));
+
+  // Verify elements exist before loading
+  const purposeContent = document.getElementById('editPlacePurposeTabContent');
+  const purposeList = document.getElementById('purposeList');
+
+  if (!purposeList) {
+    console.error('purposeList element not found! Cannot render purposes.');
+    showNotification('Error: Purpose list element not found', 'error');
+    return;
+  }
+
+  // Ensure purpose content is visible (remove hidden class explicitly and force display)
+  if (purposeContent) {
+    purposeContent.classList.remove('hidden');
+    (purposeContent as HTMLElement).style.display = 'block';
+    (purposeContent as HTMLElement).style.visibility = 'visible';
+    (purposeContent as HTMLElement).style.opacity = '1';
+    (purposeContent as HTMLElement).style.height = 'auto';
+  }
+
+  // Load purposes for this place (same as admin side - renders immediately)
+  // This will call renderPurposeList() which needs the purposeList element to be visible
+  await loadPlacePurposes(placeId);
+  
+  // Force a re-render to ensure content is displayed
+  renderPurposeList();
+  
+  // Double-check the content was rendered and visible
+  setTimeout(() => {
+    const checkList = document.getElementById('purposeList');
+    const checkContent = document.getElementById('editPlacePurposeTabContent');
+    if (checkList && checkContent) {
+      // Force visibility one more time with all possible methods
+      checkContent.classList.remove('hidden');
+      (checkContent as HTMLElement).style.display = 'block';
+      (checkContent as HTMLElement).style.visibility = 'visible';
+      (checkContent as HTMLElement).style.opacity = '1';
+      (checkContent as HTMLElement).style.height = 'auto';
+      (checkContent as HTMLElement).style.maxHeight = 'none';
+      
+      // Also ensure the purpose list itself is visible
+      if (checkList) {
+        (checkList as HTMLElement).style.display = 'block';
+        (checkList as HTMLElement).style.visibility = 'visible';
+      }
+    }
+  }, 100);
 }
 
 // Function to save place purposes
