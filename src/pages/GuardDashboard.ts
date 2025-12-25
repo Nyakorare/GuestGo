@@ -955,8 +955,58 @@ function showGuardVisitConfirmationModal(visitData: VisitQRData) {
       showGuardError('Error', 'Unable to start face detection. Please try again.');
     }
   });
-  tempExitBtn?.addEventListener('click', () => {
-    logGuardAction('temporary_exit', visitData);
+  tempExitBtn?.addEventListener('click', async () => {
+    try {
+      // Show loading state
+      if (tempExitBtn) {
+        tempExitBtn.disabled = true;
+        tempExitBtn.innerHTML = `
+          <svg class="w-5 h-5 animate-spin mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          Verifying Face...
+        `;
+      }
+
+      // Verify face before allowing temporary exit
+      const { verifyTemporaryExitFace } = await import('../utils/temporaryExitFaceVerification');
+      const verificationResult = await verifyTemporaryExitFace(visitData.visitId);
+      
+      // Reset button state
+      if (tempExitBtn) {
+        tempExitBtn.disabled = false;
+        tempExitBtn.innerHTML = `
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v8m4-4H8" />
+          </svg>
+          <span>Temporary Exit</span>
+        `;
+      }
+      
+      if (!verificationResult.success) {
+        // Face verification failed
+        showGuardError('Face Verification Failed', verificationResult.error || 'Face verification failed. Please try again.');
+        return;
+      }
+
+      // Face verification successful - proceed with temporary exit
+      await logGuardAction('temporary_exit', visitData);
+    } catch (e) {
+      console.error('Error during temporary exit face verification:', e);
+      
+      // Reset button state
+      if (tempExitBtn) {
+        tempExitBtn.disabled = false;
+        tempExitBtn.innerHTML = `
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v8m4-4H8" />
+          </svg>
+          <span>Temporary Exit</span>
+        `;
+      }
+      
+      showGuardError('Error', 'Unable to verify face. Please try again.');
+    }
   });
   exitBtn?.addEventListener('click', async () => {
     try {
