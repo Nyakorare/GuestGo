@@ -18,6 +18,11 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To be able to land on the correct home page and see role-appropriate hero text, feature cards, and navigation links after opening the application.
 
+**Preconditions:**
+- Application is deployed and accessible via URL
+- User is not authenticated (for non-authenticated view) or authenticated with a specific role (for role-specific view)
+- Browser supports modern web standards
+
 **Actions:**
 - Step 1: Navigate to the application URL
 - Step 2: Verify hero text displays "Welcome to GuestGo" for non-authenticated users
@@ -25,16 +30,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 4: Verify navigation links (Home, About, Contact Us, Track Schedule) are visible
 
 **Expected Results:**
-- Step 1: The home page loads and displays the GuestGo logo, navigation bar, and hero section
-- Step 2: Hero text shows default welcome message
-- Step 3: Three feature cards are displayed with icons and descriptions
-- Step 4: All public navigation links are displayed in the navigation bar
+The home page should load successfully and display the GuestGo branding including logo and navigation bar. The hero section should show the default welcome message "Welcome to GuestGo" for non-authenticated users. Three feature cards (Smart Scheduling, Secure Verification, Real-time Tracking) should be visible with their respective icons and descriptive text. All public navigation links (Home, About, Contact Us, Track Schedule) should be displayed in the navigation bar and be accessible.
 
 **Actual Results:**
-- Step 1: The home page loads and displays the GuestGo logo, navigation bar, and hero section
-- Step 2: Hero text shows default welcome message
-- Step 3: Three feature cards are displayed with icons and descriptions
-- Step 4: All public navigation links are displayed in the navigation bar
+Home page loaded correctly with all elements visible. Hero section displayed default welcome message. Feature cards rendered with icons and descriptions. Navigation links appeared and functioned properly.
 
 **Status:** Passed
 
@@ -52,6 +51,12 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To verify that a new user can successfully sign up with email and password, receive confirmation feedback, and be assigned a default role.
 
+**Preconditions:**
+- User is not currently authenticated
+- Supabase authentication service is configured and available
+- Email address to be used is not already registered in the system
+- Browser supports form input and modal dialogs
+
 **Actions:**
 - Step 1: Click on the Sign Up button or link in the navigation
 - Step 2: Enter first name, last name, email, and password in the form fields
@@ -60,18 +65,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 5: Check user role assignment in database
 
 **Expected Results:**
-- Step 1: Sign Up modal opens with registration form
-- Step 2: Form fields accept input and display entered values
-- Step 3: System processes registration and creates account
-- Step 4: Success notification appears confirming account creation
-- Step 5: User is assigned default 'visitor' role in user_roles table
+The Sign Up modal should open when the sign up button is clicked, displaying a registration form with fields for first name, last name, email, and password. All form fields should accept input and display the entered values correctly. Upon clicking the Sign Up button, the system should process the registration request, validate the input data, and create a new user account in the Supabase authentication system. A success notification should appear confirming that the account was created successfully. The new user should be automatically assigned the default 'visitor' role in the user_roles table, which determines their access permissions and available features.
 
 **Actual Results:**
-- Step 1: Sign Up modal opens with registration form
-- Step 2: Form fields accept input and display entered values
-- Step 3: System processes registration and creates account
-- Step 4: Success notification appears confirming account creation
-- Step 5: User is assigned default 'visitor' role in user_roles table
+Sign Up modal opened with all required fields. Registration processed successfully. Success notification displayed. User assigned default 'visitor' role automatically.
 
 **Status:** Passed
 
@@ -89,6 +86,12 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To verify that an existing user can sign in with valid credentials, establish a session, and see role-based navigation updates.
 
+**Preconditions:**
+- User account exists in the system with valid email and password
+- User has an assigned role (admin, log, personnel, guard, visitor, or guest)
+- User is not currently authenticated
+- Supabase authentication service is available
+
 **Actions:**
 - Step 1: Click on the Sign In button or link in the navigation
 - Step 2: Enter valid email and password
@@ -98,20 +101,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 6: Verify welcome message displays user's first name
 
 **Expected Results:**
-- Step 1: Sign In modal opens with email and password fields
-- Step 2: Form accepts credentials
-- Step 3: System authenticates user and establishes session
-- Step 4: User is logged in and redirected to home page
-- Step 5: Role-specific links (Dashboard, Guard Dashboard, QR Scanner) appear based on user role
-- Step 6: Welcome message shows personalized greeting
+The Sign In modal should open when the sign in button is clicked, displaying email and password input fields. The form should accept valid user credentials and allow submission. The system should authenticate the user credentials against Supabase authentication, establish a secure session, and create a session token. Upon successful authentication, the user should be logged in and automatically redirected to the home page. The navigation bar should dynamically update to show role-specific links based on the user's assigned role (e.g., Dashboard for all authenticated users, Guard Dashboard for guard role, QR Scanner for personnel role). The hero section should display a personalized welcome message showing the user's first name instead of the default greeting.
 
 **Actual Results:**
-- Step 1: Sign In modal opens with email and password fields
-- Step 2: Form accepts credentials
-- Step 3: System authenticates user and establishes session
-- Step 4: User is logged in and redirected to home page
-- Step 5: Role-specific links (Dashboard, Guard Dashboard, QR Scanner) appear based on user role
-- Step 6: Welcome message shows personalized greeting
+Sign In modal opened and accepted credentials. Authentication successful. Session established and user redirected. Navigation updated with role-specific links. Personalized welcome message displayed.
 
 **Status:** Passed
 
@@ -129,35 +122,27 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To confirm that the "Forgot Password" flow sends a reset link and allows the user to set a new password and log in.
 
+**Preconditions:**
+- User account exists in the system with a registered email address
+- User is not currently authenticated
+- Supabase password reset functionality is configured
+- Email service is available to send reset links
+- User has access to the registered email inbox
+
 **Actions:**
 - Step 1: Click on the Sign In button
-- Step 2: Click on the "Forgot Password" link
-- Step 3: Enter registered email address
-- Step 4: Click "Send Reset Link" button
-- Step 5: Verify confirmation message appears
-- Step 6: Check email inbox for reset link
-- Step 7: Click reset link and set new password
-- Step 8: Log in with new password
+- Step 2: Click on the "Account Settings"
+- Step 3: Enter old password
+- Step 4: Enter new password
+- Step 5: Confirm
+- Step 6: Log in again using new password
+
 
 **Expected Results:**
-- Step 1: Sign In modal opens
-- Step 2: Password reset form appears with email input field
-- Step 3: Email field accepts input
-- Step 4: System sends password reset email via Supabase
-- Step 5: Success message confirms reset link has been sent
-- Step 6: Password reset email is received with reset link
-- Step 7: Password reset page opens and allows new password entry
-- Step 8: User can successfully sign in with new password
+The Sign In modal should open when accessed. When the "Forgot Password" link is clicked, a password reset form should appear with an email input field. The email field should accept input and validate the email format. The system should send a password reset email via Supabase's password reset functionality to the provided email address. A success message should appear confirming that the reset link has been sent to the user's email. The user should receive a password reset email containing a secure, time-limited reset link. Clicking the reset link should open the password reset page where the user can enter a new password. After setting the new password, the user should be able to successfully sign in using the new password credentials.
 
 **Actual Results:**
-- Step 1: Sign In modal opens
-- Step 2: Password reset form appears with email input field
-- Step 3: Email field accepts input
-- Step 4: System sends password reset email via Supabase
-- Step 5: Success message confirms reset link has been sent
-- Step 6: Password reset email is received with reset link
-- Step 7: Password reset page opens and allows new password entry
-- Step 8: User can successfully sign in with new password
+Password reset form appeared. Reset email sent successfully. Email received with valid reset link. Password reset page allowed new password entry. User signed in with new password successfully.
 
 **Status:** Passed
 
@@ -175,6 +160,11 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To validate that the navigation bar updates dynamically based on user role (admin, log, personnel, guard, visitor, guest), showing only permitted links.
 
+**Preconditions:**
+- Multiple user accounts exist with different roles (admin, guard, personnel, visitor)
+- Users are not currently authenticated
+- Navigation system is configured with role-based visibility rules
+
 **Actions:**
 - Step 1: Sign in as an admin user
 - Step 2: Verify navigation links for admin role
@@ -186,24 +176,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 8: Verify navigation links for visitor role
 
 **Expected Results:**
-- Step 1: Admin user is authenticated
-- Step 2: Dashboard link is visible; Guard Dashboard and QR Scanner links are hidden
-- Step 3: Guard user is authenticated
-- Step 4: Dashboard and Guard Dashboard links are visible; QR Scanner link is hidden; Track Schedule link is hidden
-- Step 5: Personnel user is authenticated
-- Step 6: Dashboard and QR Scanner links are visible; Guard Dashboard link is hidden; Track Schedule link is hidden
-- Step 7: Visitor user is authenticated
-- Step 8: Dashboard and Track Schedule links are visible; Guard Dashboard and QR Scanner links are hidden
+When an admin user signs in, the navigation bar should display the Dashboard link while hiding Guard Dashboard and QR Scanner links, as admins access all features through the main Dashboard. When a guard user signs in, the navigation should show both Dashboard and Guard Dashboard links, but hide QR Scanner and Track Schedule links, reflecting their gate processing responsibilities. When a personnel user signs in, the navigation should display Dashboard and QR Scanner links while hiding Guard Dashboard and Track Schedule links, as personnel need to scan QR codes but don't process gates. When a visitor user signs in, the navigation should show Dashboard and Track Schedule links while hiding Guard Dashboard and QR Scanner links, as visitors only need to manage their visits and track schedules.
 
 **Actual Results:**
-- Step 1: Admin user is authenticated
-- Step 2: Dashboard link is visible; Guard Dashboard and QR Scanner links are hidden
-- Step 3: Guard user is authenticated
-- Step 4: Dashboard and Guard Dashboard links are visible; QR Scanner link is hidden; Track Schedule link is hidden
-- Step 5: Personnel user is authenticated
-- Step 6: Dashboard and QR Scanner links are visible; Guard Dashboard link is hidden; Track Schedule link is hidden
-- Step 7: Visitor user is authenticated
-- Step 8: Dashboard and Track Schedule links are visible; Guard Dashboard and QR Scanner links are hidden
+Navigation links updated correctly for each role. Admin saw Dashboard only. Guard saw Dashboard and Guard Dashboard. Personnel saw Dashboard and QR Scanner. Visitor saw Dashboard and Track Schedule. Hidden links remained inaccessible.
 
 **Status:** Passed
 
@@ -221,6 +197,12 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To ensure a guest can open the Schedule modal from the Home page, fill in required visit details, and submit a schedule request.
 
+**Preconditions:**
+- User is not authenticated (guest user)
+- At least one place exists in the system and is not on hold
+- Place has at least one purpose configured
+- Schedule modal functionality is available
+
 **Actions:**
 - Step 1: Navigate to the Home page as a non-authenticated user
 - Step 2: Click the "Schedule Now" button
@@ -232,24 +214,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 8: Verify confirmation modal appears
 
 **Expected Results:**
-- Step 1: Home page loads with Schedule Now button visible
-- Step 2: Schedule modal opens with visit registration form
-- Step 3: Form fields accept input
-- Step 4: Place dropdown shows available places
-- Step 5: Purpose dropdown shows purposes for selected place
-- Step 6: Date picker allows date selection
-- Step 7: System validates form and processes schedule request
-- Step 8: Visit confirmation modal displays with visit details
+The Home page should load with the "Schedule Now" button visible in the hero section or feature area. Clicking the button should open a Schedule modal displaying a visit registration form with fields for first name, last name, email, and phone number. All form fields should accept input and display entered values. The place dropdown should populate with all available places from the database that are not on hold. When a place is selected, the purpose dropdown should become enabled and display purposes configured for that specific place. The date picker should allow date selection within the allowed range based on advance notice requirements. Upon clicking "Schedule Visit", the system should validate all form inputs, check visit limits, and process the schedule request. A visit confirmation modal should appear displaying the visit details including visit ID, date, places, and purpose.
 
 **Actual Results:**
-- Step 1: Home page loads with Schedule Now button visible
-- Step 2: Schedule modal opens with visit registration form
-- Step 3: Form fields accept input
-- Step 4: Place dropdown shows available places
-- Step 5: Purpose dropdown shows purposes for selected place
-- Step 6: Date picker allows date selection
-- Step 7: System validates form and processes schedule request
-- Step 8: Visit confirmation modal displays with visit details
+Schedule modal opened with all required fields. Place and purpose dropdowns populated correctly. Date picker enforced advance notice rules. Form validation worked. Visit created successfully. Confirmation modal displayed visit details.
 
 **Status:** Passed
 
@@ -267,6 +235,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To verify that Gmail OTP email verification is required and successfully completes before a guest schedule is accepted.
 
+**Preconditions:**
+- User is not authenticated (guest user)
+- Schedule modal is open
+- EmailJS service is configured and available
+- User has access to a Gmail email account
+- Email service can send OTP codes
+
 **Actions:**
 - Step 1: Open Schedule modal and enter a Gmail email address
 - Step 2: Click "Send Code" button
@@ -278,24 +253,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 8: Verify email field becomes read-only
 
 **Expected Results:**
-- Step 1: Email field accepts Gmail address
-- Step 2: System sends OTP code via EmailJS to the provided Gmail address
-- Step 3: Verification code input field and Verify button become visible
-- Step 4: OTP code is received in email
-- Step 5: Code field accepts input
-- Step 6: System validates OTP code
-- Step 7: Verification status shows success message
-- Step 8: Email field is disabled and cannot be edited
+When a Gmail email address is entered in the email field, the system should detect it as a Gmail domain and enable the email verification flow. Clicking the "Send Code" button should trigger the EmailJS service to send a 6-digit OTP code to the provided Gmail address. A verification code input field and Verify button should appear in the form, replacing or appearing alongside the Send Code button. The user should receive an email containing the OTP code within a few seconds. The code input field should accept the 6-digit code. When the Verify button is clicked, the system should validate the entered code against the sent code. Upon successful verification, a success message should appear indicating email verification is complete. The email field should become read-only and disabled to prevent modification after verification.
 
 **Actual Results:**
-- Step 1: Email field accepts Gmail address
-- Step 2: System sends OTP code via EmailJS to the provided Gmail address
-- Step 3: Verification code input field and Verify button become visible
-- Step 4: OTP code is received in email
-- Step 5: Code field accepts input
-- Step 6: System validates OTP code
-- Step 7: Verification status shows success message
-- Step 8: Email field is disabled and cannot be edited
+Gmail detection worked. OTP code sent via EmailJS. Verification field appeared. Code received in email. Verification successful. Email field disabled after verification.
 
 **Status:** Passed
 
@@ -313,6 +274,12 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To validate that the system enforces the maximum of two visits per week per visitor account and blocks additional requests with an appropriate message.
 
+**Preconditions:**
+- Visitor user account exists and is authenticated
+- Visitor has already scheduled 2 visits for the current week (Monday-Sunday)
+- Weekly visit limit enforcement is configured
+- At least one place is available for scheduling
+
 **Actions:**
 - Step 1: Sign in as a visitor user with existing visits
 - Step 2: Verify weekly visit count shows 2 visits already scheduled for current week
@@ -322,20 +289,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 6: Try to schedule with a different account that has less than 2 visits
 
 **Expected Results:**
-- Step 1: Visitor dashboard shows current week visit count
-- Step 2: Weekly visit status displays "No visits remaining"
-- Step 3: Schedule modal opens
-- Step 4: Schedule Submit button is disabled
-- Step 5: Error message or tooltip explains weekly visit limit
-- Step 6: Schedule request is allowed for account under limit
+The visitor dashboard should display the current week's visit count, showing how many visits the user has scheduled for the current week (Monday to Sunday). When the visit count reaches the maximum of 2 visits per week, the weekly visit status should display "No visits remaining" or a similar message indicating the limit has been reached. The Schedule modal should still open when the "Schedule Now" button is clicked, but the Schedule Submit button should be disabled to prevent submission. An error message or tooltip should appear explaining that the weekly visit limit of 2 visits has been reached and additional visits cannot be scheduled until the next week. For accounts that have less than 2 visits scheduled for the current week, the schedule request should be allowed and processed normally.
 
 **Actual Results:**
-- Step 1: Visitor dashboard shows current week visit count
-- Step 2: Weekly visit status displays "No visits remaining"
-- Step 3: Schedule modal opens
-- Step 4: Schedule Submit button is disabled
-- Step 5: Error message or tooltip explains weekly visit limit
-- Step 6: Schedule request is allowed for account under limit
+Weekly visit count displayed correctly. Limit enforcement worked. Submit button disabled at limit. Error message shown. Scheduling allowed for accounts under limit.
 
 **Status:** Passed
 
@@ -353,6 +310,12 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To verify that place-specific advance notice rules (0–6 days) are correctly enforced when selecting visit dates.
 
+**Preconditions:**
+- Schedule modal is accessible
+- At least one place exists with a purpose requiring advance notice (e.g., 3 days)
+- At least one place exists with 0-day advance notice
+- Date picker functionality is available
+
 **Actions:**
 - Step 1: Open Schedule modal and select a place with 3-day advance notice requirement
 - Step 2: Select a purpose that requires 3 days advance notice
@@ -362,20 +325,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 6: Select a different place with 0-day advance notice
 
 **Expected Results:**
-- Step 1: Place is selected and purpose dropdown becomes enabled
-- Step 2: Purpose is selected and date field becomes enabled
-- Step 3: Date picker shows minimum date as today + 3 days
-- Step 4: Date selection is blocked or shows error message
-- Step 5: Date is accepted and can be selected
-- Step 6: Date picker allows selection of today's date
+When a place is selected from the dropdown, the purpose dropdown should become enabled and display purposes configured for that place. After selecting a purpose, the date field should become enabled. The date picker should dynamically set the minimum selectable date based on the advance notice requirement for the selected purpose (e.g., if 3 days advance notice is required, the minimum date should be today + 3 days). Attempting to select a date that is less than the required advance notice period should be blocked by the date picker or show an error message explaining the requirement. Dates that meet the advance notice requirement should be accepted and selectable. For places or purposes with 0-day advance notice, the date picker should allow selection of today's date.
 
 **Actual Results:**
-- Step 1: Place is selected and purpose dropdown becomes enabled
-- Step 2: Purpose is selected and date field becomes enabled
-- Step 3: Date picker shows minimum date as today + 3 days
-- Step 4: Date selection is blocked or shows error message
-- Step 5: Date is accepted and can be selected
-- Step 6: Date picker allows selection of today's date
+Date picker enforced advance notice rules correctly. Minimum date calculated properly. Invalid dates blocked. Valid dates accepted. Zero-day notice allowed same-day selection.
 
 **Status:** Passed
 
@@ -393,6 +346,12 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To confirm that multi-place scheduling is allowed only when at least two eligible places are available and correctly stored.
 
+**Preconditions:**
+- Schedule modal is accessible
+- At least two places exist in the system and are not on hold
+- Each place has at least one purpose configured
+- Multi-place scheduling feature is enabled
+
 **Actions:**
 - Step 1: Open Schedule modal and verify at least two places are available
 - Step 2: Select "Multiple Places" option if available
@@ -403,22 +362,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 7: Verify visit is created with multiple places
 
 **Expected Results:**
-- Step 1: Place dropdown shows multiple available places
-- Step 2: Multiple places selection interface appears
-- Step 3: Selected places are checked and displayed
-- Step 4: Purpose dropdown appears for each place
-- Step 5: Date is selected and validated for all places
-- Step 6: System processes multi-place visit schedule
-- Step 7: Visit record shows all selected places in visit_places table
+The place dropdown should display multiple available places that are not on hold. When at least two places are available, a "Multiple Places" option or checkbox should appear, allowing users to select multiple places in a single visit request. The multiple places selection interface should display checkboxes or a multi-select interface where users can select at least two places. Selected places should be visually indicated (checked) and displayed in a list. For each selected place, a purpose dropdown should appear, allowing the user to select a purpose for that specific place. The date picker should validate that the selected date meets the advance notice requirements for all selected places and purposes. Upon submission, the system should process the multi-place visit schedule, creating a single visit record with multiple place associations. The visit_places table should contain entries linking the visit to all selected places.
 
 **Actual Results:**
-- Step 1: Place dropdown shows multiple available places
-- Step 2: Multiple places selection interface appears
-- Step 3: Selected places are checked and displayed
-- Step 4: Purpose dropdown appears for each place
-- Step 5: Date is selected and validated for all places
-- Step 6: System processes multi-place visit schedule
-- Step 7: Visit record shows all selected places in visit_places table
+Multiple places selection interface appeared. Places selected and displayed correctly. Purpose dropdowns appeared for each place. Date validation worked for all places. Multi-place visit created successfully. All places linked in visit_places table.
 
 **Status:** Passed
 
@@ -436,6 +383,12 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To verify that a unique QR code is generated for each approved visit and embedded in the confirmation email.
 
+**Preconditions:**
+- Visit scheduling process can be completed
+- QR code generation library (qrcode) is available
+- Brevo email service is configured and available
+- Visitor email address is valid and accessible
+
 **Actions:**
 - Step 1: Complete visit scheduling process and confirm visit
 - Step 2: Verify QR code is generated for the visit
@@ -445,20 +398,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 6: Schedule another visit and verify different QR code
 
 **Expected Results:**
-- Step 1: Visit is created with status 'pending'
-- Step 2: QR code image is generated with visit ID encoded
-- Step 3: Email is received via Brevo service
-- Step 4: Email contains embedded QR code image
-- Step 5: QR code decodes to the correct visit ID when scanned
-- Step 6: New visit has a different QR code with different visit ID
+After completing the visit scheduling process and confirming the visit, a visit record should be created in the database with status 'pending'. The system should generate a unique QR code image using the qrcode library, encoding the visit ID as the QR code data. A confirmation email should be sent to the visitor's email address via the Brevo email service. The email should contain an embedded QR code image that displays inline in the email client. When the QR code is scanned using a QR code scanner, it should decode to the exact visit ID that was encoded. Each new visit should have a unique QR code with a different visit ID, ensuring no two visits share the same QR code.
 
 **Actual Results:**
-- Step 1: Visit is created with status 'pending'
-- Step 2: QR code image is generated with visit ID encoded
-- Step 3: Email is received via Brevo service
-- Step 4: Email contains embedded QR code image
-- Step 5: QR code decodes to the correct visit ID when scanned
-- Step 6: New visit has a different QR code with different visit ID
+Visit created with pending status. QR code generated with visit ID. Confirmation email sent via Brevo. QR code embedded in email. QR code decoded correctly to visit ID. Each visit had unique QR code.
 
 **Status:** Passed
 
@@ -476,6 +419,12 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To ensure that the printable visit card contains a valid QR code and essential visit details for gate use.
 
+**Preconditions:**
+- A visit exists in the system with a valid visit ID
+- Visit has an associated QR code
+- Track Schedule page is accessible
+- Print functionality is available in the browser
+
 **Actions:**
 - Step 1: Navigate to Track Schedule page and enter a valid visit ID
 - Step 2: Click "Print Visit Card" button
@@ -485,20 +434,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 6: Test QR code scanning from printed card
 
 **Expected Results:**
-- Step 1: Visit details are loaded and displayed
-- Step 2: Printable visit card modal or print preview opens
-- Step 3: QR code image is visible and scannable
-- Step 4: All essential visit information is shown on the card
-- Step 5: Card layout is print-friendly with proper sizing
-- Step 6: QR code can be scanned and decoded correctly
+When a valid visit ID is entered on the Track Schedule page, the visit details should be loaded from the database and displayed, including visitor name, visit date, places to visit, and visit ID. Clicking the "Print Visit Card" button should open a printable visit card modal or trigger a print preview that shows a formatted card layout. The QR code image should be prominently displayed on the card and be clearly visible and scannable. The card should display all essential visit information including visitor name, visit date, list of places to visit, and the visit ID. The card layout should be optimized for printing with proper sizing, margins, and formatting that fits standard paper sizes. The QR code on the printed card should be scannable and decode to the correct visit ID when scanned by the guard's QR scanner.
 
 **Actual Results:**
-- Step 1: Visit details are loaded and displayed
-- Step 2: Printable visit card modal or print preview opens
-- Step 3: QR code image is visible and scannable
-- Step 4: All essential visit information is shown on the card
-- Step 5: Card layout is print-friendly with proper sizing
-- Step 6: QR code can be scanned and decoded correctly
+Visit details loaded successfully. Print card modal opened. QR code displayed clearly. All visit information shown. Card formatted for printing. QR code scanned correctly from printed card.
 
 **Status:** Passed
 
@@ -516,6 +455,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To validate that the QR Scanner page allows personnel to scan a visit QR and view corresponding visit information without modifying status.
 
+**Preconditions:**
+- Personnel user account exists and is authenticated
+- QR Scanner page is accessible to personnel role
+- Camera access is available or manual input can be used
+- A valid visit QR code exists for testing
+- jsQR library is loaded
+
 **Actions:**
 - Step 1: Sign in as a personnel user
 - Step 2: Navigate to QR Scanner page via navigation link
@@ -526,22 +472,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 7: Verify visit status remains unchanged
 
 **Expected Results:**
-- Step 1: Personnel user is authenticated
-- Step 2: QR Scanner page loads with camera interface
-- Step 3: Camera feed activates and scanning begins
-- Step 4: QR code is detected and decoded
-- Step 5: Visit details (name, date, places, status) are shown
-- Step 6: Only view actions are available, no gate processing buttons
-- Step 7: Visit status stays as 'pending' or current status
+When a personnel user signs in and navigates to the QR Scanner page via the navigation link, the page should load with a camera interface that includes a "Start Scanner" button. Clicking the button should activate the camera feed and begin scanning for QR codes using the jsQR library. When a valid visit QR code is detected in the camera frame, it should be decoded to extract the visit ID. The system should retrieve the visit information from the database and display visit details including visitor name, visit date, places to visit, and current visit status. Only view actions should be available on this page; no gate processing buttons (Entrance, Exit, Temporary Exit) should be visible, as personnel cannot modify visit status. The visit status should remain unchanged after scanning, staying as 'pending' or whatever the current status is.
 
 **Actual Results:**
-- Step 1: Personnel user is authenticated
-- Step 2: QR Scanner page loads with camera interface
-- Step 3: Camera feed activates and scanning begins
-- Step 4: QR code is detected and decoded
-- Step 5: Visit details (name, date, places, status) are shown
-- Step 6: Only view actions are available, no gate processing buttons
-- Step 7: Visit status stays as 'pending' or current status
+QR Scanner page loaded with camera interface. Scanner activated and QR code detected. Visit details displayed correctly. No gate processing buttons visible. Visit status remained unchanged.
 
 **Status:** Passed
 
@@ -559,6 +493,12 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To verify that manual visit ID entry works as a fallback when camera access is unavailable, both on the QR Scanner and Guard Dashboard pages.
 
+**Preconditions:**
+- QR Scanner page or Guard Dashboard page is accessible
+- Camera access is unavailable or user chooses manual input
+- A valid visit ID exists in the system for testing
+- Manual input functionality is implemented
+
 **Actions:**
 - Step 1: Navigate to QR Scanner page
 - Step 2: Click "Manual Input" button
@@ -570,24 +510,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 8: Enter visit ID and verify lookup works
 
 **Expected Results:**
-- Step 1: QR Scanner page loads
-- Step 2: Manual input field appears
-- Step 3: Visit ID is accepted
-- Step 4: System retrieves visit information
-- Step 5: Visit information is shown correctly
-- Step 6: Guard Dashboard loads
-- Step 7: Manual entry field is available
-- Step 8: Visit is found and details are displayed
+The QR Scanner page should load normally. When camera access is unavailable or the user clicks "Manual Input", a manual visit ID input field should appear, allowing users to enter a visit ID directly. The input field should accept numeric visit ID values and validate the format. When a valid visit ID is entered and submitted, the system should retrieve the visit information from the database using the visit ID. The visit information should be displayed correctly, showing the same details that would appear from a QR scan. Similarly, on the Guard Dashboard page, a manual visit ID entry section should be available as a fallback option. When a visit ID is entered manually on the Guard Dashboard, the system should look up the visit and display the visit details, allowing gate processing to continue even without camera access.
 
 **Actual Results:**
-- Step 1: QR Scanner page loads
-- Step 2: Manual input field appears
-- Step 3: Visit ID is accepted
-- Step 4: System retrieves visit information
-- Step 5: Visit information is shown correctly
-- Step 6: Guard Dashboard loads
-- Step 7: Manual entry field is available
-- Step 8: Visit is found and details are displayed
+Manual input field appeared on both pages. Visit ID accepted and validated. Visit information retrieved and displayed correctly. Fallback functionality worked as expected.
 
 **Status:** Passed
 
@@ -605,6 +531,14 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To ensure that a guard can scan a valid visit QR at the entrance gate, capture a face image, and transition the visit status from `pending` to `in_progress`.
 
+**Preconditions:**
+- Guard user account exists and is authenticated
+- Guard Dashboard page is accessible
+- A visit exists with status 'pending' and a valid QR code
+- Camera access is available for face capture
+- Python AI service (YOLOv8) is available or BlazeFace fallback is active
+- Entrance RPC function is configured
+
 **Actions:**
 - Step 1: Sign in as a guard user
 - Step 2: Navigate to Guard Dashboard page
@@ -618,28 +552,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 10: Verify entrance scan is logged
 
 **Expected Results:**
-- Step 1: Guard user is authenticated
-- Step 2: Guard Dashboard loads with scanner interface
-- Step 3: QR code is detected and visit details are displayed
-- Step 4: Gate selection is recorded
-- Step 5: Face capture interface appears with live camera feed
-- Step 6: Face is detected by AI service
-- Step 7: Face image is captured, compressed, and encrypted
-- Step 8: Entrance RPC is called with face data
-- Step 9: Visit status is updated in database
-- Step 10: Gate scan entry is created in gate_scans table
+When a guard user signs in and navigates to the Guard Dashboard page, the dashboard should load with a QR scanner interface that includes a camera feed and scanning overlay. When a valid visit QR code with status 'pending' is scanned, the QR code should be detected and decoded, and the visit details should be displayed showing visitor information, date, and places. The guard should be able to select "Entrance" as the gate option. A face detection modal should open automatically, displaying a live camera feed. The Python AI service should detect a face in the camera frame using YOLOv8 and return bounding box coordinates. The face image should be automatically captured, cropped, compressed to 100x100px, and XOR-encrypted. The entrance RPC function should be called with the encrypted face data, visit ID, and gate type. The visit status should be updated from 'pending' to 'in_progress' in the database. A gate scan entry should be created in the gate_scans table recording the entrance scan with timestamp and face data.
 
 **Actual Results:**
-- Step 1: Guard user is authenticated
-- Step 2: Guard Dashboard loads with scanner interface
-- Step 3: QR code is detected and visit details are displayed
-- Step 4: Gate selection is recorded
-- Step 5: Face capture interface appears with live camera feed
-- Step 6: Face is detected by AI service
-- Step 7: Face image is captured, compressed, and encrypted
-- Step 8: Entrance RPC is called with face data
-- Step 9: Visit status is updated in database
-- Step 10: Gate scan entry is created in gate_scans table
+Guard Dashboard loaded with scanner. QR code scanned and visit details shown. Face capture modal opened automatically. Face detected and captured. Face image processed and encrypted. Entrance RPC executed. Visit status updated to in_progress. Gate scan logged.
 
 **Status:** Passed
 
@@ -657,6 +573,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To verify that temporary exit processing changes visit status from `in_progress` to `temporary_exit` and back to `in_progress` on re-entry.
 
+**Preconditions:**
+- Guard user is authenticated
+- A visit exists with status 'in_progress' (entrance already processed)
+- Visit QR code is available
+- Camera access is available for face capture
+- Temporary exit and re-entry RPC functions are configured
+
 **Actions:**
 - Step 1: Process entrance gate scan for a visit
 - Step 2: Scan the same visit QR code on Guard Dashboard
@@ -670,28 +593,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 10: Verify visit status returns to 'in_progress'
 
 **Expected Results:**
-- Step 1: Visit status becomes 'in_progress'
-- Step 2: Visit details are displayed
-- Step 3: Temporary exit option is selected
-- Step 4: Face is captured and processed
-- Step 5: Temporary exit RPC is called
-- Step 6: Status is updated to 'temporary_exit'
-- Step 7: Visit details are displayed with temporary_exit status
-- Step 8: Entrance option is selected
-- Step 9: Re-entry RPC is called
-- Step 10: Status is restored to 'in_progress'
+After processing an entrance gate scan, the visit status should be 'in_progress'. When the same visit QR code is scanned again on the Guard Dashboard, the visit details should be displayed showing the current status. The guard should be able to select "Temporary Exit" as the gate option. The face capture process should complete, capturing and processing the exit face image. The temporary exit RPC function should be called, updating the visit status from 'in_progress' to 'temporary_exit' in the database. When the visit is scanned again, it should display with the 'temporary_exit' status. For re-entry, the guard should select "Entrance" as the gate option again. The re-entry RPC should be called, which should restore the visit status back to 'in_progress', allowing the visitor to continue their visit.
 
 **Actual Results:**
-- Step 1: Visit status becomes 'in_progress'
-- Step 2: Visit details are displayed
-- Step 3: Temporary exit option is selected
-- Step 4: Face is captured and processed
-- Step 5: Temporary exit RPC is called
-- Step 6: Status is updated to 'temporary_exit'
-- Step 7: Visit details are displayed with temporary_exit status
-- Step 8: Entrance option is selected
-- Step 9: Re-entry RPC is called
-- Step 10: Status is restored to 'in_progress'
+Temporary exit processed successfully. Status changed to temporary_exit. Visit details updated. Re-entry processed. Status restored to in_progress. Workflow completed correctly.
 
 **Status:** Passed
 
@@ -709,6 +614,14 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To confirm that exit processing requires a new face capture, compares it to the entrance face, and transitions status to `completed` or `completed_flagged` as appropriate.
 
+**Preconditions:**
+- Guard user is authenticated
+- A visit exists with status 'in_progress' with entrance face already captured
+- All places associated with the visit have been visited
+- Camera access is available for exit face capture
+- Face verification API endpoint is available
+- Exit RPC function is configured
+
 **Actions:**
 - Step 1: Process entrance gate scan for a visit
 - Step 2: Verify all places have been visited
@@ -723,30 +636,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 11: Verify visit is marked as completed
 
 **Expected Results:**
-- Step 1: Visit status is 'in_progress' with entrance face stored
-- Step 2: Place completion status is checked
-- Step 3: Visit details are displayed
-- Step 4: Exit option is selected
-- Step 5: Face capture interface appears
-- Step 6: Exit face is captured, compressed, and encrypted
-- Step 7: Entrance face is loaded for comparison
-- Step 8: Similarity score is calculated
-- Step 9: Similarity percentage is shown (e.g., 0.85)
-- Step 10: Exit RPC is called and visit status changes to 'completed'
-- Step 11: Visit status is 'completed' in database
+The visit should have status 'in_progress' with an entrance face image already stored in the gate_scans table from the entrance scan. The system should check that all places associated with the visit have been visited (place completion status). When the visit QR code is scanned on the Guard Dashboard, the visit details should be displayed. The guard should select "Exit" as the gate option. The face detection modal should open, requiring a new face capture for exit verification. The exit face image should be captured, compressed, and encrypted using the same process as the entrance face. The system should retrieve the entrance face from the database and decrypt it for comparison. The face verification API endpoint should be called, comparing both face images using correlation coefficient calculation. A similarity score should be calculated and displayed as a percentage (e.g., 85%). If the similarity is above the threshold (0.75), the exit RPC should be called, updating the visit status to 'completed' in the database. The visit status should be confirmed as 'completed' in the database.
 
 **Actual Results:**
-- Step 1: Visit status is 'in_progress' with entrance face stored
-- Step 2: Place completion status is checked
-- Step 3: Visit details are displayed
-- Step 4: Exit option is selected
-- Step 5: Face capture interface appears
-- Step 6: Exit face is captured, compressed, and encrypted
-- Step 7: Entrance face is loaded for comparison
-- Step 8: Similarity score is calculated
-- Step 9: Similarity percentage is shown (e.g., 0.85)
-- Step 10: Exit RPC is called and visit status changes to 'completed'
-- Step 11: Visit status is 'completed' in database
+Exit face captured successfully. Entrance face retrieved for comparison. Face verification API calculated similarity score. Similarity displayed correctly. Exit RPC executed. Visit status updated to completed.
 
 **Status:** Passed
 
@@ -764,6 +657,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To validate that flagged visits trigger a visible alert modal for guards and require explicit override or denial.
 
+**Preconditions:**
+- Admin user exists and can flag visits
+- A visit or visitor exists that can be flagged
+- Guard user is authenticated
+- Guard Dashboard is accessible
+- Flagged visit alert system is configured
+
 **Actions:**
 - Step 1: Admin flags a visitor or visit in the system
 - Step 2: Guard scans QR code for the flagged visit
@@ -775,24 +675,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 8: Test "Deny" option
 
 **Expected Results:**
-- Step 1: Flag is set on the visit record
-- Step 2: Visit details are displayed
-- Step 3: Alert modal shows flag warning and reason
-- Step 4: Flag details and context are shown
-- Step 5: Override and Deny buttons are visible
-- Step 6: Override action is logged and visit processing continues
-- Step 7: Override entry is created in logs table
-- Step 8: Visit processing is blocked and denial is logged
+An admin should be able to flag a visitor or visit in the system, setting a flag indicator on the visit record with an associated reason. When a guard scans a QR code for a flagged visit on the Guard Dashboard, the visit details should be displayed normally. However, a flagged visit alert modal should automatically appear, showing a warning message about the flag and displaying the flag reason and context. The modal should display flag details including why the visit or visitor was flagged. The modal should provide two options: "Override" and "Deny" buttons, allowing the guard to make an explicit decision. If the guard clicks "Override" and provides a reason, the override action should be logged in the audit logs table, and visit processing should continue normally. An override entry should be created in the logs table recording the guard's decision and reason. If the guard clicks "Deny", visit processing should be blocked and the denial should be logged in the audit logs.
 
 **Actual Results:**
-- Step 1: Flag is set on the visit record
-- Step 2: Visit details are displayed
-- Step 3: Alert modal shows flag warning and reason
-- Step 4: Flag details and context are shown
-- Step 5: Override and Deny buttons are visible
-- Step 6: Override action is logged and visit processing continues
-- Step 7: Override entry is created in logs table
-- Step 8: Visit processing is blocked and denial is logged
+Flagged visit alert modal appeared automatically. Flag warning and reason displayed. Override and Deny buttons visible. Override action logged. Visit processing continued after override. Denial blocked processing and logged.
 
 **Status:** Passed
 
@@ -810,6 +696,14 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To ensure the Python AI service can detect a face from the guard's live camera stream using YOLOv8 and return valid bounding box coordinates.
 
+**Preconditions:**
+- Guard user is authenticated
+- Face detection modal can be opened
+- Camera access is available
+- Python AI service is running and accessible
+- YOLOv8 model is loaded and ready
+- /detect-face-base64 endpoint is available
+
 **Actions:**
 - Step 1: Open face detection modal on Guard Dashboard
 - Step 2: Verify Python AI service is available
@@ -821,24 +715,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 8: Verify face is highlighted or indicated in UI
 
 **Expected Results:**
-- Step 1: Face capture interface opens with camera feed
-- Step 2: Service health check passes
-- Step 3: Live video feed shows user's face
-- Step 4: Frame is sent to /detect-face-base64 endpoint
-- Step 5: Face detection occurs using YOLOv8
-- Step 6: API returns normalized coordinates [x1, y1, x2, y2]
-- Step 7: Confidence score (e.g., 0.95) is returned
-- Step 8: Visual feedback shows detected face area
+When the face detection modal opens on the Guard Dashboard, it should display a live camera feed showing the user's face in real-time. The system should perform a health check on the Python AI service to verify it's available and responding. The live video feed should continuously show frames from the camera. Each frame should be converted to base64 format and sent to the Python AI service's /detect-face-base64 endpoint. The YOLOv8 face detection model should process the image frame and detect any faces present. The API should return normalized bounding box coordinates in the format [x1, y1, x2, y2] representing the face location in the image. A confidence score should be returned indicating the detection certainty (e.g., 0.95 for 95% confidence). Visual feedback should be displayed on the camera feed, such as a bounding box or highlight, showing the detected face area to the user.
 
 **Actual Results:**
-- Step 1: Face capture interface opens with camera feed
-- Step 2: Service health check passes
-- Step 3: Live video feed shows user's face
-- Step 4: Frame is sent to /detect-face-base64 endpoint
-- Step 5: Face detection occurs using YOLOv8
-- Step 6: API returns normalized coordinates [x1, y1, x2, y2]
-- Step 7: Confidence score (e.g., 0.95) is returned
-- Step 8: Visual feedback shows detected face area
+Face capture interface opened with live camera feed. Python AI service health check passed. Frames sent to detection endpoint. YOLOv8 detected face successfully. Normalized coordinates returned. Confidence score provided. Visual feedback displayed detected face area.
 
 **Status:** Passed
 
@@ -856,6 +736,14 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To verify that when the Python AI service is unavailable, the system automatically falls back to client-side BlazeFace detection and still allows capture.
 
+**Preconditions:**
+- Guard user is authenticated
+- Face detection modal can be opened
+- Camera access is available
+- Python AI service can be made unavailable (simulated or actual)
+- TensorFlow.js BlazeFace model can be loaded in browser
+- Fallback detection system is implemented
+
 **Actions:**
 - Step 1: Simulate Python AI service unavailability
 - Step 2: Open face detection modal
@@ -868,26 +756,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 9: Restore Python service and verify automatic switch back
 
 **Expected Results:**
-- Step 1: Service health check fails or times out
-- Step 2: Face capture interface opens
-- Step 3: UI shows "AI service unavailable - using browser fallback"
-- Step 4: Live video feed shows user's face
-- Step 5: BlazeFace model initializes in browser
-- Step 6: Face detection occurs using BlazeFace
-- Step 7: Bounding box coordinates are returned
-- Step 8: Face can be captured and processed
-- Step 9: System detects service availability and switches back
+When the Python AI service is unavailable (service down, network issue, or timeout), the service health check should fail or timeout. The face capture interface should still open normally. The UI should display a message indicating "AI service unavailable - using browser fallback" to inform the user that the fallback system is active. The live video feed should continue to show the user's face. The system should automatically load the TensorFlow.js BlazeFace model in the browser as a fallback detection method. Face detection should occur using the client-side BlazeFace model instead of the Python service. Bounding box coordinates should still be returned in the same format, allowing the capture process to continue. Face capture and processing should work normally using the fallback detection. When the Python service becomes available again, the system should automatically detect the service availability and switch back to using YOLOv8 for future detections.
 
 **Actual Results:**
-- Step 1: Service health check fails or times out
-- Step 2: Face capture interface opens
-- Step 3: UI shows "AI service unavailable - using browser fallback"
-- Step 4: Live video feed shows user's face
-- Step 5: BlazeFace model initializes in browser
-- Step 6: Face detection occurs using BlazeFace
-- Step 7: Bounding box coordinates are returned
-- Step 8: Face can be captured and processed
-- Step 9: System detects service availability and switches back
+Service unavailability detected. Fallback message displayed. BlazeFace model loaded in browser. Face detection worked with fallback. Bounding box coordinates returned. Face capture processed successfully. System switched back to Python service when available.
 
 **Status:** Passed
 
@@ -905,6 +777,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To confirm that captured face images are compressed, XOR-encrypted, stored in Supabase, and can be decrypted on demand in the Face Data modal.
 
+**Preconditions:**
+- Face capture can be performed during gate scan
+- Image compression and encryption functions are implemented
+- Supabase database is accessible
+- Face Data modal is accessible to authorized users
+- XOR encryption/decryption functions are available
+
 **Actions:**
 - Step 1: Capture a face image during gate scan
 - Step 2: System compresses the image to 100x100px
@@ -918,28 +797,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 10: Verify decrypted image displays correctly
 
 **Expected Results:**
-- Step 1: Face is detected and cropped
-- Step 2: Image size is reduced by 80-90%
-- Step 3: Compressed JPEG is created
-- Step 4: Image bytes are XOR-encrypted with key rotation
-- Step 5: Encrypted base64 string is generated
-- Step 6: Face image is saved in Supabase database
-- Step 7: Face Data modal opens
-- Step 8: Encrypted base64 is loaded
-- Step 9: XOR decryption reverses encryption
-- Step 10: Face image is visible in modal
+When a face is detected during gate scan, the face area should be cropped from the camera frame using the bounding box coordinates. The cropped face image should be resized to 100x100 pixels, reducing the image size by approximately 80-90% compared to the original. The image should be compressed using JPEG encoding with quality 0.5 to further reduce file size while maintaining acceptable image quality. The compressed image bytes should be XOR-encrypted using a key rotation algorithm to protect biometric data. The encrypted image should be converted to a base64-encoded string for storage. The encrypted face image data should be saved in the Supabase database in the gate_scans table. When the Face Data modal is opened to view stored faces, the encrypted base64 string should be retrieved from the database. The XOR decryption process should reverse the encryption, restoring the original image data. The decrypted face image should be displayed correctly in the modal, showing the captured face.
 
 **Actual Results:**
-- Step 1: Face is detected and cropped
-- Step 2: Image size is reduced by 80-90%
-- Step 3: Compressed JPEG is created
-- Step 4: Image bytes are XOR-encrypted with key rotation
-- Step 5: Encrypted base64 string is generated
-- Step 6: Face image is saved in Supabase database
-- Step 7: Face Data modal opens
-- Step 8: Encrypted base64 is loaded
-- Step 9: XOR decryption reverses encryption
-- Step 10: Face image is visible in modal
+Face detected and cropped successfully. Image compressed to 100x100px. JPEG compression applied. XOR encryption completed. Encrypted data stored in database. Face Data modal retrieved and decrypted image. Face displayed correctly in modal.
 
 **Status:** Passed
 
@@ -957,6 +818,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To validate that the face verification endpoint computes a similarity score between entrance and exit images and flags low-similarity cases for review.
 
+**Preconditions:**
+- Entrance gate scan has been processed with face capture
+- Exit gate scan is being processed
+- Face verification API endpoint (/metrics/verify-images) is available
+- Python AI service is running
+- Similarity threshold (0.75) is configured
+
 **Actions:**
 - Step 1: Process entrance gate scan with face capture
 - Step 2: Process exit gate scan with face capture
@@ -970,28 +838,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 10: Test with low similarity (< 0.75)
 
 **Expected Results:**
-- Step 1: Entrance face is stored in gate_scans table
-- Step 2: Exit face is captured
-- Step 3: Verification request is sent to Python service
-- Step 4: Feature vectors are generated (100x100 grayscale)
-- Step 5: Lighting normalization is applied
-- Step 6: Correlation is computed between feature vectors
-- Step 7: Similarity score is calculated (e.g., 0.87)
-- Step 8: Match is confirmed (similarity >= 0.75)
-- Step 9: Similarity percentage is shown to user
-- Step 10: System flags for review or requires override
+The entrance face image should already be stored in the gate_scans table from the entrance gate scan. When processing the exit gate scan, a new exit face should be captured using the same process. A face verification request should be sent to the Python AI service's /metrics/verify-images endpoint with both face images. The service should extract feature vectors from both faces by converting them to 100x100 grayscale images. Histogram equalization should be applied to normalize lighting conditions and improve comparison accuracy. A correlation coefficient should be computed between the two feature vectors to measure similarity. The correlation should be converted to a similarity score on a 0-1 scale (e.g., 0.87 for 87% similarity). If the similarity score is above the threshold of 0.75, the match should be confirmed and exit processing should proceed. The similarity percentage should be displayed to the user in the Face Data modal. If the similarity is below 0.75, the system should flag the visit for review or require a guard override before allowing exit.
 
 **Actual Results:**
-- Step 1: Entrance face is stored in gate_scans table
-- Step 2: Exit face is captured
-- Step 3: Verification request is sent to Python service
-- Step 4: Feature vectors are generated (100x100 grayscale)
-- Step 5: Lighting normalization is applied
-- Step 6: Correlation is computed between feature vectors
-- Step 7: Similarity score is calculated (e.g., 0.87)
-- Step 8: Match is confirmed (similarity >= 0.75)
-- Step 9: Similarity percentage is shown to user
-- Step 10: System flags for review or requires override
+Face verification request sent to Python service. Feature vectors generated and normalized. Correlation computed successfully. Similarity score calculated (above threshold). Match confirmed. Similarity percentage displayed. Low similarity cases flagged for review.
 
 **Status:** Passed
 
@@ -1009,6 +859,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To ensure the AI Status dashboard correctly reflects the health and latency of the Python AI microservice and fallback state.
 
+**Preconditions:**
+- Admin or guard user is authenticated
+- Dashboard with AI Status tab is accessible
+- Python AI service can be tested for availability
+- Service health check functionality is implemented
+- Metrics collection system is active
+
 **Actions:**
 - Step 1: Sign in as admin or guard user
 - Step 2: Navigate to Dashboard and click AI Status tab
@@ -1020,24 +877,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 8: Test with Python service unavailable
 
 **Expected Results:**
-- Step 1: User is authenticated
-- Step 2: AI Status tab content is displayed
-- Step 3: Service status (available/unavailable) is displayed
-- Step 4: Average latency metrics are shown
-- Step 5: BlazeFace fallback state is shown when applicable
-- Step 6: Accuracy percentages are displayed
-- Step 7: Status shows "Available" with latency
-- Step 8: Status shows "Unavailable" and fallback active
+When an admin or guard user signs in and navigates to the Dashboard, they should be able to access the AI Status tab. The AI Status tab content should be displayed, showing information about the Python AI microservice health and performance. The service status should be clearly displayed, indicating whether the Python AI service is "Available" or "Unavailable". Average latency metrics should be shown, displaying the response time in milliseconds for face detection requests. When the Python service is unavailable, the BlazeFace fallback state should be indicated, showing that the browser-based fallback detection is active. Detection accuracy percentages should be displayed if available, showing the reliability of face detection. When the Python service is available, the status should show "Available" along with the current latency measurement. When the service is unavailable, the status should show "Unavailable" and indicate that the BlazeFace fallback is active.
 
 **Actual Results:**
-- Step 1: User is authenticated
-- Step 2: AI Status tab content is displayed
-- Step 3: Service status (available/unavailable) is displayed
-- Step 4: Average latency metrics are shown
-- Step 5: BlazeFace fallback state is shown when applicable
-- Step 6: Accuracy percentages are displayed
-- Step 7: Status shows "Available" with latency
-- Step 8: Status shows "Unavailable" and fallback active
+AI Status tab displayed service health information. Service status shown correctly. Latency metrics displayed. Fallback state indicated when applicable. Accuracy percentages shown. Status updated correctly based on service availability.
 
 **Status:** Passed
 
@@ -1055,6 +898,12 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To verify that an admin can access the Dashboard with Places, Accounts, Gates, Feedback, and AI Status tabs visible.
 
+**Preconditions:**
+- Admin user account exists and is authenticated
+- Dashboard page is accessible
+- Admin role has full access permissions
+- All admin tabs are configured and available
+
 **Actions:**
 - Step 1: Sign in as an admin user
 - Step 2: Navigate to Dashboard page
@@ -1066,24 +915,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 8: Click each tab and verify content loads
 
 **Expected Results:**
-- Step 1: Admin user is authenticated
-- Step 2: Dashboard loads
-- Step 3: Places tab appears in admin tabs section
-- Step 4: Accounts tab appears in admin tabs section
-- Step 5: Gates tab appears in admin tabs section
-- Step 6: Feedback tab appears in admin tabs section
-- Step 7: AI Status tab appears in admin tabs section
-- Step 8: Tab content is displayed when clicked
+When an admin user signs in and navigates to the Dashboard page, the admin should be authenticated and have full administrative access. The Dashboard should load with the admin-specific interface. The Places tab should appear in the admin tabs section, allowing management of places in the system. The Accounts tab should appear, providing user account management capabilities. The Gates tab should appear, showing gate configuration and management options. The Feedback tab should appear, displaying feedback analytics and survey responses. The AI Status tab should appear, showing the AI service health and metrics. When each tab is clicked, the corresponding tab content should be displayed, loading the appropriate interface and data for that administrative function.
 
 **Actual Results:**
-- Step 1: Admin user is authenticated
-- Step 2: Dashboard loads
-- Step 3: Places tab appears in admin tabs section
-- Step 4: Accounts tab appears in admin tabs section
-- Step 5: Gates tab appears in admin tabs section
-- Step 6: Feedback tab appears in admin tabs section
-- Step 7: AI Status tab appears in admin tabs section
-- Step 8: Tab content is displayed when clicked
+Admin Dashboard loaded with all tabs visible. Places, Accounts, Gates, Feedback, and AI Status tabs appeared. Tab content loaded correctly when clicked. All administrative functions accessible.
 
 **Status:** Passed
 
@@ -1101,6 +936,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To confirm that an admin can create, edit, and delete places, and see changes reflected in scheduling options on the Home and Dashboard pages.
 
+**Preconditions:**
+- Admin user is authenticated
+- Places management interface is accessible
+- Database is available for place creation/modification
+- Audit logging system is configured
+- Home page scheduling dropdown is functional
+
 **Actions:**
 - Step 1: Sign in as admin and navigate to Places tab
 - Step 2: Click "Add New Place" button
@@ -1116,32 +958,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 12: Verify deletion is logged in audit trail
 
 **Expected Results:**
-- Step 1: Places management interface is displayed
-- Step 2: Place creation modal opens
-- Step 3: Form fields accept input
-- Step 4: New place is created and saved
-- Step 5: New place is visible in the list
-- Step 6: Place is available for selection
-- Step 7: Edit modal opens with place details
-- Step 8: Place details are updated
-- Step 9: Updated information is displayed
-- Step 10: Delete confirmation appears
-- Step 11: Place is deleted and removed from list
-- Step 12: Delete action is recorded in logs
+When an admin navigates to the Places tab in the dashboard, the places management interface should be displayed showing a list of existing places. Clicking the "Add New Place" button should open a place creation modal with form fields for place name, description, and location. All form fields should accept input and validate the data. Upon submission, the new place should be created and saved to the database. The new place should immediately appear in the places list on the dashboard. The new place should also become available for selection in the scheduling dropdown on the Home page. Clicking the edit button on an existing place should open an edit modal pre-populated with the current place details. Modifications to place information should be saved when the form is submitted. The updated information should be reflected in the places list. Clicking the delete button should show a delete confirmation dialog to prevent accidental deletion. Upon confirmation, the place should be deleted and removed from the list. The delete action should be recorded in the audit logs for tracking purposes.
 
 **Actual Results:**
-- Step 1: Places management interface is displayed
-- Step 2: Place creation modal opens
-- Step 3: Form fields accept input
-- Step 4: New place is created and saved
-- Step 5: New place is visible in the list
-- Step 6: Place is available for selection
-- Step 7: Edit modal opens with place details
-- Step 8: Place details are updated
-- Step 9: Updated information is displayed
-- Step 10: Delete confirmation appears
-- Step 11: Place is deleted and removed from list
-- Step 12: Delete action is recorded in logs
+Places management interface displayed. Place creation modal opened. New place created and saved. Place appeared in list and scheduling dropdown. Edit modal opened with place details. Updates saved successfully. Delete confirmation appeared. Place deleted and removed. Delete action logged.
 
 **Status:** Passed
 
@@ -1159,6 +979,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To validate that an admin can assign personnel to places and configure visit limits and purposes per place.
 
+**Preconditions:**
+- Admin user is authenticated
+- At least one place exists in the system
+- At least one personnel user account exists
+- Places management interface is accessible
+- Personnel assignment functionality is available
+
 **Actions:**
 - Step 1: Navigate to Places tab in admin dashboard
 - Step 2: Click on a place to view details
@@ -1175,34 +1002,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 13: Verify purpose appears in scheduling dropdown
 
 **Expected Results:**
-- Step 1: Places list is displayed
-- Step 2: Place details panel opens
-- Step 3: Personnel assignment interface appears
-- Step 4: Personnel is selected
-- Step 5: Personnel is assigned to the place
-- Step 6: Assigned personnel is listed
-- Step 7: Visit limit configuration modal opens
-- Step 8: Limit type is selected
-- Step 9: Limit value is set
-- Step 10: Limit is saved and enforced
-- Step 11: Purpose management interface opens
-- Step 12: Purpose is configured with required days (0-6)
-- Step 13: Purpose is available when place is selected
+The Places tab should display a list of all places in the system. When an admin clicks on a place to view details, a place details panel should open showing place information and management options. Clicking the "Assign Personnel" button should open a personnel assignment interface displaying a list of available personnel users. A personnel user should be selectable from the list. Upon confirmation, the personnel should be assigned to the place, creating a relationship in the database. The assigned personnel should be listed in the place details, showing who is responsible for that place. Clicking "Configure Visit Limits" should open a visit limit configuration modal. The admin should be able to select a limit type (weekly or monthly). A limit value should be set (e.g., 10 visits). The limit should be saved to the database and enforced during visit scheduling. Clicking "Add Purpose" or "Edit Purposes" should open a purpose management interface. A purpose should be configurable with advance notice days ranging from 0 to 6 days. Once configured, the purpose should become available in the purpose dropdown when that place is selected during visit scheduling.
 
 **Actual Results:**
-- Step 1: Places list is displayed
-- Step 2: Place details panel opens
-- Step 3: Personnel assignment interface appears
-- Step 4: Personnel is selected
-- Step 5: Personnel is assigned to the place
-- Step 6: Assigned personnel is listed
-- Step 7: Visit limit configuration modal opens
-- Step 8: Limit type is selected
-- Step 9: Limit value is set
-- Step 10: Limit is saved and enforced
-- Step 11: Purpose management interface opens
-- Step 12: Purpose is configured with required days (0-6)
-- Step 13: Purpose is available when place is selected
+Place details panel opened. Personnel assigned successfully. Assigned personnel listed. Visit limit configured and saved. Purpose management interface opened. Purpose configured with advance notice days. Purpose available in scheduling dropdown.
 
 **Status:** Passed
 
@@ -1220,6 +1023,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To ensure that a log-role user can open the Dashboard and view only the Logs tab and content.
 
+**Preconditions:**
+- Log-role user account exists and is authenticated
+- Dashboard page is accessible
+- Audit logs exist in the system
+- Logs tab is configured for log-role users
+- Other admin tabs are restricted from log users
+
 **Actions:**
 - Step 1: Sign in as a log-role user
 - Step 2: Navigate to Dashboard page
@@ -1230,22 +1040,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 7: Verify other dashboard sections are hidden
 
 **Expected Results:**
-- Step 1: Log user is authenticated
-- Step 2: Dashboard loads
-- Step 3: Other admin tabs (Places, Accounts, Gates, Feedback, AI Status) are hidden
-- Step 4: Logs content is visible with audit entries
-- Step 5: Audit log entries are shown with details
-- Step 6: Page navigation controls are visible
-- Step 7: Visitor content and admin content are hidden
+When a log-role user signs in and navigates to the Dashboard page, the log user should be authenticated with read-only access to audit logs. The Dashboard should load with a restricted interface. All other admin tabs (Places, Accounts, Gates, Feedback, AI Status) should be hidden from view, as log users only have access to logs. The Logs tab should be the only visible tab and should be active by default. The logs content should be visible, displaying audit log entries from the system. Audit log entries should be shown with details including timestamp, user, action type, category, and description. Pagination controls should be visible to navigate through large numbers of log entries. Visitor-specific content and other admin content should be hidden, ensuring log users can only view audit logs and cannot access other system functions.
 
 **Actual Results:**
-- Step 1: Log user is authenticated
-- Step 2: Dashboard loads
-- Step 3: Other admin tabs (Places, Accounts, Gates, Feedback, AI Status) are hidden
-- Step 4: Logs content is visible with audit entries
-- Step 5: Audit log entries are shown with details
-- Step 6: Page navigation controls are visible
-- Step 7: Visitor content and admin content are hidden
+Log user authenticated. Dashboard loaded with restricted access. Only Logs tab visible. Audit log entries displayed with details. Pagination controls available. Other tabs and content hidden correctly.
 
 **Status:** Passed
 
@@ -1263,6 +1061,12 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To verify that log filters (category, action type, date range, search) correctly narrow down audit entries.
 
+**Preconditions:**
+- Log-role user or admin is authenticated
+- Logs tab is accessible
+- Multiple audit log entries exist with different categories, action types, and dates
+- Filtering functionality is implemented
+
 **Actions:**
 - Step 1: Navigate to Logs tab in dashboard
 - Step 2: Click on category filter tab (e.g., "Gate")
@@ -1277,30 +1081,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 11: Verify all logs are displayed again
 
 **Expected Results:**
-- Step 1: Logs interface is displayed
-- Step 2: Category filter is applied
-- Step 3: Log list shows only gate actions
-- Step 4: Action type filter is applied
-- Step 5: Only entrance scan logs are shown
-- Step 6: Date range is selected
-- Step 7: Only logs within date range are displayed
-- Step 8: Search query is entered
-- Step 9: Matching log entries are shown
-- Step 10: All filters are reset
-- Step 11: Complete log list is shown
+The Logs tab interface should be displayed showing all audit log entries. When a category filter tab is clicked (e.g., "Gate"), the filter should be applied and the log list should show only logs matching that category. For example, selecting the "Gate" category should display only gate-related actions. When an action type filter is selected (e.g., "gate_entrance_scan"), the logs should be further filtered to show only that specific action type. When a date range filter is set with start and end dates, only log entries within that date range should be displayed. When a search query is entered in the search field, the system should filter logs by matching the search term against log descriptions, user names, or other searchable fields. Only matching log entries should be shown. When all filters are cleared or reset, the complete unfiltered log list should be displayed again, showing all audit log entries.
 
 **Actual Results:**
-- Step 1: Logs interface is displayed
-- Step 2: Category filter is applied
-- Step 3: Log list shows only gate actions
-- Step 4: Action type filter is applied
-- Step 5: Only entrance scan logs are shown
-- Step 6: Date range is selected
-- Step 7: Only logs within date range are displayed
-- Step 8: Search query is entered
-- Step 9: Matching log entries are shown
-- Step 10: All filters are reset
-- Step 11: Complete log list is shown
+Category filter applied correctly. Log list filtered by category. Action type filter narrowed results. Date range filter worked. Search query filtered logs. Filters reset successfully. Complete log list displayed when filters cleared.
 
 **Status:** Passed
 
@@ -1318,6 +1102,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To confirm that a personnel user sees Assignment, Visits, Requests, and Finished tabs and can view only visits for their assigned places.
 
+**Preconditions:**
+- Personnel user account exists and is authenticated
+- Personnel is assigned to at least one place
+- Visits exist for assigned places
+- Dashboard page is accessible
+- Role-based filtering is configured
+
 **Actions:**
 - Step 1: Sign in as a personnel user
 - Step 2: Navigate to Dashboard page
@@ -1333,32 +1124,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 12: Verify only requests for assigned places are shown
 
 **Expected Results:**
-- Step 1: Personnel user is authenticated
-- Step 2: Dashboard loads
-- Step 3: Assignment tab appears
-- Step 4: Visits tab appears
-- Step 5: Requests tab appears
-- Step 6: Finished tab appears
-- Step 7: Assigned places are displayed
-- Step 8: Only assigned places appear in list
-- Step 9: In-progress visits are displayed
-- Step 10: Visits are filtered by assigned places
-- Step 11: Pending reschedule requests are displayed
-- Step 12: Requests are filtered by assigned places
+When a personnel user signs in and navigates to the Dashboard page, the personnel user should be authenticated. The Dashboard should load with personnel-specific tabs. The Assignment tab should appear, showing places assigned to the personnel user. The Visits tab should appear, displaying visits for assigned places. The Requests tab should appear, showing reschedule requests. The Finished tab should appear, displaying completed visits. When the Assignment tab is clicked, only places that have been assigned to this personnel user should be displayed in the list. When the Visits tab is clicked, in-progress visits should be displayed, but only for places assigned to the personnel user. The visits should be filtered by assigned places, ensuring personnel only see visits for their assigned locations. When the Requests tab is clicked, pending reschedule requests should be displayed. The requests should also be filtered by assigned places, showing only reschedule requests for visits to places assigned to the personnel user.
 
 **Actual Results:**
-- Step 1: Personnel user is authenticated
-- Step 2: Dashboard loads
-- Step 3: Assignment tab appears
-- Step 4: Visits tab appears
-- Step 5: Requests tab appears
-- Step 6: Finished tab appears
-- Step 7: Assigned places are displayed
-- Step 8: Only assigned places appear in list
-- Step 9: In-progress visits are displayed
-- Step 10: Visits are filtered by assigned places
-- Step 11: Pending reschedule requests are displayed
-- Step 12: Requests are filtered by assigned places
+Personnel Dashboard loaded with all tabs. Assignment tab showed only assigned places. Visits tab filtered by assigned places. Requests tab filtered by assigned places. Finished tab displayed completed visits. All filtering worked correctly.
 
 **Status:** Passed
 
@@ -1376,6 +1145,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To validate that personnel can approve or decline visitor reschedule requests and that resulting schedule changes are enforced by the system.
 
+**Preconditions:**
+- Personnel user is authenticated and assigned to a place
+- Visitor has requested a reschedule for a visit to the personnel's assigned place
+- Reschedule request exists with status 'pending_reschedule'
+- Requests tab is accessible
+- Reschedule processing functionality is available
+
 **Actions:**
 - Step 1: Visitor requests a reschedule for a visit
 - Step 2: Sign in as personnel assigned to the visit's place
@@ -1390,30 +1166,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 11: Verify visitor is notified of decision
 
 **Expected Results:**
-- Step 1: Reschedule request is created
-- Step 2: Personnel user is authenticated
-- Step 3: Pending reschedule requests are displayed
-- Step 4: Request details are shown
-- Step 5: Action modal opens
-- Step 6: New date is selected
-- Step 7: Date validation passes
-- Step 8: Reschedule decision is processed
-- Step 9: Visit date changes to new date
-- Step 10: Action is recorded in audit logs
-- Step 11: Notification or email is sent
+When a visitor requests a reschedule for a visit, a reschedule request should be created with status 'pending_reschedule'. When a personnel user assigned to the visit's place signs in and navigates to the Requests tab, the personnel user should be authenticated. Pending reschedule requests for their assigned places should be displayed in a list. Request details should be shown including the original visit date, requested new date, visitor information, and reason for reschedule. Clicking "Accept" or "Decline" should open an action modal. If accepting, the personnel should be able to select a new date from a date picker. The system should validate that the new date meets advance notice requirements and visit limits. Upon confirmation, the reschedule decision should be processed. If accepted, the visit date should be updated to the new date in the database. The reschedule action (accept or decline) should be recorded in the audit logs with details about who made the decision and when. The visitor should be notified of the decision via email or in-app notification.
 
 **Actual Results:**
-- Step 1: Reschedule request is created
-- Step 2: Personnel user is authenticated
-- Step 3: Pending reschedule requests are displayed
-- Step 4: Request details are shown
-- Step 5: Action modal opens
-- Step 6: New date is selected
-- Step 7: Date validation passes
-- Step 8: Reschedule decision is processed
-- Step 9: Visit date changes to new date
-- Step 10: Action is recorded in audit logs
-- Step 11: Notification or email is sent
+Reschedule requests displayed in Requests tab. Request details shown correctly. Action modal opened. New date selected and validated. Reschedule decision processed. Visit date updated when accepted. Action logged in audit trail. Visitor notified of decision.
 
 **Status:** Passed
 
@@ -1431,6 +1187,12 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To ensure that a guard user sees the Guard Dashboard and AI Status tabs and can access the dedicated Guard Dashboard page.
 
+**Preconditions:**
+- Guard user account exists and is authenticated
+- Dashboard page is accessible
+- Guard Dashboard page is accessible via navigation
+- Guard role has appropriate permissions
+
 **Actions:**
 - Step 1: Sign in as a guard user
 - Step 2: Navigate to Dashboard page
@@ -1443,26 +1205,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 9: Verify page has manual visit ID entry section
 
 **Expected Results:**
-- Step 1: Guard user is authenticated
-- Step 2: Dashboard loads
-- Step 3: Guard Dashboard tab appears
-- Step 4: AI Status tab appears
-- Step 5: Places, Accounts, Gates, Feedback tabs are hidden
-- Step 6: Guard dashboard content is displayed
-- Step 7: Dedicated Guard Dashboard page loads
-- Step 8: QR scanner and gate processing interface is visible
-- Step 9: Manual input field is available
+When a guard user signs in and navigates to the Dashboard page, the guard user should be authenticated. The Dashboard should load with guard-specific tabs. The Guard Dashboard tab should appear, providing access to guard dashboard content within the main dashboard. The AI Status tab should appear, allowing guards to monitor AI service health. All other admin tabs (Places, Accounts, Gates, Feedback) should be hidden, as guards don't have administrative access. Clicking the Guard Dashboard tab should display guard dashboard content. Guards should also be able to navigate to a dedicated Guard Dashboard page via the navigation link. The dedicated Guard Dashboard page should load with a QR scanner interface and gate processing controls. The QR scanner and gate processing interface should be visible, including camera feed, scan overlay, and gate selection buttons. A manual visit ID input field should be available as a fallback when camera access is unavailable.
 
 **Actual Results:**
-- Step 1: Guard user is authenticated
-- Step 2: Dashboard loads
-- Step 3: Guard Dashboard tab appears
-- Step 4: AI Status tab appears
-- Step 5: Places, Accounts, Gates, Feedback tabs are hidden
-- Step 6: Guard dashboard content is displayed
-- Step 7: Dedicated Guard Dashboard page loads
-- Step 8: QR scanner and gate processing interface is visible
-- Step 9: Manual input field is available
+Guard Dashboard tab appeared. AI Status tab visible. Other admin tabs hidden. Guard dashboard content displayed. Dedicated Guard Dashboard page loaded. QR scanner and gate processing interface visible. Manual input field available.
 
 **Status:** Passed
 
@@ -1480,6 +1226,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To verify that guard dashboard metrics (scan rate, interval, status text) update in real time during scanning.
 
+**Preconditions:**
+- Guard user is authenticated
+- Guard Dashboard page is accessible
+- Scanner functionality is available
+- Camera access is available
+- Real-time metrics update system is implemented
+
 **Actions:**
 - Step 1: Navigate to Guard Dashboard page
 - Step 2: Click "Start Scanner" button
@@ -1492,26 +1245,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 9: Stop scanner
 
 **Expected Results:**
-- Step 1: Guard Dashboard loads
-- Step 2: Scanner activates and camera feed starts
-- Step 3: FPS counter appears (e.g., "Scan Rate: 15 FPS")
-- Step 4: Interval counter appears (e.g., "Interval: 100ms")
-- Step 5: Status messages change (e.g., "Position QR code", "Detecting", "Success")
-- Step 6: QR code is detected
-- Step 7: FPS and interval values change dynamically
-- Step 8: Status updates to reflect scan state
-- Step 9: Scanner stops and metrics reset
+The Guard Dashboard page should load with the scanner interface. When the "Start Scanner" button is clicked, the scanner should activate and the camera feed should start displaying live video. A scan rate (FPS) counter should appear, displaying the current frames per second being processed (e.g., "Scan Rate: 15 FPS"). An interval counter should appear, showing the time interval between scan attempts (e.g., "Interval: 100ms"). Status text messages should change dynamically during scanning, showing different states such as "Position QR code", "Detecting", "Success", or "No QR code detected". When a QR code is detected in the camera frame, the detection should be processed. The FPS and interval values should update in real-time as scanning continues, reflecting the current performance metrics. The status text should update to reflect the current scan state, providing immediate feedback to the guard. When the scanner is stopped, the metrics should reset to initial values.
 
 **Actual Results:**
-- Step 1: Guard Dashboard loads
-- Step 2: Scanner activates and camera feed starts
-- Step 3: FPS counter appears (e.g., "Scan Rate: 15 FPS")
-- Step 4: Interval counter appears (e.g., "Interval: 100ms")
-- Step 5: Status messages change (e.g., "Position QR code", "Detecting", "Success")
-- Step 6: QR code is detected
-- Step 7: FPS and interval values change dynamically
-- Step 8: Status updates to reflect scan state
-- Step 9: Scanner stops and metrics reset
+Scanner activated and camera feed started. FPS counter displayed scan rate. Interval counter showed scan interval. Status messages updated dynamically. QR code detection worked. Metrics updated in real-time. Status reflected scan state correctly. Metrics reset when scanner stopped.
 
 **Status:** Passed
 
@@ -1529,6 +1266,12 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To confirm that a visitor user can open their Dashboard and view Current (Today/Future) and Past visits with correct filtering and counts.
 
+**Preconditions:**
+- Visitor user account exists and is authenticated
+- Visitor has visits scheduled (some current, some past)
+- Dashboard page is accessible
+- Date filtering logic is implemented
+
 **Actions:**
 - Step 1: Sign in as a visitor user
 - Step 2: Navigate to Dashboard page
@@ -1543,30 +1286,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 11: Verify visit details are displayed (date, places, status)
 
 **Expected Results:**
-- Step 1: Visitor user is authenticated
-- Step 2: Dashboard loads
-- Step 3: Current Visits tab appears
-- Step 4: Past Visits tab appears
-- Step 5: Today and future visits are displayed
-- Step 6: Count shows number of current visits
-- Step 7: Only today's and future visits are shown
-- Step 8: Past/completed visits are displayed
-- Step 9: Count shows number of past visits
-- Step 10: Only past visits are shown
-- Step 11: Visit information is shown for each visit
+When a visitor user signs in and navigates to the Dashboard page, the visitor user should be authenticated. The Dashboard should load with visitor-specific tabs. The "Current Visits" tab should appear, displaying visits scheduled for today and future dates. The "Past Visits" tab should appear, displaying completed or past visits. When the Current Visits tab is clicked, today's visits and all future scheduled visits should be displayed in a list. A visit count should be shown indicating the total number of current visits. The filtering should ensure that only visits with dates from today onwards are shown, excluding past visits. When the Past Visits tab is clicked, past and completed visits should be displayed. A past visit count should be shown indicating the total number of past visits. The filtering should ensure that only visits with dates before today are shown. For each visit in both tabs, visit information should be displayed including visit date, places to visit, visit status, and visit ID.
 
 **Actual Results:**
-- Step 1: Visitor user is authenticated
-- Step 2: Dashboard loads
-- Step 3: Current Visits tab appears
-- Step 4: Past Visits tab appears
-- Step 5: Today and future visits are displayed
-- Step 6: Count shows number of current visits
-- Step 7: Only today's and future visits are shown
-- Step 8: Past/completed visits are displayed
-- Step 9: Count shows number of past visits
-- Step 10: Only past visits are shown
-- Step 11: Visit information is shown for each visit
+Visitor Dashboard loaded with Current and Past Visits tabs. Current Visits showed today and future visits. Visit count displayed correctly. Past Visits showed completed visits. Filtering worked correctly for both tabs. Visit information displayed for each visit.
 
 **Status:** Passed
 
@@ -1584,6 +1307,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To validate that visitors can request a reschedule for eligible visits directly from their Dashboard and see status updates.
 
+**Preconditions:**
+- Visitor user is authenticated
+- Visitor has at least one visit with status 'pending'
+- Dashboard with Current Visits tab is accessible
+- Reschedule request functionality is available
+- Personnel is assigned to the visit's place
+
 **Actions:**
 - Step 1: Sign in as a visitor user
 - Step 2: Navigate to Dashboard and view Current Visits
@@ -1598,30 +1328,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 11: Refresh dashboard and verify status update
 
 **Expected Results:**
-- Step 1: Visitor user is authenticated
-- Step 2: Current visits list is displayed
-- Step 3: Eligible visit is found
-- Step 4: Reschedule request modal opens
-- Step 5: New date is selected
-- Step 6: Reason field accepts input
-- Step 7: Reschedule request is submitted
-- Step 8: Confirmation message is displayed
-- Step 9: Visit status is updated
-- Step 10: Request is visible to assigned personnel
-- Step 11: Updated status is reflected
+When a visitor user signs in and navigates to the Dashboard, the visitor user should be authenticated. The Current Visits tab should display a list of visits with status 'pending' that are eligible for reschedule. A visit with status 'pending' should be found in the list. Clicking the "Request Reschedule" button on an eligible visit should open a reschedule request modal. The modal should allow the visitor to select a new date from a date picker that enforces advance notice requirements. A reason field should be available (if required) to accept input explaining why the reschedule is needed. Clicking "Submit Reschedule Request" should submit the request to the system. A success confirmation message should be displayed indicating the request was submitted. The visit status should be updated from 'pending' to 'pending_reschedule' in the database. The reschedule request should become visible to the personnel user assigned to the visit's place in their Requests tab. When the visitor refreshes the dashboard, the updated status should be reflected, showing the visit as pending reschedule.
 
 **Actual Results:**
-- Step 1: Visitor user is authenticated
-- Step 2: Current visits list is displayed
-- Step 3: Eligible visit is found
-- Step 4: Reschedule request modal opens
-- Step 5: New date is selected
-- Step 6: Reason field accepts input
-- Step 7: Reschedule request is submitted
-- Step 8: Confirmation message is displayed
-- Step 9: Visit status is updated
-- Step 10: Request is visible to assigned personnel
-- Step 11: Updated status is reflected
+Reschedule request modal opened. New date selected with validation. Reason field accepted input. Request submitted successfully. Confirmation message displayed. Visit status updated to pending_reschedule. Request visible to assigned personnel. Status updated on refresh.
 
 **Status:** Passed
 
@@ -1639,6 +1349,12 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To verify that any visitor or guest can open the Track Schedule page, enter a valid visit ID, and see full visit details and progress.
 
+**Preconditions:**
+- Track Schedule page is accessible (no authentication required)
+- A visit exists in the system with a valid visit ID
+- Visit has associated places and gate scan data
+- QR code exists for the visit
+
 **Actions:**
 - Step 1: Navigate to Track Schedule page via navigation link
 - Step 2: Verify visit ID input field is visible
@@ -1652,28 +1368,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 10: Verify print visit card option is available
 
 **Expected Results:**
-- Step 1: Track Schedule page loads
-- Step 2: Input field is displayed
-- Step 3: Visit ID is accepted
-- Step 4: System retrieves visit information
-- Step 5: Visit information (name, date, places, status) is shown
-- Step 6: Progress indicators show current status
-- Step 7: List of places with completion status is shown
-- Step 8: Entrance and exit scan status are shown
-- Step 9: QR code image is visible
-- Step 10: Print button is visible
+The Track Schedule page should load when accessed via the navigation link, displaying a visit ID input field. The input field should be visible and ready to accept a visit ID. When a valid visit ID is entered and submitted, the system should retrieve the visit information from the database. The visit information should be displayed including visitor name, visit date, list of places to visit, and current visit status. Progress indicators should show the current status of the visit (pending, in_progress, completed, etc.). A list of places to visit should be displayed with completion status indicators showing which places have been visited. The entrance gate scan status should be shown (scanned or not scanned). The exit gate scan status should be shown (scanned or not scanned). The visit QR code image should be visible and displayable. A "Print Visit Card" button should be visible, allowing users to print the visit card with QR code.
 
 **Actual Results:**
-- Step 1: Track Schedule page loads
-- Step 2: Input field is displayed
-- Step 3: Visit ID is accepted
-- Step 4: System retrieves visit information
-- Step 5: Visit information (name, date, places, status) is shown
-- Step 6: Progress indicators show current status
-- Step 7: List of places with completion status is shown
-- Step 8: Entrance and exit scan status are shown
-- Step 9: QR code image is visible
-- Step 10: Print button is visible
+Track Schedule page loaded. Visit ID input field displayed. Visit information retrieved successfully. Visit details shown correctly. Progress indicators displayed status. Places list showed completion status. Gate scan status displayed. QR code visible. Print button available.
 
 **Status:** Passed
 
@@ -1691,6 +1389,11 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To ensure that entering an invalid or unknown visit ID shows an appropriate "no visit found" state.
 
+**Preconditions:**
+- Track Schedule page is accessible
+- Error handling system is implemented
+- Input validation is configured
+
 **Actions:**
 - Step 1: Navigate to Track Schedule page
 - Step 2: Enter an invalid visit ID (non-existent)
@@ -1703,26 +1406,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 9: Clear input and verify reset
 
 **Expected Results:**
-- Step 1: Track Schedule page loads
-- Step 2: Invalid ID is entered
-- Step 3: System attempts to retrieve visit
-- Step 4: Error message is displayed
-- Step 5: "No Visit Found" component is displayed
-- Step 6: Message explains visit was not found
-- Step 7: Invalid format is entered
-- Step 8: Format validation error is shown
-- Step 9: Input field is cleared and ready for new entry
+The Track Schedule page should load normally. When an invalid or non-existent visit ID is entered and submitted, the system should attempt to retrieve the visit from the database. Since the visit doesn't exist, an error message should be displayed. A "No Visit Found" component or error state UI should be displayed, providing clear visual feedback. The error message should be user-friendly and explain that the visit was not found, possibly suggesting the user check the visit ID. When an invalid format is entered (non-numeric, too short, or incorrect format), a format validation error should be shown before submission, preventing invalid requests. The input field should be clearable, allowing users to reset and enter a new visit ID for another attempt.
 
 **Actual Results:**
-- Step 1: Track Schedule page loads
-- Step 2: Invalid ID is entered
-- Step 3: System attempts to retrieve visit
-- Step 4: Error message is displayed
-- Step 5: "No Visit Found" component is displayed
-- Step 6: Message explains visit was not found
-- Step 7: Invalid format is entered
-- Step 8: Format validation error is shown
-- Step 9: Input field is cleared and ready for new entry
+Invalid visit ID handled correctly. Error message displayed. "No Visit Found" component shown. Format validation prevented invalid input. Input field cleared for new entry. Error handling worked as expected.
 
 **Status:** Passed
 
@@ -1740,6 +1427,14 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To confirm that Track Schedule correctly displays gate scan status (entrance/exit), places list, and visit QR for printing.
 
+**Preconditions:**
+- Track Schedule page is accessible
+- A visit exists with valid visit ID
+- Visit has entrance and/or exit gate scans
+- Visit has associated places
+- QR code exists for the visit
+- Print functionality is available
+
 **Actions:**
 - Step 1: Navigate to Track Schedule page
 - Step 2: Enter a valid visit ID and track visit
@@ -1753,28 +1448,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 10: Verify visit progress bar or indicator is shown
 
 **Expected Results:**
-- Step 1: Track Schedule page loads
-- Step 2: Visit details are loaded
-- Step 3: Entrance scan status (scanned/not scanned) is shown
-- Step 4: Exit scan status (scanned/not scanned) is shown
-- Step 5: List of places with checkmarks or status is shown
-- Step 6: Completed places are marked, pending places are shown
-- Step 7: QR code image is visible and scannable
-- Step 8: Print preview or modal opens
-- Step 9: Card has all essential information
-- Step 10: Progress visualization is displayed
+The Track Schedule page should load when a valid visit ID is entered. Visit details should be loaded from the database and displayed. The entrance gate scan status should be clearly shown, indicating whether the entrance has been scanned (with timestamp) or not scanned yet. The exit gate scan status should be clearly shown, indicating whether the exit has been scanned (with timestamp) or not scanned yet. A list of places to visit should be displayed with visual indicators such as checkmarks for completed places or status text for pending places. Completed places should be marked with checkmarks or "Completed" status, while pending places should show as "Pending" or "Not Visited". The visit QR code image should be visible, clearly displayed, and scannable. Clicking the "Print Visit Card" button should open a print preview or printable modal. The printable card should contain all essential information including visitor name, visit date, places, visit ID, and QR code. A progress visualization such as a progress bar or status indicators should be displayed, showing the overall visit completion status.
 
 **Actual Results:**
-- Step 1: Track Schedule page loads
-- Step 2: Visit details are loaded
-- Step 3: Entrance scan status (scanned/not scanned) is shown
-- Step 4: Exit scan status (scanned/not scanned) is shown
-- Step 5: List of places with checkmarks or status is shown
-- Step 6: Completed places are marked, pending places are shown
-- Step 7: QR code image is visible and scannable
-- Step 8: Print preview or modal opens
-- Step 9: Card has all essential information
-- Step 10: Progress visualization is displayed
+Visit details loaded correctly. Entrance and exit scan status displayed. Places list showed completion status. QR code visible and scannable. Print preview opened. Card contained all essential information. Progress visualization displayed correctly.
 
 **Status:** Passed
 
@@ -1792,6 +1469,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To validate that after a visit is completed, the system offers an ISO 25010 feedback survey for that visit.
 
+**Preconditions:**
+- A visit has been completed (entrance and exit scans processed)
+- Visitor user account exists and can be authenticated
+- Feedback survey system is configured
+- ISO 25010 quality attributes are defined
+- Dashboard or Home page is accessible
+
 **Actions:**
 - Step 1: Complete a visit (entrance and exit scans processed)
 - Step 2: Sign in as the visitor who completed the visit
@@ -1804,26 +1488,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 9: Verify "Provide Feedback" button appears for completed visits
 
 **Expected Results:**
-- Step 1: Visit status changes to 'completed'
-- Step 2: Visitor user is authenticated
-- Step 3: Page loads
-- Step 4: Feedback modal opens with ISO 25010 survey
-- Step 5: Survey questions cover functional suitability, performance, usability, etc.
-- Step 6: Visit details are shown in modal
-- Step 7: Modal can be dismissed and accessed again
-- Step 8: Past visits are displayed
-- Step 9: Feedback button is visible on completed visits
+After a visit is completed (entrance and exit scans processed), the visit status should change to 'completed' in the database. When the visitor who completed the visit signs in and navigates to the Dashboard or Home page, the visitor user should be authenticated. The page should load normally. A feedback survey modal should automatically appear, prompting the visitor to provide feedback for the completed visit. The survey should contain ISO 25010 quality attributes including functional suitability, performance efficiency, usability, reliability, security, maintainability, and portability. The survey should be specific to the completed visit, showing visit details such as date and places visited. The modal should be dismissible, allowing visitors to close it and access it again later if they choose not to provide feedback immediately. When navigating to the Past Visits tab in the dashboard, a "Provide Feedback" button should appear for completed visits that haven't received feedback yet, allowing visitors to provide feedback at their convenience.
 
 **Actual Results:**
-- Step 1: Visit status changes to 'completed'
-- Step 2: Visitor user is authenticated
-- Step 3: Page loads
-- Step 4: Feedback modal opens with ISO 25010 survey
-- Step 5: Survey questions cover functional suitability, performance, usability, etc.
-- Step 6: Visit details are shown in modal
-- Step 7: Modal can be dismissed and accessed again
-- Step 8: Past visits are displayed
-- Step 9: Feedback button is visible on completed visits
+Visit status updated to completed. Feedback modal appeared automatically. ISO 25010 survey displayed. Visit details shown in modal. Modal dismissible and accessible later. Feedback button visible on completed visits in Past Visits tab.
 
 **Status:** Passed
 
@@ -1841,6 +1509,12 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To ensure that only one feedback submission per visit is accepted and subsequent attempts are blocked.
 
+**Preconditions:**
+- A completed visit exists
+- Feedback survey can be accessed
+- Feedback submission system is configured
+- Duplicate submission prevention is implemented
+
 **Actions:**
 - Step 1: Open feedback survey for a completed visit
 - Step 2: Fill in all survey questions
@@ -1854,28 +1528,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 10: Verify visit shows "Feedback Submitted" status
 
 **Expected Results:**
-- Step 1: Feedback modal opens
-- Step 2: Survey form accepts responses
-- Step 3: Feedback is submitted and saved
-- Step 4: Confirmation message is displayed
-- Step 5: Feedback entry is created in feedback table
-- Step 6: Feedback modal opens or button is clicked
-- Step 7: Submit button is disabled or error message appears
-- Step 8: Message explains feedback was already provided
-- Step 9: Button is not available for this visit
-- Step 10: Status indicator shows feedback is complete
+When a feedback survey is opened for a completed visit, the feedback modal should open displaying the ISO 25010 survey form. All survey questions should accept responses, allowing visitors to rate different quality attributes. When the feedback survey is submitted, the feedback data should be saved to the database. A success confirmation message should be displayed indicating the feedback was submitted successfully. A feedback entry should be created in the feedback table, linking the feedback to the specific visit. When attempting to open the feedback survey for the same visit again (either through the modal or "Provide Feedback" button), the system should detect that feedback already exists. The submit button should be disabled or an error message should appear preventing duplicate submission. The error message should clearly explain that feedback was already provided for this visit. The "Provide Feedback" button should be disabled, hidden, or show a "Feedback Submitted" status. A status indicator should show that feedback is complete for this visit, preventing further feedback attempts.
 
 **Actual Results:**
-- Step 1: Feedback modal opens
-- Step 2: Survey form accepts responses
-- Step 3: Feedback is submitted and saved
-- Step 4: Confirmation message is displayed
-- Step 5: Feedback entry is created in feedback table
-- Step 6: Feedback modal opens or button is clicked
-- Step 7: Submit button is disabled or error message appears
-- Step 8: Message explains feedback was already provided
-- Step 9: Button is not available for this visit
-- Step 10: Status indicator shows feedback is complete
+Feedback modal opened. Survey responses accepted. Feedback submitted and saved. Confirmation message displayed. Feedback entry created in database. Duplicate submission blocked. Error message shown. Feedback button disabled. Status indicator showed feedback complete.
 
 **Status:** Passed
 
@@ -1893,6 +1549,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To confirm that feedback responses appear in the Feedback analytics dashboard for admins.
 
+**Preconditions:**
+- At least one feedback submission exists in the system
+- Admin user is authenticated
+- Feedback analytics dashboard is accessible
+- Feedback data is stored in the database
+- Analytics and visualization tools are configured
+
 **Actions:**
 - Step 1: Submit feedback for a completed visit
 - Step 2: Sign in as an admin user
@@ -1906,28 +1569,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 10: Verify aggregated statistics are calculated
 
 **Expected Results:**
-- Step 1: Feedback is saved to database
-- Step 2: Admin user is authenticated
-- Step 3: Feedback analytics dashboard loads
-- Step 4: Submitted feedback responses are shown
-- Step 5: Visit details are associated with feedback
-- Step 6: Quality attribute scores are shown
-- Step 7: Visualizations show feedback trends
-- Step 8: Date filter works correctly
-- Step 9: Additional filters work correctly
-- Step 10: Average scores and trends are displayed
+After feedback is submitted for a completed visit, the feedback should be saved to the database in the feedback table. When an admin user signs in and navigates to the Dashboard, the admin user should be authenticated. Clicking the Feedback tab should load the feedback analytics dashboard. All submitted feedback responses should be displayed in a list or table format. Each feedback entry should be associated with visit details, showing which visit the feedback relates to. The ISO 25010 quality attribute scores should be displayed for each feedback entry, showing ratings for functional suitability, performance, usability, etc. Visualizations such as charts or graphs should show feedback trends over time, helping admins understand system performance from user perspectives. A date range filter should be available and work correctly, allowing admins to filter feedback by submission date. Additional filters should work correctly, such as filtering by visit, visitor, or quality attribute. Aggregated statistics should be displayed, showing average scores across all feedback and trends indicating improvements or areas of concern.
 
 **Actual Results:**
-- Step 1: Feedback is saved to database
-- Step 2: Admin user is authenticated
-- Step 3: Feedback analytics dashboard loads
-- Step 4: Submitted feedback responses are shown
-- Step 5: Visit details are associated with feedback
-- Step 6: Quality attribute scores are shown
-- Step 7: Visualizations show feedback trends
-- Step 8: Date filter works correctly
-- Step 9: Additional filters work correctly
-- Step 10: Average scores and trends are displayed
+Feedback saved to database. Feedback analytics dashboard loaded. Feedback responses displayed with visit details. Quality attribute scores shown. Visualizations displayed trends. Date filter worked. Additional filters functioned correctly. Aggregated statistics calculated and displayed.
 
 **Status:** Passed
 
@@ -1945,6 +1590,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To verify that visit confirmation emails (with QR) are sent to visitors upon successful scheduling.
 
+**Preconditions:**
+- Visit scheduling process can be completed
+- Brevo email service is configured and available
+- QR code generation is functional
+- Visitor email address is valid and accessible
+- Email template with QR code embedding is configured
+
 **Actions:**
 - Step 1: Complete visit scheduling process
 - Step 2: Verify visit status is 'pending'
@@ -1958,28 +1610,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 10: Verify email is sent to correct recipient
 
 **Expected Results:**
-- Step 1: Visit is created and approved
-- Step 2: Visit is in pending state
-- Step 3: Confirmation email is received
-- Step 4: Email is delivered successfully
-- Step 5: Visit date, places, and purpose are included
-- Step 6: QR code image is visible in email
-- Step 7: QR code can be scanned and decoded
-- Step 8: Visit ID is displayed in email
-- Step 9: Instructions for gate use are included
-- Step 10: Email address matches visitor's email
+After completing the visit scheduling process and confirming the visit, a visit record should be created in the database with status 'pending'. The visit should be in the pending state, awaiting entrance gate processing. A visit confirmation email should be sent to the visitor's email address via the Brevo email service. The email should be delivered successfully to the visitor's inbox. The email should contain all visit details including the visit date, list of places to visit, and the visit purpose. The QR code image should be embedded in the email and visible when the email is opened. The QR code should be scannable directly from the email, allowing visitors to use it at the gate without printing. The visit ID should be displayed in the email, allowing visitors to track their visit. Instructions for gate use should be included in the email, explaining how to use the QR code and what to expect during the visit. The email should be sent to the correct recipient, matching the visitor's email address used during scheduling.
 
 **Actual Results:**
-- Step 1: Visit is created and approved
-- Step 2: Visit is in pending state
-- Step 3: Confirmation email is received
-- Step 4: Email is delivered successfully
-- Step 5: Visit date, places, and purpose are included
-- Step 6: QR code image is visible in email
-- Step 7: QR code can be scanned and decoded
-- Step 8: Visit ID is displayed in email
-- Step 9: Instructions for gate use are included
-- Step 10: Email address matches visitor's email
+Visit created with pending status. Confirmation email sent via Brevo. Email delivered successfully. Visit details included in email. QR code embedded and visible. QR code scannable from email. Visit ID displayed. Instructions included. Email sent to correct recipient.
 
 **Status:** Passed
 
@@ -1997,6 +1631,14 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To validate that visit completion emails with feedback links are sent when a visit transitions to `completed`.
 
+**Preconditions:**
+- A visit can be completed (exit gate scan processed)
+- Visit status can transition to 'completed'
+- Brevo email service is configured
+- Email trigger system is implemented
+- Feedback survey link generation is functional
+- Visitor email address is valid
+
 **Actions:**
 - Step 1: Complete exit gate scan for a visit
 - Step 2: Verify completion email trigger is activated
@@ -2010,28 +1652,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 10: Verify email is sent to correct recipient
 
 **Expected Results:**
-- Step 1: Visit status changes to 'completed'
-- Step 2: Email sending process is initiated
-- Step 3: Completion email is received
-- Step 4: Email is delivered successfully
-- Step 5: Completion message is included
-- Step 6: Feedback link is clickable and functional
-- Step 7: System redirects to feedback survey
-- Step 8: Survey is pre-populated with visit details
-- Step 9: Visit details and places visited are shown
-- Step 10: Email address matches visitor's email
+When an exit gate scan is completed and all places have been visited, the visit status should change to 'completed' in the database. The email sending process should be automatically initiated when the visit status changes to completed. A visit completion email should be sent to the visitor's email address via the Brevo service. The email should be delivered successfully to the visitor's inbox. The email should contain a completion confirmation message thanking the visitor for their visit. A feedback survey link should be included in the email, allowing visitors to provide feedback about their visit experience. The feedback link should be clickable and functional, directing users to the feedback survey. When clicked, the system should redirect to the feedback survey page or open the feedback modal. The survey should be pre-populated with visit details, ensuring the feedback is associated with the correct visit. Visit details and places visited should be shown in the email summary. The email should be sent to the correct recipient, matching the visitor's email address.
 
 **Actual Results:**
-- Step 1: Visit status changes to 'completed'
-- Step 2: Email sending process is initiated
-- Step 3: Completion email is received
-- Step 4: Email is delivered successfully
-- Step 5: Completion message is included
-- Step 6: Feedback link is clickable and functional
-- Step 7: System redirects to feedback survey
-- Step 8: Survey is pre-populated with visit details
-- Step 9: Visit details and places visited are shown
-- Step 10: Email address matches visitor's email
+Visit status updated to completed. Completion email sent via Brevo. Email delivered successfully. Completion message included. Feedback link functional. System redirected to feedback survey. Survey pre-populated with visit details. Visit summary included. Email sent to correct recipient.
 
 **Status:** Passed
 
@@ -2049,6 +1673,12 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To confirm that users without an authenticated session cannot access protected pages such as Dashboard, Guard Dashboard, and QR Scanner.
 
+**Preconditions:**
+- User is not authenticated or session is cleared
+- Protected pages exist (Dashboard, Guard Dashboard, QR Scanner)
+- Access control system is implemented
+- Redirect functionality is configured
+
 **Actions:**
 - Step 1: Sign out or clear session
 - Step 2: Attempt to navigate to Dashboard page directly via URL
@@ -2060,24 +1690,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 8: Verify protected pages are now accessible
 
 **Expected Results:**
-- Step 1: User is not authenticated
-- Step 2: System redirects to home or sign-in page
-- Step 3: Authentication required message is shown
-- Step 4: System redirects to home or sign-in page
-- Step 5: System redirects to home or sign-in page
-- Step 6: Dashboard, Guard Dashboard, QR Scanner links are not visible
-- Step 7: User is authenticated
-- Step 8: Dashboard and other pages can be accessed
+When a user signs out or clears their session, they should no longer be authenticated. When an unauthenticated user attempts to navigate to the Dashboard page directly via URL, the system should detect the lack of authentication and redirect to the home page or sign-in page. An authentication required message or sign-in prompt should be shown, indicating that authentication is needed to access the page. Similarly, attempting to navigate to the Guard Dashboard page directly should result in a redirect to the home or sign-in page. Attempting to navigate to the QR Scanner page directly should also result in a redirect. Protected navigation links (Dashboard, Guard Dashboard, QR Scanner) should not be visible in the navigation bar for unauthenticated users. When a user signs in with valid credentials, they should be authenticated and a session should be established. After authentication, the Dashboard and other protected pages should be accessible based on the user's role permissions.
 
 **Actual Results:**
-- Step 1: User is not authenticated
-- Step 2: System redirects to home or sign-in page
-- Step 3: Authentication required message is shown
-- Step 4: System redirects to home or sign-in page
-- Step 5: System redirects to home or sign-in page
-- Step 6: Dashboard, Guard Dashboard, QR Scanner links are not visible
-- Step 7: User is authenticated
-- Step 8: Dashboard and other pages can be accessed
+Unauthenticated access attempts redirected. Authentication required message shown. Protected navigation links hidden. After sign-in, protected pages accessible. Access control enforced correctly.
 
 **Status:** Passed
 
@@ -2095,6 +1711,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To ensure that role-based restrictions prevent users from accessing dashboards or actions not permitted to their role (e.g., visitors cannot access admin tabs).
 
+**Preconditions:**
+- Multiple user accounts exist with different roles (visitor, guard, personnel, admin)
+- Users can be authenticated with their respective roles
+- Role-based access control (RBAC) is implemented
+- Dashboard pages are accessible
+- URL manipulation attempts can be tested
+
 **Actions:**
 - Step 1: Sign in as a visitor user
 - Step 2: Navigate to Dashboard page
@@ -2108,28 +1731,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 10: Verify role-based actions are restricted
 
 **Expected Results:**
-- Step 1: Visitor user is authenticated
-- Step 2: Dashboard loads
-- Step 3: Admin tabs are not visible
-- Step 4: Visitor tabs are displayed
-- Step 5: System blocks access or redirects
-- Step 6: Guard user is authenticated
-- Step 7: Guard Dashboard is accessible, admin tabs are hidden
-- Step 8: Personnel user is authenticated
-- Step 9: QR Scanner is accessible, Guard Dashboard is hidden
-- Step 10: Actions match user's role permissions
+When a visitor user signs in and navigates to the Dashboard page, the visitor user should be authenticated. The Dashboard should load with visitor-specific content. Admin tabs (Places, Accounts, Gates, Feedback, AI Status) should not be visible, as visitors don't have administrative access. Visitor tabs (Current Visits, Past Visits) should be displayed, showing only visitor-appropriate content. If a visitor attempts to access admin tabs via direct URL manipulation, the system should block access or redirect to an appropriate page. When a guard user signs in, the guard user should be authenticated. The Guard Dashboard should be accessible through the navigation link, but admin tabs should be hidden from guards. When a personnel user signs in, the personnel user should be authenticated. The QR Scanner should be accessible through the navigation link, but the Guard Dashboard should be hidden from personnel. All actions and features should match the user's role permissions, ensuring users can only perform operations allowed for their role.
 
 **Actual Results:**
-- Step 1: Visitor user is authenticated
-- Step 2: Dashboard loads
-- Step 3: Admin tabs are not visible
-- Step 4: Visitor tabs are displayed
-- Step 5: System blocks access or redirects
-- Step 6: Guard user is authenticated
-- Step 7: Guard Dashboard is accessible, admin tabs are hidden
-- Step 8: Personnel user is authenticated
-- Step 9: QR Scanner is accessible, Guard Dashboard is hidden
-- Step 10: Actions match user's role permissions
+Role-based access control enforced correctly. Visitor saw only visitor tabs. Admin tabs hidden from non-admin users. Guard Dashboard accessible to guards only. QR Scanner accessible to personnel only. URL manipulation blocked. Actions restricted by role permissions.
 
 **Status:** Passed
 
@@ -2147,6 +1752,12 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To verify that the About page displays company information, mission and vision, team profiles, technology stack, culture, values, thesis timeline, and statistics correctly.
 
+**Preconditions:**
+- About page is accessible via navigation
+- Company information content is available
+- Page content is configured and populated
+- Responsive design is implemented
+
 **Actions:**
 - Step 1: Navigate to About page via navigation link
 - Step 2: Verify company information section is displayed
@@ -2160,28 +1771,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 10: Verify page is responsive and scrollable
 
 **Expected Results:**
-- Step 1: About page loads
-- Step 2: Company details and background are shown
-- Step 3: Mission and vision sections are visible
-- Step 4: Team member profiles with photos and roles are shown
-- Step 5: Tech stack list with icons/logos is shown
-- Step 6: Culture information is displayed
-- Step 7: Values list is displayed
-- Step 8: Timeline with milestones is shown
-- Step 9: Statistics or metrics are shown
-- Step 10: All sections are accessible
+When navigating to the About page via the navigation link, the About page should load successfully. A company information section should be displayed, showing company details, background, and history. Mission and vision statements should be visible, explaining the company's purpose and future goals. A team profiles section should display team member information including photos, names, and roles. A technology stack section should show the technologies used in the system with icons or logos for each technology. Company culture information should be displayed, describing the work environment and practices. A company values section should list the core values and principles. A thesis timeline section should show project milestones and development phases. Statistics or metrics should be displayed, showing system usage or achievement data. All sections should be accessible, properly formatted, and the page should be responsive and scrollable on different screen sizes.
 
 **Actual Results:**
-- Step 1: About page loads
-- Step 2: Company details and background are shown
-- Step 3: Mission and vision sections are visible
-- Step 4: Team member profiles with photos and roles are shown
-- Step 5: Tech stack list with icons/logos is shown
-- Step 6: Culture information is displayed
-- Step 7: Values list is displayed
-- Step 8: Timeline with milestones is shown
-- Step 9: Statistics or metrics are shown
-- Step 10: All sections are accessible
+About page loaded successfully. All sections displayed correctly. Company information, mission, vision shown. Team profiles displayed. Tech stack listed. Culture and values shown. Timeline displayed. Statistics visible. Page responsive and accessible.
 
 **Status:** Passed
 
@@ -2199,6 +1792,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To validate that the Contact page allows users to submit contact forms via EmailJS, view business hours, location information, social media links, and see daily rotating public feedback testimonials.
 
+**Preconditions:**
+- Contact page is accessible via navigation
+- EmailJS service is configured
+- Contact form is functional
+- Public feedback testimonials exist in the system
+- Daily rotation system is implemented
+
 **Actions:**
 - Step 1: Navigate to Contact page via navigation link
 - Step 2: Verify contact form is displayed
@@ -2213,30 +1813,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 11: Verify testimonials rotate daily
 
 **Expected Results:**
-- Step 1: Contact page loads
-- Step 2: Form with name, email, message fields is shown
-- Step 3: Form accepts input
-- Step 4: Form is submitted via EmailJS
-- Step 5: Confirmation message is displayed
-- Step 6: Business hours information is shown
-- Step 7: Address and map (if available) are shown
-- Step 8: Social media icons/links are visible
-- Step 9: Links open in new tabs
-- Step 10: Testimonials section shows public feedback
-- Step 11: Different testimonials appear each day
+When navigating to the Contact page via the navigation link, the Contact page should load successfully. A contact form should be displayed with fields for name, email, and message. The form should accept input and validate the entered data. When the form is submitted, it should be sent via the EmailJS service to the configured email address. A success confirmation message should be displayed indicating the message was sent successfully. Business hours information should be shown, displaying operating hours and availability. Location information including address and a map (if available) should be displayed. Social media links should be visible with icons or text links. Social media links should open in new tabs when clicked, allowing users to visit social media pages without leaving the contact page. A testimonials section should show public feedback from visitors, displaying positive reviews and experiences. The testimonials should rotate daily, showing different feedback each day to provide variety.
 
 **Actual Results:**
-- Step 1: Contact page loads
-- Step 2: Form with name, email, message fields is shown
-- Step 3: Form accepts input
-- Step 4: Form is submitted via EmailJS
-- Step 5: Confirmation message is displayed
-- Step 6: Business hours information is shown
-- Step 7: Address and map (if available) are shown
-- Step 8: Social media icons/links are visible
-- Step 9: Links open in new tabs
-- Step 10: Testimonials section shows public feedback
-- Step 11: Different testimonials appear each day
+Contact page loaded. Contact form displayed and functional. Form submitted via EmailJS. Confirmation message shown. Business hours displayed. Location information shown. Social media links visible and functional. Testimonials displayed. Daily rotation worked correctly.
 
 **Status:** Passed
 
@@ -2254,6 +1834,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To confirm that authenticated users can access Profile Settings to change their password and update account information.
 
+**Preconditions:**
+- User is authenticated with any role
+- Profile Settings functionality is accessible
+- Supabase authentication allows password changes
+- Account information can be updated
+- Current password is known
+
 **Actions:**
 - Step 1: Sign in as any authenticated user
 - Step 2: Click on profile icon or settings link
@@ -2268,30 +1855,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 11: Save account information changes
 
 **Expected Results:**
-- Step 1: User is authenticated
-- Step 2: Profile Settings modal or page opens
-- Step 3: Name, email, role are shown
-- Step 4: Password change form appears
-- Step 5: Current password field accepts input
-- Step 6: New password field accepts input
-- Step 7: Confirm password field accepts input
-- Step 8: Password is updated via Supabase
-- Step 9: Confirmation message is displayed
-- Step 10: Name or other fields can be edited
-- Step 11: Changes are saved to database
+When any authenticated user signs in and clicks on the profile icon or settings link, the user should be authenticated. A Profile Settings modal or page should open, displaying the user's current account information. The current account information should be shown including name, email, and assigned role. A "Change Password" section should be available with a password change form. The current password field should accept input and validate against the user's existing password. A new password field should accept input and enforce password requirements (minimum 6 characters). A confirm password field should accept input and validate that it matches the new password. When the password change form is submitted, the password should be updated via Supabase authentication. A confirmation message should be displayed indicating the password was changed successfully. Account information fields such as name should be editable. When account information changes are saved, they should be saved to the database and reflected in the user's profile.
 
 **Actual Results:**
-- Step 1: User is authenticated
-- Step 2: Profile Settings modal or page opens
-- Step 3: Name, email, role are shown
-- Step 4: Password change form appears
-- Step 5: Current password field accepts input
-- Step 6: New password field accepts input
-- Step 7: Confirm password field accepts input
-- Step 8: Password is updated via Supabase
-- Step 9: Confirmation message is displayed
-- Step 10: Name or other fields can be edited
-- Step 11: Changes are saved to database
+Profile Settings opened. Current account information displayed. Password change form appeared. Password updated via Supabase. Confirmation message shown. Account information editable. Changes saved to database.
 
 **Status:** Passed
 
@@ -2309,6 +1876,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To verify that optional face enrollment during visit scheduling successfully captures, compresses, encrypts, and stores face data for future verification.
 
+**Preconditions:**
+- Schedule modal is accessible
+- Face enrollment option is available
+- Camera access is available
+- AI face detection service (YOLOv8 or BlazeFace) is available
+- Image compression and encryption functions are implemented
+
 **Actions:**
 - Step 1: Open Schedule modal and fill in visit details
 - Step 2: Verify "Optional Face Enrollment" checkbox or option is available
@@ -2323,30 +1897,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 11: Verify enrolled face can be used for verification
 
 **Expected Results:**
-- Step 1: Schedule form is completed
-- Step 2: Face enrollment option is visible
-- Step 3: Face enrollment is activated
-- Step 4: Camera feed and face detection appear
-- Step 5: Face is detected by AI
-- Step 6: Face image is captured
-- Step 7: Image is reduced to 100x100px
-- Step 8: Image is XOR-encrypted
-- Step 9: Visit is created with face data
-- Step 10: Encrypted face is saved in visit or user table
-- Step 11: Face is available for future gate scans
+When a visitor completes the schedule form with all required information, the schedule form should be completed and ready for submission. A face enrollment option should be visible, allowing visitors to optionally enroll their face during scheduling. When face enrollment is activated, a face capture interface should appear. A camera feed should be displayed with live face detection running. The AI service (YOLOv8 or BlazeFace) should detect a face in the camera frame. When a face is detected, the face image should be automatically captured. The captured face image should be reduced to 100x100 pixels for storage efficiency. The face image should be XOR-encrypted using the same encryption process as gate scans. When the schedule request is submitted, the visit should be created with the face data associated. The encrypted face should be saved in the visit table or user table, depending on the implementation. The enrolled face should be available for future gate scans, allowing faster verification during entrance and exit processing.
 
 **Actual Results:**
-- Step 1: Schedule form is completed
-- Step 2: Face enrollment option is visible
-- Step 3: Face enrollment is activated
-- Step 4: Camera feed and face detection appear
-- Step 5: Face is detected by AI
-- Step 6: Face image is captured
-- Step 7: Image is reduced to 100x100px
-- Step 8: Image is XOR-encrypted
-- Step 9: Visit is created with face data
-- Step 10: Encrypted face is saved in visit or user table
-- Step 11: Face is available for future gate scans
+Face enrollment option appeared. Face capture interface activated. Face detected and captured. Image compressed and encrypted. Visit created with face data. Encrypted face saved in database. Face available for future verification.
 
 **Status:** Passed
 
@@ -2364,6 +1918,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To ensure that the weekly visit count display on the Home page correctly shows remaining visit slots, active visits, and completed visits for the current week.
 
+**Preconditions:**
+- Visitor user is authenticated
+- Home page is accessible
+- Weekly visit count widget is implemented
+- Visitor has some visits scheduled (current week)
+- Week calculation uses Monday-Sunday boundaries
+
 **Actions:**
 - Step 1: Sign in as a visitor user
 - Step 2: Navigate to Home page
@@ -2377,28 +1938,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 10: Verify counts update in real time
 
 **Expected Results:**
-- Step 1: Visitor user is authenticated
-- Step 2: Home page loads
-- Step 3: Visit count widget or section is visible
-- Step 4: Count shows available slots (e.g., "1 visit remaining")
-- Step 5: Number of in-progress visits is shown
-- Step 6: Number of completed visits this week is shown
-- Step 7: Week calculation is correct
-- Step 8: Visit is created
-- Step 9: Count updates to reflect new visit
-- Step 10: Display refreshes when visits change
+When a visitor user signs in and navigates to the Home page, the visitor user should be authenticated. The Home page should load with personalized content. A weekly visit count widget or section should be visible, displaying visit statistics for the current week. The count should show available visit slots remaining (e.g., "1 visit remaining" out of the maximum 2 visits per week). The number of active (in-progress) visits should be displayed, showing visits that are currently ongoing. The number of completed visits for the current week should be shown. The week calculation should be correct, using Monday to Sunday as the week boundaries. When a new visit is scheduled, the visit should be created in the database. The remaining slots count should decrease accordingly, reflecting the new visit. The display should refresh automatically when visits change, updating the counts in real-time to show current status.
 
 **Actual Results:**
-- Step 1: Visitor user is authenticated
-- Step 2: Home page loads
-- Step 3: Visit count widget or section is visible
-- Step 4: Count shows available slots (e.g., "1 visit remaining")
-- Step 5: Number of in-progress visits is shown
-- Step 6: Number of completed visits this week is shown
-- Step 7: Week calculation is correct
-- Step 8: Visit is created
-- Step 9: Count updates to reflect new visit
-- Step 10: Display refreshes when visits change
+Weekly visit count section displayed. Remaining slots shown correctly. Active visits count displayed. Completed visits count displayed. Week calculation correct (Monday-Sunday). Counts updated when new visit scheduled. Display refreshed automatically.
 
 **Status:** Passed
 
@@ -2416,6 +1959,12 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To validate that the FAQ section on the Home page displays expandable questions and answers with smooth animations.
 
+**Preconditions:**
+- Home page is accessible
+- FAQ section is implemented
+- FAQ content is populated
+- Expand/collapse animation system is configured
+
 **Actions:**
 - Step 1: Navigate to Home page
 - Step 2: Scroll to FAQ section
@@ -2429,28 +1978,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 10: Verify FAQ content is relevant and helpful
 
 **Expected Results:**
-- Step 1: Home page loads
-- Step 2: FAQ section is visible
-- Step 3: List of questions is shown
-- Step 4: Question expands to show answer
-- Step 5: Answer appears with transition effect
-- Step 6: Expand/collapse icon changes
-- Step 7: Question collapses and answer hides
-- Step 8: Answer hides with transition effect
-- Step 9: Multiple answers can be visible at once
-- Step 10: Questions and answers are informative
+When navigating to the Home page, the page should load successfully. The FAQ section should be visible, typically located below the main content. A list of frequently asked questions should be displayed, each with a question text and an expand/collapse indicator. When a FAQ question is clicked, the question should expand to show the corresponding answer. The answer should appear with a smooth transition animation, providing a polished user experience. The expand/collapse icon should change to indicate the expanded state (e.g., from plus to minus). When an expanded question is clicked again, the question should collapse and the answer should hide. The answer should hide with a smooth transition effect, maintaining visual consistency. Multiple questions can be expanded simultaneously, allowing users to view multiple answers at once. The FAQ content should be relevant and helpful, addressing common questions about the system and visit process.
 
 **Actual Results:**
-- Step 1: Home page loads
-- Step 2: FAQ section is visible
-- Step 3: List of questions is shown
-- Step 4: Question expands to show answer
-- Step 5: Answer appears with transition effect
-- Step 6: Expand/collapse icon changes
-- Step 7: Question collapses and answer hides
-- Step 8: Answer hides with transition effect
-- Step 9: Multiple answers can be visible at once
-- Step 10: Questions and answers are informative
+FAQ section displayed correctly. Questions listed. Expand/collapse functionality worked. Smooth animations applied. Multiple questions expandable simultaneously. Content relevant and informative.
 
 **Status:** Passed
 
@@ -2468,6 +1999,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To confirm that personnel can set single-day unavailability and that this prevents scheduling for their assigned places on that specific date.
 
+**Preconditions:**
+- Personnel user is authenticated
+- Personnel is assigned to at least one place
+- Assignment tab is accessible
+- Unavailability management system is implemented
+- Schedule modal can be tested
+
 **Actions:**
 - Step 1: Sign in as a personnel user
 - Step 2: Navigate to Dashboard and Assignment tab
@@ -2482,30 +2020,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 11: Verify scheduling works for available dates
 
 **Expected Results:**
-- Step 1: Personnel user is authenticated
-- Step 2: Assignment interface is displayed
-- Step 3: Unavailability calendar or date picker opens
-- Step 4: Date is selected
-- Step 5: Unavailability is saved
-- Step 6: Entry is created in unavailability table
-- Step 7: Schedule modal opens
-- Step 8: Date selection is prevented or warning is shown
-- Step 9: Visit cannot be scheduled
-- Step 10: Date can be selected
-- Step 11: Visit can be scheduled
+When a personnel user signs in and navigates to the Dashboard Assignment tab, the personnel user should be authenticated. The Assignment interface should be displayed showing places assigned to the personnel. A "Set Unavailability" button or similar option should be available. When clicked, an unavailability calendar or date picker should open, allowing the personnel to select a specific date. A date should be selected for unavailability. When confirmed, the unavailability should be saved to the database. An entry should be created in the unavailability table, linking the date to the personnel and their assigned place. When a visitor attempts to schedule a visit for the assigned place on the unavailable date, the schedule modal should open normally. However, date selection should be prevented for that date, or a warning message should be shown indicating the date is unavailable. Visit scheduling should be blocked for that specific date. When selecting a different available date, the date should be selectable in the date picker. Visit scheduling should work normally for available dates that are not marked as unavailable.
 
 **Actual Results:**
-- Step 1: Personnel user is authenticated
-- Step 2: Assignment interface is displayed
-- Step 3: Unavailability calendar or date picker opens
-- Step 4: Date is selected
-- Step 5: Unavailability is saved
-- Step 6: Entry is created in unavailability table
-- Step 7: Schedule modal opens
-- Step 8: Date selection is prevented or warning is shown
-- Step 9: Visit cannot be scheduled
-- Step 10: Date can be selected
-- Step 11: Visit can be scheduled
+Unavailability calendar opened. Date selected and saved. Entry created in database. Date selection blocked for unavailable dates. Warning message shown. Scheduling prevented for unavailable dates. Available dates selectable. Scheduling worked for available dates.
 
 **Status:** Passed
 
@@ -2523,6 +2041,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To verify that admins can create and edit place purposes with advance notice requirements (0-6 days) and that these rules are enforced during scheduling.
 
+**Preconditions:**
+- Admin user is authenticated
+- Places management interface is accessible
+- At least one place exists
+- Purpose management functionality is available
+- Schedule modal can be tested for enforcement
+
 **Actions:**
 - Step 1: Sign in as admin and navigate to Places tab
 - Step 2: Select a place to manage
@@ -2539,34 +2064,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 13: Verify scheduling blocks dates that don't meet requirement
 
 **Expected Results:**
-- Step 1: Places management interface is displayed
-- Step 2: Place details are shown
-- Step 3: Purpose management interface opens
-- Step 4: Purpose details are entered
-- Step 5: Advance notice days are selected
-- Step 6: Purpose is created and saved
-- Step 7: Purpose is displayed
-- Step 8: Edit modal opens
-- Step 9: Days are updated
-- Step 10: Purpose is updated
-- Step 11: Schedule modal opens
-- Step 12: Date picker enforces minimum date based on notice
-- Step 13: Invalid dates cannot be selected
+When an admin signs in and navigates to the Places tab, the places management interface should be displayed. When a place is selected for management, place details should be shown. Clicking "Add Purpose" or "Manage Purposes" should open a purpose management interface. Purpose details including name and description should be entered in the form. An advance notice requirement should be set, selecting a value between 0 and 6 days. When saved, the purpose should be created and saved to the database. The purpose should appear in the place purposes list. When editing an existing purpose, an edit modal should open with the current purpose details. The advance notice requirement can be modified to a different value (0-6 days). When changes are saved, the purpose should be updated in the database. When attempting to schedule a visit with this purpose, the schedule modal should open. The date picker should enforce the minimum date based on the advance notice requirement (e.g., if 3 days notice is required, today + 3 days is the minimum). Invalid dates that don't meet the advance notice requirement should not be selectable in the date picker.
 
 **Actual Results:**
-- Step 1: Places management interface is displayed
-- Step 2: Place details are shown
-- Step 3: Purpose management interface opens
-- Step 4: Purpose details are entered
-- Step 5: Advance notice days are selected
-- Step 6: Purpose is created and saved
-- Step 7: Purpose is displayed
-- Step 8: Edit modal opens
-- Step 9: Days are updated
-- Step 10: Purpose is updated
-- Step 11: Schedule modal opens
-- Step 12: Date picker enforces minimum date based on notice
-- Step 13: Invalid dates cannot be selected
+Purpose management interface opened. Purpose created with advance notice requirement. Purpose displayed in list. Purpose edited successfully. Advance notice rule enforced during scheduling. Date picker blocked invalid dates. Valid dates selectable.
 
 **Status:** Passed
 
@@ -2584,6 +2085,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To validate that admins can change user roles (e.g., visitor to personnel) and that role changes are reflected immediately in navigation and dashboard access.
 
+**Preconditions:**
+- Admin user is authenticated
+- Accounts management interface is accessible
+- At least one user account exists (other than admin)
+- Role change functionality is implemented
+- Audit logging system is configured
+
 **Actions:**
 - Step 1: Sign in as admin and navigate to Accounts tab
 - Step 2: Locate a user in the accounts list
@@ -2597,28 +2105,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 10: Verify role change is logged in audit trail
 
 **Expected Results:**
-- Step 1: Accounts management interface is displayed
-- Step 2: User details are shown
-- Step 3: Role change interface opens
-- Step 4: New role is selected
-- Step 5: Role is updated in database
-- Step 6: User's role is updated in user_roles table
-- Step 7: User is authenticated
-- Step 8: Navigation reflects new role permissions
-- Step 9: Dashboard shows appropriate tabs for new role
-- Step 10: Role change action is recorded in logs
+When an admin signs in and navigates to the Accounts tab, the accounts management interface should be displayed showing a list of users. User details should be shown for each user including name, email, and current role. Clicking "Edit Role" or "Change Role" should open a role change interface. A new role should be selected from available roles (admin, log, personnel, guard, visitor, guest). When confirmed, the role should be updated in the database. The user's role should be updated in the user_roles table, changing their access permissions. When the user whose role was changed signs in, they should be authenticated. The navigation bar should reflect the new role permissions, showing or hiding links based on the new role. The Dashboard should show appropriate tabs for the new role (e.g., if changed to personnel, they should see Assignment, Visits, Requests, Finished tabs). The role change action should be recorded in the audit logs, tracking who made the change, when it was made, and what the change was.
 
 **Actual Results:**
-- Step 1: Accounts management interface is displayed
-- Step 2: User details are shown
-- Step 3: Role change interface opens
-- Step 4: New role is selected
-- Step 5: Role is updated in database
-- Step 6: User's role is updated in user_roles table
-- Step 7: User is authenticated
-- Step 8: Navigation reflects new role permissions
-- Step 9: Dashboard shows appropriate tabs for new role
-- Step 10: Role change action is recorded in logs
+Role change interface opened. New role selected and saved. User role updated in database. Navigation updated based on new role. Dashboard tabs matched new role. Role change logged in audit trail.
 
 **Status:** Passed
 
@@ -2636,6 +2126,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To ensure that admins can create, edit, and change gate status (active/inactive) and that gate changes are logged in the audit trail.
 
+**Preconditions:**
+- Admin user is authenticated
+- Gates management interface is accessible
+- Gate management functionality is implemented
+- Audit logging system is configured
+- Guard Dashboard can test gate availability
+
 **Actions:**
 - Step 1: Sign in as admin and navigate to Gates tab
 - Step 2: Click "Add New Gate" button
@@ -2651,32 +2148,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 12: Verify inactive gates are not available for scanning
 
 **Expected Results:**
-- Step 1: Gates management interface is displayed
-- Step 2: Gate creation modal opens
-- Step 3: Gate details are entered
-- Step 4: Status is selected
-- Step 5: Gate is created and saved
-- Step 6: Gate is displayed
-- Step 7: Edit modal opens
-- Step 8: Details are updated
-- Step 9: Status is changed
-- Step 10: Gate is updated
-- Step 11: Action is recorded in audit logs
-- Step 12: Inactive gates cannot be selected in guard dashboard
+When an admin signs in and navigates to the Gates tab, the gates management interface should be displayed showing a list of existing gates. Clicking "Add New Gate" should open a gate creation modal with form fields. Gate details including name, location, and description should be entered. An initial gate status (active or inactive) should be selected. When saved, the gate should be created and saved to the database. The new gate should appear in the gates list. When editing an existing gate, an edit modal should open with current gate details. Gate information can be modified and updated. The gate status can be changed from active to inactive or vice versa. When changes are saved, the gate should be updated in the database. All gate changes including creation, modification, and status changes should be recorded in the audit logs. Inactive gates should not be available for selection in the guard dashboard during gate processing, ensuring only active gates can be used.
 
 **Actual Results:**
-- Step 1: Gates management interface is displayed
-- Step 2: Gate creation modal opens
-- Step 3: Gate details are entered
-- Step 4: Status is selected
-- Step 5: Gate is created and saved
-- Step 6: Gate is displayed
-- Step 7: Edit modal opens
-- Step 8: Details are updated
-- Step 9: Status is changed
-- Step 10: Gate is updated
-- Step 11: Action is recorded in audit logs
-- Step 12: Inactive gates cannot be selected in guard dashboard
+Gate creation modal opened. Gate created and saved. Gate displayed in list. Gate edited successfully. Status changed. Gate updated. Changes logged in audit trail. Inactive gates not selectable in guard dashboard.
 
 **Status:** Passed
 
@@ -2694,6 +2169,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To verify that place deletion by admins is logged and that associated visit data is handled appropriately.
 
+**Preconditions:**
+- Admin user is authenticated
+- Places management interface is accessible
+- At least one place exists with associated visits
+- Audit logging system is configured
+- Visit data preservation/archiving system is implemented
+
 **Actions:**
 - Step 1: Sign in as admin and navigate to Places tab
 - Step 2: Locate a place with associated visits
@@ -2707,28 +2189,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 10: Verify historical visit data remains accessible
 
 **Expected Results:**
-- Step 1: Places management interface is displayed
-- Step 2: Place with visit history is found
-- Step 3: Delete confirmation modal opens
-- Step 4: Warning message is displayed
-- Step 5: Place is deleted
-- Step 6: Delete action is recorded in logs
-- Step 7: Visit records are preserved or archived
-- Step 8: Place no longer appears
-- Step 9: Place cannot be selected for new visits
-- Step 10: Past visits still show place information
+When an admin signs in and navigates to the Places tab, the places management interface should be displayed. A place with associated visits should be located in the list. Clicking delete on the place should open a delete confirmation modal. A warning message should be displayed, alerting the admin about associated visit data and potential consequences. Upon confirmation, the place should be deleted from the database. The delete action should be recorded in the audit logs, tracking who deleted the place and when. Associated visit records should be preserved or archived, ensuring historical data is not lost. The place should no longer appear in the places list. The place should be removed from scheduling dropdown options, preventing new visits from being scheduled to that place. Historical visit data should remain accessible for reporting and audit purposes, even though the place no longer exists.
 
 **Actual Results:**
-- Step 1: Places management interface is displayed
-- Step 2: Place with visit history is found
-- Step 3: Delete confirmation modal opens
-- Step 4: Warning message is displayed
-- Step 5: Place is deleted
-- Step 6: Delete action is recorded in logs
-- Step 7: Visit records are preserved or archived
-- Step 8: Place no longer appears
-- Step 9: Place cannot be selected for new visits
-- Step 10: Past visits still show place information
+Delete confirmation modal opened. Warning message displayed. Place deleted successfully. Delete action logged. Visit records preserved. Place removed from list and scheduling options. Historical data remained accessible.
 
 **Status:** Passed
 
@@ -2746,6 +2210,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To confirm that pending feedback notification modals appear for visitors when they have completed visits without submitted feedback.
 
+**Preconditions:**
+- A visit has been completed (status is 'completed')
+- No feedback has been submitted for the visit
+- Visitor user account exists and can be authenticated
+- Notification system is configured
+- Dashboard or Home page is accessible
+
 **Actions:**
 - Step 1: Complete a visit (status becomes 'completed')
 - Step 2: Verify feedback has not been submitted
@@ -2761,32 +2232,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 12: Verify notification modal no longer appears
 
 **Expected Results:**
-- Step 1: Visit is completed
-- Step 2: No feedback entry exists for visit
-- Step 3: Visitor user is authenticated
-- Step 4: Page loads
-- Step 5: Notification modal opens automatically
-- Step 6: Visit details are shown in modal
-- Step 7: Feedback button is visible
-- Step 8: Feedback survey opens
-- Step 9: Modal can be closed
-- Step 10: Modal shows again when user returns
-- Step 11: Feedback is submitted
-- Step 12: Modal does not show for this visit
+After a visit is completed (status becomes 'completed'), the visit should be in the completed state. No feedback entry should exist for the visit yet. When the visitor who completed the visit signs in, the visitor user should be authenticated. When navigating to the Dashboard or Home page, the page should load normally. A pending feedback notification modal should open automatically, prompting the visitor to provide feedback. The modal should display visit information including date and places visited. A "Provide Feedback" button should be visible in the modal. Clicking the button should open the feedback survey for that visit. The modal should be dismissible, allowing visitors to close it and access it later. If feedback is not submitted, the modal should show again when the user returns or logs in again. When feedback is submitted for the visit, the feedback should be saved to the database. The notification modal should no longer appear for this visit, as feedback has been provided.
 
 **Actual Results:**
-- Step 1: Visit is completed
-- Step 2: No feedback entry exists for visit
-- Step 3: Visitor user is authenticated
-- Step 4: Page loads
-- Step 5: Notification modal opens automatically
-- Step 6: Visit details are shown in modal
-- Step 7: Feedback button is visible
-- Step 8: Feedback survey opens
-- Step 9: Modal can be closed
-- Step 10: Modal shows again when user returns
-- Step 11: Feedback is submitted
-- Step 12: Modal does not show for this visit
+Pending feedback notification modal appeared automatically. Visit details displayed in modal. Feedback button visible. Modal dismissible. Modal reappeared when feedback not submitted. Feedback submitted successfully. Modal no longer appeared after feedback submission.
 
 **Status:** Passed
 
@@ -2804,6 +2253,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To validate that pending reschedule notification modals appear for personnel when they have pending reschedule requests for their assigned places.
 
+**Preconditions:**
+- A reschedule request exists with status 'pending_reschedule'
+- Personnel user is assigned to the visit's place
+- Personnel user account exists and can be authenticated
+- Notification system is configured
+- Dashboard or Home page is accessible
+
 **Actions:**
 - Step 1: Visitor requests a reschedule for a visit
 - Step 2: Verify personnel is assigned to the visit's place
@@ -2819,32 +2275,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 12: Verify notification modal no longer appears for processed request
 
 **Expected Results:**
-- Step 1: Reschedule request is created
-- Step 2: Personnel assignment is confirmed
-- Step 3: Personnel user is authenticated
-- Step 4: Page loads
-- Step 5: Notification modal opens automatically
-- Step 6: Request details are shown in modal
-- Step 7: Action button is visible
-- Step 8: Requests tab or processing interface opens
-- Step 9: Modal can be closed
-- Step 10: Modal shows again when user returns
-- Step 11: Request is processed
-- Step 12: Modal does not show for this request
+When a visitor requests a reschedule for a visit, a reschedule request should be created with status 'pending_reschedule'. The personnel assigned to the visit's place should be confirmed. When the assigned personnel user signs in, the personnel user should be authenticated. When navigating to the Dashboard or Home page, the page should load normally. A pending reschedule notification modal should open automatically, alerting the personnel about the pending request. The modal should display reschedule request information including visitor name, original date, requested new date, and reason. A "View Requests" or "Process Request" button should be available in the modal. Clicking the action button should open the Requests tab or processing interface where the personnel can approve or decline the request. The modal should be dismissible, allowing personnel to close it and access it later. If the request is not processed, the modal should show again when the user returns or logs in again. When the reschedule request is processed (approved or declined), the request status should be updated. The notification modal should no longer appear for this processed request.
 
 **Actual Results:**
-- Step 1: Reschedule request is created
-- Step 2: Personnel assignment is confirmed
-- Step 3: Personnel user is authenticated
-- Step 4: Page loads
-- Step 5: Notification modal opens automatically
-- Step 6: Request details are shown in modal
-- Step 7: Action button is visible
-- Step 8: Requests tab or processing interface opens
-- Step 9: Modal can be closed
-- Step 10: Modal shows again when user returns
-- Step 11: Request is processed
-- Step 12: Modal does not show for this request
+Pending reschedule notification modal appeared automatically. Request details displayed. Action button visible. Modal dismissible. Modal reappeared when request not processed. Request processed successfully. Modal no longer appeared after processing.
 
 **Status:** Passed
 
@@ -2862,6 +2296,14 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To ensure that the Face Data modal can decrypt and display stored face images with verification similarity scores for authorized users.
 
+**Preconditions:**
+- Entrance and exit gate scans have been completed for a visit
+- Face images are stored in gate_scans table (encrypted)
+- Visit details are accessible
+- Authorized user (guard or admin) is authenticated
+- Face Data modal is accessible
+- Decryption functionality is implemented
+
 **Actions:**
 - Step 1: Complete entrance and exit gate scans for a visit
 - Step 2: Navigate to visit details or gate scan details
@@ -2875,28 +2317,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 10: Verify modal can be closed
 
 **Expected Results:**
-- Step 1: Face images are stored in gate_scans table
-- Step 2: Visit information is displayed
-- Step 3: Face Data modal opens
-- Step 4: Entrance face image is visible
-- Step 5: Exit face image is visible
-- Step 6: Images are clear and recognizable
-- Step 7: Similarity percentage is shown (e.g., "85%")
-- Step 8: Match status (verified/flagged) is shown
-- Step 9: Access control is enforced
-- Step 10: Modal closes when dismissed
+After completing entrance and exit gate scans for a visit, face images should be stored in the gate_scans table in encrypted format. When navigating to visit details or gate scan details, the visit information should be displayed. Clicking "View Face Data" or a similar button should open the Face Data modal. The entrance face image should be displayed after decryption, showing the face captured during entrance. The exit face image should be displayed after decryption, showing the face captured during exit. Both face images should be clear and recognizable, properly decrypted from their encrypted storage format. The similarity score should be displayed as a percentage (e.g., "85%") showing how similar the entrance and exit faces are. The verification status should be indicated, showing whether the faces matched (verified) or if there was a low similarity requiring review (flagged). Face data should only be accessible to authorized users (guards, admins) with proper role-based access control enforced. The modal should close when dismissed, hiding the face data.
 
 **Actual Results:**
-- Step 1: Face images are stored in gate_scans table
-- Step 2: Visit information is displayed
-- Step 3: Face Data modal opens
-- Step 4: Entrance face image is visible
-- Step 5: Exit face image is visible
-- Step 6: Images are clear and recognizable
-- Step 7: Similarity percentage is shown (e.g., "85%")
-- Step 8: Match status (verified/flagged) is shown
-- Step 9: Access control is enforced
-- Step 10: Modal closes when dismissed
+Face Data modal opened. Entrance and exit face images displayed correctly. Images decrypted and clear. Similarity percentage shown. Verification status indicated. Access control enforced. Modal closed properly.
 
 **Status:** Passed
 
@@ -2914,6 +2338,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To verify that session management automatically refreshes tokens and maintains user sessions across page navigations.
 
+**Preconditions:**
+- User account exists
+- Authentication system is configured
+- Session management is implemented
+- Token refresh mechanism is active
+- Multiple pages are accessible (Home, Dashboard, About)
+
 **Actions:**
 - Step 1: Sign in as any user
 - Step 2: Verify session token is stored
@@ -2927,28 +2358,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 10: Sign out and verify session is cleared
 
 **Expected Results:**
-- Step 1: User is authenticated and session is established
-- Step 2: Token is saved in session storage
-- Step 3: Pages load successfully
-- Step 4: Session is maintained
-- Step 5: Token refresh occurs before expiration
-- Step 6: Token approaches expiration
-- Step 7: New token is issued and stored
-- Step 8: No re-authentication required
-- Step 9: User remains logged in after refresh
-- Step 10: Token is removed and session ends
+When a user signs in with valid credentials, the user should be authenticated and a session should be established. The session token should be saved in session storage or cookies. When navigating to different pages (Home, Dashboard, About), all pages should load successfully. The user session should be maintained across all page navigations without requiring re-authentication. The session token should be automatically refreshed before expiration, ensuring continuous access. As the token approaches expiration, the system should detect the approaching expiration time. A new token should be issued and stored, replacing the old token seamlessly. No re-authentication should be required during the token refresh process. When the page is refreshed, the user should remain logged in, with the session persisting. When the user signs out, the token should be removed and the session should end, requiring authentication for future access.
 
 **Actual Results:**
-- Step 1: User is authenticated and session is established
-- Step 2: Token is saved in session storage
-- Step 3: Pages load successfully
-- Step 4: Session is maintained
-- Step 5: Token refresh occurs before expiration
-- Step 6: Token approaches expiration
-- Step 7: New token is issued and stored
-- Step 8: No re-authentication required
-- Step 9: User remains logged in after refresh
-- Step 10: Token is removed and session ends
+Session established successfully. Token stored. Session maintained across navigation. Token refreshed automatically. No re-authentication required. Session persisted after page refresh. Session cleared on sign out.
 
 **Status:** Passed
 
@@ -2966,6 +2379,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To validate that the system automatically transitions past-due visits from `pending` to `unsuccessful` and from `in_progress` to `completed_flagged` when appropriate.
 
+**Preconditions:**
+- Visits exist with past dates (pending) or past exit times (in_progress)
+- Background job or cron system is configured
+- Auto-fix process is implemented
+- Audit logging system is configured
+- Notification system is available
+
 **Actions:**
 - Step 1: Create a visit with status 'pending' and past date
 - Step 2: Verify system background job or cron runs
@@ -2979,28 +2399,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 10: Verify auto-fix runs on schedule (daily or hourly)
 
 **Expected Results:**
-- Step 1: Visit with past scheduled date is created
-- Step 2: Status check process executes
-- Step 3: Visit status is updated to 'unsuccessful'
-- Step 4: Visit with past exit time is created
-- Step 5: Status check identifies overdue visit
-- Step 6: Visit status is updated to 'completed_flagged'
-- Step 7: Status change actions are recorded in logs
-- Step 8: Notifications or emails are sent
-- Step 9: Visit lists show correct statuses
-- Step 10: Process executes regularly
+When a visit is created with status 'pending' and a past scheduled date, the visit should be created in the database. A system background job or cron process should execute to check visit statuses. Past-due pending visits should have their status automatically updated to 'unsuccessful', indicating the visit never occurred. When a visit has status 'in_progress' and the expected exit time has passed, the visit should be identified as overdue. Past-due in-progress visits should have their status automatically updated to 'completed_flagged', indicating the visit was completed but flagged for review. All status transition actions should be recorded in the audit logs, tracking when and why statuses changed. Visitors should be notified of status changes via email or in-app notifications. The dashboard should reflect the updated statuses, showing visits with their correct current status. The auto-fix process should run on a regular schedule (daily or hourly) to ensure all past-due visits are handled promptly.
 
 **Actual Results:**
-- Step 1: Visit with past scheduled date is created
-- Step 2: Status check process executes
-- Step 3: Visit status is updated to 'unsuccessful'
-- Step 4: Visit with past exit time is created
-- Step 5: Status check identifies overdue visit
-- Step 6: Visit status is updated to 'completed_flagged'
-- Step 7: Status change actions are recorded in logs
-- Step 8: Notifications or emails are sent
-- Step 9: Visit lists show correct statuses
-- Step 10: Process executes regularly
+Status check process executed. Past-due pending visits updated to unsuccessful. Past-due in-progress visits updated to completed_flagged. Status changes logged. Notifications sent. Dashboard reflected updated statuses. Auto-fix ran on schedule.
 
 **Status:** Passed
 
@@ -3018,6 +2420,14 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To confirm that the Place on Hold functionality allows personnel to place their assigned places on hold, preventing new visit scheduling while allowing existing in-progress visits to continue.
 
+**Preconditions:**
+- Personnel user is authenticated
+- Personnel is assigned to at least one place
+- Assignment tab is accessible
+- Place on Hold functionality is implemented
+- At least one in-progress visit exists for the place (optional)
+- Audit logging system is configured
+
 **Actions:**
 - Step 1: Sign in as a personnel user
 - Step 2: Navigate to Dashboard and Assignment tab
@@ -3033,32 +2443,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 12: Verify hold action is logged
 
 **Expected Results:**
-- Step 1: Personnel user is authenticated
-- Step 2: Assignment interface is displayed
-- Step 3: Assigned place is found
-- Step 4: Place on Hold modal opens
-- Step 5: Hold period is selected
-- Step 6: Reason is entered
-- Step 7: Place hold is activated
-- Step 8: Place status is updated in database
-- Step 9: Schedule modal opens
-- Step 10: Place is blocked or shows hold message
-- Step 11: In-progress visits are not affected
-- Step 12: Hold action is recorded in audit logs
+When a personnel user signs in and navigates to the Dashboard Assignment tab, the personnel user should be authenticated. The Assignment interface should be displayed showing places assigned to the personnel. An assigned place should be found in the list. Clicking "Place on Hold" should open a Place on Hold modal with options for setting hold duration. A hold duration or end date should be selected, specifying when the hold should expire. A reason for the hold should be entered if required. When confirmed, the place hold should be activated. The place status should be updated in the database to 'on_hold'. When attempting to schedule a new visit for the place, the schedule modal should open normally. However, the place should be blocked from selection or show a hold status message indicating it's unavailable. Existing in-progress visits should not be affected by the hold, allowing ongoing visits to continue. The hold action should be logged in the audit trail, recording who placed the hold, when, and why.
 
 **Actual Results:**
-- Step 1: Personnel user is authenticated
-- Step 2: Assignment interface is displayed
-- Step 3: Assigned place is found
-- Step 4: Place on Hold modal opens
-- Step 5: Hold period is selected
-- Step 6: Reason is entered
-- Step 7: Place hold is activated
-- Step 8: Place status is updated in database
-- Step 9: Schedule modal opens
-- Step 10: Place is blocked or shows hold message
-- Step 11: In-progress visits are not affected
-- Step 12: Hold action is recorded in audit logs
+Place on Hold modal opened. Hold duration selected. Reason entered. Place hold activated. Status updated to on_hold. Place blocked from scheduling. Hold message displayed. In-progress visits unaffected. Hold action logged.
 
 **Status:** Passed
 
@@ -3076,6 +2464,13 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To verify that when a place is on hold, the scheduling interface correctly displays the hold status and blocks new schedule creation for that place.
 
+**Preconditions:**
+- A place has been placed on hold (status is 'on_hold')
+- Schedule modal is accessible
+- Hold status display system is implemented
+- At least one other place exists that is not on hold
+- Place hold removal functionality is available
+
 **Actions:**
 - Step 1: Place a place on hold
 - Step 2: Navigate to Home page and open Schedule modal
@@ -3090,30 +2485,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 11: Verify place becomes available for scheduling again
 
 **Expected Results:**
-- Step 1: Place status is 'on_hold'
-- Step 2: Schedule modal opens
-- Step 3: Place is marked as "On Hold" or similar
-- Step 4: Place selection is blocked or disabled
-- Step 5: Message explains place is on hold
-- Step 6: Hold expiration date is shown
-- Step 7: Non-held places are selectable
-- Step 8: Submit button is disabled or error appears
-- Step 9: Place shows hold indicator in admin/personnel views
-- Step 10: Place hold is deactivated
-- Step 11: Place can be selected in schedule modal
+When a place is placed on hold, the place status should be 'on_hold' in the database. When navigating to the Home page and opening the Schedule modal, the schedule modal should open normally. In the place dropdown, the place on hold should be marked as "On Hold" or display a similar status indicator. Place selection should be blocked or disabled for the held place, preventing users from selecting it. A message or tooltip should appear explaining that the place is on hold and unavailable for scheduling. If available, the hold expiration date should be displayed, showing when the place will become available again. Other available places that are not on hold should still be selectable normally. If a user attempts to proceed with a held place, the submit button should be disabled or an error message should appear. The place should show a hold indicator in admin and personnel dashboard views, making the status visible to administrators. When the hold is removed from the place, the place hold should be deactivated and status changed to 'active'. The place should become available for selection in the schedule modal again.
 
 **Actual Results:**
-- Step 1: Place status is 'on_hold'
-- Step 2: Schedule modal opens
-- Step 3: Place is marked as "On Hold" or similar
-- Step 4: Place selection is blocked or disabled
-- Step 5: Message explains place is on hold
-- Step 6: Hold expiration date is shown
-- Step 7: Non-held places are selectable
-- Step 8: Submit button is disabled or error appears
-- Step 9: Place shows hold indicator in admin/personnel views
-- Step 10: Place hold is deactivated
-- Step 11: Place can be selected in schedule modal
+Place marked as "On Hold" in dropdown. Place selection blocked. Hold message displayed. Expiration date shown. Other places selectable. Submit button disabled for held place. Hold indicator visible in dashboards. Hold removed successfully. Place available for scheduling again.
 
 **Status:** Passed
 
@@ -3131,6 +2506,14 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 
 **Objective:** To ensure that place on hold expiration is properly managed and that places automatically become available again after the hold period ends.
 
+**Preconditions:**
+- A place has been placed on hold with a specific expiration date/time
+- Hold expiration timestamp is stored in database
+- Background job or cron system is configured to check expiration
+- Expiration check process is implemented
+- Audit logging system is configured
+- Notification system is available (if configured)
+
 **Actions:**
 - Step 1: Place a place on hold with specific end date/time
 - Step 2: Verify hold expiration is stored in database
@@ -3144,28 +2527,10 @@ Table 8 contains a set of use cases related to the system's functionality. Each 
 - Step 10: Verify place shows as available in all interfaces
 
 **Expected Results:**
-- Step 1: Place hold is activated with expiration
-- Step 2: Expiration timestamp is saved
-- Step 3: Expiration check process runs
-- Step 4: Hold period elapses
-- Step 5: Expiration is identified
-- Step 6: Place status is updated
-- Step 7: Place can be selected in schedule modal
-- Step 8: Hold expiration is recorded in audit logs
-- Step 9: Notification is sent (if enabled)
-- Step 10: Place appears as active in all views
+When a place is placed on hold with a specific end date or time, the place hold should be activated with an expiration timestamp. The expiration timestamp should be saved in the database, indicating when the hold should automatically expire. A system background job should check hold expiration periodically, running on a schedule to detect expired holds. When the hold period elapses and the expiration time passes, the hold period should elapse. The system should detect the expired hold during the next expiration check. The place status should automatically change from 'on_hold' to 'active', making it available again. The place should become available for scheduling, appearing in the schedule modal dropdown. The hold expiration action should be recorded in the audit logs, tracking when the hold expired automatically. If configured, personnel should be notified of the hold expiration via email or notification. The place should appear as active in all interfaces including the places list, scheduling dropdown, and personnel assignment views.
 
 **Actual Results:**
-- Step 1: Place hold is activated with expiration
-- Step 2: Expiration timestamp is saved
-- Step 3: Expiration check process runs
-- Step 4: Hold period elapses
-- Step 5: Expiration is identified
-- Step 6: Place status is updated
-- Step 7: Place can be selected in schedule modal
-- Step 8: Hold expiration is recorded in audit logs
-- Step 9: Notification is sent (if enabled)
-- Step 10: Place appears as active in all views
+Hold expiration timestamp saved. Expiration check process ran. Expired hold detected. Place status updated to active. Place available for scheduling. Expiration logged. Notification sent. Place appeared as active in all views.
 
 **Status:** Passed
 
