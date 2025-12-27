@@ -1035,6 +1035,11 @@ export function setupAboutPageInteractivity() {
     }
   })();
 
+  // Setup scroll to top button
+  import('../components/DocumentationNavigationButtons').then(({ setupScrollToTopButton }) => {
+    setupScrollToTopButton();
+  });
+
   function animateCounter(el: HTMLElement, target: number, decimals = 0) {
     let count = 0;
     const increment = Math.max(1, Math.floor(target / 100));

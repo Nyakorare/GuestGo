@@ -82,6 +82,11 @@ export function TrackSchedulePage() {
 export function initTrackSchedulePage() {
   // Set up event listeners
   setupTrackScheduleEventListeners();
+
+  // Setup scroll to top button
+  import('../components/DocumentationNavigationButtons').then(({ setupScrollToTopButton }) => {
+    setupScrollToTopButton();
+  });
 }
 
 // Set up event listeners for the Track Schedule page

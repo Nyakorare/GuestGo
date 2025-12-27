@@ -625,28 +625,112 @@ async function generateExcelFile(feedbackData: any[], fromDate: string, toDate: 
     'IP Address'
   ];
 
+  // Calculate criterion means
+  const criteriaFields = [
+    'functional_suitability',
+    'performance_efficiency',
+    'compatibility',
+    'usability',
+    'reliability',
+    'security',
+    'maintainability',
+    'portability'
+  ];
+
+  const criterionMeans: { [key: string]: number } = {};
+  let grandTotal = 0;
+
+  criteriaFields.forEach(field => {
+    const validScores = feedbackData
+      .map(f => f[field])
+      .filter(score => score !== null && score !== undefined && !isNaN(score));
+    
+    if (validScores.length > 0) {
+      const mean = validScores.reduce((sum, score) => sum + score, 0) / validScores.length;
+      criterionMeans[field] = Math.round(mean * 100) / 100; // Round to 2 decimal places
+      grandTotal += criterionMeans[field];
+    } else {
+      criterionMeans[field] = 0;
+    }
+  });
+
+  // Calculate grand mean
+  const grandMean = criteriaFields.length > 0 
+    ? Math.round((grandTotal / criteriaFields.length) * 100) / 100 
+    : 0;
+
+  // Build CSV rows
+  const dataRows = feedbackData.map(feedback => [
+    feedback.id,
+    feedback.visit_id,
+    `"${feedback.visitor_first_name} ${feedback.visitor_last_name}"`,
+    `"${feedback.visitor_email}"`,
+    feedback.visit_date,
+    `"${feedback.places}"`,
+    feedback.functional_suitability,
+    feedback.performance_efficiency,
+    feedback.compatibility,
+    feedback.usability,
+    feedback.reliability,
+    feedback.security,
+    feedback.maintainability,
+    feedback.portability,
+    feedback.overall_satisfaction,
+    `"${(feedback.comments || '').replace(/"/g, '""')}"`,
+    feedback.submitted_at,
+    feedback.ip_address || ''
+  ].join(','));
+
+  // Add summary rows
+  const summaryRows = [
+    '', // Empty row separator
+    [
+      'CRITERION MEANS',
+      '',
+      '',
+      '',
+      '',
+      '',
+      criterionMeans.functional_suitability,
+      criterionMeans.performance_efficiency,
+      criterionMeans.compatibility,
+      criterionMeans.usability,
+      criterionMeans.reliability,
+      criterionMeans.security,
+      criterionMeans.maintainability,
+      criterionMeans.portability,
+      '', // Overall Satisfaction (not included in grand mean)
+      '',
+      '',
+      ''
+    ].join(','),
+    '', // Empty row separator
+    [
+      'GRAND MEAN (All ISO 25010 Criteria)',
+      '',
+      '',
+      '',
+      '',
+      '',
+      grandMean,
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '', // Overall Satisfaction (not included in grand mean)
+      '',
+      '',
+      ''
+    ].join(',')
+  ];
+
   const csvContent = [
     headers.join(','),
-    ...feedbackData.map(feedback => [
-      feedback.id,
-      feedback.visit_id,
-      `"${feedback.visitor_first_name} ${feedback.visitor_last_name}"`,
-      `"${feedback.visitor_email}"`,
-      feedback.visit_date,
-      `"${feedback.places}"`,
-      feedback.functional_suitability,
-      feedback.performance_efficiency,
-      feedback.compatibility,
-      feedback.usability,
-      feedback.reliability,
-      feedback.security,
-      feedback.maintainability,
-      feedback.portability,
-      feedback.overall_satisfaction,
-      `"${(feedback.comments || '').replace(/"/g, '""')}"`,
-      feedback.submitted_at,
-      feedback.ip_address || ''
-    ].join(','))
+    ...dataRows,
+    ...summaryRows
   ].join('\n');
 
   // Create and download the file

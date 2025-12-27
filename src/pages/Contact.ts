@@ -583,4 +583,9 @@ export function setupContactPage(): void {
   setTimeout(() => {
     loadFeedback();
   }, 100);
+
+  // Setup scroll to top button
+  import('../components/DocumentationNavigationButtons').then(({ setupScrollToTopButton }) => {
+    setupScrollToTopButton();
+  });
 }

@@ -6,11 +6,16 @@ import dashboardDescriptionsDocs from '../../THESIS DESC/DASHBOARD_DESCRIPTIONS.
 import capabilitiesLimitationsDocs from '../../THESIS DESC/CAPABILITIES_LIMITATIONS.md?raw';
 import projectDescriptionDocs from '../../THESIS DESC/PROJECT_DESCRIPTION.md?raw';
 import homePageDescriptionDocs from '../../THESIS DESC/HOME_PAGE_DESCRIPTION.md?raw';
+import reliabilityTestResultsDocs from '../../THESIS DESC/RELIABILITY_TEST_RESULTS.md?raw';
+import securityTestResultsDocs from '../../THESIS DESC/SECURITY_TEST_RESULTS.md?raw';
+import usabilityTestResultsDocs from '../../THESIS DESC/USABILITY_TEST_RESULTS.md?raw';
 import { marked } from 'marked';
+import { DocumentationNavigationButtons, setupDocumentationNavigationButtons } from '../components/DocumentationNavigationButtons';
 
 export function DocumentationsPage(): string {
   return `
     <div class="max-w-6xl mx-auto px-4 py-8">
+      ${DocumentationNavigationButtons()}
       <div class="mb-8">
         <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">GuestGo Documentation</h1>
         <p class="text-sm text-gray-600 dark:text-gray-400">
@@ -54,6 +59,15 @@ export function DocumentationsPage(): string {
             </button>
             <button data-thesis-tab="home-page-description" class="thesis-sub-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap">
               Home Page Description
+            </button>
+            <button data-thesis-tab="reliability-test-results" class="thesis-sub-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap">
+              Reliability Test Results
+            </button>
+            <button data-thesis-tab="security-test-results" class="thesis-sub-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap">
+              Security Test Results
+            </button>
+            <button data-thesis-tab="usability-test-results" class="thesis-sub-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap">
+              Usability Test Results
             </button>
           </nav>
         </div>
@@ -116,11 +130,14 @@ export function setupDocumentationsPage(): void {
   const capabilitiesLimitationsHtml = enhanceTables(marked.parse(capabilitiesLimitationsDocs));
   const projectDescriptionHtml = enhanceTables(marked.parse(projectDescriptionDocs));
   const homePageDescriptionHtml = enhanceTables(marked.parse(homePageDescriptionDocs));
+  const reliabilityTestResultsHtml = enhanceTables(marked.parse(reliabilityTestResultsDocs));
+  const securityTestResultsHtml = enhanceTables(marked.parse(securityTestResultsDocs));
+  const usabilityTestResultsHtml = enhanceTables(marked.parse(usabilityTestResultsDocs));
 
   const thesisSubTabsContainer = document.getElementById('thesisSubTabs');
   const thesisSubTabsNav = document.getElementById('thesisSubTabsNav');
 
-  function setActiveThesisSubTab(subTabId: 'functionality' | 'dashboard-descriptions' | 'capabilities-limitations' | 'project-description' | 'home-page-description') {
+  function setActiveThesisSubTab(subTabId: 'functionality' | 'dashboard-descriptions' | 'capabilities-limitations' | 'project-description' | 'home-page-description' | 'reliability-test-results' | 'security-test-results' | 'usability-test-results') {
     // Update sub-tab button styles
     if (thesisSubTabsNav) {
       const buttons = thesisSubTabsNav.querySelectorAll<HTMLButtonElement>('.thesis-sub-tab');
@@ -153,9 +170,18 @@ export function setupDocumentationsPage(): void {
     } else if (subTabId === 'project-description') {
       title = 'Project Description';
       innerHtml = projectDescriptionHtml;
-    } else {
+    } else if (subTabId === 'home-page-description') {
       title = 'Home Page Description';
       innerHtml = homePageDescriptionHtml;
+    } else if (subTabId === 'reliability-test-results') {
+      title = 'Reliability Test Results';
+      innerHtml = reliabilityTestResultsHtml;
+    } else if (subTabId === 'security-test-results') {
+      title = 'Security Test Results';
+      innerHtml = securityTestResultsHtml;
+    } else {
+      title = 'Usability Test Results';
+      innerHtml = usabilityTestResultsHtml;
     }
 
     docsContent.innerHTML = `
@@ -242,7 +268,7 @@ export function setupDocumentationsPage(): void {
       const target = event.target as HTMLElement | null;
       const button = target?.closest('button.thesis-sub-tab') as HTMLButtonElement | null;
       if (!button) return;
-      const subTabId = button.getAttribute('data-thesis-tab') as 'functionality' | 'dashboard-descriptions' | 'capabilities-limitations' | 'project-description' | 'home-page-description' | null;
+      const subTabId = button.getAttribute('data-thesis-tab') as 'functionality' | 'dashboard-descriptions' | 'capabilities-limitations' | 'project-description' | 'home-page-description' | 'reliability-test-results' | 'security-test-results' | 'usability-test-results' | null;
       if (!subTabId) return;
       setActiveThesisSubTab(subTabId);
     });
@@ -250,4 +276,7 @@ export function setupDocumentationsPage(): void {
 
   // Show overview by default
   setActiveTab('overview');
+
+  // Setup navigation buttons (back button and scroll to top)
+  setupDocumentationNavigationButtons();
 }
