@@ -1303,7 +1303,13 @@ async function getEntranceFaceImage(visitId: string): Promise<string | null> {
     const { processFaceImageForDisplay } = await import('../utils/imageCompression');
     const decryptedImage = processFaceImageForDisplay(storedImageData);
     
-    return decryptedImage;
+    // Resize the entrance face image to a larger size for better face detection
+    // The stored image is 100x100 which is too small for MediaPipe
+    // Resize to 400x400 to match the exit image size
+    const { compressImageDataUrl } = await import('../utils/imageCompression');
+    const resizedImage = await compressImageDataUrl(decryptedImage, 0.9, 400, 400);
+    
+    return resizedImage;
   } catch (error) {
     console.error('Error in getEntranceFaceImage:', error);
     return null;
@@ -1653,8 +1659,29 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
       }
 
       // Compress exit face image for verification (use same compression as storage)
+      // Use higher quality (0.9) and 400x400 size for better face detection
       const { compressImageDataUrl } = await import('../utils/imageCompression');
-      const compressedExitImage = await compressImageDataUrl(faceResult.croppedImageDataUrl, 0.8, 400, 400);
+      const compressedExitImage = await compressImageDataUrl(faceResult.croppedImageDataUrl, 0.9, 400, 400);
+
+      // Validate both images are in correct format before verification
+      if (!entranceFaceImage || !entranceFaceImage.startsWith('data:image/')) {
+        console.error('Invalid entrance face image format:', entranceFaceImage?.substring(0, 50));
+        showGuardError('Face Verification Error', 'Entrance face image is in invalid format. Please ensure the entrance was scanned with face detection.');
+        return;
+      }
+
+      if (!compressedExitImage || !compressedExitImage.startsWith('data:image/')) {
+        console.error('Invalid exit face image format:', compressedExitImage?.substring(0, 50));
+        showGuardError('Face Verification Error', 'Exit face image is in invalid format. Please retake the photo.');
+        return;
+      }
+
+      console.log('Verifying faces with images:', {
+        entranceSize: entranceFaceImage.length,
+        exitSize: compressedExitImage.length,
+        entranceFormat: entranceFaceImage.substring(0, 30),
+        exitFormat: compressedExitImage.substring(0, 30)
+      });
 
       // Verify faces match
       let verificationResult;

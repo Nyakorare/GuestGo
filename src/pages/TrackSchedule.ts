@@ -1617,10 +1617,15 @@ async function getEntranceFaceImage(visitId: string): Promise<string | null> {
     }
 
     // Decrypt the image data if it's encrypted
-    const { processFaceImageForDisplay } = await import('../utils/imageCompression');
+    const { processFaceImageForDisplay, compressImageDataUrl } = await import('../utils/imageCompression');
     const decryptedImage = processFaceImageForDisplay(storedImageData);
     
-    return decryptedImage;
+    // Resize the entrance face image to a larger size for better face detection
+    // The stored image is 100x100 which is too small for MediaPipe
+    // Resize to 400x400 to match typical exit image size
+    const resizedImage = await compressImageDataUrl(decryptedImage, 0.9, 400, 400);
+    
+    return resizedImage;
   } catch (error) {
     console.error('Error in getEntranceFaceImage:', error);
     return null;
