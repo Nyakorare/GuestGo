@@ -675,7 +675,7 @@ async function loadWeeklyVisitCount(_userEmail: string) {
       (window as any).updatePurposeFieldState();
     }
     if ((window as any).updateVisitDateFieldState) {
-      (window as any).updateVisitDateFieldState();
+      await (window as any).updateVisitDateFieldState();
     }
   }
 };

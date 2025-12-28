@@ -220,17 +220,17 @@ export async function setupEventListeners() {
           checkboxes.forEach(checkbox => {
             checkbox.addEventListener('change', async () => {
               await updateUnavailableDatesDisplay();
-              // Re-validate the date when place selection changes
-              if (typeof (window as any).validateVisitDate === 'function') {
-                await (window as any).validateVisitDate();
-              }
-              // Update purpose field state when checkbox selection changes
+              // Update purpose field state when checkbox selection changes (this will recreate purpose selectors)
               if (typeof (window as any).updatePurposeFieldState === 'function') {
                 await (window as any).updatePurposeFieldState();
               }
-              // Update visit date field state
+              // Update visit date field state and recalculate date minimum (await to ensure it completes)
               if (typeof (window as any).updateVisitDateFieldState === 'function') {
-                (window as any).updateVisitDateFieldState();
+                await (window as any).updateVisitDateFieldState();
+              }
+              // Re-validate the date when place selection changes
+              if (typeof (window as any).validateVisitDate === 'function') {
+                await (window as any).validateVisitDate();
               }
               
               // Re-validate the date if one is already selected
@@ -254,9 +254,9 @@ export async function setupEventListeners() {
       if (typeof (window as any).updatePurposeFieldState === 'function') {
         await (window as any).updatePurposeFieldState();
       }
-      // Update visit date field state
+      // Update visit date field state and recalculate date minimum (await to ensure it completes)
       if (typeof (window as any).updateVisitDateFieldState === 'function') {
-        (window as any).updateVisitDateFieldState();
+        await (window as any).updateVisitDateFieldState();
       }
       
       // Update unavailable dates display when place selection changes
@@ -502,8 +502,7 @@ export async function setupEventListeners() {
             }
           }
           // Update visit date field state and min when purpose changes
-          updateVisitDateFieldState();
-          await updateVisitDateMin();
+          await updateVisitDateFieldState();
           
           // Validate date if a date is already selected
           const visitDateInput = document.getElementById('visitDate') as HTMLInputElement;
@@ -582,6 +581,8 @@ export async function setupEventListeners() {
 
     if (placeToVisitSelect?.value === 'multiple') {
       // For multiple places, find the maximum required days across all selected purposes
+      // This ensures that if one purpose requires 5 days and another requires 0 days (same day),
+      // the minimum date will be 5 days from now (the highest requirement)
       const checkedPlaceIds = Array.from(document.querySelectorAll('input[name="places"]:checked'))
         .map((checkbox) => (checkbox as HTMLInputElement).value);
 
@@ -597,6 +598,7 @@ export async function setupEventListeners() {
       }
     } else if (placeToVisitSelect?.value && placeToVisitSelect.value !== '') {
       // Single place - get required days from selected purpose
+      const purposeSelect = document.getElementById('purpose') as HTMLSelectElement;
       if (purposeSelect && purposeSelect.value) {
         const selectedOption = purposeSelect.options[purposeSelect.selectedIndex];
         if (selectedOption && selectedOption.value !== 'other') {
@@ -642,7 +644,7 @@ export async function setupEventListeners() {
   }
 
   // Function to enable/disable visit date field based on purpose selection
-  function updateVisitDateFieldState() {
+  async function updateVisitDateFieldState() {
     const visitDateInput = document.getElementById('visitDate') as HTMLInputElement;
     const placeToVisitSelect = document.getElementById('placeToVisit') as HTMLSelectElement;
     const dateAdvanceNotice = document.getElementById('dateAdvanceNotice');
@@ -676,8 +678,8 @@ export async function setupEventListeners() {
     if (hasPurposeSelected) {
       visitDateInput.disabled = false;
       visitDateInput.classList.remove('disabled:bg-gray-100', 'dark:disabled:bg-gray-800', 'disabled:cursor-not-allowed', 'disabled:opacity-50');
-      // Update min date based on purpose
-      updateVisitDateMin();
+      // Update min date based on purpose - await to ensure it completes
+      await updateVisitDateMin();
     } else {
       visitDateInput.disabled = true;
       visitDateInput.classList.add('disabled:bg-gray-100', 'dark:disabled:bg-gray-800', 'disabled:cursor-not-allowed', 'disabled:opacity-50');
@@ -692,6 +694,9 @@ export async function setupEventListeners() {
   async function updatePurposeFieldState() {
     const placeToVisitSelect = document.getElementById('placeToVisit') as HTMLSelectElement;
     const singlePurposeContainer = document.getElementById('singlePurposeContainer');
+    const purposeSelect = document.getElementById('purpose') as HTMLSelectElement;
+    const otherPurposeTextarea = document.getElementById('otherPurpose') as HTMLTextAreaElement;
+    const multiplePurposesContainer = document.getElementById('multiplePurposesContainer');
     
     if (!placeToVisitSelect) return;
     
@@ -704,9 +709,8 @@ export async function setupEventListeners() {
         await createMultiplePlacePurposeSelectors();
       }
       // Update visit date field state after purposes are created
-      setTimeout(() => {
-        updateVisitDateFieldState();
-        updateVisitDateMin();
+      setTimeout(async () => {
+        await updateVisitDateFieldState();
       }, 100);
     } else if (placeToVisitSelect.value && placeToVisitSelect.value !== '') {
       // Single place selected
@@ -725,7 +729,7 @@ export async function setupEventListeners() {
           otherPurposeTextarea.disabled = false;
         }
         // Update visit date field state (will remain disabled until purpose is selected)
-        updateVisitDateFieldState();
+        await updateVisitDateFieldState();
       }
     } else {
       // No place selected
@@ -750,7 +754,7 @@ export async function setupEventListeners() {
         }
       }
       // Disable visit date when no place is selected
-      updateVisitDateFieldState();
+      await updateVisitDateFieldState();
     }
     
     // Update submit button state after place/purpose state changes
@@ -779,8 +783,7 @@ export async function setupEventListeners() {
         }
       }
       // Update visit date field state and min when purpose changes
-      updateVisitDateFieldState();
-      await updateVisitDateMin();
+      await updateVisitDateFieldState();
       
       // Validate date if a date is already selected
       const visitDateInput = document.getElementById('visitDate') as HTMLInputElement;
@@ -803,8 +806,8 @@ export async function setupEventListeners() {
       const target = e.target as HTMLElement;
       if (target && target.id && target.id.startsWith('purpose_') && target.tagName === 'SELECT') {
         // Update visit date field state and min when any multiple place purpose changes
-        updateVisitDateFieldState();
-        await updateVisitDateMin();
+        // This will recalculate the date minimum based on the highest required days across all selected purposes
+        await updateVisitDateFieldState();
         
         // Validate date if a date is already selected
         const visitDateInput = document.getElementById('visitDate') as HTMLInputElement;
@@ -1776,7 +1779,7 @@ export async function setupEventListeners() {
           (window as any).updatePurposeFieldState();
         }
         if (typeof (window as any).updateVisitDateFieldState === 'function') {
-          (window as any).updateVisitDateFieldState();
+          await (window as any).updateVisitDateFieldState();
         }
         // Note: Visit date should remain disabled until place is selected
         // Date validation will be re-initialized when place is selected
@@ -3908,7 +3911,7 @@ export async function updatePlaceAvailabilityForDate(visitDate: string) {
             await (window as any).updatePurposeFieldState();
           }
           if (typeof (window as any).updateVisitDateFieldState === 'function') {
-            (window as any).updateVisitDateFieldState();
+            await (window as any).updateVisitDateFieldState();
           }
           await updateUnavailableDatesDisplay();
           updateSubmitButtonState();
@@ -3952,17 +3955,17 @@ export async function updatePlaceAvailabilityForDate(visitDate: string) {
     checkboxes.forEach(checkbox => {
       checkbox.addEventListener('change', async () => {
         await updateUnavailableDatesDisplay();
-        // Re-validate the date when place selection changes
-        if (typeof (window as any).validateVisitDate === 'function') {
-          await (window as any).validateVisitDate();
-        }
-        // Update purpose field state when checkbox selection changes
+        // Update purpose field state when checkbox selection changes (this will recreate purpose selectors)
         if (typeof (window as any).updatePurposeFieldState === 'function') {
           await (window as any).updatePurposeFieldState();
         }
-        // Update visit date field state
+        // Update visit date field state and recalculate date minimum (await to ensure it completes)
         if (typeof (window as any).updateVisitDateFieldState === 'function') {
-          (window as any).updateVisitDateFieldState();
+          await (window as any).updateVisitDateFieldState();
+        }
+        // Re-validate the date when place selection changes
+        if (typeof (window as any).validateVisitDate === 'function') {
+          await (window as any).validateVisitDate();
         }
         
         // Re-validate the date if one is already selected
