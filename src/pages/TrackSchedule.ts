@@ -153,6 +153,18 @@ function setupTrackScheduleEventListeners() {
 
     showGateExitScanningModal(visitId);
   });
+
+  // View face images button
+  const viewFaceImagesBtn = document.getElementById('viewFaceImagesBtn');
+  viewFaceImagesBtn?.addEventListener('click', async () => {
+    const visitId = visitIdInput?.value.trim();
+    if (!visitId) {
+      showNotification('No visit ID available', 'error');
+      return;
+    }
+
+    await showFaceImagesModal(visitId);
+  });
 }
 
 // Track a visit by ID
@@ -403,6 +415,19 @@ async function displayGateScanningStatus(visitData: any) {
 
   // Update scan buttons based on user role and visit status
   await updateScanButtons(visitData, scanEntranceBtn, scanExitBtn);
+
+  // Show/hide view face images button for non-logged-in scheduled visits
+  const viewFaceImagesContainer = document.getElementById('viewFaceImagesContainer');
+  const isGuestVisit = visitData.visitor_user_id === null;
+  
+  if (viewFaceImagesContainer) {
+    // Show button only for guest visits (non-logged-in scheduled visits)
+    if (isGuestVisit) {
+      viewFaceImagesContainer.classList.remove('hidden');
+    } else {
+      viewFaceImagesContainer.classList.add('hidden');
+    }
+  }
 }
 
 // Update scan buttons based on user role and visit status
@@ -1361,6 +1386,211 @@ async function processGateScanWithFaceData(visitId: string, gateId: string, face
   } catch (error: any) {
     console.error('Error in processGateScanWithFaceData:', error);
     showGateScanError('Error processing gate scan with face data.');
+  }
+}
+
+// Function to show face images modal for entrance and exit
+async function showFaceImagesModal(visitId: string) {
+  try {
+    // Get visit data to get visitor name
+    const { data: visitData, error: visitError } = await supabase
+      .from('scheduled_visits')
+      .select('visitor_first_name, visitor_last_name, visitor_email')
+      .eq('id', visitId)
+      .single();
+
+    if (visitError || !visitData) {
+      showNotification('Error loading visit data', 'error');
+      return;
+    }
+
+    const visitorName = visitData.visitor_first_name && visitData.visitor_last_name
+      ? `${visitData.visitor_first_name} ${visitData.visitor_last_name}`
+      : visitData.visitor_email || 'Visitor';
+
+    // Get entrance and exit face images
+    const { data: scans, error: scansError } = await supabase
+      .from('gate_scans')
+      .select('scan_type, face_image_data, face_detection_confidence, face_detection_metadata, scanned_at')
+      .eq('visit_id', visitId)
+      .in('scan_type', ['entrance', 'exit'])
+      .order('scanned_at', { ascending: true });
+
+    if (scansError) {
+      console.error('Error loading face images:', scansError);
+      showNotification('Error loading face images', 'error');
+      return;
+    }
+
+    const entranceScan = scans?.find(s => s.scan_type === 'entrance');
+    const exitScan = scans?.find(s => s.scan_type === 'exit');
+
+    // Create modal
+    const modal = document.createElement('div');
+    modal.id = 'faceImagesModal';
+    modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50';
+    
+    modal.innerHTML = `
+      <div class="relative top-10 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white dark:bg-gray-800">
+        <div class="mt-3">
+          <!-- Header -->
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+              Face Images - Entrance & Exit
+            </h3>
+            <button 
+              id="closeFaceImagesModalBtn"
+              class="text-gray-400 hover:text-gray-500 focus:outline-none"
+            >
+              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Visitor Info -->
+          <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
+            <div class="flex items-center space-x-2 mb-2">
+              <svg class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              <span class="font-medium text-gray-900 dark:text-white">Visitor: ${visitorName}</span>
+            </div>
+            <div class="text-sm text-gray-600 dark:text-gray-400">
+              Visit ID: ${visitId.substring(0, 8)}...
+            </div>
+          </div>
+
+          <!-- Face Images Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <!-- Entrance Face -->
+            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-xl p-4 border-2 border-blue-200 dark:border-blue-700">
+              <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                </svg>
+                Entrance Face
+              </h4>
+              <div id="entranceFaceContainer" class="flex justify-center items-center h-48 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                <div class="text-center">
+                  <svg class="mx-auto h-12 w-12 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <div class="text-sm text-gray-500 dark:text-gray-400">${entranceScan ? 'Loading...' : 'No entrance face image available'}</div>
+                </div>
+              </div>
+              ${entranceScan && entranceScan.face_detection_confidence ? `
+                <div class="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                  Confidence: ${(entranceScan.face_detection_confidence * 100).toFixed(1)}%
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- Exit Face -->
+            <div class="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/30 dark:to-pink-900/30 rounded-xl p-4 border-2 border-purple-200 dark:border-purple-700">
+              <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                </svg>
+                Exit Face
+              </h4>
+              <div id="exitFaceContainer" class="flex justify-center items-center h-48 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                <div class="text-center">
+                  <svg class="mx-auto h-12 w-12 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <div class="text-sm text-gray-500 dark:text-gray-400">${exitScan ? 'Loading...' : 'No exit face image available'}</div>
+                </div>
+              </div>
+              ${exitScan && exitScan.face_detection_confidence ? `
+                <div class="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                  Confidence: ${(exitScan.face_detection_confidence * 100).toFixed(1)}%
+                </div>
+              ` : ''}
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="flex justify-end space-x-3">
+            <button 
+              id="closeFaceImagesModalBtn2"
+              class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors duration-200"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Add event listeners
+    const closeBtn1 = modal.querySelector('#closeFaceImagesModalBtn');
+    const closeBtn2 = modal.querySelector('#closeFaceImagesModalBtn2');
+    
+    const closeModal = () => {
+      modal.remove();
+    };
+
+    closeBtn1?.addEventListener('click', closeModal);
+    closeBtn2?.addEventListener('click', closeModal);
+
+    // Close on background click
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeModal();
+      }
+    });
+
+    // Load and display face images
+    const { processFaceImageForDisplay } = await import('../utils/imageCompression');
+    const entranceContainer = modal.querySelector('#entranceFaceContainer');
+    const exitContainer = modal.querySelector('#exitFaceContainer');
+
+    if (entranceScan && entranceScan.face_image_data && entranceContainer) {
+      try {
+        const decryptedImage = processFaceImageForDisplay(entranceScan.face_image_data);
+        entranceContainer.innerHTML = `
+          <img 
+            src="${decryptedImage}" 
+            alt="Entrance face image"
+            class="max-w-full max-h-48 rounded-lg shadow-md border-2 border-blue-300 dark:border-blue-600"
+          />
+        `;
+      } catch (error) {
+        console.error('Error processing entrance face image:', error);
+        entranceContainer.innerHTML = `
+          <div class="text-center">
+            <div class="text-sm text-red-500 dark:text-red-400">Error loading entrance face image</div>
+          </div>
+        `;
+      }
+    }
+
+    if (exitScan && exitScan.face_image_data && exitContainer) {
+      try {
+        const decryptedImage = processFaceImageForDisplay(exitScan.face_image_data);
+        exitContainer.innerHTML = `
+          <img 
+            src="${decryptedImage}" 
+            alt="Exit face image"
+            class="max-w-full max-h-48 rounded-lg shadow-md border-2 border-purple-300 dark:border-purple-600"
+          />
+        `;
+      } catch (error) {
+        console.error('Error processing exit face image:', error);
+        exitContainer.innerHTML = `
+          <div class="text-center">
+            <div class="text-sm text-red-500 dark:text-red-400">Error loading exit face image</div>
+          </div>
+        `;
+      }
+    }
+
+  } catch (error) {
+    console.error('Error showing face images modal:', error);
+    showNotification('Error displaying face images', 'error');
   }
 }
 

@@ -45,6 +45,18 @@ export function GateScanningStatus() {
           </button>
         </div>
       </div>
+      <!-- View Face Images Button (for non-logged-in scheduled visits) -->
+      <div id="viewFaceImagesContainer" class="hidden mt-5">
+        <button 
+          id="viewFaceImagesBtn"
+          class="w-full px-4 py-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 text-sm font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center justify-center gap-2 track-button-glow"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          View Face Images
+        </button>
+      </div>
     </div>
   `;
 }
