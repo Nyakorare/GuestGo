@@ -1251,6 +1251,17 @@ async function sendVisitCompletionEmailForGuard(visitId: string): Promise<void> 
       return;
     }
 
+    // Check if visitor email exists - required for sending completion email
+    if (!visitData.visitor_email || visitData.visitor_email.trim() === '') {
+      console.warn('Cannot send completion email: visitor email is missing for visit', visitId);
+      console.warn('Visit details:', {
+        visitorName: `${visitData.visitor_first_name} ${visitData.visitor_last_name}`,
+        visitorRole: visitData.visitor_role,
+        hasEmail: !!visitData.visitor_email
+      });
+      return;
+    }
+
     // Transform places data
     const places = (visitData.scheduled_visit_places || []).map((svp: any) => ({
       placeId: svp.places_to_visit?.id || svp.place_id,
@@ -1300,16 +1311,11 @@ async function getEntranceFaceImage(visitId: string): Promise<string | null> {
     }
 
     // Decrypt the image data if it's encrypted
+    // The stored image is already at 400x400 for verification purposes, so use it directly
     const { processFaceImageForDisplay } = await import('../utils/imageCompression');
     const decryptedImage = processFaceImageForDisplay(storedImageData);
     
-    // Resize the entrance face image to a larger size for better face detection
-    // The stored image is 100x100 which is too small for MediaPipe
-    // Resize to 400x400 to match the exit image size
-    const { compressImageDataUrl } = await import('../utils/imageCompression');
-    const resizedImage = await compressImageDataUrl(decryptedImage, 0.9, 400, 400);
-    
-    return resizedImage;
+    return decryptedImage;
   } catch (error) {
     console.error('Error in getEntranceFaceImage:', error);
     return null;
@@ -1810,11 +1816,16 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
       }
 
       // Send completion email after successful exit logging
-      try {
-        await sendVisitCompletionEmailForGuard(visitData.visitId);
-      } catch (emailError) {
-        console.error('Error sending completion email after guard exit with face:', emailError);
-        // Don't fail the exit logging if email fails
+      // Only send if visitor has an email address
+      if (visitData.visitorEmail && visitData.visitorEmail.trim() !== '') {
+        try {
+          await sendVisitCompletionEmailForGuard(visitData.visitId);
+        } catch (emailError) {
+          console.error('Error sending completion email after guard exit with face:', emailError);
+          // Don't fail the exit logging if email fails
+        }
+      } else {
+        console.warn('Skipping completion email: visitor email is missing for visit', visitData.visitId);
       }
 
       // Store face data in gate_scans table using guard-specific function

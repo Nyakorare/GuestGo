@@ -338,13 +338,8 @@ async function calculateAndDisplaySimilarity(visitId: string, exitFaceImage: str
     }
 
     // Decrypt the entrance face image
-    const decryptedImage = processFaceImageForDisplay(storedImageData);
-    
-    // Resize the entrance face image to a larger size for better face detection
-    // The stored image is 100x100 which is too small for MediaPipe
-    // Resize to 400x400 to match typical exit image size
-    const { compressImageDataUrl } = await import('../utils/imageCompression');
-    const entranceFaceImage = await compressImageDataUrl(decryptedImage, 0.9, 400, 400);
+    // The stored image is already at 400x400 for verification purposes, so use it directly
+    const entranceFaceImage = processFaceImageForDisplay(storedImageData);
 
     // Verify faces using Python AI API
     const similarityResult = await verifyFaces(entranceFaceImage, exitFaceImage);

@@ -188,8 +188,10 @@ export function decryptBase64(encryptedData: string, key: string = 'guestgo_face
  */
 export async function processFaceImageForStorage(dataUrl: string): Promise<string> {
   try {
-    // First compress the image to very small size for database storage
-    const compressed = await compressImageDataUrl(dataUrl, 0.5, 100, 100);
+    // Compress the image to 400x400 for verification purposes
+    // This size is needed for face detection/verification APIs to work properly
+    // Quality 0.8 provides good balance between file size and image quality
+    const compressed = await compressImageDataUrl(dataUrl, 0.8, 400, 400);
     
     // Then encrypt it
     const encrypted = encryptBase64(compressed);
