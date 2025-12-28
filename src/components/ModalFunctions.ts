@@ -285,13 +285,25 @@ export async function setupEventListeners() {
         .order('purpose');
 
       if (error) {
-        console.error('Error loading purposes for place:', error);
+        console.error('Error loading purposes for place:', placeId, error);
+        console.error('Error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
         return [];
+      }
+
+      if (!purposes || purposes.length === 0) {
+        console.log('No purposes found for place:', placeId);
+      } else {
+        console.log(`Loaded ${purposes.length} purpose(s) for place:`, placeId);
       }
 
       return purposes || [];
     } catch (error) {
-      console.error('Error accessing place_purposes table:', error);
+      console.error('Exception accessing place_purposes table for place:', placeId, error);
       return [];
     }
   }
