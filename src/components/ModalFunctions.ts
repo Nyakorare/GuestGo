@@ -180,23 +180,42 @@ export async function setupEventListeners() {
     }
     placeToVisitSelect.appendChild(multipleOption);
 
-    // Update help text
-    const helpText = placeToVisitSelect.parentElement?.querySelector('p');
-    if (helpText) {
-      if (!isLoggedIn) {
-        helpText.textContent = 'Multiple Places option requires login. Please login to access this feature.';
-        helpText.className = 'mt-1 text-sm text-blue-600 dark:text-blue-400';
-      } else if (availablePlacesCount < 2) {
-        helpText.textContent = `Multiple Places option is disabled (only ${availablePlacesCount} available place)`;
-        helpText.className = 'mt-1 text-sm text-orange-600 dark:text-orange-400';
-      } else {
-        helpText.textContent = `Multiple Places option requires at least 2 available places (${availablePlacesCount} available)`;
-        helpText.className = 'mt-1 text-sm text-gray-500 dark:text-gray-400';
+    // Function to update help text based on current selection
+    const updateHelpText = (selectedValue: string) => {
+      const helpText = placeToVisitSelect.parentElement?.querySelector('p');
+      if (helpText) {
+        if (selectedValue === 'multiple') {
+          // User selected multiple places option
+          if (!isLoggedIn) {
+            helpText.textContent = 'Multiple Places option requires login. Please login to access this feature.';
+            helpText.className = 'mt-1 text-sm text-blue-600 dark:text-blue-400';
+          } else if (availablePlacesCount < 2) {
+            helpText.textContent = `Multiple Places option is disabled (only ${availablePlacesCount} available place)`;
+            helpText.className = 'mt-1 text-sm text-orange-600 dark:text-orange-400';
+          } else {
+            helpText.textContent = `Multiple Places option requires at least 2 available places (${availablePlacesCount} available)`;
+            helpText.className = 'mt-1 text-sm text-gray-500 dark:text-gray-400';
+          }
+        } else if (selectedValue && selectedValue !== '') {
+          // User selected a single place - show default help text
+          helpText.textContent = 'Multiple Places option requires at least 2 available places';
+          helpText.className = 'mt-1 text-sm text-gray-500 dark:text-gray-400';
+        } else {
+          // No place selected - show default help text
+          helpText.textContent = 'Multiple Places option requires at least 2 available places';
+          helpText.className = 'mt-1 text-sm text-gray-500 dark:text-gray-400';
+        }
       }
-    }
+    };
+
+    // Initialize help text with default (no selection)
+    updateHelpText('');
 
     placeToVisitSelect.addEventListener('change', async function(e: Event) {
       const target = e.target as HTMLSelectElement;
+      
+      // Update help text based on selection
+      updateHelpText(target.value);
       const multiplePlacesContainer = document.getElementById('multiplePlacesContainer');
       if (multiplePlacesContainer) {
         if (target.value === 'multiple' && isLoggedIn && availablePlacesCount >= 2) {
@@ -623,12 +642,10 @@ export async function setupEventListeners() {
     const minDate = new Date(currentPhilippineDate);
     minDate.setDate(minDate.getDate() + maxRequiredDays);
     
-    // Also get max date (1 month from today)
-    const endOfCurrentMonth = new Date(currentPhilippineDate.getFullYear(), currentPhilippineDate.getMonth() + 1, 0);
-    const isLastDayOfMonth = currentPhilippineDate.getDate() === endOfCurrentMonth.getDate();
-    const philippineMaxDate = isLastDayOfMonth
-      ? new Date(currentPhilippineDate.getFullYear(), currentPhilippineDate.getMonth() + 2, 0)
-      : endOfCurrentMonth;
+    // Calculate max date: exactly 1 month from today (not end of current month)
+    // This ensures weeks that span across months (e.g., Dec 28 - Jan 3) are fully accessible
+    const philippineMaxDate = new Date(currentPhilippineDate);
+    philippineMaxDate.setMonth(philippineMaxDate.getMonth() + 1);
 
     // Update min and max dates
     visitDateInput.min = minDate.toISOString().split('T')[0];
