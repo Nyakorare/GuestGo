@@ -2238,12 +2238,22 @@ export async function setupEventListeners() {
       }
       if (userEmail && visitDateInput.value) {
         // Query for existing visit for this user/email and date
-        let { data: existingVisits, error: checkError } = await supabase
+        // Build query conditionally based on whether userId is null
+        let query = supabase
           .from('scheduled_visits')
           .select('id')
-          .or(`visitor_email.eq.${userEmail},visitor_user_id.eq.${userId}`)
           .eq('visit_date', visitDateInput.value)
           .in('status', ['pending', 'in_progress', 'completed', 'completed_flagged', 'temporary_exit']);
+        
+        // For logged-in users, check by both email and user_id
+        // For guest users, only check by email
+        if (userId) {
+          query = query.or(`visitor_email.eq.${userEmail},visitor_user_id.eq.${userId}`);
+        } else {
+          query = query.eq('visitor_email', userEmail);
+        }
+        
+        let { data: existingVisits, error: checkError } = await query;
         if (checkError) {
           console.error('Error checking for existing scheduled visit:', checkError);
         } else if (existingVisits && existingVisits.length > 0) {
