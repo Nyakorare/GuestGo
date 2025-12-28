@@ -28,7 +28,7 @@ Table 9 presents the consolidated usability test execution results across two fo
 - Step 4: Move cursor away from the link and observe the transition back to normal state
 
 **Expected Results:**
-The navigation links display smooth visual feedback when hovered over, including a color transition from gray to blue, and an animated underline effect that expands from left to right beneath the link text. The transitions occur smoothly over a 200ms duration, providing clear visual indication that the element is interactive. When the cursor moves away, the link returns to its default state with the same smooth transition, maintaining a polished user experience throughout the interaction.
+Navigation links display smooth hover feedback with color transition (gray to blue) and animated underline expanding from left to right. Transitions occur over 200ms duration. When cursor moves away, link returns to default state smoothly.
 
 **Actual Results:**
 Hover effects work as expected. Links change color and show underline animation smoothly. Transitions are smooth and provide clear feedback.
@@ -63,7 +63,7 @@ Hover effects work as expected. Links change color and show underline animation 
 - Step 4: Move cursor away and observe the return animation
 
 **Expected Results:**
-Dashboard cards and visit cards display engaging hover effects including a subtle upward translation (translateY effect), enhanced shadow depth, and gradient overlay animations that become visible on hover. The cards smoothly lift up by approximately 4 pixels, creating a sense of depth and interactivity. The gradient overlay transitions from transparent to visible with smooth opacity changes, and the shadow intensifies to provide better visual separation from the background. These effects combine to create a clear indication that the card is interactive and can be clicked or selected, enhancing the overall user experience and making navigation more intuitive.
+Cards display hover effects including upward translation (4px lift), enhanced shadow, and gradient overlay. Gradient transitions from transparent to visible. Shadow intensifies for better separation. Effects clearly indicate interactivity.
 
 **Actual Results:**
 Cards lift up on hover with enhanced shadows. Gradient overlays appear smoothly. Interactive feedback is clear and engaging.
@@ -100,7 +100,7 @@ Cards lift up on hover with enhanced shadows. Gradient overlays appear smoothly.
 - Step 6: Correct the input and observe the error message disappear
 
 **Expected Results:**
-Form fields provide immediate visual feedback when validation fails, including red border highlighting around the invalid field, error messages displayed below or near the field in red text, and clear indication of what needs to be corrected. For email fields, the system validates the format and displays specific error messages such as "Please enter a valid email address" when the format is incorrect. When the user corrects the input, the red border is removed, the error message disappears smoothly, and the field returns to its normal state. The validation occurs both on blur events and during form submission, ensuring users receive feedback at appropriate times without being overly intrusive.
+Form fields show immediate feedback on validation failure: red border, error messages in red text near the field. Email format validation displays specific messages. When input is corrected, red border and error message disappear smoothly. Validation occurs on blur and form submission.
 
 **Actual Results:**
 Invalid fields show red borders and error messages immediately. Email format validation works correctly. Errors clear when input is corrected. Feedback is timely and non-intrusive.
@@ -137,7 +137,7 @@ Invalid fields show red borders and error messages immediately. Email format val
 - Step 6: Wait for the operation to complete and observe the success or error feedback
 
 **Expected Results:**
-Buttons display distinct hover effects including color darkening, scale transformations, shadow enhancements, and smooth transitions that provide clear visual feedback. Primary buttons (blue/purple gradient) show hover effects with slight scale increases and enhanced shadows, while danger buttons (red) display darker red tones on hover. When buttons trigger asynchronous operations, they transition to loading states with disabled appearance, spinner animations, and text changes (e.g., "Submitting...", "Verifying Face...", "Processing..."). The loading indicators use spinning icons or animated elements that clearly communicate the system is working. Upon completion, buttons return to their normal state and success or error messages are displayed, providing users with clear feedback about the operation's outcome.
+Buttons display hover effects: color darkening, scale transformations, shadow enhancements. Primary buttons show scale increases and enhanced shadows. Danger buttons show darker tones. Loading states display disabled appearance, spinner animations, and text changes. Upon completion, buttons return to normal state with success/error messages.
 
 **Actual Results:**
 Button hover effects work correctly with color changes and scale transformations. Loading states show spinners and disabled appearance. Success/error feedback appears after operations complete.
@@ -174,7 +174,7 @@ Button hover effects work correctly with color changes and scale transformations
 - Step 6: Close and reopen the browser, then verify theme preference is maintained
 
 **Expected Results:**
-The theme toggle button smoothly transitions the entire application between light and dark modes, with all UI elements including backgrounds, text colors, borders, cards, and modals updating simultaneously. The transition occurs smoothly without flickering, and the icon changes from sun to moon (or vice versa) to indicate the current theme state. The selected theme preference is stored in localStorage and persists across page navigations, browser refreshes, and browser sessions. All components including dashboards, forms, modals, cards, and navigation elements maintain consistent theming, ensuring a cohesive visual experience. The dark mode provides adequate contrast ratios for readability while reducing eye strain in low-light conditions.
+Theme toggle smoothly transitions all UI elements between light and dark modes simultaneously. Icon changes to indicate current theme. Preference stored in localStorage and persists across navigations, refreshes, and sessions. All components maintain consistent theming. Dark mode provides adequate contrast for readability.
 
 **Actual Results:**
 Theme toggle works smoothly without flickering. All UI elements update simultaneously. Theme preference persists across sessions. Dark mode provides good contrast and readability.
@@ -211,7 +211,7 @@ Theme toggle works smoothly without flickering. All UI elements update simultane
 - Step 6: Verify focus is properly managed (keyboard navigation works within modal)
 
 **Expected Results:**
-Modals open with smooth fade-in and slide-up animations, creating a polished and professional appearance. The backdrop overlay appears with a blur effect and darkening that draws attention to the modal content while maintaining visual context of the underlying page. Modal content is centered on screen and properly sized for different viewport sizes. Users can close modals by clicking the backdrop, clicking the close (X) button, pressing the Escape key, or clicking Cancel buttons, all of which trigger smooth closing animations. Focus is automatically trapped within the modal when open, ensuring keyboard navigation works correctly, and focus returns to the triggering element when the modal closes. The modal content is accessible and readable with proper contrast ratios in both light and dark themes.
+Modals open with smooth fade-in and slide-up animations. Backdrop has blur and darkening effects. Content centered and properly sized. Multiple close methods work (backdrop, X button, Escape key, Cancel). Focus trapped within modal. Focus returns to triggering element on close. Content readable in both themes.
 
 **Actual Results:**
 Modals open with smooth animations and backdrop blur. Multiple close methods work (backdrop, X button, Escape key). Focus management works correctly. Content is readable in both themes.
@@ -248,7 +248,7 @@ Modals open with smooth animations and backdrop blur. Multiple close methods wor
 - Step 6: Verify multiple notifications stack properly if they appear simultaneously
 
 **Expected Results:**
-Success notifications appear as green-colored toast messages typically in the top-right corner or center of the screen, displaying checkmark icons and clear success messages such as "Entrance logged successfully" or "Visit scheduled successfully". Error notifications appear as red-colored messages with error icons and descriptive error text explaining what went wrong. Warning notifications appear as yellow/amber-colored messages for non-critical issues. All notifications include smooth slide-in animations, remain visible for an appropriate duration (typically 3-5 seconds), and auto-dismiss with fade-out animations. If multiple notifications appear, they stack vertically without overlapping. The notifications are readable in both light and dark themes and do not obstruct critical UI elements, allowing users to continue working while being informed of system status.
+Success notifications appear as green toast messages with checkmark icons. Error notifications appear as red messages with error icons. Warning notifications appear as yellow/amber messages. All include smooth slide-in animations, remain visible 3-5 seconds, and auto-dismiss. Multiple notifications stack vertically. Notifications readable in both themes and non-intrusive.
 
 **Actual Results:**
 Toast notifications appear with correct colors (green for success, red for errors). They auto-dismiss after 3-5 seconds. Multiple notifications stack properly. Notifications are readable and non-intrusive.
@@ -286,7 +286,7 @@ Toast notifications appear with correct colors (green for success, red for error
 - Step 7: Verify QR code detection feedback when code is successfully scanned
 
 **Expected Results:**
-The QR scanner interface displays a live camera feed with a clear scanning overlay that includes corner brackets indicating the optimal scanning area. The overlay includes animated scanning lines and focus indicators that provide visual feedback about scan status. Live feedback text appears below the camera feed showing messages like "Position QR code in frame", "QR code detected!", or "Scanning..." to guide users. When a QR code is detected, the overlay highlights the detected area with a green border, and success feedback is displayed. The scanner includes performance indicators showing scan rate (FPS) and scan interval, helping users understand scanner performance. The interface adapts scan frequency based on detection success, optimizing performance. Error messages are displayed clearly if camera access fails or QR code cannot be read, guiding users to resolve issues.
+QR scanner displays live camera feed with scanning overlay including corner brackets. Animated scanning lines and focus indicators provide visual feedback. Status messages guide users ("Position QR code in frame", "QR code detected!"). Detected codes highlighted with green border. Performance indicators show scan rate and interval. Scan frequency adapts based on detection. Error messages displayed clearly when issues occur.
 
 **Actual Results:**
 Scanner shows live camera feed with clear overlay and corner brackets. Status messages guide users effectively. QR detection highlights with green border. Performance indicators display correctly. Error messages are clear when issues occur.
@@ -325,7 +325,7 @@ Scanner shows live camera feed with clear overlay and corner brackets. Status me
 - Step 8: Observe the processing indicator and success feedback
 
 **Expected Results:**
-The face detection modal displays clear instructions explaining that users should allow camera access, position their face in the camera frame, and take a photo. The modal includes a live camera feed with visual indicators showing detection status through color-coded feedback circles (green for perfect face, blue for face detected, red for multiple faces, gray for no face). When a face is detected, bounding boxes appear around the detected face(s), and the "Take Photo" button becomes enabled. The interface provides real-time feedback about face detection quality and guides users to adjust their position if needed. After capturing, a processing indicator shows that the system is analyzing the image, and success feedback confirms successful face detection. Error messages clearly explain if face detection fails and provide guidance for retrying. The modal is responsive and works across different device sizes and camera orientations.
+Face detection modal displays clear instructions. Live camera feed shows color-coded indicators (green for perfect, blue for detected, red for multiple, gray for none). Bounding boxes appear when face detected. "Take Photo" button enables on detection. Real-time feedback guides positioning. Processing indicator shows after capture. Success feedback confirms detection. Error messages explain failures and provide retry guidance. Modal responsive across devices.
 
 **Actual Results:**
 Modal shows clear instructions and live camera feed. Color-coded indicators (green/blue/red/gray) provide real-time feedback. Bounding boxes appear when face is detected. Processing indicators and success feedback work correctly. Error messages are helpful.
@@ -364,7 +364,7 @@ Modal shows clear instructions and live camera feed. Color-coded indicators (gre
 - Step 8: Verify all functionality works correctly at each screen size
 
 **Expected Results:**
-The application displays appropriately across all screen sizes with responsive layouts that adapt to viewport dimensions. On desktop screens, the navigation bar displays horizontally with all links visible, cards display in multi-column grids, and modals are properly sized. On tablet screens, layouts adjust to fewer columns, navigation may condense but remains functional, and touch targets are appropriately sized. On mobile screens, the navigation collapses to a hamburger menu, content stacks vertically in single columns, cards display full-width, and touch targets meet minimum size requirements (44x44px). The mobile menu slides in smoothly when activated and can be closed by tapping outside or using the close button. All forms, buttons, and interactive elements remain usable and accessible at all screen sizes. Text remains readable without horizontal scrolling, and images scale appropriately. The responsive design maintains visual hierarchy and usability across all breakpoints.
+Application displays appropriately across all screen sizes. Desktop shows horizontal navigation and multi-column grids. Tablet adjusts to fewer columns with appropriately sized touch targets. Mobile uses hamburger menu, single-column layout, and full-width cards. Touch targets meet 44x44px minimum. Mobile menu slides in smoothly. All elements remain usable at all sizes. Text readable without horizontal scrolling. Visual hierarchy maintained across breakpoints.
 
 **Actual Results:**
 Layout adapts correctly across all screen sizes. Desktop shows horizontal navigation and multi-column grids. Mobile uses hamburger menu and single-column layout. Touch targets meet size requirements. All elements remain usable at all breakpoints.
@@ -400,7 +400,7 @@ Layout adapts correctly across all screen sizes. Desktop shows horizontal naviga
 - Step 5: Hover over the logo multiple times to see different animation variations
 
 **Expected Results:**
-The GuestGo logo displays engaging hover animations that include various effects such as rotation, scaling, bouncing, or floating motions. Each hover triggers a randomly selected animation from a pool of available animations, creating variety and visual interest. The animations are smooth and performant, completing within reasonable durations (typically 0.5-2 seconds) without causing performance issues. The logo maintains its clickable appearance (cursor pointer) and the animations enhance rather than distract from usability. When the cursor moves away, animations complete gracefully without abrupt stops. The logo remains functional as a navigation element (typically linking to home page) while providing delightful micro-interactions that enhance brand personality and user engagement.
+Logo displays engaging hover animations (rotation, scaling, bouncing, floating). Random animation selected on each hover. Animations smooth and performant (0.5-2 seconds). Logo maintains clickable appearance. Animations complete gracefully when cursor moves away. Logo remains functional as navigation element while enhancing brand personality.
 
 **Actual Results:**
 Logo hover animations work smoothly with random variations (rotation, scaling, bouncing). Animations complete within 0.5-2 seconds without performance issues. Logo remains clickable and functional. Animations enhance user experience without distraction.
@@ -439,7 +439,7 @@ Logo hover animations work smoothly with random variations (rotation, scaling, b
 - Step 8: Check table responsiveness on different screen sizes
 
 **Expected Results:**
-Data tables display information in a clear, organized structure with properly aligned columns, readable text, and appropriate spacing between rows and columns. Column headers are visually distinct (bold, different background color, or underlined) and clearly labeled. Data cells contain properly formatted content with consistent alignment (text left-aligned, numbers right-aligned, dates in consistent format). Tables include hover effects on rows that highlight the entire row when the cursor passes over it, improving readability. Sorting functionality, when available, provides clear visual indicators (arrows) showing sort direction and allows users to sort by clicking column headers. Search and filter controls are clearly visible and functional, with results updating dynamically. Pagination controls, when present, clearly show current page, total pages, and provide navigation buttons. Tables adapt responsively to smaller screens, either scrolling horizontally or converting to card-based layouts on mobile devices. The tables maintain readability in both light and dark themes.
+Tables display data in clear, organized structure with proper alignment and spacing. Column headers visually distinct and clearly labeled. Data cells formatted consistently. Row hover effects highlight entire row. Sorting provides clear visual indicators (arrows). Search/filter controls visible and functional. Pagination shows current page and navigation. Tables adapt responsively to mobile (horizontal scroll or card layout). Readable in both themes.
 
 **Actual Results:**
 Tables display data clearly with proper alignment and spacing. Row hover effects improve readability. Sorting works with clear visual indicators. Search/filter and pagination function correctly. Tables adapt responsively to mobile screens.
@@ -476,7 +476,7 @@ Tables display data clearly with proper alignment and spacing. Row hover effects
 - Step 6: Verify status indicators work in both light and dark themes
 
 **Expected Results:**
-Status badges use consistent color coding throughout the application, with green indicating completed or successful states, blue indicating in-progress or active states, yellow/amber indicating warnings or temporary states, red indicating errors or failed states, and gray indicating cancelled or inactive states. Badges display rounded corners, appropriate padding, and clear text labels that are readable at various sizes. The status text uses consistent terminology (e.g., "Completed", "In Progress", "Pending", "Temporary Exit") across all pages. Badges maintain adequate contrast ratios for readability in both light and dark themes, ensuring accessibility. Status indicators appear consistently in the same locations (typically near visit titles or place names) making them easy to locate and interpret. The visual design clearly distinguishes between different statuses, allowing users to quickly scan and understand the state of visits and places without reading detailed text.
+Status badges use consistent color coding (green for completed, blue for in-progress, yellow for warnings, red for errors, gray for cancelled). Badges have rounded corners, appropriate padding, and clear labels. Status terminology consistent across pages. Badges maintain adequate contrast in both themes. Status indicators appear consistently in same locations. Visual design allows quick scanning and understanding.
 
 **Actual Results:**
 Status badges use consistent color coding (green/blue/yellow/red/gray) throughout the application. Badges are readable with proper contrast in both themes. Status terminology is consistent. Badges are easy to locate and distinguish at a glance.
@@ -514,7 +514,7 @@ Status badges use consistent color coding (green/blue/yellow/red/gray) throughou
 - Step 7: Verify loading states disappear when operations complete
 
 **Expected Results:**
-Loading states are clearly visible and informative throughout the application. During initial page loads, skeleton screens or loading spinners appear in place of content areas, providing visual feedback that content is being fetched. Buttons display loading states with spinner animations, disabled appearance, and text changes (e.g., "Loading...", "Submitting...", "Processing...") when triggering asynchronous operations. Data tables and lists show loading indicators or skeleton rows while fetching data. Loading spinners use consistent styling (typically circular spinners with appropriate sizing and colors) and are positioned appropriately (centered in content areas, inline with buttons, or as overlay indicators). The loading states prevent user interaction with elements that are processing, reducing errors from duplicate submissions. When operations complete, loading indicators disappear smoothly and content updates, or error messages appear if operations fail. The loading feedback maintains visual consistency across the application and works effectively in both light and dark themes.
+Loading states clearly visible throughout application. Initial page loads show skeleton screens or spinners. Buttons show loading states with spinners, disabled appearance, and text changes. Tables show loading indicators or skeleton rows. Spinners use consistent styling and appropriate positioning. Loading states prevent interaction with processing elements. Indicators disappear smoothly when operations complete. Consistent across application and both themes.
 
 **Actual Results:**
 Loading indicators appear during data fetching and operations. Skeleton screens and spinners provide clear feedback. Buttons show disabled state and text changes during processing. Loading states prevent duplicate submissions. Indicators disappear smoothly when operations complete.
@@ -553,7 +553,7 @@ Loading indicators appear during data fetching and operations. Skeleton screens 
 - Step 8: Test error recovery (correcting input, retrying operations)
 
 **Expected Results:**
-Error messages are clear, specific, and actionable, explaining what went wrong and how to fix it. Validation errors appear near the relevant form fields with specific guidance (e.g., "Email format is invalid", "Password must be at least 6 characters"). Network errors display user-friendly messages explaining connectivity issues and suggesting retry options. Permission errors clearly state what permissions are required and guide users to contact administrators if needed. Error messages use consistent styling (typically red text, error icons, and appropriate containers) and appear in predictable locations (near form fields, in modals, or as toast notifications). Error messages do not use technical jargon and are written in plain language that users can understand. When errors occur, the system provides recovery options such as retry buttons, form correction guidance, or links to help resources. Error states are visually distinct from success states, and error messages persist long enough for users to read them but can be dismissed when appropriate. The error handling maintains user confidence and guides them toward successful task completion.
+Error messages are clear, specific, and actionable. Validation errors appear near relevant fields with specific guidance. Network errors display user-friendly messages with retry options. Permission errors state required permissions. Messages use consistent styling (red text, error icons) and appear in predictable locations. Plain language used without technical jargon. Recovery options provided (retry buttons, correction guidance). Error states visually distinct from success. Messages persist appropriately and can be dismissed. Error handling guides users toward completion.
 
 **Actual Results:**
 Error messages are clear and actionable with specific guidance. Validation errors appear near relevant fields. Network and permission errors provide helpful recovery options. Messages use plain language and consistent styling. Error handling guides users effectively.

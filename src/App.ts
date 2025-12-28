@@ -70,6 +70,71 @@ function updateAuthUI(session: any) {
 }
 
 export default function setupApp() {
+  // Handle Supabase auth callback from email verification
+  // Supabase adds tokens to the URL (either hash or query params), so we need to process them
+  const handleAuthCallback = async () => {
+    // Check hash first (for SPAs)
+    let hashParams: URLSearchParams | null = null;
+    let queryParams: URLSearchParams | null = null;
+    
+    if (window.location.hash) {
+      const hash = window.location.hash.substring(1);
+      // Check if hash contains auth tokens (format: #access_token=... or #/access_token=...)
+      if (hash.includes('access_token') || hash.includes('type=')) {
+        // Remove leading #/ if present
+        const cleanHash = hash.startsWith('/') ? hash.substring(1) : hash;
+        hashParams = new URLSearchParams(cleanHash);
+      }
+    }
+    
+    // Also check query parameters (fallback)
+    if (window.location.search) {
+      queryParams = new URLSearchParams(window.location.search.substring(1));
+    }
+    
+    const params = hashParams || queryParams;
+    if (!params) return;
+    
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    const type = params.get('type');
+    
+    // If we have auth tokens in the URL, process them
+    if (accessToken && (type === 'email' || type === 'recovery' || type === 'signup')) {
+      try {
+        // Exchange the tokens for a session
+        const { data, error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken || '',
+        });
+        
+        if (error) {
+          console.error('Error setting session:', error);
+        } else if (data.session) {
+          // Clear the hash/query to remove tokens from URL
+          window.history.replaceState(null, '', window.location.pathname);
+          window.location.hash = '/';
+          // Refresh to update UI
+          setTimeout(() => {
+            window.location.reload();
+          }, 100);
+          return;
+        }
+      } catch (err) {
+        console.error('Error processing auth callback:', err);
+      }
+    }
+    
+    // Clean up URL if we have auth-related params but didn't process them
+    if (params.has('access_token') || params.has('type')) {
+      window.history.replaceState(null, '', window.location.pathname);
+      window.location.hash = '/';
+    }
+  };
+  
+  // Process auth callback if present
+  handleAuthCallback();
+
   // Initialize theme
   const theme = getThemePreference();
   updateTheme(theme);
