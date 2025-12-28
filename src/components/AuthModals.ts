@@ -1,5 +1,6 @@
 import supabase from '../config/supabase';
 import { getLoginModalTemplate, getSignupModalTemplate } from './AuthModalTemplates';
+import { logAccountCreation } from '../utils/accountLogging';
 
 export function createLoginModal() {
   return getLoginModalTemplate();
@@ -136,6 +137,9 @@ export function setupAuthEventListeners() {
             // Log the error but don't throw it as the account was created successfully
             // The user can still verify their email and login
           }
+
+          // Log account creation
+          logAccountCreation(data.user.id, email, firstName, lastName);
 
           // Show success message
           if (successDiv) {

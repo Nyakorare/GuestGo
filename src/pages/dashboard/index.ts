@@ -96,6 +96,7 @@ const LOGS_TAB_ACTIONS = {
     { value: 'visit_reschedule_accepted', label: 'Visit Reschedule Accepted' },
     { value: 'visit_reschedule_declined', label: 'Visit Reschedule Declined' },
     { value: 'role_change', label: 'Role Change' },
+    { value: 'account_created', label: 'Account Created' },
   ],
   gate: [
     { value: 'all', label: 'All Actions' },
@@ -121,6 +122,7 @@ const LOGS_TAB_ACTIONS = {
     { value: 'all', label: 'All Actions' },
     { value: 'password_change', label: 'Password Change' },
     { value: 'role_change', label: 'Role Change' },
+    { value: 'account_created', label: 'Account Created' },
   ],
   schedules: [
     { value: 'all', label: 'All Actions' },
@@ -744,6 +746,7 @@ export function DashboardPage() {
                     <option value="visit_feedback_submitted">Visit Feedback Submitted</option>
                     <option value="place_visit_limit_update">Place Visit Limit Update</option>
                     <option value="role_change">Role Change</option>
+                    <option value="account_created">Account Created</option>
                   </select>
                 </div>
 
@@ -2551,6 +2554,7 @@ async function renderLogs(): Promise<void> {
                       log.displayAction === 'gate_exit_scan' ? 'bg-orange-200 text-orange-900 dark:bg-orange-800 dark:text-orange-100' :
                       log.displayAction === 'visit_flagged_no_exit' ? 'bg-stone-100 text-stone-800 dark:bg-stone-900 dark:text-stone-200' :
                       log.displayAction === 'role_change' ? 'bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200' :
+                      log.displayAction === 'account_created' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' :
                       log.displayAction === 'visit_reschedule_requested' ? 'bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-200' :
                       log.displayAction === 'visit_reschedule_accepted' ? 'bg-emerald-200 text-emerald-900 dark:bg-emerald-800 dark:text-emerald-100' :
                       log.displayAction === 'visit_reschedule_declined' ? 'bg-rose-200 text-rose-900 dark:bg-rose-800 dark:text-rose-100' :
@@ -2637,6 +2641,7 @@ async function renderLogs(): Promise<void> {
                       log.displayAction === 'gate_exit_scan' ? 'bg-orange-200 text-orange-900 dark:bg-orange-800 dark:text-orange-100' :
                       log.displayAction === 'visit_flagged_no_exit' ? 'bg-stone-100 text-stone-800 dark:bg-stone-900 dark:text-stone-200' :
                       log.displayAction === 'role_change' ? 'bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200' :
+                      log.displayAction === 'account_created' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' :
                       log.displayAction === 'visit_reschedule_requested' ? 'bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-200' :
                       log.displayAction === 'visit_reschedule_accepted' ? 'bg-emerald-200 text-emerald-900 dark:bg-emerald-800 dark:text-emerald-100' :
                       log.displayAction === 'visit_reschedule_declined' ? 'bg-rose-200 text-rose-900 dark:bg-rose-800 dark:text-rose-100' :
@@ -3920,6 +3925,19 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
         if (parsedDetails.changed_at) {
           detailsHtml += `<div><span class="font-medium">Changed:</span> ${new Date(parsedDetails.changed_at).toLocaleString()}</div>`;
         }
+        
+        return detailsHtml;
+      }
+      case 'account_created': {
+        const email = parsedDetails.email || 'Unknown Email';
+        const firstName = parsedDetails.first_name || '';
+        const lastName = parsedDetails.last_name || '';
+        const fullName = `${firstName} ${lastName}`.trim() || 'Unknown User';
+        const timestamp = parsedDetails.timestamp ? new Date(parsedDetails.timestamp).toLocaleString() : 'Unknown time';
+        
+        let detailsHtml = `<div><span class="font-medium">User:</span> <span class="font-semibold">${fullName}</span></div>`;
+        detailsHtml += `<div><span class="font-medium">Email:</span> <span class="text-sm text-gray-600 dark:text-gray-400">${email}</span></div>`;
+        detailsHtml += `<div><span class="font-medium">Created:</span> <span class="text-indigo-600 dark:text-indigo-400 font-semibold">${timestamp}</span></div>`;
         
         return detailsHtml;
       }
