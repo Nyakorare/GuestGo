@@ -1145,17 +1145,41 @@ export async function setupEventListeners() {
       const emailValid = isLoggedIn || isEmailVerified;
       
       // Check if date validation blocks scheduling (unavailable date)
+      // Block if the message explicitly says "Cannot schedule on this date" or has error indicators
+      // Note: Unavailable dates use orange-600, critical errors use red-600
       const dateValidationStatus = document.getElementById('dateValidationStatus');
+      const statusText = dateValidationStatus?.textContent || '';
+      const statusClass = dateValidationStatus?.className || '';
       const hasUnavailableDateError = dateValidationStatus && 
-        (dateValidationStatus.textContent?.includes('Cannot schedule on this date') ||
-         dateValidationStatus.textContent?.includes('❌') ||
-         dateValidationStatus.className.includes('text-red-600'));
+        (statusText.includes('Cannot schedule on this date') ||
+         statusText.includes('❌') ||
+         (statusClass.includes('text-red-600') && !statusText.includes('✅')));
       
       // Check if visit date is disabled (means no purpose selected yet)
       const visitDateInput = document.getElementById('visitDate') as HTMLInputElement;
       const visitDateDisabled = visitDateInput && visitDateInput.disabled;
       
-      scheduleSubmitBtn.disabled = !(allFieldsFilled && emailValid && !hasUnavailableDateError && !visitDateDisabled);
+      // Check if visit date has a value
+      const visitDateHasValue = visitDateInput && visitDateInput.value;
+      
+      // Enable button only if all conditions are met
+      const shouldEnable = allFieldsFilled && emailValid && !hasUnavailableDateError && !visitDateDisabled && visitDateHasValue;
+      
+      scheduleSubmitBtn.disabled = !shouldEnable;
+      
+      // Debug logging for non-logged-in users
+      if (!isLoggedIn && !shouldEnable) {
+        console.log('Button disabled for non-logged-in user:', {
+          allFieldsFilled,
+          emailValid,
+          isEmailVerified,
+          hasUnavailableDateError,
+          visitDateDisabled,
+          visitDateHasValue,
+          dateValidationStatusText: dateValidationStatus?.textContent,
+          dateValidationStatusClass: dateValidationStatus?.className
+        });
+      }
     }
   }
 

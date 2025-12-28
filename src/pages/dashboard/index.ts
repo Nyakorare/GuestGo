@@ -2154,7 +2154,6 @@ function renderAccounts(): void {
                     <option value="personnel" ${account.role === 'personnel' ? 'selected' : ''}>Personnel</option>
                     <option value="guard" ${account.role === 'guard' ? 'selected' : ''}>Guard</option>
                     <option value="visitor" ${account.role === 'visitor' ? 'selected' : ''}>Visitor</option>
-                    <option value="guest" ${account.role === 'guest' ? 'selected' : ''}>Guest</option>
                   </select>
                 </td>
               </tr>
