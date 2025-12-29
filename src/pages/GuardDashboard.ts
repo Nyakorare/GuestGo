@@ -1867,9 +1867,9 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
       showGuardSuccess(`${action.charAt(0).toUpperCase() + action.slice(1)} logged successfully for ${visitData.visitorName}!`);
     }
 
-    // Reset scanner after successful logging
+    // Refresh page after successful face detection and saving
     setTimeout(() => {
-      resetGuardScanner();
+      window.location.reload();
     }, 2000);
 
   } catch (error) {
