@@ -530,6 +530,11 @@ async function submitFeedback(visitId: string, form: HTMLFormElement, submitBtn:
       (window as any).refreshVisitorPastVisits();
     }
 
+    // Refresh the track schedule feedback button state (for non-logged-in users)
+    if (typeof (window as any).refreshTrackScheduleFeedbackButton === 'function') {
+      (window as any).refreshTrackScheduleFeedbackButton(visitId);
+    }
+
   } catch (error: any) {
     console.error('Error submitting feedback:', error);
     showNotification(error.message || 'Failed to submit feedback. Please try again.', 'error');

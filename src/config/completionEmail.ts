@@ -46,9 +46,9 @@ export async function sendVisitCompletionEmail(visitData: CompletionEmailData): 
       ? window.location.origin 
       : 'https://your-domain.com'; // Fallback for server-side
     
-    // Build feedback survey link for guests
+    // Build feedback survey link for guests (using hash-based routing)
     const feedbackSurveyLink = visitData.visitorRole === 'guest'
-      ? `${baseUrl}/feedback/${visitData.visitId}`
+      ? `${baseUrl}/#/feedback/${visitData.visitId}`
       : null;
 
     // Send email via backend API (to avoid CORS issues)

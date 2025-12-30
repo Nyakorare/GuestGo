@@ -1209,10 +1209,17 @@ async function logGuardAction(action: 'entrance' | 'exit' | 'temporary_exit', vi
     // Show success message
     showGuardSuccess(`${action.charAt(0).toUpperCase() + action.slice(1).replace('_',' ')} logged successfully for ${activeVisit.visitorName}!`);
 
-    // Reset scanner after successful logging
-    setTimeout(() => {
-      resetGuardScanner();
-    }, 2000);
+    // Refresh page after successful temporary exit logging
+    if (action === 'temporary_exit') {
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } else {
+      // Reset scanner after successful logging (for entrance/exit)
+      setTimeout(() => {
+        resetGuardScanner();
+      }, 2000);
+    }
 
   } catch (error) {
     console.error('Error in logGuardAction:', error);
@@ -1863,14 +1870,14 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
       } else {
         showGuardSuccess(`Exit logged successfully for ${visitData.visitorName}! (Face verification was unavailable)`);
       }
+      
+      // Refresh page after successful exit and saving on face detection modal
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
     } else {
       showGuardSuccess(`${action.charAt(0).toUpperCase() + action.slice(1)} logged successfully for ${visitData.visitorName}!`);
     }
-
-    // Refresh page after successful face detection and saving
-    setTimeout(() => {
-      window.location.reload();
-    }, 2000);
 
   } catch (error) {
     console.error('Error in logGuardActionWithFaceImage:', error);

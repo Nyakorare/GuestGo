@@ -68,6 +68,31 @@ export function TrackSchedulePage() {
             ${GateScanningStatus()}
 
             ${VisitQRCode()}
+
+            <!-- Feedback Survey Button (for non-logged-in completed visits) -->
+            <div id="feedbackSurveyContainer" class="hidden mt-8 track-fade-in track-fade-in-delay-5">
+              <div class="track-card bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-xl p-6 border-2 border-blue-200 dark:border-blue-700">
+                <div class="flex items-center justify-between">
+                  <div class="flex-1">
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                      Share Your Feedback
+                    </h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">
+                      Help us improve by sharing your experience with this visit
+                    </p>
+                  </div>
+                  <button 
+                    id="feedbackSurveyBtn"
+                    class="ml-4 px-6 py-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-2 track-button-glow disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                    </svg>
+                    Feedback Survey
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -295,6 +320,115 @@ async function displayVisitDetails(visitData: any) {
   // Handle invalid statuses (unsuccessful or completed_flagged)
   if (visitData.status === 'unsuccessful' || visitData.status === 'completed_flagged') {
     disableAllButtons();
+  }
+
+  // Show/hide feedback survey button for non-logged-in completed visits
+  await displayFeedbackSurveyButton(visitData);
+}
+
+// Display feedback survey button for non-logged-in completed visits
+async function displayFeedbackSurveyButton(visitData: any) {
+  const feedbackContainer = document.getElementById('feedbackSurveyContainer');
+  const feedbackBtn = document.getElementById('feedbackSurveyBtn') as HTMLButtonElement;
+  
+  if (!feedbackContainer || !feedbackBtn) return;
+
+  // Check if this is a non-logged-in visit (guest visit) and if it's completed
+  const isGuestVisit = visitData.visitor_user_id === null;
+  const isCompleted = visitData.status === 'completed';
+
+  if (isGuestVisit && isCompleted) {
+    // Show the feedback container
+    feedbackContainer.classList.remove('hidden');
+
+    // Get places names for the feedback survey
+    const places = (visitData.scheduled_visit_places || []).map((place: any) => 
+      place.places_to_visit?.name || 'Unknown Place'
+    );
+
+    // Set up the button click handler
+    feedbackBtn.onclick = async () => {
+      await openFeedbackSurveyForTrackSchedule(
+        visitData.id,
+        `${visitData.visitor_first_name} ${visitData.visitor_last_name}`,
+        visitData.visit_date,
+        places
+      );
+    };
+
+    // Check if feedback already exists and update button state
+    await updateFeedbackButtonStateForTrackSchedule(visitData.id, feedbackBtn);
+  } else {
+    // Hide the feedback container for logged-in visits or non-completed visits
+    feedbackContainer.classList.add('hidden');
+  }
+}
+
+// Open feedback survey for track schedule (non-logged-in users)
+async function openFeedbackSurveyForTrackSchedule(
+  visitId: string, 
+  visitorName: string, 
+  visitDate: string, 
+  places: string[]
+) {
+  try {
+    // Import the feedback survey modal
+    const { showFeedbackSurveyModal, hasFeedbackForVisit } = await import('../components/FeedbackSurveyModal');
+    
+    // Check if feedback already exists for this visit
+    const feedbackExists = await hasFeedbackForVisit(visitId);
+    
+    if (feedbackExists) {
+      showNotification('Feedback has already been submitted for this visit.', 'success');
+      // Update button state
+      const feedbackBtn = document.getElementById('feedbackSurveyBtn') as HTMLButtonElement;
+      if (feedbackBtn) {
+        await updateFeedbackButtonStateForTrackSchedule(visitId, feedbackBtn);
+      }
+      return;
+    }
+    
+    // Show the feedback survey modal
+    showFeedbackSurveyModal({
+      visitId,
+      visitorName,
+      visitDate,
+      places
+    });
+    
+  } catch (error) {
+    console.error('Error opening feedback survey:', error);
+    showNotification('Error opening feedback survey. Please try again.', 'error');
+  }
+}
+
+// Update feedback button state for track schedule
+async function updateFeedbackButtonStateForTrackSchedule(visitId: string, button: HTMLButtonElement) {
+  try {
+    const { hasFeedbackForVisit } = await import('../components/FeedbackSurveyModal');
+    const feedbackExists = await hasFeedbackForVisit(visitId);
+    
+    if (feedbackExists) {
+      button.disabled = true;
+      button.innerHTML = `
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        Feedback Submitted
+      `;
+      button.className = button.className.replace('from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-indigo-700', 'from-green-600 to-emerald-600');
+    } else {
+      button.disabled = false;
+      button.innerHTML = `
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+        </svg>
+        Feedback Survey
+      `;
+      button.className = button.className.replace('from-green-600 to-emerald-600', 'from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-indigo-700');
+    }
+  } catch (error) {
+    console.error('Error updating feedback button state:', error);
   }
 }
 
@@ -2056,6 +2190,14 @@ function addInvalidStickerToQR() {
     descriptionText.className = 'mt-2 text-sm text-red-500 dark:text-red-400';
   }
 }
+
+// Function to refresh track schedule feedback button state (called after feedback submission)
+(window as any).refreshTrackScheduleFeedbackButton = async function(visitId: string) {
+  const feedbackBtn = document.getElementById('feedbackSurveyBtn') as HTMLButtonElement;
+  if (feedbackBtn) {
+    await updateFeedbackButtonStateForTrackSchedule(visitId, feedbackBtn);
+  }
+};
 
 // Helper function to send visit completion email
 async function sendVisitCompletionEmailHelper(visitId: string): Promise<void> {
