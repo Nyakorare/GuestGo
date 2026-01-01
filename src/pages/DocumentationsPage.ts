@@ -9,6 +9,7 @@ import homePageDescriptionDocs from '../../THESIS DESC/HOME_PAGE_DESCRIPTION.md?
 import reliabilityTestResultsDocs from '../../THESIS DESC/RELIABILITY_TEST_RESULTS.md?raw';
 import securityTestResultsDocs from '../../THESIS DESC/SECURITY_TEST_RESULTS.md?raw';
 import usabilityTestResultsDocs from '../../THESIS DESC/USABILITY_TEST_RESULTS.md?raw';
+import conclusionDocs from '../../THESIS DESC/CONCLUSION.md?raw';
 import { marked } from 'marked';
 import { DocumentationNavigationButtons, setupDocumentationNavigationButtons } from '../components/DocumentationNavigationButtons';
 
@@ -68,6 +69,9 @@ export function DocumentationsPage(): string {
             </button>
             <button data-thesis-tab="usability-test-results" class="thesis-sub-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap">
               Usability Test Results
+            </button>
+            <button data-thesis-tab="conclusion" class="thesis-sub-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap">
+              Conclusion
             </button>
           </nav>
         </div>
@@ -133,11 +137,12 @@ export function setupDocumentationsPage(): void {
   const reliabilityTestResultsHtml = enhanceTables(marked.parse(reliabilityTestResultsDocs));
   const securityTestResultsHtml = enhanceTables(marked.parse(securityTestResultsDocs));
   const usabilityTestResultsHtml = enhanceTables(marked.parse(usabilityTestResultsDocs));
+  const conclusionHtml = enhanceTables(marked.parse(conclusionDocs));
 
   const thesisSubTabsContainer = document.getElementById('thesisSubTabs');
   const thesisSubTabsNav = document.getElementById('thesisSubTabsNav');
 
-  function setActiveThesisSubTab(subTabId: 'functionality' | 'dashboard-descriptions' | 'capabilities-limitations' | 'project-description' | 'home-page-description' | 'reliability-test-results' | 'security-test-results' | 'usability-test-results') {
+  function setActiveThesisSubTab(subTabId: 'functionality' | 'dashboard-descriptions' | 'capabilities-limitations' | 'project-description' | 'home-page-description' | 'reliability-test-results' | 'security-test-results' | 'usability-test-results' | 'conclusion') {
     // Update sub-tab button styles
     if (thesisSubTabsNav) {
       const buttons = thesisSubTabsNav.querySelectorAll<HTMLButtonElement>('.thesis-sub-tab');
@@ -179,9 +184,12 @@ export function setupDocumentationsPage(): void {
     } else if (subTabId === 'security-test-results') {
       title = 'Security Test Results';
       innerHtml = securityTestResultsHtml;
-    } else {
+    } else if (subTabId === 'usability-test-results') {
       title = 'Usability Test Results';
       innerHtml = usabilityTestResultsHtml;
+    } else {
+      title = 'Conclusion';
+      innerHtml = conclusionHtml;
     }
 
     docsContent.innerHTML = `
@@ -268,7 +276,7 @@ export function setupDocumentationsPage(): void {
       const target = event.target as HTMLElement | null;
       const button = target?.closest('button.thesis-sub-tab') as HTMLButtonElement | null;
       if (!button) return;
-      const subTabId = button.getAttribute('data-thesis-tab') as 'functionality' | 'dashboard-descriptions' | 'capabilities-limitations' | 'project-description' | 'home-page-description' | 'reliability-test-results' | 'security-test-results' | 'usability-test-results' | null;
+      const subTabId = button.getAttribute('data-thesis-tab') as 'functionality' | 'dashboard-descriptions' | 'capabilities-limitations' | 'project-description' | 'home-page-description' | 'reliability-test-results' | 'security-test-results' | 'usability-test-results' | 'conclusion' | null;
       if (!subTabId) return;
       setActiveThesisSubTab(subTabId);
     });
