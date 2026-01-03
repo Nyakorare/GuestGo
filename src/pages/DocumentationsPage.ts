@@ -73,6 +73,9 @@ export function DocumentationsPage(): string {
             <button data-thesis-tab="conclusion" class="thesis-sub-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap">
               Conclusion
             </button>
+            <button data-thesis-tab="testing-samples-data" class="thesis-sub-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap">
+              Testing Samples Data
+            </button>
           </nav>
         </div>
 
@@ -142,7 +145,7 @@ export function setupDocumentationsPage(): void {
   const thesisSubTabsContainer = document.getElementById('thesisSubTabs');
   const thesisSubTabsNav = document.getElementById('thesisSubTabsNav');
 
-  function setActiveThesisSubTab(subTabId: 'functionality' | 'dashboard-descriptions' | 'capabilities-limitations' | 'project-description' | 'home-page-description' | 'reliability-test-results' | 'security-test-results' | 'usability-test-results' | 'conclusion') {
+  function setActiveThesisSubTab(subTabId: 'functionality' | 'dashboard-descriptions' | 'capabilities-limitations' | 'project-description' | 'home-page-description' | 'reliability-test-results' | 'security-test-results' | 'usability-test-results' | 'conclusion' | 'testing-samples-data') {
     // Update sub-tab button styles
     if (thesisSubTabsNav) {
       const buttons = thesisSubTabsNav.querySelectorAll<HTMLButtonElement>('.thesis-sub-tab');
@@ -187,17 +190,58 @@ export function setupDocumentationsPage(): void {
     } else if (subTabId === 'usability-test-results') {
       title = 'Usability Test Results';
       innerHtml = usabilityTestResultsHtml;
-    } else {
+    } else if (subTabId === 'conclusion') {
       title = 'Conclusion';
       innerHtml = conclusionHtml;
+    } else if (subTabId === 'testing-samples-data') {
+      title = 'Testing Samples Data';
+      docsContent.innerHTML = `
+        <h2 class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">${title}</h2>
+        <div class="flex flex-col items-center justify-center py-12">
+          <p class="text-gray-600 dark:text-gray-400 mb-6 text-center">
+            Download the system testing sample data file used for testing the GuestGo system.
+          </p>
+          <button 
+            id="downloadSampleDataBtn" 
+            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition-colors duration-200 flex items-center gap-2"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+            </svg>
+            System Testing Sample Data
+          </button>
+        </div>
+      `;
+      
+      // Setup download button
+      setTimeout(() => {
+        const downloadBtn = document.getElementById('downloadSampleDataBtn');
+        if (downloadBtn) {
+          downloadBtn.addEventListener('click', async () => {
+            try {
+              const response = await fetch('/GuestGo-System Sample Data IRL.xlsx');
+              if (!response.ok) {
+                throw new Error('Failed to download file');
+              }
+              const blob = await response.blob();
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = 'GuestGo-System Sample Data IRL.xlsx';
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              URL.revokeObjectURL(url);
+            } catch (error) {
+              console.error('Error downloading file:', error);
+              alert('Failed to download the file. Please try again.');
+            }
+          });
+        }
+      }, 100);
+      return;
     }
 
-    docsContent.innerHTML = `
-      <h2 class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">${title}</h2>
-      <div class="prose dark:prose-invert max-w-none text-sm leading-relaxed text-gray-800 dark:text-gray-100 overflow-x-auto">
-        ${innerHtml}
-      </div>
-    `;
   }
 
   function setActiveTab(tabId: 'overview' | 'algorithms' | 'face' | 'thesis') {
@@ -276,7 +320,7 @@ export function setupDocumentationsPage(): void {
       const target = event.target as HTMLElement | null;
       const button = target?.closest('button.thesis-sub-tab') as HTMLButtonElement | null;
       if (!button) return;
-      const subTabId = button.getAttribute('data-thesis-tab') as 'functionality' | 'dashboard-descriptions' | 'capabilities-limitations' | 'project-description' | 'home-page-description' | 'reliability-test-results' | 'security-test-results' | 'usability-test-results' | 'conclusion' | null;
+      const subTabId = button.getAttribute('data-thesis-tab') as 'functionality' | 'dashboard-descriptions' | 'capabilities-limitations' | 'project-description' | 'home-page-description' | 'reliability-test-results' | 'security-test-results' | 'usability-test-results' | 'conclusion' | 'testing-samples-data' | null;
       if (!subTabId) return;
       setActiveThesisSubTab(subTabId);
     });
