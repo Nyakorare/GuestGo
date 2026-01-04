@@ -1080,6 +1080,58 @@ export function setupAboutPageInteractivity() {
   }).catch(error => {
     console.error('Error setting up QR share modal:', error);
   });
+
+  // Setup Timeline Toggle
+  function setupTimelineToggle() {
+    const timelineToggleBtn = document.getElementById('timeline-toggle-btn');
+    const timelineContainer = document.getElementById('timeline-container');
+    
+    if (timelineToggleBtn && timelineContainer) {
+      // Check if already initialized
+      if (timelineToggleBtn.dataset.initialized === 'true') {
+        return;
+      }
+      
+      timelineToggleBtn.dataset.initialized = 'true';
+      let isExpanded = false;
+      
+      timelineToggleBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        isExpanded = !isExpanded;
+        
+        const container = document.getElementById('timeline-container');
+        const icon = document.getElementById('timeline-toggle-icon');
+        
+        if (container) {
+          if (isExpanded) {
+            container.classList.add('show');
+            timelineToggleBtn.setAttribute('aria-expanded', 'true');
+            if (icon) {
+              icon.style.transform = 'rotate(180deg)';
+            }
+          } else {
+            container.classList.remove('show');
+            timelineToggleBtn.setAttribute('aria-expanded', 'false');
+            if (icon) {
+              icon.style.transform = 'rotate(0deg)';
+            }
+          }
+        }
+      });
+    }
+  }
+  
+  // Try to setup immediately and also after delays to catch dynamic content
+  setupTimelineToggle();
+  setTimeout(setupTimelineToggle, 100);
+  setTimeout(setupTimelineToggle, 300);
+  setTimeout(setupTimelineToggle, 500);
+  
+  // Also setup on DOMContentLoaded if not already loaded
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupTimelineToggle);
+  }
 }
 
 // Function to update navigation based on user role

@@ -198,9 +198,25 @@ export function setupDocumentationsPage(): void {
       docsContent.innerHTML = `
         <h2 class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">${title}</h2>
         <div class="flex flex-col items-center justify-center py-12">
-          <p class="text-gray-600 dark:text-gray-400 mb-6 text-center">
-            Download the system testing sample data file used for testing the GuestGo system.
-          </p>
+          <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-6 mb-6 max-w-2xl w-full border border-gray-200 dark:border-gray-700">
+            <p class="text-gray-700 dark:text-gray-300 mb-4 text-center">
+              This sample data file contains test data used for system testing of the GuestGo platform. The test dataset includes:
+            </p>
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div class="flex items-center gap-2">
+                <span class="font-semibold text-gray-900 dark:text-white">15 Visitors</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="font-semibold text-gray-900 dark:text-white">2 Personnel</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="font-semibold text-gray-900 dark:text-white">2 Guards</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="font-semibold text-gray-900 dark:text-white">1 Admin</span>
+              </div>
+            </div>
+          </div>
           <button 
             id="downloadSampleDataBtn" 
             class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition-colors duration-200 flex items-center gap-2"

@@ -292,10 +292,18 @@ export function AboutPage() {
       }
       
       .timeline-item:nth-child(1) { animation-delay: 0.1s; }
-      .timeline-item:nth-child(2) { animation-delay: 0.2s; }
-      .timeline-item:nth-child(3) { animation-delay: 0.3s; }
-      .timeline-item:nth-child(4) { animation-delay: 0.4s; }
-      .timeline-item:nth-child(5) { animation-delay: 0.5s; }
+      .timeline-item:nth-child(2) { animation-delay: 0.15s; }
+      .timeline-item:nth-child(3) { animation-delay: 0.2s; }
+      .timeline-item:nth-child(4) { animation-delay: 0.25s; }
+      .timeline-item:nth-child(5) { animation-delay: 0.3s; }
+      .timeline-item:nth-child(6) { animation-delay: 0.35s; }
+      .timeline-item:nth-child(7) { animation-delay: 0.4s; }
+      .timeline-item:nth-child(8) { animation-delay: 0.45s; }
+      .timeline-item:nth-child(9) { animation-delay: 0.5s; }
+      .timeline-item:nth-child(10) { animation-delay: 0.55s; }
+      .timeline-item:nth-child(11) { animation-delay: 0.6s; }
+      .timeline-item:nth-child(12) { animation-delay: 0.65s; }
+      .timeline-item:nth-child(13) { animation-delay: 0.7s; }
       
       @keyframes timelineFadeIn {
         to {
