@@ -13,6 +13,7 @@ import { showTodayPendingVisitsModal } from '../../components/TodayPendingVisits
 import { initializePlaceOnHold, isPlaceOnHold, createOnHoldButton, modifyMarkCompleteButton, getOnHoldExpiration } from '../../components/PlaceOnHold';
 import { checkAndShowPlaceOnHoldNotification } from '../../components/PlaceOnHoldNotificationModal';
 import { calculateVisitDuration } from '../../utils/visitDuration';
+import { loadVisitorSettings, shouldShowScanButtons } from '../../components/VisitorSettings';
 
 interface Place {
   id: string;
@@ -183,12 +184,14 @@ export function DashboardPage() {
         const gatesTab = document.getElementById('gatesTab');
         const feedbackTab = document.getElementById('feedbackTab');
         const aiStatusTab = document.getElementById('aiStatusTab');
+        const visitorSettingsTab = document.getElementById('visitorSettingsTab');
     const placesContent = document.getElementById('placesContent');
     const accountsContent = document.getElementById('accountsContent');
     const logsContent = document.getElementById('logsContent');
     const gatesContent = document.getElementById('gatesContent');
     const feedbackContent = document.getElementById('feedbackContent');
     const aiStatusContent = document.getElementById('aiStatusContent');
+    const visitorSettingsContent = document.getElementById('visitorSettingsContent');
 
         if (roleData.role === 'log') {
           // Only show logs tab and content
@@ -207,6 +210,7 @@ export function DashboardPage() {
           if (gatesContent) gatesContent.classList.add('hidden');
           if (feedbackContent) feedbackContent.classList.add('hidden');
           if (aiStatusContent) aiStatusContent.classList.add('hidden');
+          if (visitorSettingsContent) visitorSettingsContent.classList.add('hidden');
           
           // Hide visitor content
           const visitorContent = document.getElementById('visitorContent');
@@ -225,12 +229,14 @@ export function DashboardPage() {
           if (feedbackTab) feedbackTab.classList.remove('hidden');
           if (guardDashboardTab) guardDashboardTab.classList.add('hidden');
           if (aiStatusTab) aiStatusTab.classList.remove('hidden');
+          if (visitorSettingsTab) visitorSettingsTab.classList.remove('hidden');
           if (placesContent) placesContent.classList.remove('hidden');
           if (accountsContent) accountsContent.classList.add('hidden');
           if (logsContent) logsContent.classList.add('hidden');
           if (gatesContent) gatesContent.classList.add('hidden');
           if (feedbackContent) feedbackContent.classList.add('hidden');
           if (aiStatusContent) aiStatusContent.classList.add('hidden');
+          if (visitorSettingsContent) visitorSettingsContent.classList.add('hidden');
           
           // Hide visitor content
           const visitorContent = document.getElementById('visitorContent');
@@ -251,9 +257,11 @@ export function DashboardPage() {
           if (feedbackTab) feedbackTab.classList.add('hidden');
           if (guardDashboardTab) guardDashboardTab.classList.add('hidden');
           if (aiStatusTab) aiStatusTab.classList.add('hidden');
+          if (visitorSettingsTab) visitorSettingsTab.classList.add('hidden');
           if (placesContent) placesContent.classList.add('hidden');
           if (accountsContent) accountsContent.classList.add('hidden');
           if (logsContent) logsContent.classList.add('hidden');
+          if (visitorSettingsContent) visitorSettingsContent.classList.add('hidden');
           loadPersonnelDashboard();
         } else if (roleData.role === 'guard') {
           // Guard: show guard content and AI Status tab, hide other admin tabs
@@ -266,12 +274,14 @@ export function DashboardPage() {
           if (feedbackTab) feedbackTab.classList.add('hidden');
           if (guardDashboardTab) guardDashboardTab.classList.remove('hidden');
           if (aiStatusTab) aiStatusTab.classList.remove('hidden');
+          if (visitorSettingsTab) visitorSettingsTab.classList.add('hidden');
           if (placesContent) placesContent.classList.add('hidden');
           if (accountsContent) accountsContent.classList.add('hidden');
           if (logsContent) logsContent.classList.add('hidden');
           if (gatesContent) gatesContent.classList.add('hidden');
           if (feedbackContent) feedbackContent.classList.add('hidden');
           if (aiStatusContent) aiStatusContent.classList.add('hidden');
+          if (visitorSettingsContent) visitorSettingsContent.classList.add('hidden');
           
           // Show guard content
           const guardContent = document.getElementById('guardContent');
@@ -302,9 +312,11 @@ export function DashboardPage() {
           if (feedbackTab) feedbackTab.classList.add('hidden');
           if (guardDashboardTab) guardDashboardTab.classList.add('hidden');
           if (aiStatusTab) aiStatusTab.classList.add('hidden');
+          if (visitorSettingsTab) visitorSettingsTab.classList.add('hidden');
           if (placesContent) placesContent.classList.add('hidden');
           if (accountsContent) accountsContent.classList.add('hidden');
           if (logsContent) logsContent.classList.add('hidden');
+          if (visitorSettingsContent) visitorSettingsContent.classList.add('hidden');
           
           // Show visitor content
           const visitorContent = document.getElementById('visitorContent');
@@ -322,9 +334,11 @@ export function DashboardPage() {
           if (feedbackTab) feedbackTab.classList.add('hidden');
           if (guardDashboardTab) guardDashboardTab.classList.add('hidden');
           if (aiStatusTab) aiStatusTab.classList.add('hidden');
+          if (visitorSettingsTab) visitorSettingsTab.classList.add('hidden');
           if (placesContent) placesContent.classList.add('hidden');
           if (accountsContent) accountsContent.classList.add('hidden');
           if (logsContent) logsContent.classList.add('hidden');
+          if (visitorSettingsContent) visitorSettingsContent.classList.add('hidden');
         }
       }
     }
@@ -528,6 +542,12 @@ export function DashboardPage() {
                 class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
               >
                 AI Status
+              </button>
+              <button 
+                id="visitorSettingsTab"
+                class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+              >
+                Visitor Settings
               </button>
             </div>
             <button 
@@ -815,6 +835,11 @@ export function DashboardPage() {
       <!-- AI Status Content -->
       <div id="aiStatusContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
         <!-- AI Status Content will be loaded here -->
+      </div>
+
+      <!-- Visitor Settings Content -->
+      <div id="visitorSettingsContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
+        <!-- Visitor Settings Content will be loaded here -->
       </div>
 
       <!-- Personnel Dashboard Content -->
@@ -6000,11 +6025,13 @@ function setupAdminTabEventListeners() {
   const gatesTab = document.getElementById('gatesTab');
   const feedbackTab = document.getElementById('feedbackTab');
   const aiStatusTab = document.getElementById('aiStatusTab');
+  const visitorSettingsTab = document.getElementById('visitorSettingsTab');
   const placesContent = document.getElementById('placesContent');
   const accountsContent = document.getElementById('accountsContent');
   const gatesContent = document.getElementById('gatesContent');
   const feedbackContent = document.getElementById('feedbackContent');
   const aiStatusContent = document.getElementById('aiStatusContent');
+  const visitorSettingsContent = document.getElementById('visitorSettingsContent');
 
   // Places tab event listener
   placesTab?.addEventListener('click', () => {
@@ -6018,11 +6045,14 @@ function setupAdminTabEventListeners() {
     feedbackTab?.classList.add('bg-gray-100', 'text-gray-700');
     aiStatusTab?.classList.remove('bg-blue-600', 'text-white');
     aiStatusTab?.classList.add('bg-gray-100', 'text-gray-700');
+    visitorSettingsTab?.classList.remove('bg-blue-600', 'text-white');
+    visitorSettingsTab?.classList.add('bg-gray-100', 'text-gray-700');
     placesContent?.classList.remove('hidden');
     accountsContent?.classList.add('hidden');
     gatesContent?.classList.add('hidden');
     feedbackContent?.classList.add('hidden');
     aiStatusContent?.classList.add('hidden');
+    visitorSettingsContent?.classList.add('hidden');
     // Clear gates content when switching away
     if (gatesContent) {
       gatesContent.innerHTML = '';
@@ -6082,11 +6112,14 @@ function setupAdminTabEventListeners() {
     feedbackTab?.classList.add('bg-gray-100', 'text-gray-700');
     aiStatusTab?.classList.remove('bg-blue-600', 'text-white');
     aiStatusTab?.classList.add('bg-gray-100', 'text-gray-700');
+    visitorSettingsTab?.classList.remove('bg-blue-600', 'text-white');
+    visitorSettingsTab?.classList.add('bg-gray-100', 'text-gray-700');
     gatesContent?.classList.remove('hidden');
     placesContent?.classList.add('hidden');
     accountsContent?.classList.add('hidden');
     feedbackContent?.classList.add('hidden');
     aiStatusContent?.classList.add('hidden');
+    visitorSettingsContent?.classList.add('hidden');
     // Clear feedback content when switching away
     if (feedbackContent) {
       feedbackContent.innerHTML = '';
@@ -6191,6 +6224,41 @@ function setupAdminTabEventListeners() {
     });
   });
 
+  // Visitor Settings tab event listener
+  visitorSettingsTab?.addEventListener('click', () => {
+    visitorSettingsTab.classList.add('bg-blue-600', 'text-white');
+    visitorSettingsTab.classList.remove('bg-gray-100', 'text-gray-700');
+    placesTab?.classList.remove('bg-blue-600', 'text-white');
+    placesTab?.classList.add('bg-gray-100', 'text-gray-700');
+    accountsTab?.classList.remove('bg-blue-600', 'text-white');
+    accountsTab?.classList.add('bg-gray-100', 'text-gray-700');
+    gatesTab?.classList.remove('bg-blue-600', 'text-white');
+    gatesTab?.classList.add('bg-gray-100', 'text-gray-700');
+    feedbackTab?.classList.remove('bg-blue-600', 'text-white');
+    feedbackTab?.classList.add('bg-gray-100', 'text-gray-700');
+    aiStatusTab?.classList.remove('bg-blue-600', 'text-white');
+    aiStatusTab?.classList.add('bg-gray-100', 'text-gray-700');
+    visitorSettingsContent?.classList.remove('hidden');
+    placesContent?.classList.add('hidden');
+    accountsContent?.classList.add('hidden');
+    gatesContent?.classList.add('hidden');
+    feedbackContent?.classList.add('hidden');
+    aiStatusContent?.classList.add('hidden');
+    // Clear gates content when switching away
+    if (gatesContent) {
+      gatesContent.innerHTML = '';
+    }
+    // Clear feedback content when switching away
+    if (feedbackContent) {
+      feedbackContent.innerHTML = '';
+    }
+    // Clear AI status content when switching away
+    if (aiStatusContent) {
+      aiStatusContent.innerHTML = '';
+    }
+    // Load visitor settings
+    loadVisitorSettings();
+  });
 }
 // Make function available globally
 (window as any).setupAdminTabEventListeners = setupAdminTabEventListeners;
@@ -11107,6 +11175,7 @@ async function fetchVisitsWithFeedback(visitIds: string[]): Promise<Set<string> 
 
 // Function to display visitor's current visits
 async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
+  const scanButtonsEnabled = shouldShowScanButtons();
   const visitorCurrentVisitsList = document.getElementById('visitorCurrentVisitsList');
   if (!visitorCurrentVisitsList) {
     console.error('Visitor current visits list container not found');
@@ -11259,7 +11328,7 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
                   <span>Details</span>
                 </button>
               ` : ''}
-              ${isToday && userRole === 'visitor' && ((visit.status === 'pending' && !visit.gate_entrance_scanned) || visit.status === 'temporary_exit') ? `
+              ${isToday && userRole === 'visitor' && scanButtonsEnabled && ((visit.status === 'pending' && !visit.gate_entrance_scanned) || visit.status === 'temporary_exit') ? `
                 <button 
                   onclick="scanGateEntrance('${visit.id}')"
                   class="px-3 py-1 bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 rounded-full text-xs font-medium hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors duration-200 flex items-center space-x-1"
@@ -11271,7 +11340,7 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
                   <span>Scan Gate</span>
                 </button>
               ` : ''}
-              ${isToday && (visit.status === 'pending' || visit.status === 'in_progress') && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && completedPlaces === totalPlaces && totalPlaces > 0 ? `
+              ${isToday && (visit.status === 'pending' || visit.status === 'in_progress') && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && scanButtonsEnabled && completedPlaces === totalPlaces && totalPlaces > 0 ? `
                 <button 
                   onclick="scanGateExit('${visit.id}')"
                   class="px-3 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded-full text-xs font-medium hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors duration-200 flex items-center space-x-1"
@@ -11510,6 +11579,7 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
 
 // Function to display visitor's today visits
 async function displayVisitorTodayVisits(visits: any[]): Promise<void> {
+  const scanButtonsEnabled = shouldShowScanButtons();
   const visitorTodayVisitsList = document.getElementById('visitorTodayVisitsList');
   if (!visitorTodayVisitsList) {
     console.error('Visitor today visits list container not found');
@@ -11650,7 +11720,7 @@ async function displayVisitorTodayVisits(visits: any[]): Promise<void> {
                   <span>Print</span>
                 </button>
               ` : ''}
-              ${isToday && userRole === 'visitor' && ((visit.status === 'pending' && !visit.gate_entrance_scanned) || visit.status === 'temporary_exit') ? `
+              ${isToday && userRole === 'visitor' && scanButtonsEnabled && ((visit.status === 'pending' && !visit.gate_entrance_scanned) || visit.status === 'temporary_exit') ? `
                 <button 
                   onclick="scanGateEntrance('${visit.id}')"
                   class="px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full text-xs font-medium hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors duration-200 flex items-center space-x-1"
@@ -11662,7 +11732,7 @@ async function displayVisitorTodayVisits(visits: any[]): Promise<void> {
                   <span>Scan Entrance</span>
                 </button>
               ` : ''}
-              ${isToday && (visit.status === 'pending' || visit.status === 'in_progress') && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && completedPlaces === totalPlaces && totalPlaces > 0 ? `
+              ${isToday && (visit.status === 'pending' || visit.status === 'in_progress') && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && scanButtonsEnabled && completedPlaces === totalPlaces && totalPlaces > 0 ? `
                 <button 
                   onclick="scanGateExit('${visit.id}')"
                   class="px-3 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded-full text-xs font-medium hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors duration-200 flex items-center space-x-1"
@@ -11885,6 +11955,7 @@ async function displayVisitorTodayVisits(visits: any[]): Promise<void> {
 
 // Function to display visitor's future visits
 async function displayVisitorFutureVisits(visits: any[]): Promise<void> {
+  const scanButtonsEnabled = shouldShowScanButtons();
   const visitorFutureVisitsList = document.getElementById('visitorFutureVisitsList');
   if (!visitorFutureVisitsList) {
     console.error('Visitor future visits list container not found');
@@ -12053,7 +12124,7 @@ async function displayVisitorFutureVisits(visits: any[]): Promise<void> {
                   <span>Print</span>
                 </button>
               ` : ''}
-              ${isToday && visit.status === 'pending' && !visit.gate_entrance_scanned && userRole === 'visitor' ? `
+              ${isToday && visit.status === 'pending' && !visit.gate_entrance_scanned && userRole === 'visitor' && scanButtonsEnabled ? `
                 <button 
                   onclick="scanGateEntrance('${visit.id}')"
                   class="px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full text-xs font-medium hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors duration-200 flex items-center space-x-1"
@@ -12065,7 +12136,7 @@ async function displayVisitorFutureVisits(visits: any[]): Promise<void> {
                   <span>Scan Entrance</span>
                 </button>
               ` : ''}
-              ${isToday && (visit.status === 'pending' || visit.status === 'in_progress') && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && completedPlaces === totalPlaces && totalPlaces > 0 ? `
+              ${isToday && (visit.status === 'pending' || visit.status === 'in_progress') && visit.gate_entrance_scanned && !visit.gate_exit_scanned && userRole === 'visitor' && scanButtonsEnabled && completedPlaces === totalPlaces && totalPlaces > 0 ? `
                 <button 
                   onclick="scanGateExit('${visit.id}')"
                   class="px-3 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded-full text-xs font-medium hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors duration-200 flex items-center space-x-1"
