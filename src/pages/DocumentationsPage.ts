@@ -28,16 +28,16 @@ export function DocumentationsPage(): string {
         <!-- Tabs -->
         <div class="border-b border-gray-200 dark:border-gray-700 mb-4 overflow-x-auto">
           <nav id="docsTabs" class="flex space-x-4 text-sm" aria-label="Documentation sections">
-            <button data-doc-tab="overview" class="docs-tab active border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 px-3 py-2 whitespace-nowrap">
+            <button data-doc-tab="overview" class="docs-tab active border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 px-3 py-2 whitespace-nowrap transition-all duration-300 ease-in-out hover:scale-105 hover:border-blue-500">
               Platform Overview
             </button>
-            <button data-doc-tab="algorithms" class="docs-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap">
+            <button data-doc-tab="algorithms" class="docs-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap transition-all duration-300 ease-in-out hover:scale-105 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400">
               Algorithms
             </button>
-            <button data-doc-tab="face" class="docs-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap">
+            <button data-doc-tab="face" class="docs-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap transition-all duration-300 ease-in-out hover:scale-105 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400">
               Face Detection & Verification
             </button>
-            <button data-doc-tab="thesis" class="docs-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap">
+            <button data-doc-tab="thesis" class="docs-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap transition-all duration-300 ease-in-out hover:scale-105 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400">
               Thesis
             </button>
           </nav>
@@ -46,34 +46,34 @@ export function DocumentationsPage(): string {
         <!-- Sub-tabs for Thesis (hidden by default) -->
         <div id="thesisSubTabs" class="border-b border-gray-200 dark:border-gray-700 mb-4 overflow-x-auto hidden">
           <nav id="thesisSubTabsNav" class="flex space-x-4 text-sm" aria-label="Thesis sections">
-            <button data-thesis-tab="functionality" class="thesis-sub-tab active border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 px-3 py-2 whitespace-nowrap">
+            <button data-thesis-tab="functionality" class="thesis-sub-tab active border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 px-3 py-2 whitespace-nowrap transition-all duration-300 ease-in-out hover:scale-105 hover:border-blue-500">
               Functionality
             </button>
-            <button data-thesis-tab="dashboard-descriptions" class="thesis-sub-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap">
+            <button data-thesis-tab="dashboard-descriptions" class="thesis-sub-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap transition-all duration-300 ease-in-out hover:scale-105 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400">
               Dashboard Descriptions
             </button>
-            <button data-thesis-tab="capabilities-limitations" class="thesis-sub-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap">
+            <button data-thesis-tab="capabilities-limitations" class="thesis-sub-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap transition-all duration-300 ease-in-out hover:scale-105 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400">
               Capabilities & Limitations
             </button>
-            <button data-thesis-tab="project-description" class="thesis-sub-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap">
+            <button data-thesis-tab="project-description" class="thesis-sub-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap transition-all duration-300 ease-in-out hover:scale-105 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400">
               Project Description
             </button>
-            <button data-thesis-tab="home-page-description" class="thesis-sub-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap">
+            <button data-thesis-tab="home-page-description" class="thesis-sub-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap transition-all duration-300 ease-in-out hover:scale-105 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400">
               Home Page Description
             </button>
-            <button data-thesis-tab="reliability-test-results" class="thesis-sub-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap">
+            <button data-thesis-tab="reliability-test-results" class="thesis-sub-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap transition-all duration-300 ease-in-out hover:scale-105 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400">
               Reliability Test Results
             </button>
-            <button data-thesis-tab="security-test-results" class="thesis-sub-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap">
+            <button data-thesis-tab="security-test-results" class="thesis-sub-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap transition-all duration-300 ease-in-out hover:scale-105 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400">
               Security Test Results
             </button>
-            <button data-thesis-tab="usability-test-results" class="thesis-sub-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap">
+            <button data-thesis-tab="usability-test-results" class="thesis-sub-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap transition-all duration-300 ease-in-out hover:scale-105 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400">
               Usability Test Results
             </button>
-            <button data-thesis-tab="conclusion" class="thesis-sub-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap">
+            <button data-thesis-tab="conclusion" class="thesis-sub-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap transition-all duration-300 ease-in-out hover:scale-105 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400">
               Conclusion
             </button>
-            <button data-thesis-tab="testing-samples-data" class="thesis-sub-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap">
+            <button data-thesis-tab="testing-samples-data" class="thesis-sub-tab border-b-2 border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 whitespace-nowrap transition-all duration-300 ease-in-out hover:scale-105 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400">
               Testing Samples Data
             </button>
           </nav>
