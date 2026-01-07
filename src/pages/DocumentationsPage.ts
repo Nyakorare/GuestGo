@@ -258,6 +258,15 @@ export function setupDocumentationsPage(): void {
       return;
     }
 
+    // Update content for all other thesis sub-tabs
+    if (docsContent && innerHtml && title) {
+      docsContent.innerHTML = `
+        <h2 class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">${title}</h2>
+        <div class="prose dark:prose-invert max-w-none text-sm leading-relaxed text-gray-800 dark:text-gray-100 overflow-x-auto">
+          ${innerHtml}
+        </div>
+      `;
+    }
   }
 
   function setActiveTab(tabId: 'overview' | 'algorithms' | 'face' | 'thesis') {
