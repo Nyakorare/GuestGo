@@ -538,14 +538,48 @@ async function setupPageFunctionality(path: string, user: any, role: string | nu
   }
 }
 
-function updateNavigationState(path: string) {
+// Helper function to update active tab color based on theme
+function updateActiveTabColor(link: HTMLElement) {
+  const isDark = document.documentElement.classList.contains('dark');
+  if (!isDark) {
+    // Light mode - no special color, remove inline style to use default
+    link.style.color = '';
+  } else {
+    // Dark mode - use blue-300
+    link.style.color = 'rgb(147, 197, 253)'; // blue-300 for dark mode
+  }
+}
+
+// Update active tab colors when theme changes
+function setupThemeChangeListener() {
+  // Use MutationObserver to watch for theme changes
+  const observer = new MutationObserver(() => {
+    document.querySelectorAll('nav a.nav-link-enhanced.active').forEach(link => {
+      updateActiveTabColor(link as HTMLElement);
+    });
+  });
+
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class']
+  });
+}
+
+// Initialize theme change listener
+setupThemeChangeListener();
+
+export function updateNavigationState(path: string) {
   // Update active navigation link
   document.querySelectorAll('nav a').forEach(link => {
-    if (link.getAttribute('href') === '#' + path) {
-      link.classList.add('text-blue-600', 'nav-link');
+    const href = link.getAttribute('href');
+    if (href === '#' + path || (path === '/' && href === '#/')) {
+      link.classList.add('active');
+      // Update color based on current theme
+      updateActiveTabColor(link as HTMLElement);
     } else {
-      link.classList.remove('text-blue-600');
-      link.classList.add('nav-link');
+      link.classList.remove('active');
+      // Remove inline color to let CSS handle it
+      (link as HTMLElement).style.color = '';
     }
   });
 

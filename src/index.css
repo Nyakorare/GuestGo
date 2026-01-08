@@ -16,6 +16,128 @@
     @apply w-full;
   }
 
+  .nav-link-enhanced {
+    @apply relative px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200;
+    color: rgb(31 41 55); /* gray-800 for light mode - better contrast */
+    z-index: 10;
+    position: relative;
+  }
+
+  .dark .nav-link-enhanced {
+    color: rgb(229 231 235); /* gray-200 for dark mode */
+  }
+
+  .nav-link-enhanced::before {
+    content: '';
+    @apply absolute inset-0 rounded-lg opacity-0 scale-95 transition-all duration-200;
+    background-color: rgb(239 246 255); /* blue-50 for light mode */
+    z-index: 0;
+  }
+
+  .dark .nav-link-enhanced::before {
+    background-color: rgba(30, 58, 138, 0.3); /* blue-900/30 for dark mode */
+  }
+
+  .nav-link-enhanced:hover {
+    color: rgb(37 99 235); /* blue-600 for light mode */
+  }
+
+  .dark .nav-link-enhanced:hover {
+    color: rgb(147 197 253); /* blue-300 for dark mode */
+  }
+
+  .nav-link-enhanced:hover::before {
+    @apply opacity-100 scale-100;
+  }
+
+  /* Active state - animated design */
+  nav a.nav-link-enhanced.active {
+    font-weight: 600 !important;
+    position: relative !important;
+    z-index: 10 !important;
+  }
+
+  /* Animated underline for active tab */
+  nav a.nav-link-enhanced.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgb(37, 99, 235), transparent);
+    animation: activeTabUnderline 0.6s ease-out forwards;
+    z-index: 11;
+  }
+
+  .dark nav a.nav-link-enhanced.active::after {
+    background: linear-gradient(90deg, transparent, rgb(147, 197, 253), transparent);
+  }
+
+  /* Light mode active tab - no special color, just use default text color */
+  html:not(.dark) nav a.nav-link-enhanced.active {
+    /* No special color - uses default gray-800 from .nav-link-enhanced */
+  }
+
+  /* Light mode active tab - subtle animated background */
+  html:not(.dark) .nav-link-enhanced.active::before {
+    opacity: 0.3 !important;
+    transform: scale(1) !important;
+    background-color: rgb(239 246 255) !important; /* blue-50 - subtle background */
+    animation: activeTabBackground 2s ease-in-out infinite;
+  }
+
+  /* Dark mode active tab - blue-300 text on blue-900/40 background */
+  html.dark nav a.nav-link-enhanced.active {
+    color: rgb(147, 197, 253) !important; /* blue-300 - light blue for dark mode */
+  }
+
+  /* Dark mode active state background with animation */
+  html.dark .nav-link-enhanced.active::before {
+    opacity: 1;
+    transform: scale(1);
+    background-color: rgba(30, 58, 138, 0.4); /* blue-900/40 for dark mode */
+    box-shadow: 0 1px 3px 0 rgba(30, 58, 138, 0.2), 0 1px 2px 0 rgba(30, 58, 138, 0.1);
+  }
+
+  /* Animation keyframes */
+  @keyframes activeTabUnderline {
+    0% {
+      width: 0;
+      opacity: 0;
+    }
+    50% {
+      opacity: 1;
+    }
+    100% {
+      width: 100%;
+      opacity: 1;
+    }
+  }
+
+
+  @keyframes activeTabBackground {
+    0%, 100% {
+      opacity: 0.3;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  @keyframes activeTabBackgroundDark {
+    0%, 100% {
+      opacity: 0.4;
+    }
+    50% {
+      opacity: 0.6;
+    }
+  }
+
+  html.dark .nav-link-enhanced.active::before {
+    animation: activeTabBackgroundDark 2s ease-in-out infinite;
+  }
+
   .track-card {
     @apply relative overflow-hidden transition-transform duration-300 ease-out;
   }
