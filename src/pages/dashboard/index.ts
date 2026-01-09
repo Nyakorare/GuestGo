@@ -6080,6 +6080,8 @@ function setupAdminTabEventListeners() {
     feedbackTab?.classList.add('bg-gray-100', 'text-gray-700');
     aiStatusTab?.classList.remove('bg-blue-600', 'text-white');
     aiStatusTab?.classList.add('bg-gray-100', 'text-gray-700');
+    visitorSettingsTab?.classList.remove('bg-blue-600', 'text-white');
+    visitorSettingsTab?.classList.add('bg-gray-100', 'text-gray-700');
     accountsContent?.classList.remove('hidden');
     placesContent?.classList.add('hidden');
     gatesContent?.classList.add('hidden');
@@ -6148,6 +6150,8 @@ function setupAdminTabEventListeners() {
     gatesTab?.classList.add('bg-gray-100', 'text-gray-700');
     aiStatusTab?.classList.remove('bg-blue-600', 'text-white');
     aiStatusTab?.classList.add('bg-gray-100', 'text-gray-700');
+    visitorSettingsTab?.classList.remove('bg-blue-600', 'text-white');
+    visitorSettingsTab?.classList.add('bg-gray-100', 'text-gray-700');
     feedbackContent?.classList.remove('hidden');
     placesContent?.classList.add('hidden');
     accountsContent?.classList.add('hidden');
@@ -6198,6 +6202,8 @@ function setupAdminTabEventListeners() {
     gatesTab?.classList.add('bg-gray-100', 'text-gray-700');
     feedbackTab?.classList.remove('bg-blue-600', 'text-white');
     feedbackTab?.classList.add('bg-gray-100', 'text-gray-700');
+    visitorSettingsTab?.classList.remove('bg-blue-600', 'text-white');
+    visitorSettingsTab?.classList.add('bg-gray-100', 'text-gray-700');
     guardDashboardTab?.classList.remove('bg-blue-600', 'text-white');
     guardDashboardTab?.classList.add('bg-gray-100', 'text-gray-700');
     aiStatusContent?.classList.remove('hidden');
