@@ -532,7 +532,7 @@ async function loadFeedback() {
       
       // Create stars HTML
       let starsHtml = '';
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 4; i++) {
         if (i < rating) {
           starsHtml += '<span class="text-yellow-400 text-xl">★</span>';
         } else {

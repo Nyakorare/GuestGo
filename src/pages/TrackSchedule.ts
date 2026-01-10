@@ -13,6 +13,7 @@ import { VisitQRCode } from '../components/mini-features/trackschedule/VisitQRCo
 import { NoVisitFound } from '../components/mini-features/trackschedule/NoVisitFound';
 import { checkAndShowPlaceOnHoldNotification } from '../components/PlaceOnHoldNotificationModal';
 import { Footer } from '../components/mini-features/Footer';
+import { shouldShowScanButtons } from '../components/VisitorSettings';
 
 export function TrackSchedulePage() {
   return `
@@ -567,6 +568,26 @@ async function displayGateScanningStatus(visitData: any) {
 // Update scan buttons based on user role and visit status
 async function updateScanButtons(visitData: any, scanEntranceBtn: HTMLButtonElement | null, scanExitBtn: HTMLButtonElement | null) {
   try {
+    // Check visitor settings - if scan buttons are disabled, hide them
+    const scanButtonsEnabled = shouldShowScanButtons();
+    if (!scanButtonsEnabled) {
+      if (scanEntranceBtn) {
+        scanEntranceBtn.style.display = 'none';
+      }
+      if (scanExitBtn) {
+        scanExitBtn.style.display = 'none';
+      }
+      return;
+    } else {
+      // Make sure buttons are visible if settings allow
+      if (scanEntranceBtn) {
+        scanEntranceBtn.style.display = '';
+      }
+      if (scanExitBtn) {
+        scanExitBtn.style.display = '';
+      }
+    }
+
     // Check for invalid statuses first
     if (visitData.status === 'unsuccessful' || visitData.status === 'completed_flagged') {
       if (scanEntranceBtn) {
