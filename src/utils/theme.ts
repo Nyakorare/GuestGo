@@ -23,12 +23,37 @@ export function updateTheme(theme: Theme) {
 export function updateThemeIcons(theme: Theme) {
   const darkIcon = document.getElementById('theme-toggle-dark-icon');
   const lightIcon = document.getElementById('theme-toggle-light-icon');
+  const toggleButton = document.getElementById('theme-toggle');
+  
+  // Add rotation animation to button
+  toggleButton?.classList.add('theme-toggle-rotate');
+  setTimeout(() => {
+    toggleButton?.classList.remove('theme-toggle-rotate');
+  }, 600);
   
   if (theme === 'dark') {
-    darkIcon?.classList.add('hidden');
-    lightIcon?.classList.remove('hidden');
+    // Fade out dark icon, fade in light icon
+    darkIcon?.classList.add('theme-icon-fade-out');
+    setTimeout(() => {
+      darkIcon?.classList.add('hidden');
+      darkIcon?.classList.remove('theme-icon-fade-out');
+      lightIcon?.classList.remove('hidden');
+      lightIcon?.classList.add('theme-icon-fade-in');
+      setTimeout(() => {
+        lightIcon?.classList.remove('theme-icon-fade-in');
+      }, 300);
+    }, 150);
   } else {
-    lightIcon?.classList.add('hidden');
-    darkIcon?.classList.remove('hidden');
+    // Fade out light icon, fade in dark icon
+    lightIcon?.classList.add('theme-icon-fade-out');
+    setTimeout(() => {
+      lightIcon?.classList.add('hidden');
+      lightIcon?.classList.remove('theme-icon-fade-out');
+      darkIcon?.classList.remove('hidden');
+      darkIcon?.classList.add('theme-icon-fade-in');
+      setTimeout(() => {
+        darkIcon?.classList.remove('theme-icon-fade-in');
+      }, 300);
+    }, 150);
   }
 }
