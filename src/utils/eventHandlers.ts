@@ -142,7 +142,7 @@ function updateAuthMenu(isLoggedIn: boolean) {
     // Desktop dropdown content
     if (authDropdownContent) {
       authDropdownContent.innerHTML = `
-        <button id="logout-button" class="block w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100 dark:text-red-500 dark:hover:bg-gray-700 transition-colors duration-200">
+        <button id="logout-button" class="auth-dropdown-button block w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100 dark:text-red-500 dark:hover:bg-gray-700 transition-colors duration-200">
           Logout
         </button>
       `;
@@ -160,8 +160,8 @@ function updateAuthMenu(isLoggedIn: boolean) {
     // Desktop dropdown content
     if (authDropdownContent) {
       authDropdownContent.innerHTML = `
-        <button id="login-button" class="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors duration-200">Login</button>
-        <button id="signup-button" class="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors duration-200">Sign Up</button>
+        <button id="login-button" class="auth-dropdown-button block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors duration-200">Login</button>
+        <button id="signup-button" class="auth-dropdown-button block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors duration-200">Sign Up</button>
       `;
     }
 
@@ -179,20 +179,54 @@ function updateAuthMenu(isLoggedIn: boolean) {
 }
 
 function setupAuthButtonListeners() {
+  // Helper function to close dropdown with animation
+  const closeDropdownAnimated = () => {
+    const authDropdown = document.getElementById('auth-dropdown');
+    if (authDropdown) {
+      authDropdown.classList.remove('dropdown-open');
+      authDropdown.classList.add('dropdown-close');
+      setTimeout(() => {
+        if (authDropdown.classList.contains('dropdown-close')) {
+          authDropdown.classList.add('hidden');
+        }
+      }, 200);
+    }
+  };
+
   // Login button click handler
   const loginButton = document.getElementById('login-button');
   loginButton?.addEventListener('click', () => {
-    openModal('login-modal');
-    const authDropdown = document.getElementById('auth-dropdown');
-    authDropdown?.classList.add('hidden');
+    // Add click animation
+    loginButton.classList.add('auth-button-clicked');
+    setTimeout(() => {
+      loginButton.classList.remove('auth-button-clicked');
+    }, 300);
+    
+    // Close dropdown with animation
+    closeDropdownAnimated();
+    
+    // Open modal after a short delay for smooth transition
+    setTimeout(() => {
+      openModal('login-modal');
+    }, 150);
   });
 
   // Signup button click handler
   const signupButton = document.getElementById('signup-button');
   signupButton?.addEventListener('click', () => {
-    openModal('signup-modal');
-    const authDropdown = document.getElementById('auth-dropdown');
-    authDropdown?.classList.add('hidden');
+    // Add click animation
+    signupButton.classList.add('auth-button-clicked');
+    setTimeout(() => {
+      signupButton.classList.remove('auth-button-clicked');
+    }, 300);
+    
+    // Close dropdown with animation
+    closeDropdownAnimated();
+    
+    // Open modal after a short delay for smooth transition
+    setTimeout(() => {
+      openModal('signup-modal');
+    }, 150);
   });
 
   // Logout button click handler
@@ -200,6 +234,17 @@ function setupAuthButtonListeners() {
   const mobileLogoutButton = document.getElementById('mobile-logout-button');
   
   const handleLogout = async () => {
+    // Add click animation to logout button
+    if (logoutButton) {
+      logoutButton.classList.add('auth-button-clicked');
+      setTimeout(() => {
+        logoutButton.classList.remove('auth-button-clicked');
+      }, 300);
+    }
+    
+    // Close dropdown with animation
+    closeDropdownAnimated();
+    
     await supabase.auth.signOut();
     window.location.hash = '/';
     setTimeout(() => {
@@ -766,18 +811,46 @@ export function setupEventListeners() {
     });
   }
 
-  // Auth dropdown functionality
+  // Auth dropdown functionality with animations
   const authMenuButton = document.getElementById('auth-menu-button');
   const authDropdown = document.getElementById('auth-dropdown');
   
+  const openDropdown = () => {
+    if (authDropdown) {
+      authDropdown.classList.remove('hidden', 'dropdown-close');
+      // Force reflow to ensure transition works
+      void authDropdown.offsetWidth;
+      authDropdown.classList.add('dropdown-open');
+    }
+  };
+
+  const closeDropdown = () => {
+    if (authDropdown) {
+      authDropdown.classList.remove('dropdown-open');
+      authDropdown.classList.add('dropdown-close');
+      // Hide after animation completes
+      setTimeout(() => {
+        if (authDropdown.classList.contains('dropdown-close')) {
+          authDropdown.classList.add('hidden');
+        }
+      }, 200);
+    }
+  };
+  
   authMenuButton?.addEventListener('click', (e) => {
     e.stopPropagation();
-    authDropdown?.classList.toggle('hidden');
+    if (authDropdown?.classList.contains('dropdown-open')) {
+      closeDropdown();
+    } else {
+      openDropdown();
+    }
   });
 
   // Close dropdown when clicking outside
-  document.addEventListener('click', () => {
-    authDropdown?.classList.add('hidden');
+  document.addEventListener('click', (e) => {
+    if (authDropdown && !authDropdown.contains(e.target as Node) && !authMenuButton?.contains(e.target as Node)) {
+      closeDropdown();
+    }
   });
 
   // Setup modal listeners for both desktop and mobile

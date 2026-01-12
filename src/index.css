@@ -231,7 +231,71 @@
 }
 
 .dropdown-transition {
-  animation: slideDown 0.2s ease-out;
+  opacity: 0;
+  transform: translateY(-10px) scale(0.95);
+  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+  pointer-events: none;
+}
+
+.dropdown-transition.dropdown-open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.dropdown-transition.dropdown-close {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.95);
+  pointer-events: none;
+}
+
+/* Dropdown button click animation */
+.auth-dropdown-button {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s ease-out;
+}
+
+.auth-dropdown-button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.2);
+  transform: translate(-50%, -50%);
+  transition: width 0.4s ease-out, height 0.4s ease-out;
+  pointer-events: none;
+}
+
+.auth-dropdown-button:active::before,
+.auth-dropdown-button.auth-button-clicked::before {
+  width: 300px;
+  height: 300px;
+}
+
+.auth-dropdown-button:active,
+.auth-dropdown-button.auth-button-clicked {
+  transform: scale(0.98);
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+.auth-dropdown-button.auth-button-clicked {
+  animation: buttonClickPulse 0.3s ease-out;
+}
+
+@keyframes buttonClickPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(0.98);
+  }
 }
 
 @keyframes fadeIn {
