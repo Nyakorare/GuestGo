@@ -109,9 +109,12 @@ export function initTrackSchedulePage() {
   // Set up event listeners
   setupTrackScheduleEventListeners();
 
-  // Setup scroll to top button
+  // Setup scroll to top button and home button
   import('../components/DocumentationNavigationButtons').then(({ setupScrollToTopButton }) => {
     setupScrollToTopButton();
+  });
+  import('../components/HomeButton').then(({ setupHomeButton }) => {
+    setupHomeButton();
   });
 }
 

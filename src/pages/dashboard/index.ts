@@ -196,6 +196,7 @@ export function DashboardPage() {
         if (roleData.role === 'log') {
           // Only show logs tab and content
           const guardDashboardTab = document.getElementById('guardDashboardTab');
+          const adminRefreshBtn = document.getElementById('adminRefreshBtn');
           if (adminTabs) adminTabs.classList.remove('hidden');
           if (logsTab) logsTab.classList.remove('hidden');
           if (placesTab) placesTab.classList.add('hidden');
@@ -212,6 +213,9 @@ export function DashboardPage() {
           if (aiStatusContent) aiStatusContent.classList.add('hidden');
           if (visitorSettingsContent) visitorSettingsContent.classList.add('hidden');
           
+          // Show refresh all button for log role
+          if (adminRefreshBtn) adminRefreshBtn.classList.remove('hidden');
+          
           // Hide visitor content
           const visitorContent = document.getElementById('visitorContent');
           if (visitorContent) visitorContent.classList.add('hidden');
@@ -221,10 +225,17 @@ export function DashboardPage() {
         } else if (roleData.role === 'admin') {
           // Admin: show admin tabs including gates, hide logs
           const guardDashboardTab = document.getElementById('guardDashboardTab');
+          const adminRefreshBtn = document.getElementById('adminRefreshBtn');
           if (adminTabs) adminTabs.classList.remove('hidden');
           if (logsTab) logsTab.classList.add('hidden');
-          if (placesTab) placesTab.classList.remove('bg-blue-600', 'text-white');
-          if (accountsTab) accountsTab.classList.remove('bg-gray-100', 'text-gray-700');
+          // Set Places tab as active (default)
+          setTabActive(placesTab);
+          // Set all other tabs as inactive
+          setTabInactive(accountsTab);
+          setTabInactive(gatesTab);
+          setTabInactive(feedbackTab);
+          setTabInactive(aiStatusTab);
+          setTabInactive(visitorSettingsTab);
           if (gatesTab) gatesTab.classList.remove('hidden');
           if (feedbackTab) feedbackTab.classList.remove('hidden');
           if (guardDashboardTab) guardDashboardTab.classList.add('hidden');
@@ -238,6 +249,9 @@ export function DashboardPage() {
           if (aiStatusContent) aiStatusContent.classList.add('hidden');
           if (visitorSettingsContent) visitorSettingsContent.classList.add('hidden');
           
+          // Hide refresh all button for admin role
+          if (adminRefreshBtn) adminRefreshBtn.classList.add('hidden');
+          
           // Hide visitor content
           const visitorContent = document.getElementById('visitorContent');
           if (visitorContent) visitorContent.classList.add('hidden');
@@ -249,6 +263,7 @@ export function DashboardPage() {
         } else if (roleData.role === 'personnel') {
           // Personnel: show personnel content, hide admin tabs
           const guardDashboardTab = document.getElementById('guardDashboardTab');
+          const adminRefreshBtn = document.getElementById('adminRefreshBtn');
           if (adminTabs) adminTabs.classList.add('hidden');
           if (logsTab) logsTab.classList.add('hidden');
           if (placesTab) placesTab.classList.add('hidden');
@@ -262,10 +277,15 @@ export function DashboardPage() {
           if (accountsContent) accountsContent.classList.add('hidden');
           if (logsContent) logsContent.classList.add('hidden');
           if (visitorSettingsContent) visitorSettingsContent.classList.add('hidden');
+          
+          // Hide refresh all button for personnel role
+          if (adminRefreshBtn) adminRefreshBtn.classList.add('hidden');
+          
           loadPersonnelDashboard();
         } else if (roleData.role === 'guard') {
           // Guard: show guard content and AI Status tab, hide other admin tabs
           const guardDashboardTab = document.getElementById('guardDashboardTab');
+          const adminRefreshBtn = document.getElementById('adminRefreshBtn');
           if (adminTabs) adminTabs.classList.remove('hidden');
           if (logsTab) logsTab.classList.add('hidden');
           if (placesTab) placesTab.classList.add('hidden');
@@ -283,19 +303,16 @@ export function DashboardPage() {
           if (aiStatusContent) aiStatusContent.classList.add('hidden');
           if (visitorSettingsContent) visitorSettingsContent.classList.add('hidden');
           
+          // Hide refresh all button for guard role
+          if (adminRefreshBtn) adminRefreshBtn.classList.add('hidden');
+          
           // Show guard content
           const guardContent = document.getElementById('guardContent');
           if (guardContent) guardContent.classList.remove('hidden');
           
           // Set Guard Dashboard tab as active by default
-          if (guardDashboardTab) {
-            guardDashboardTab.classList.add('bg-blue-600', 'text-white');
-            guardDashboardTab.classList.remove('bg-gray-100', 'text-gray-700');
-          }
-          if (aiStatusTab) {
-            aiStatusTab.classList.remove('bg-blue-600', 'text-white');
-            aiStatusTab.classList.add('bg-gray-100', 'text-gray-700');
-          }
+          setTabActive(guardDashboardTab);
+          setTabInactive(aiStatusTab);
           
           // Setup admin tab event listeners (needed for AI Status tab)
           setupAdminTabEventListeners();
@@ -304,6 +321,7 @@ export function DashboardPage() {
         } else if (roleData.role === 'visitor') {
           // Visitor: show visitor content, hide admin tabs
           const guardDashboardTab = document.getElementById('guardDashboardTab');
+          const adminRefreshBtn = document.getElementById('adminRefreshBtn');
           if (adminTabs) adminTabs.classList.add('hidden');
           if (logsTab) logsTab.classList.add('hidden');
           if (placesTab) placesTab.classList.add('hidden');
@@ -317,6 +335,9 @@ export function DashboardPage() {
           if (accountsContent) accountsContent.classList.add('hidden');
           if (logsContent) logsContent.classList.add('hidden');
           if (visitorSettingsContent) visitorSettingsContent.classList.add('hidden');
+          
+          // Hide refresh all button for visitor role
+          if (adminRefreshBtn) adminRefreshBtn.classList.add('hidden');
           
           // Show visitor content
           const visitorContent = document.getElementById('visitorContent');
@@ -326,6 +347,7 @@ export function DashboardPage() {
         } else {
           // Other roles (guest): hide all admin/logs tabs
           const guardDashboardTab = document.getElementById('guardDashboardTab');
+          const adminRefreshBtn = document.getElementById('adminRefreshBtn');
           if (adminTabs) adminTabs.classList.add('hidden');
           if (logsTab) logsTab.classList.add('hidden');
           if (placesTab) placesTab.classList.add('hidden');
@@ -339,6 +361,9 @@ export function DashboardPage() {
           if (accountsContent) accountsContent.classList.add('hidden');
           if (logsContent) logsContent.classList.add('hidden');
           if (visitorSettingsContent) visitorSettingsContent.classList.add('hidden');
+          
+          // Hide refresh all button for other roles
+          if (adminRefreshBtn) adminRefreshBtn.classList.add('hidden');
         }
       }
     }
@@ -459,6 +484,14 @@ export function DashboardPage() {
     const profileSettingsBtn = document.getElementById('profileSettingsBtn');
     if (profileSettingsBtn) {
       profileSettingsBtn.classList.remove('hidden');
+      // Ensure dropdown handler is attached - use setTimeout to ensure DOM is ready
+      setTimeout(() => {
+        import('../../components/ProfileSettingsDropdown').then(({ reinitializeProfileSettingsDropdown }) => {
+          reinitializeProfileSettingsDropdown();
+        }).catch(err => {
+          console.error('Error loading ProfileSettingsDropdown:', err);
+        });
+      }, 50);
     }
 
     // Setup dashboard event listeners
@@ -509,43 +542,43 @@ export function DashboardPage() {
               </button>
               <button 
                 id="accountsTab"
-                class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
               >
                 Accounts
               </button>
               <button 
                 id="logsTab"
-                class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
               >
                 Logs
               </button>
               <button 
                 id="gatesTab"
-                class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
               >
                 Gates
               </button>
               <button 
                 id="feedbackTab"
-                class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
               >
                 Feedback
               </button>
               <button 
                 id="guardDashboardTab"
-                class="hidden w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                class="hidden w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
               >
                 Guard Dashboard
               </button>
               <button 
                 id="aiStatusTab"
-                class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
               >
                 AI Status
               </button>
               <button 
                 id="visitorSettingsTab"
-                class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
               >
                 Visitor Settings
               </button>
@@ -6018,6 +6051,19 @@ window.addEventListener('beforeunload', () => {
   stopAutomaticStatusUpdates();
 });
 
+// Helper functions for tab styling
+function setTabActive(tab: HTMLElement | null) {
+  if (!tab) return;
+  tab.classList.add('bg-blue-600', 'text-white');
+  tab.classList.remove('bg-gray-100', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300');
+}
+
+function setTabInactive(tab: HTMLElement | null) {
+  if (!tab) return;
+  tab.classList.remove('bg-blue-600', 'text-white');
+  tab.classList.add('bg-gray-100', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-300');
+}
+
 // Add admin tab switching event listeners
 function setupAdminTabEventListeners() {
   const placesTab = document.getElementById('placesTab');
@@ -6035,18 +6081,12 @@ function setupAdminTabEventListeners() {
 
   // Places tab event listener
   placesTab?.addEventListener('click', () => {
-    placesTab.classList.add('bg-blue-600', 'text-white');
-    placesTab.classList.remove('bg-gray-100', 'text-gray-700');
-    accountsTab?.classList.remove('bg-blue-600', 'text-white');
-    accountsTab?.classList.add('bg-gray-100', 'text-gray-700');
-    gatesTab?.classList.remove('bg-blue-600', 'text-white');
-    gatesTab?.classList.add('bg-gray-100', 'text-gray-700');
-    feedbackTab?.classList.remove('bg-blue-600', 'text-white');
-    feedbackTab?.classList.add('bg-gray-100', 'text-gray-700');
-    aiStatusTab?.classList.remove('bg-blue-600', 'text-white');
-    aiStatusTab?.classList.add('bg-gray-100', 'text-gray-700');
-    visitorSettingsTab?.classList.remove('bg-blue-600', 'text-white');
-    visitorSettingsTab?.classList.add('bg-gray-100', 'text-gray-700');
+    setTabActive(placesTab);
+    setTabInactive(accountsTab);
+    setTabInactive(gatesTab);
+    setTabInactive(feedbackTab);
+    setTabInactive(aiStatusTab);
+    setTabInactive(visitorSettingsTab);
     placesContent?.classList.remove('hidden');
     accountsContent?.classList.add('hidden');
     gatesContent?.classList.add('hidden');
@@ -6065,23 +6105,21 @@ function setupAdminTabEventListeners() {
     if (aiStatusContent) {
       aiStatusContent.innerHTML = '';
     }
+    // Clear visitor settings content when switching away
+    if (visitorSettingsContent) {
+      visitorSettingsContent.innerHTML = '';
+    }
     loadPlaces();
   });
 
   // Accounts tab event listener
   accountsTab?.addEventListener('click', () => {
-    accountsTab.classList.add('bg-blue-600', 'text-white');
-    accountsTab.classList.remove('bg-gray-100', 'text-gray-700');
-    placesTab?.classList.remove('bg-blue-600', 'text-white');
-    placesTab?.classList.add('bg-gray-100', 'text-gray-700');
-    gatesTab?.classList.remove('bg-blue-600', 'text-white');
-    gatesTab?.classList.add('bg-gray-100', 'text-gray-700');
-    feedbackTab?.classList.remove('bg-blue-600', 'text-white');
-    feedbackTab?.classList.add('bg-gray-100', 'text-gray-700');
-    aiStatusTab?.classList.remove('bg-blue-600', 'text-white');
-    aiStatusTab?.classList.add('bg-gray-100', 'text-gray-700');
-    visitorSettingsTab?.classList.remove('bg-blue-600', 'text-white');
-    visitorSettingsTab?.classList.add('bg-gray-100', 'text-gray-700');
+    setTabActive(accountsTab);
+    setTabInactive(placesTab);
+    setTabInactive(gatesTab);
+    setTabInactive(feedbackTab);
+    setTabInactive(aiStatusTab);
+    setTabInactive(visitorSettingsTab);
     accountsContent?.classList.remove('hidden');
     placesContent?.classList.add('hidden');
     gatesContent?.classList.add('hidden');
@@ -6099,23 +6137,21 @@ function setupAdminTabEventListeners() {
     if (aiStatusContent) {
       aiStatusContent.innerHTML = '';
     }
+    // Clear visitor settings content when switching away
+    if (visitorSettingsContent) {
+      visitorSettingsContent.innerHTML = '';
+    }
     loadAccounts();
   });
 
   // Gates tab event listener
   gatesTab?.addEventListener('click', () => {
-    gatesTab.classList.add('bg-blue-600', 'text-white');
-    gatesTab.classList.remove('bg-gray-100', 'text-gray-700');
-    placesTab?.classList.remove('bg-blue-600', 'text-white');
-    placesTab?.classList.add('bg-gray-100', 'text-gray-700');
-    accountsTab?.classList.remove('bg-blue-600', 'text-white');
-    accountsTab?.classList.add('bg-gray-100', 'text-gray-700');
-    feedbackTab?.classList.remove('bg-blue-600', 'text-white');
-    feedbackTab?.classList.add('bg-gray-100', 'text-gray-700');
-    aiStatusTab?.classList.remove('bg-blue-600', 'text-white');
-    aiStatusTab?.classList.add('bg-gray-100', 'text-gray-700');
-    visitorSettingsTab?.classList.remove('bg-blue-600', 'text-white');
-    visitorSettingsTab?.classList.add('bg-gray-100', 'text-gray-700');
+    setTabActive(gatesTab);
+    setTabInactive(placesTab);
+    setTabInactive(accountsTab);
+    setTabInactive(feedbackTab);
+    setTabInactive(aiStatusTab);
+    setTabInactive(visitorSettingsTab);
     gatesContent?.classList.remove('hidden');
     placesContent?.classList.add('hidden');
     accountsContent?.classList.add('hidden');
@@ -6130,6 +6166,10 @@ function setupAdminTabEventListeners() {
     if (aiStatusContent) {
       aiStatusContent.innerHTML = '';
     }
+    // Clear visitor settings content when switching away
+    if (visitorSettingsContent) {
+      visitorSettingsContent.innerHTML = '';
+    }
     // Dynamically import and render the Gates tab content
     import('./Gates').then(module => {
       gatesContent.innerHTML = module.renderGates();
@@ -6140,18 +6180,12 @@ function setupAdminTabEventListeners() {
 
   // Feedback tab event listener
   feedbackTab?.addEventListener('click', () => {
-    feedbackTab.classList.add('bg-blue-600', 'text-white');
-    feedbackTab.classList.remove('bg-gray-100', 'text-gray-700');
-    placesTab?.classList.remove('bg-blue-600', 'text-white');
-    placesTab?.classList.add('bg-gray-100', 'text-gray-700');
-    accountsTab?.classList.remove('bg-blue-600', 'text-white');
-    accountsTab?.classList.add('bg-gray-100', 'text-gray-700');
-    gatesTab?.classList.remove('bg-blue-600', 'text-white');
-    gatesTab?.classList.add('bg-gray-100', 'text-gray-700');
-    aiStatusTab?.classList.remove('bg-blue-600', 'text-white');
-    aiStatusTab?.classList.add('bg-gray-100', 'text-gray-700');
-    visitorSettingsTab?.classList.remove('bg-blue-600', 'text-white');
-    visitorSettingsTab?.classList.add('bg-gray-100', 'text-gray-700');
+    setTabActive(feedbackTab);
+    setTabInactive(placesTab);
+    setTabInactive(accountsTab);
+    setTabInactive(gatesTab);
+    setTabInactive(aiStatusTab);
+    setTabInactive(visitorSettingsTab);
     feedbackContent?.classList.remove('hidden');
     placesContent?.classList.add('hidden');
     accountsContent?.classList.add('hidden');
@@ -6165,6 +6199,10 @@ function setupAdminTabEventListeners() {
     if (aiStatusContent) {
       aiStatusContent.innerHTML = '';
     }
+    // Clear visitor settings content when switching away
+    if (visitorSettingsContent) {
+      visitorSettingsContent.innerHTML = '';
+    }
     // Dynamically import and render the Feedback tab content
     import('./Feedback').then(module => {
       feedbackContent.innerHTML = module.renderFeedback();
@@ -6176,10 +6214,8 @@ function setupAdminTabEventListeners() {
   // Guard Dashboard tab event listener
   const guardDashboardTab = document.getElementById('guardDashboardTab');
   guardDashboardTab?.addEventListener('click', () => {
-    guardDashboardTab.classList.add('bg-blue-600', 'text-white');
-    guardDashboardTab.classList.remove('bg-gray-100', 'text-gray-700');
-    aiStatusTab?.classList.remove('bg-blue-600', 'text-white');
-    aiStatusTab?.classList.add('bg-gray-100', 'text-gray-700');
+    setTabActive(guardDashboardTab);
+    setTabInactive(aiStatusTab);
     // Show guard content and hide AI Status content
     const guardContent = document.getElementById('guardContent');
     if (guardContent) guardContent.classList.remove('hidden');
@@ -6188,22 +6224,20 @@ function setupAdminTabEventListeners() {
     if (aiStatusContent) {
       aiStatusContent.innerHTML = '';
     }
+    // Clear visitor settings content when switching away
+    if (visitorSettingsContent) {
+      visitorSettingsContent.innerHTML = '';
+    }
   });
 
   // AI Status tab event listener
   aiStatusTab?.addEventListener('click', () => {
-    aiStatusTab.classList.add('bg-blue-600', 'text-white');
-    aiStatusTab.classList.remove('bg-gray-100', 'text-gray-700');
-    placesTab?.classList.remove('bg-blue-600', 'text-white');
-    placesTab?.classList.add('bg-gray-100', 'text-gray-700');
-    accountsTab?.classList.remove('bg-blue-600', 'text-white');
-    accountsTab?.classList.add('bg-gray-100', 'text-gray-700');
-    gatesTab?.classList.remove('bg-blue-600', 'text-white');
-    gatesTab?.classList.add('bg-gray-100', 'text-gray-700');
-    feedbackTab?.classList.remove('bg-blue-600', 'text-white');
-    feedbackTab?.classList.add('bg-gray-100', 'text-gray-700');
-    visitorSettingsTab?.classList.remove('bg-blue-600', 'text-white');
-    visitorSettingsTab?.classList.add('bg-gray-100', 'text-gray-700');
+    setTabActive(aiStatusTab);
+    setTabInactive(placesTab);
+    setTabInactive(accountsTab);
+    setTabInactive(gatesTab);
+    setTabInactive(feedbackTab);
+    setTabInactive(visitorSettingsTab);
     guardDashboardTab?.classList.remove('bg-blue-600', 'text-white');
     guardDashboardTab?.classList.add('bg-gray-100', 'text-gray-700');
     aiStatusContent?.classList.remove('hidden');
@@ -6222,6 +6256,10 @@ function setupAdminTabEventListeners() {
     if (feedbackContent) {
       feedbackContent.innerHTML = '';
     }
+    // Clear visitor settings content when switching away
+    if (visitorSettingsContent) {
+      visitorSettingsContent.innerHTML = '';
+    }
     // Dynamically import and render the AI Status tab content
     import('./AIStatus').then(module => {
       aiStatusContent.innerHTML = module.renderAIStatus();
@@ -6232,18 +6270,12 @@ function setupAdminTabEventListeners() {
 
   // Visitor Settings tab event listener
   visitorSettingsTab?.addEventListener('click', () => {
-    visitorSettingsTab.classList.add('bg-blue-600', 'text-white');
-    visitorSettingsTab.classList.remove('bg-gray-100', 'text-gray-700');
-    placesTab?.classList.remove('bg-blue-600', 'text-white');
-    placesTab?.classList.add('bg-gray-100', 'text-gray-700');
-    accountsTab?.classList.remove('bg-blue-600', 'text-white');
-    accountsTab?.classList.add('bg-gray-100', 'text-gray-700');
-    gatesTab?.classList.remove('bg-blue-600', 'text-white');
-    gatesTab?.classList.add('bg-gray-100', 'text-gray-700');
-    feedbackTab?.classList.remove('bg-blue-600', 'text-white');
-    feedbackTab?.classList.add('bg-gray-100', 'text-gray-700');
-    aiStatusTab?.classList.remove('bg-blue-600', 'text-white');
-    aiStatusTab?.classList.add('bg-gray-100', 'text-gray-700');
+    setTabActive(visitorSettingsTab);
+    setTabInactive(placesTab);
+    setTabInactive(accountsTab);
+    setTabInactive(gatesTab);
+    setTabInactive(feedbackTab);
+    setTabInactive(aiStatusTab);
     visitorSettingsContent?.classList.remove('hidden');
     placesContent?.classList.add('hidden');
     accountsContent?.classList.add('hidden');

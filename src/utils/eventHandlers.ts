@@ -2,6 +2,7 @@ import supabase from '../config/supabase';
 import { logAction } from './logging';
 import { openModal } from '../components/AuthModals';
 
+
 // Function to show logout modal after password change
 function showPasswordChangeLogoutModal() {
   // Remove any existing modal
@@ -284,15 +285,21 @@ export function setupEventListeners() {
   // Update navigation based on user role
   updateNavigationBasedOnRole();
 
-  // Profile settings dropdown functionality
-  const profileSettingsBtn = document.getElementById('profileSettingsBtn');
-  const profileDropdown = document.getElementById('profile-dropdown');
-  const accountSettingsBtn = document.getElementById('account-settings-btn');
-  const profileLogoutBtn = document.getElementById('profile-logout-btn');
+  // Profile settings dropdown functionality - now handled in separate file
+  // Use dynamic import to avoid circular dependencies
+  (async () => {
+    try {
+      const { setupProfileSettingsDropdown } = await import('../components/ProfileSettingsDropdown');
+      setupProfileSettingsDropdown();
+    } catch (err) {
+      console.error('Error loading ProfileSettingsDropdown:', err);
+    }
+  })();
+
+  // Function to close the modal
   const profileSettingsModal = document.getElementById('profileSettingsModal');
   const closeProfileModalBtn = document.getElementById('closeProfileModalBtn');
   
-  // Function to close the modal
   const closeModal = () => {
     if (profileSettingsModal) {
       profileSettingsModal.classList.add('hidden');
@@ -365,72 +372,6 @@ export function setupEventListeners() {
     }
   };
 
-  profileSettingsBtn?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    profileDropdown?.classList.toggle('hidden');
-  });
-
-  // Close profile dropdown when clicking outside
-  document.addEventListener('click', () => {
-    profileDropdown?.classList.add('hidden');
-  });
-
-  // Account settings button click handler
-  accountSettingsBtn?.addEventListener('click', async () => {
-    if (profileSettingsModal) {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        // Get user's role and name
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('role, first_name, last_name')
-          .eq('user_id', user.id)
-          .single();
-
-        const modalUserRole = document.getElementById('modalUserRole');
-        const modalUserName = document.getElementById('modalUserName');
-        const modalUserId = document.getElementById('modalUserId');
-        
-        if (modalUserRole) {
-          if (roleData) {
-            // Capitalize first letter of role
-            const role = roleData.role.charAt(0).toUpperCase() + roleData.role.slice(1);
-            modalUserRole.textContent = role;
-          } else {
-            modalUserRole.textContent = 'User';
-          }
-        }
-
-        // Set user full name
-        if (modalUserName) {
-          if (roleData && roleData.first_name && roleData.last_name) {
-            modalUserName.textContent = `${roleData.first_name} ${roleData.last_name}`;
-          } else if (roleData && roleData.first_name) {
-            modalUserName.textContent = roleData.first_name;
-          } else if (user.user_metadata?.first_name && user.user_metadata?.last_name) {
-            modalUserName.textContent = `${user.user_metadata.first_name} ${user.user_metadata.last_name}`;
-          } else if (user.user_metadata?.first_name) {
-            modalUserName.textContent = user.user_metadata.first_name;
-          } else if (user.email) {
-            modalUserName.textContent = user.email;
-          } else {
-            modalUserName.textContent = 'User';
-          }
-        }
-
-        // Set user ID
-        if (modalUserId) {
-          modalUserId.textContent = user.id;
-        }
-      }
-      
-      profileSettingsModal.classList.remove('hidden');
-      profileDropdown?.classList.add('hidden');
-    }
-  });
-
   // Close modal when clicking the close button
   closeProfileModalBtn?.addEventListener('click', closeModal);
 
@@ -448,14 +389,7 @@ export function setupEventListeners() {
     }
   });
 
-  // Profile logout button click handler
-  profileLogoutBtn?.addEventListener('click', async () => {
-    await supabase.auth.signOut();
-    window.location.hash = '/';
-    setTimeout(() => {
-      window.location.reload();
-    }, 50);
-  });
+  // Profile logout button click handler is now handled in ProfileSettingsDropdown.ts
 
   // Handle password change form
   const passwordChangeForm = document.getElementById('passwordChangeForm') as HTMLFormElement;
@@ -1205,6 +1139,14 @@ export function setupAboutPageInteractivity() {
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', setupTimelineToggle);
   }
+
+  // Setup scroll to top button and home button
+  import('../components/DocumentationNavigationButtons').then(({ setupScrollToTopButton }) => {
+    setupScrollToTopButton();
+  });
+  import('../components/HomeButton').then(({ setupHomeButton }) => {
+    setupHomeButton();
+  });
 }
 
 // Function to update navigation based on user role
