@@ -205,6 +205,7 @@ export function DashboardPage() {
           if (feedbackTab) feedbackTab.classList.add('hidden');
           if (guardDashboardTab) guardDashboardTab.classList.add('hidden');
           if (aiStatusTab) aiStatusTab.classList.add('hidden');
+          if (visitorSettingsTab) visitorSettingsTab.classList.add('hidden');
           if (placesContent) placesContent.classList.add('hidden');
           if (accountsContent) accountsContent.classList.add('hidden');
           if (logsContent) logsContent.classList.remove('hidden');
@@ -496,6 +497,14 @@ export function DashboardPage() {
 
     // Setup dashboard event listeners
     setupDashboardEventListeners();
+
+    // Setup scroll to top button and home button
+    import('../../components/DocumentationNavigationButtons').then(({ setupScrollToTopButton }) => {
+      setupScrollToTopButton();
+    });
+    import('../../components/HomeButton').then(({ setupHomeButton }) => {
+      setupHomeButton();
+    });
   }, 0);
   return `
     <div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-6 sm:py-12">
