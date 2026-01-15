@@ -391,58 +391,6 @@ export function ContactPage() {
             }, 2000);
           }
         });
-
-        // Business hours status
-        function updateBusinessStatus() {
-          const now = new Date();
-          const day = now.getDay();
-          const hour = now.getHours();
-          const minute = now.getMinutes();
-          const currentTime = hour * 60 + minute;
-          
-          const statusIndicator = document.getElementById('status-indicator');
-          const statusText = document.getElementById('status-text');
-          const nextOpening = document.getElementById('next-opening');
-          
-          if (!statusIndicator || !statusText || !nextOpening) return;
-          
-          let isOpen = false;
-          let nextOpen = '';
-          
-          if (day >= 1 && day <= 5) { // Monday to Friday
-            if (currentTime >= 9 * 60 && currentTime < 18 * 60) {
-              isOpen = true;
-            } else if (currentTime < 9 * 60) {
-              nextOpen = 'Today at 9:00 AM';
-            } else {
-              nextOpen = 'Tomorrow at 9:00 AM';
-            }
-          } else if (day === 6) { // Saturday
-            if (currentTime >= 10 * 60 && currentTime < 16 * 60) {
-              isOpen = true;
-            } else if (currentTime < 10 * 60) {
-              nextOpen = 'Today at 10:00 AM';
-            } else {
-              nextOpen = 'Monday at 9:00 AM';
-            }
-          } else { // Sunday
-            nextOpen = 'Monday at 9:00 AM';
-          }
-          
-          if (isOpen) {
-            statusIndicator.className = 'w-3 h-3 rounded-full mr-3 bg-green-500';
-            statusText.textContent = 'We\'re Open!';
-            nextOpening.textContent = 'Open until ' + (day >= 1 && day <= 5 ? '6:00 PM' : '4:00 PM');
-          } else {
-            statusIndicator.className = 'w-3 h-3 rounded-full mr-3 bg-red-500';
-            statusText.textContent = 'We\'re Closed';
-            nextOpening.textContent = 'Next opening: ' + nextOpen;
-          }
-        }
-
-        // Update business status every minute
-        updateBusinessStatus();
-        setInterval(updateBusinessStatus, 60000);
       });
     </script>
   `;
@@ -591,4 +539,161 @@ export function setupContactPage(): void {
   import('../components/HomeButton').then(({ setupHomeButton }) => {
     setupHomeButton();
   });
+
+  // Initialize business hours status
+  function initBusinessStatus() {
+    function updateBusinessStatus(showLoading = false) {
+      const now = new Date();
+      const day = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+      const hour = now.getHours();
+      const minute = now.getMinutes();
+      const currentTime = hour * 60 + minute;
+      
+      const statusIndicator = document.getElementById('status-indicator');
+      const statusText = document.getElementById('status-text');
+      const nextOpening = document.getElementById('next-opening');
+      const currentStatusDiv = document.getElementById('current-status');
+      
+      if (!statusIndicator || !statusText || !nextOpening) return;
+      
+      // Show loading state
+      if (showLoading) {
+        statusIndicator.className = 'w-4 h-4 rounded-full bg-gray-400 animate-pulse';
+        statusText.textContent = 'Checking status...';
+        statusText.className = 'text-xl font-bold text-gray-600 dark:text-gray-400';
+        nextOpening.textContent = 'Please wait...';
+        if (currentStatusDiv) {
+          currentStatusDiv.classList.remove('border-green-300', 'dark:border-green-700', 'border-red-300', 'dark:border-red-700');
+          currentStatusDiv.classList.add('border-gray-200', 'dark:border-gray-600');
+        }
+        return;
+      }
+      
+      // Schedule configuration (matching the left side)
+      const schedule = {
+        mondayFriday: { open: 9 * 60, close: 18 * 60 }, // 9:00 AM - 6:00 PM
+        saturday: { open: 10 * 60, close: 16 * 60 }, // 10:00 AM - 4:00 PM
+        sunday: { open: null, close: null } // Closed
+      };
+      
+      let isOpen = false;
+      let nextOpen = '';
+      let closingTime = '';
+      
+      // Remove active class from all schedule items
+      const mondayFridayEl = document.getElementById('schedule-monday-friday');
+      const saturdayEl = document.getElementById('schedule-saturday');
+      const sundayEl = document.getElementById('schedule-sunday');
+      
+      if (mondayFridayEl) mondayFridayEl.classList.remove('schedule-day-active');
+      if (saturdayEl) saturdayEl.classList.remove('schedule-day-active');
+      if (sundayEl) sundayEl.classList.remove('schedule-day-active');
+      
+      // Determine status based on current day and time
+      if (day >= 1 && day <= 5) { // Monday to Friday
+        // Highlight current day
+        if (mondayFridayEl) mondayFridayEl.classList.add('schedule-day-active');
+        
+        if (currentTime >= schedule.mondayFriday.open && currentTime < schedule.mondayFriday.close) {
+          isOpen = true;
+          closingTime = '6:00 PM';
+        } else if (currentTime < schedule.mondayFriday.open) {
+          // Before opening today
+          nextOpen = 'Today at 9:00 AM';
+        } else {
+          // After closing - check if tomorrow is Saturday or Sunday
+          if (day === 5) {
+            // Friday - next is Saturday
+            nextOpen = 'Tomorrow at 10:00 AM';
+          } else {
+            // Monday-Thursday - next is tomorrow
+            nextOpen = 'Tomorrow at 9:00 AM';
+          }
+        }
+      } else if (day === 6) { // Saturday
+        // Highlight current day
+        if (saturdayEl) saturdayEl.classList.add('schedule-day-active');
+        
+        if (currentTime >= schedule.saturday.open && currentTime < schedule.saturday.close) {
+          isOpen = true;
+          closingTime = '4:00 PM';
+        } else if (currentTime < schedule.saturday.open) {
+          // Before opening today
+          nextOpen = 'Today at 10:00 AM';
+        } else {
+          // After closing - next is Monday
+          nextOpen = 'Monday at 9:00 AM';
+        }
+      } else { // Sunday (day === 0)
+        // Highlight current day
+        if (sundayEl) sundayEl.classList.add('schedule-day-active');
+        
+        // Always closed on Sunday
+        nextOpen = 'Tomorrow at 9:00 AM';
+      }
+      
+      // Update status display with fade transition
+      if (currentStatusDiv) {
+        currentStatusDiv.style.opacity = '0';
+        currentStatusDiv.style.transition = 'opacity 0.3s ease-in-out';
+      }
+      
+      setTimeout(() => {
+        if (isOpen) {
+          statusIndicator.className = 'w-4 h-4 rounded-full bg-green-500 animate-pulse';
+          statusText.textContent = 'We\'re Open!';
+          statusText.className = 'text-xl font-bold text-green-600 dark:text-green-400';
+          nextOpening.textContent = 'Open until ' + closingTime;
+          if (currentStatusDiv) {
+            currentStatusDiv.classList.remove('border-gray-200', 'dark:border-gray-600', 'border-red-300', 'dark:border-red-700');
+            currentStatusDiv.classList.add('border-green-300', 'dark:border-green-700');
+          }
+        } else {
+          statusIndicator.className = 'w-4 h-4 rounded-full bg-red-500 animate-pulse';
+          statusText.textContent = 'We\'re Closed';
+          statusText.className = 'text-xl font-bold text-red-600 dark:text-red-400';
+          nextOpening.textContent = 'Next opening: ' + nextOpen;
+          if (currentStatusDiv) {
+            currentStatusDiv.classList.remove('border-gray-200', 'dark:border-gray-600', 'border-green-300', 'dark:border-green-700');
+            currentStatusDiv.classList.add('border-red-300', 'dark:border-red-700');
+          }
+        }
+        
+        // Remove pulse animation from status container when loaded
+        if (currentStatusDiv) {
+          currentStatusDiv.classList.remove('animate-pulse-glow');
+          currentStatusDiv.style.opacity = '1';
+        }
+      }, 150);
+    }
+
+    // Wait a bit for DOM to be ready, then initialize
+    setTimeout(() => {
+      const statusIndicator = document.getElementById('status-indicator');
+      const statusText = document.getElementById('status-text');
+      const nextOpening = document.getElementById('next-opening');
+      
+      if (!statusIndicator || !statusText || !nextOpening) {
+        // Retry if elements not found
+        setTimeout(() => initBusinessStatus(), 300);
+        return;
+      }
+      
+      // Show loading state initially
+      updateBusinessStatus(true);
+      
+      // Update status after 5 seconds
+      setTimeout(() => {
+        updateBusinessStatus(false);
+      }, 5000);
+      
+      // Update business status every minute
+      setInterval(() => {
+        updateBusinessStatus(false);
+      }, 60000);
+    }, 200);
+  }
+
+  // Initialize business status
+  initBusinessStatus();
 }
