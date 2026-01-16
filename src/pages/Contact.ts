@@ -5,6 +5,7 @@ import { BusinessHours } from '../components/mini-features/BusinessHours';
 import { FollowUs } from '../components/mini-features/FollowUs';
 import { UserFeedback } from '../components/mini-features/UserFeedback';
 import { Footer } from '../components/mini-features/Footer';
+import { initializeGoogleMap } from '../components/mini-features/GoogleMap';
 
 export function ContactPage() {
   return `    <div class="w-full py-12 -mx-4 sm:-mx-6 lg:-mx-8">
@@ -531,6 +532,11 @@ export function setupContactPage(): void {
   setTimeout(() => {
     loadFeedback();
   }, 100);
+
+  // Initialize Google Map (Leaflet)
+  setTimeout(() => {
+    initializeGoogleMap();
+  }, 200);
 
   // Setup scroll to top button and home button
   import('../components/DocumentationNavigationButtons').then(({ setupScrollToTopButton }) => {
