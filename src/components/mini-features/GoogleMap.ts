@@ -22,6 +22,14 @@ export function initializeGoogleMap(): void {
     document.head.appendChild(link);
   }
 
+  // Load Leaflet Routing Machine CSS if not already loaded
+  if (!document.querySelector('link[href*="leaflet-routing-machine"]')) {
+    const routingCss = document.createElement('link');
+    routingCss.rel = 'stylesheet';
+    routingCss.href = 'https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css';
+    document.head.appendChild(routingCss);
+  }
+
   // Load Leaflet JS if not already loaded
   if (typeof (window as any).L === 'undefined') {
     if (!document.querySelector('script[src*="leaflet.js"]')) {
@@ -30,7 +38,7 @@ export function initializeGoogleMap(): void {
       script.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
       script.crossOrigin = 'anonymous';
       script.onload = () => {
-        setTimeout(initAllMaps, 100);
+        loadRoutingMachine();
       };
       document.head.appendChild(script);
     } else {
@@ -38,28 +46,46 @@ export function initializeGoogleMap(): void {
       const checkInterval = setInterval(() => {
         if (typeof (window as any).L !== 'undefined') {
           clearInterval(checkInterval);
-          setTimeout(initAllMaps, 100);
+          loadRoutingMachine();
         }
       }, 100);
       setTimeout(() => clearInterval(checkInterval), 10000);
     }
   } else {
     // Leaflet already loaded
+    loadRoutingMachine();
+  }
+}
+
+function loadRoutingMachine(): void {
+  // Load Leaflet Routing Machine JS if not already loaded
+  if (typeof (window as any).L !== 'undefined' && typeof (window as any).L.Routing === 'undefined') {
+    if (!document.querySelector('script[src*="leaflet-routing-machine"]')) {
+      const routingScript = document.createElement('script');
+      routingScript.src = 'https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.min.js';
+      routingScript.onload = () => {
+        setTimeout(initAllMaps, 100);
+      };
+      document.head.appendChild(routingScript);
+    } else {
+      // Script is loading, wait for it
+      const checkInterval = setInterval(() => {
+        if (typeof (window as any).L !== 'undefined' && typeof (window as any).L.Routing !== 'undefined') {
+          clearInterval(checkInterval);
+          setTimeout(initAllMaps, 100);
+        }
+      }, 100);
+      setTimeout(() => clearInterval(checkInterval), 10000);
+    }
+  } else if (typeof (window as any).L !== 'undefined' && typeof (window as any).L.Routing !== 'undefined') {
+    // Routing Machine already loaded
     setTimeout(initAllMaps, 100);
   }
 }
 
-// Calculate distance between two coordinates using Haversine formula
-function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 3959; // Earth's radius in miles
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = 
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
+// Convert meters to miles
+function metersToMiles(meters: number): number {
+  return meters * 0.000621371;
 }
 
 // Format distance for display
@@ -71,6 +97,19 @@ function formatDistance(miles: number): string {
   } else {
     return miles.toFixed(2) + ' miles';
   }
+}
+
+// Calculate distance between two coordinates using Haversine formula (fallback)
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 3959; // Earth's radius in miles
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
 }
 
 function initAllMaps(): void {
@@ -153,60 +192,157 @@ function initAllMaps(): void {
         mapContainer.appendChild(distanceContainer);
       }
 
-      // Get user's current location and draw direction line
+      // Get user's current location and draw route using roads
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (position) => {
             const userLocation: [number, number] = [position.coords.latitude, position.coords.longitude];
 
-            // Calculate distance
-            const distanceInMiles = calculateDistance(
-              userLocation[0],
-              userLocation[1],
-              targetLocation[0],
-              targetLocation[1]
-            );
-            const formattedDistance = formatDistance(distanceInMiles);
-
-            // Update distance display
-            const distanceValue = document.getElementById(`distance-value-${mapId}`);
-            if (distanceValue) {
-              distanceValue.textContent = formattedDistance;
-            }
-            if (distanceContainer) {
-              distanceContainer.style.display = 'block';
-            }
-
-            // Create marker for user location with distance in popup
+            // Create marker for user location
             const userMarker = L.marker(userLocation, { icon: blueIcon }).addTo(map);
-            userMarker.bindPopup(
-              '<div style="padding: 5px;"><strong>Your Location</strong><br>' +
-              '<span style="color: #3B82F6; font-weight: bold;">Distance: ' + formattedDistance + '</span></div>'
-            );
+            userMarker.bindPopup('<div style="padding: 5px;"><strong>Your Location</strong></div>');
 
-            // Draw a line from user location to target location
-            L.polyline([userLocation, targetLocation], {
-              color: '#3B82F6',
-              weight: 3,
-              opacity: 0.8,
-              smoothFactor: 1
-            }).addTo(map);
+            // Check if Leaflet Routing Machine is available
+            if (typeof (window as any).L !== 'undefined' && typeof (window as any).L.Routing !== 'undefined') {
+              const L = (window as any).L;
+              
+              // Create route using OSRM (free routing service)
+              const control = L.Routing.control({
+                waypoints: [
+                  L.latLng(userLocation[0], userLocation[1]),
+                  L.latLng(targetLocation[0], targetLocation[1])
+                ],
+                router: L.Routing.osrmv1({
+                  serviceUrl: 'https://router.project-osrm.org/route/v1',
+                  profile: 'driving'
+                }),
+                lineOptions: {
+                  styles: [
+                    {
+                      color: '#3B82F6',
+                      opacity: 0.8,
+                      weight: 5
+                    }
+                  ],
+                  extendToWaypoints: true,
+                  missingRouteTolerance: 0
+                },
+                addWaypoints: false,
+                draggableWaypoints: false,
+                fitSelectedRoutes: true,
+                showAlternatives: false,
+                createMarker: () => null, // Don't create default markers
+                routeWhileDragging: false
+              }).addTo(map);
 
-            // Add distance label in the middle of the line
-            const midLat = (userLocation[0] + targetLocation[0]) / 2;
-            const midLon = (userLocation[1] + targetLocation[1]) / 2;
-            L.marker([midLat, midLon], {
-              icon: L.divIcon({
-                className: 'distance-label',
-                html: '<div style="background: rgba(59, 130, 246, 0.9); color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">' + formattedDistance + '</div>',
-                iconSize: [100, 20],
-                iconAnchor: [50, 10]
-              })
-            }).addTo(map);
+              // Update distance when route is found
+              control.on('routesfound', (e: any) => {
+                const routes = e.routes;
+                if (routes && routes.length > 0) {
+                  const route = routes[0];
+                  const distanceInMeters = route.summary.totalDistance;
+                  const distanceInMiles = metersToMiles(distanceInMeters);
+                  const formattedDistance = formatDistance(distanceInMiles);
 
-            // Fit map to show both locations
-            const bounds = L.latLngBounds([userLocation, targetLocation]);
-            map.fitBounds(bounds, { padding: [50, 50] });
+                  // Update distance display
+                  const distanceValue = document.getElementById(`distance-value-${mapId}`);
+                  if (distanceValue) {
+                    distanceValue.textContent = formattedDistance;
+                  }
+                  if (distanceContainer) {
+                    distanceContainer.style.display = 'block';
+                  }
+
+                  // Update user marker popup with route distance
+                  userMarker.setPopupContent(
+                    '<div style="padding: 5px;"><strong>Your Location</strong><br>' +
+                    '<span style="color: #3B82F6; font-weight: bold;">Distance: ' + formattedDistance + '</span><br>' +
+                    '<span style="font-size: 11px; color: #666;">(via roads)</span></div>'
+                  ).openPopup();
+
+                  // Add distance label on the route (at midpoint of route coordinates)
+                  if (route.coordinates && route.coordinates.length > 0) {
+                    const midIndex = Math.floor(route.coordinates.length / 2);
+                    const midPoint = route.coordinates[midIndex];
+                    L.marker([midPoint.lat, midPoint.lng], {
+                      icon: L.divIcon({
+                        className: 'distance-label',
+                        html: '<div style="background: rgba(59, 130, 246, 0.9); color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">' + formattedDistance + '</div>',
+                        iconSize: [100, 20],
+                        iconAnchor: [50, 10]
+                      })
+                    }).addTo(map);
+                  }
+
+                  // Fit map to show the route
+                  const bounds = route.coordinates.reduce((bounds: any, coord: any) => {
+                    return bounds.extend([coord.lat, coord.lng]);
+                  }, L.latLngBounds([]));
+                  map.fitBounds(bounds, { padding: [50, 50] });
+                }
+              });
+
+              // Handle routing errors
+              control.on('routingerror', (e: any) => {
+                console.error('Routing error:', e);
+                // Fallback to straight line if routing fails
+                const distanceInMiles = calculateDistance(
+                  userLocation[0],
+                  userLocation[1],
+                  targetLocation[0],
+                  targetLocation[1]
+                );
+                const formattedDistance = formatDistance(distanceInMiles);
+                
+                // Draw straight line as fallback
+                L.polyline([userLocation, targetLocation], {
+                  color: '#3B82F6',
+                  weight: 3,
+                  opacity: 0.8,
+                  dashArray: '5, 10'
+                }).addTo(map);
+
+                const distanceValue = document.getElementById(`distance-value-${mapId}`);
+                if (distanceValue) {
+                  distanceValue.textContent = formattedDistance + ' (straight)';
+                }
+                if (distanceContainer) {
+                  distanceContainer.style.display = 'block';
+                }
+              });
+            } else {
+              // Fallback: use straight line if routing is not available
+              const distanceInMiles = calculateDistance(
+                userLocation[0],
+                userLocation[1],
+                targetLocation[0],
+                targetLocation[1]
+              );
+              const formattedDistance = formatDistance(distanceInMiles);
+
+              const distanceValue = document.getElementById(`distance-value-${mapId}`);
+              if (distanceValue) {
+                distanceValue.textContent = formattedDistance;
+              }
+              if (distanceContainer) {
+                distanceContainer.style.display = 'block';
+              }
+
+              userMarker.bindPopup(
+                '<div style="padding: 5px;"><strong>Your Location</strong><br>' +
+                '<span style="color: #3B82F6; font-weight: bold;">Distance: ' + formattedDistance + '</span></div>'
+              );
+
+              L.polyline([userLocation, targetLocation], {
+                color: '#3B82F6',
+                weight: 3,
+                opacity: 0.8,
+                smoothFactor: 1
+              }).addTo(map);
+
+              const bounds = L.latLngBounds([userLocation, targetLocation]);
+              map.fitBounds(bounds, { padding: [50, 50] });
+            }
           },
           (error) => {
             console.error('Error getting user location:', error);
