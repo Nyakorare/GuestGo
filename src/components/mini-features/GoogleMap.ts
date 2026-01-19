@@ -139,13 +139,18 @@ function initAllMaps(): void {
     // Target location: San Marcelino St, Ayala Blvd, Ermita, Manila, 1000
     const targetLocation: [number, number] = [14.5832, 120.9822];
     
+    // Store map reference for fullscreen functionality
+    let map: any = null;
+    
     try {
       // Create map centered on target location
-      const map = L.map(mapId).setView(targetLocation, 15);
+      map = L.map(mapId).setView(targetLocation, 15);
       
       // Invalidate size to ensure proper rendering
       setTimeout(() => {
-        map.invalidateSize();
+        if (map) {
+          map.invalidateSize();
+        }
       }, 100);
 
       // Add OpenStreetMap tile layer
@@ -208,12 +213,25 @@ function initAllMaps(): void {
       toggleGuideButton.setAttribute('aria-label', 'Toggle streets guide visibility');
       toggleGuideButton.style.display = 'none'; // Hide initially, show when route control is available
       
+      // Create fullscreen toggle button
+      const fullscreenButton = document.createElement('button');
+      fullscreenButton.id = `fullscreen-${mapId}`;
+      fullscreenButton.className = 'absolute bottom-2 right-2 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg shadow-lg p-2 z-[1000] border-2 border-gray-300 dark:border-gray-600 transition-colors';
+      fullscreenButton.innerHTML = `
+        <svg id="fullscreen-icon-${mapId}" class="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
+        </svg>
+      `;
+      fullscreenButton.title = 'Enter Fullscreen';
+      fullscreenButton.setAttribute('aria-label', 'Toggle fullscreen');
+      
       const mapContainer = element.parentElement;
       if (mapContainer) {
         mapContainer.style.position = 'relative';
         mapContainer.appendChild(distanceContainer);
         mapContainer.appendChild(toggleRouteButton);
         mapContainer.appendChild(toggleGuideButton);
+        mapContainer.appendChild(fullscreenButton);
       }
       
       // Store route control and distance label for toggling
@@ -223,6 +241,157 @@ function initAllMaps(): void {
       let fallbackPolyline: any = null;
       let routeVisible = true;
       let guideVisible = true;
+      let isFullscreen = false;
+      
+      // Store original styles to restore later
+      const originalContainerStyles = {
+        width: '',
+        height: '',
+        position: '',
+        top: '',
+        left: '',
+        zIndex: '',
+        backgroundColor: ''
+      };
+      const originalElementStyles = {
+        height: '400px',
+        width: ''
+      };
+      
+      // Fullscreen functionality
+      const fullscreenBtn = document.getElementById(`fullscreen-${mapId}`);
+      const fullscreenIcon = document.getElementById(`fullscreen-icon-${mapId}`);
+      
+      function toggleFullscreen() {
+        const container = element.parentElement;
+        if (!container) return;
+        
+        if (!isFullscreen) {
+          // Store original styles
+          originalContainerStyles.width = (container as HTMLElement).style.width || '';
+          originalContainerStyles.height = (container as HTMLElement).style.height || '';
+          originalContainerStyles.position = (container as HTMLElement).style.position || '';
+          originalContainerStyles.top = (container as HTMLElement).style.top || '';
+          originalContainerStyles.left = (container as HTMLElement).style.left || '';
+          originalContainerStyles.zIndex = (container as HTMLElement).style.zIndex || '';
+          originalContainerStyles.backgroundColor = (container as HTMLElement).style.backgroundColor || '';
+          
+          originalElementStyles.height = element.style.height || '400px';
+          originalElementStyles.width = element.style.width || '';
+          
+          // Set container styles for fullscreen
+          (container as HTMLElement).style.width = '100vw';
+          (container as HTMLElement).style.height = '100vh';
+          (container as HTMLElement).style.position = 'fixed';
+          (container as HTMLElement).style.top = '0';
+          (container as HTMLElement).style.left = '0';
+          (container as HTMLElement).style.zIndex = '9999';
+          (container as HTMLElement).style.backgroundColor = '#fff';
+          
+          // Set map element to full height
+          element.style.height = '100vh';
+          element.style.width = '100vw';
+          
+          // Enter fullscreen
+          if (container.requestFullscreen) {
+            container.requestFullscreen();
+          } else if ((container as any).webkitRequestFullscreen) {
+            (container as any).webkitRequestFullscreen();
+          } else if ((container as any).mozRequestFullScreen) {
+            (container as any).mozRequestFullScreen();
+          } else if ((container as any).msRequestFullscreen) {
+            (container as any).msRequestFullscreen();
+          }
+        } else {
+          // Exit fullscreen
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if ((document as any).webkitExitFullscreen) {
+            (document as any).webkitExitFullscreen();
+          } else if ((document as any).mozCancelFullScreen) {
+            (document as any).mozCancelFullScreen();
+          } else if ((document as any).msExitFullscreen) {
+            (document as any).msExitFullscreen();
+          }
+        }
+      }
+      
+      function resetFullscreenStyles() {
+        const container = element.parentElement;
+        if (!container) return;
+        
+        // Reset container styles to original values
+        (container as HTMLElement).style.width = originalContainerStyles.width;
+        (container as HTMLElement).style.height = originalContainerStyles.height;
+        (container as HTMLElement).style.position = originalContainerStyles.position;
+        (container as HTMLElement).style.top = originalContainerStyles.top;
+        (container as HTMLElement).style.left = originalContainerStyles.left;
+        (container as HTMLElement).style.zIndex = originalContainerStyles.zIndex;
+        (container as HTMLElement).style.backgroundColor = originalContainerStyles.backgroundColor;
+        
+        // Reset map element to original values
+        element.style.height = originalElementStyles.height;
+        element.style.width = originalElementStyles.width;
+      }
+      
+      function updateFullscreenIcon() {
+        if (fullscreenIcon) {
+          if (isFullscreen) {
+            fullscreenIcon.innerHTML = `
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25"></path>
+            `;
+          } else {
+            fullscreenIcon.innerHTML = `
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
+            `;
+          }
+        }
+        if (fullscreenBtn) {
+          fullscreenBtn.title = isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen';
+        }
+      }
+      
+      // Listen for fullscreen changes
+      const fullscreenChangeHandler = () => {
+        const container = element.parentElement;
+        const isCurrentlyFullscreen = !!(
+          document.fullscreenElement ||
+          (document as any).webkitFullscreenElement ||
+          (document as any).mozFullScreenElement ||
+          (document as any).msFullscreenElement
+        );
+        
+        const wasFullscreen = isFullscreen;
+        isFullscreen = isCurrentlyFullscreen;
+        updateFullscreenIcon();
+        
+        if (isCurrentlyFullscreen && container) {
+          // Ensure fullscreen container takes full viewport
+          (container as HTMLElement).style.width = '100vw';
+          (container as HTMLElement).style.height = '100vh';
+          element.style.height = '100vh';
+          element.style.width = '100vw';
+        } else if (!isCurrentlyFullscreen && wasFullscreen && container) {
+          // Reset to original size when exiting fullscreen
+          resetFullscreenStyles();
+        }
+        
+        // Invalidate map size when entering/exiting fullscreen
+        setTimeout(() => {
+          if (map) {
+            map.invalidateSize();
+          }
+        }, 300);
+      };
+      
+      document.addEventListener('fullscreenchange', fullscreenChangeHandler);
+      document.addEventListener('webkitfullscreenchange', fullscreenChangeHandler);
+      document.addEventListener('mozfullscreenchange', fullscreenChangeHandler);
+      document.addEventListener('MSFullscreenChange', fullscreenChangeHandler);
+      
+      if (fullscreenBtn) {
+        fullscreenBtn.addEventListener('click', toggleFullscreen);
+      }
 
       // Get user's current location and draw route using roads
       if (navigator.geolocation) {
