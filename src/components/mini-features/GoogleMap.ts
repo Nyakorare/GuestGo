@@ -136,8 +136,9 @@ function initAllMaps(): void {
       element.style.height = '400px';
     }
 
-    // Target location: San Marcelino St, Ayala Blvd, Ermita, Manila, 1000
-    const targetLocation: [number, number] = [14.5832, 120.9822];
+    // Target location: Technological University of the Philippines Manila
+    // San Marcelino St, Ayala Blvd, Ermita, Manila, 1000
+    const targetLocation: [number, number] = [14.58727, 120.98458];
     
     // Store map reference for fullscreen functionality
     let map: any = null;
@@ -153,11 +154,25 @@ function initAllMaps(): void {
         }
       }, 100);
 
-      // Add OpenStreetMap tile layer
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 19
-      }).addTo(map);
+      // Map type layers
+      const mapTypes = {
+        standard: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          maxZoom: 19
+        }),
+        satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          attribution: '&copy; <a href="https://www.esri.com/">Esri</a>',
+          maxZoom: 19
+        }),
+        terrain: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a>',
+          maxZoom: 17
+        })
+      };
+      
+      // Current map type
+      let currentMapType: 'standard' | 'satellite' | 'terrain' = 'standard';
+      let currentLayer = mapTypes.standard.addTo(map);
 
       // Create custom icon for target location (without shadow to avoid CORS/tracking issues)
       const redIcon = L.icon({
@@ -171,7 +186,7 @@ function initAllMaps(): void {
       const marker = L.marker(targetLocation, { icon: redIcon }).addTo(map);
       
       // Add popup to marker
-      marker.bindPopup('<div style="padding: 5px;"><strong>GuestGo Office</strong><br>San Marcelino St, Ayala Blvd<br>Ermita, Manila, 1000</div>').openPopup();
+      marker.bindPopup('<div style="padding: 5px;"><strong>GuestGo Office</strong><br>Technological University of the Philippines Manila<br>San Marcelino St, Ayala Blvd<br>Ermita, Manila, 1000</div>').openPopup();
 
       // Create custom icon for user location (without shadow to avoid CORS/tracking issues)
       const blueIcon = L.icon({
@@ -213,6 +228,18 @@ function initAllMaps(): void {
       toggleGuideButton.setAttribute('aria-label', 'Toggle streets guide visibility');
       toggleGuideButton.style.display = 'none'; // Hide initially, show when route control is available
       
+      // Create map type toggle button
+      const mapTypeButton = document.createElement('button');
+      mapTypeButton.id = `map-type-${mapId}`;
+      mapTypeButton.className = 'absolute bottom-2 right-14 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg shadow-lg p-2 z-[1000] border-2 border-gray-300 dark:border-gray-600 transition-colors';
+      mapTypeButton.innerHTML = `
+        <svg id="map-type-icon-${mapId}" class="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+        </svg>
+      `;
+      mapTypeButton.title = 'Map Type: Standard';
+      mapTypeButton.setAttribute('aria-label', 'Change map type');
+      
       // Create fullscreen toggle button
       const fullscreenButton = document.createElement('button');
       fullscreenButton.id = `fullscreen-${mapId}`;
@@ -231,7 +258,61 @@ function initAllMaps(): void {
         mapContainer.appendChild(distanceContainer);
         mapContainer.appendChild(toggleRouteButton);
         mapContainer.appendChild(toggleGuideButton);
+        mapContainer.appendChild(mapTypeButton);
         mapContainer.appendChild(fullscreenButton);
+      }
+      
+      // Map type toggle functionality
+      const mapTypeBtn = document.getElementById(`map-type-${mapId}`);
+      const mapTypeIcon = document.getElementById(`map-type-icon-${mapId}`);
+      
+      function changeMapType() {
+        // Remove current layer
+        map.removeLayer(currentLayer);
+        
+        // Cycle through map types
+        if (currentMapType === 'standard') {
+          currentMapType = 'satellite';
+        } else if (currentMapType === 'satellite') {
+          currentMapType = 'terrain';
+        } else {
+          currentMapType = 'standard';
+        }
+        
+        // Add new layer
+        currentLayer = mapTypes[currentMapType];
+        map.addLayer(currentLayer);
+        
+        // Update button icon and title
+        if (mapTypeIcon && mapTypeBtn) {
+          if (currentMapType === 'satellite') {
+            mapTypeIcon.innerHTML = `
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            `;
+            mapTypeBtn.title = 'Map Type: Satellite';
+          } else if (currentMapType === 'terrain') {
+            mapTypeIcon.innerHTML = `
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+            `;
+            mapTypeBtn.title = 'Map Type: Terrain';
+          } else {
+            mapTypeIcon.innerHTML = `
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+            `;
+            mapTypeBtn.title = 'Map Type: Standard';
+          }
+        }
+        
+        // Invalidate map size to ensure proper rendering
+        setTimeout(() => {
+          if (map) {
+            map.invalidateSize();
+          }
+        }, 100);
+      }
+      
+      if (mapTypeBtn) {
+        mapTypeBtn.addEventListener('click', changeMapType);
       }
       
       // Store route control and distance label for toggling
