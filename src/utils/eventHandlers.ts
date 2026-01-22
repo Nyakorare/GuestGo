@@ -1,6 +1,7 @@
 import supabase from '../config/supabase';
 import { logAction } from './logging';
 import { openModal } from '../components/AuthModals';
+import { setupVisitLocationsStatModal } from '../components/mini-features/VisitLocationsStatModal';
 
 
 // Function to show logout modal after password change
@@ -979,6 +980,9 @@ export function setupAboutPageInteractivity() {
       closeTeamModal();
     }
   });
+
+  // Setup "Visit Locations" stat card modal + highlight animation
+  setupVisitLocationsStatModal();
 
   // Load real statistics from database
   (async () => {

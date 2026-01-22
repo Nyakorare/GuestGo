@@ -1,3 +1,5 @@
+import { VisitLocationsStatCard } from './VisitLocationsStatModal';
+
 export function ByTheNumbers() {
   return `
     <div class="mb-8 sm:mb-12 md:mb-20 mt-4 sm:mt-6 md:mt-8">
@@ -37,21 +39,7 @@ export function ByTheNumbers() {
           </div>
         </div>
 
-        <!-- Visit Locations -->
-        <div class="stat-card group relative bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-2xl shadow-lg p-6 sm:p-8 text-center hover:shadow-2xl transform hover:-translate-y-3 transition-all duration-500 ease-out border-2 border-transparent hover:border-purple-300 dark:hover:border-purple-700 overflow-hidden">
-          <div class="absolute top-0 right-0 w-32 h-32 bg-purple-200 dark:bg-purple-800 rounded-full -mr-16 -mt-16 opacity-20 group-hover:opacity-40 transition-opacity duration-500"></div>
-          <div class="relative z-10">
-            <div class="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl mx-auto mb-4 sm:mb-6 flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-lg">
-              <svg class="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-              </svg>
-            </div>
-            <div id="stat-places" class="text-3xl sm:text-4xl md:text-5xl font-bold text-purple-600 dark:text-purple-400 mb-2 counter">0</div>
-            <div class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-1">Visit Locations</div>
-            <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Active places to visit</p>
-          </div>
-        </div>
+        ${VisitLocationsStatCard()}
 
         <!-- Success Rate -->
         <div class="stat-card group relative bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 rounded-2xl shadow-lg p-6 sm:p-8 text-center hover:shadow-2xl transform hover:-translate-y-3 transition-all duration-500 ease-out border-2 border-transparent hover:border-orange-300 dark:hover:border-orange-700 overflow-hidden">
