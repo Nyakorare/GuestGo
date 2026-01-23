@@ -110,10 +110,11 @@ function ensureStyles() {
     }
     @keyframes visitLocationsModalFadeIn {
       from { background-color: rgba(0,0,0,0); }
-      to { background-color: rgba(0,0,0,0.55); }
+      to { background-color: rgba(0,0,0,0.65); }
     }
     @keyframes visitLocationsModalPopIn {
-      from { transform: translateY(20px) scale(0.96); opacity: 0; }
+      from { transform: translateY(30px) scale(0.94); opacity: 0; }
+      50% { transform: translateY(-5px) scale(1.01); }
       to { transform: translateY(0) scale(1); opacity: 1; }
     }
   `;
@@ -130,26 +131,39 @@ function ensureModal(): HTMLElement {
     'fixed inset-0 hidden items-start justify-center z-[9999] overflow-y-auto pt-4 sm:pt-8 md:pt-12 px-4 backdrop-blur-sm bg-black/0';
 
   modal.innerHTML = `
-    <div class="visit-locations-modal-panel relative w-full max-w-2xl mx-auto bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden transform opacity-0">
-      <div class="bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600 p-5 sm:p-6">
-        <div class="flex items-start justify-between gap-4">
-          <div>
-            <h3 class="text-xl sm:text-2xl font-bold text-white">Active Visit Locations</h3>
-            <p class="text-white/90 text-sm sm:text-base">Places currently available to select in GuestGo</p>
+    <div class="visit-locations-modal-panel relative w-full max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border-2 border-blue-200 dark:border-blue-800/50 overflow-hidden transform opacity-0">
+      <!-- Header with new blue/teal gradient -->
+      <div class="relative bg-gradient-to-br from-blue-600 via-cyan-500 to-teal-500 p-6 sm:p-8 overflow-hidden">
+        <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0YzAtMS4xLS45LTItMi0ycy0yIC45LTIgMiAuOSAyIDIgMiAyLS45IDItMnoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-20"></div>
+        <div class="relative flex items-start justify-between gap-4">
+          <div class="flex items-start gap-4">
+            <div class="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/30">
+              <svg class="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-2xl sm:text-3xl font-extrabold text-white mb-2">Visit Locations</h3>
+              <p class="text-white/95 text-sm sm:text-base font-medium">Active places available in GuestGo</p>
+            </div>
           </div>
-          <button id="visit-locations-modal-close" type="button" class="text-white/90 hover:text-white text-2xl leading-none w-10 h-10 rounded-lg hover:bg-white/10 transition-colors" aria-label="Close">
-            &times;
+          <button id="visit-locations-modal-close" type="button" class="flex-shrink-0 text-white/90 hover:text-white w-10 h-10 rounded-xl hover:bg-white/20 backdrop-blur-sm transition-all duration-200 flex items-center justify-center border border-white/20 hover:border-white/40" aria-label="Close">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
           </button>
         </div>
       </div>
 
-      <div class="p-4 sm:p-6">
-        <div id="visit-locations-modal-status" class="text-sm text-gray-600 dark:text-gray-300 mb-4"></div>
-        <div class="max-h-[60vh] overflow-auto rounded-xl border border-gray-100 dark:border-gray-800">
-          <ul id="visit-locations-modal-list" class="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900"></ul>
+      <!-- Content area -->
+      <div class="p-5 sm:p-7 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
+        <div id="visit-locations-modal-status" class="flex items-center gap-2 text-sm font-semibold text-blue-700 dark:text-blue-300 mb-5 px-2"></div>
+        <div class="max-h-[60vh] overflow-auto rounded-2xl border-2 border-blue-100 dark:border-blue-900/50 bg-white dark:bg-gray-900 shadow-inner">
+          <ul id="visit-locations-modal-list" class="divide-y divide-blue-50 dark:divide-blue-900/30"></ul>
         </div>
-        <div class="mt-4 flex justify-end">
-          <button id="visit-locations-modal-close-2" type="button" class="px-4 py-2 rounded-lg bg-gray-900 text-white dark:bg-white dark:text-gray-900 hover:opacity-90 transition-opacity">
+        <div class="mt-6 flex justify-end">
+          <button id="visit-locations-modal-close-2" type="button" class="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold hover:from-blue-700 hover:to-cyan-700 transform hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl">
             Close
           </button>
         </div>
@@ -166,7 +180,7 @@ async function loadPlacesIntoModal() {
   const listEl = document.getElementById('visit-locations-modal-list');
   if (!statusEl || !listEl) return;
 
-  statusEl.textContent = 'Loading locations...';
+  statusEl.innerHTML = '<span class="inline-flex items-center gap-2"><svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Loading locations...</span>';
   listEl.innerHTML = '';
 
   const { data, error } = await supabase
@@ -175,10 +189,15 @@ async function loadPlacesIntoModal() {
     .order('name');
 
   if (error) {
-    statusEl.textContent = 'Unable to load visit locations right now.';
+    statusEl.innerHTML = '<span class="inline-flex items-center gap-2 text-red-600 dark:text-red-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Unable to load visit locations</span>';
     listEl.innerHTML = `
-      <li class="p-4 sm:p-5 text-sm text-red-600 dark:text-red-400">
-        ${escapeHtml(error.message || 'Unknown error')}
+      <li class="p-5 sm:p-6">
+        <div class="flex items-start gap-3 text-red-600 dark:text-red-400">
+          <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <div class="text-sm font-medium">${escapeHtml(error.message || 'Unknown error occurred')}</div>
+        </div>
       </li>
     `;
     return;
@@ -187,33 +206,49 @@ async function loadPlacesIntoModal() {
   const places = (data || []) as PlaceToVisit[];
   const activePlaces = places.filter((p) => (p?.name || '').trim().length > 0);
 
-  statusEl.textContent = `${activePlaces.length.toLocaleString()} location${activePlaces.length === 1 ? '' : 's'}`;
+  statusEl.innerHTML = `<span class="inline-flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>${activePlaces.length.toLocaleString()} location${activePlaces.length === 1 ? '' : 's'} found</span>`;
 
   if (activePlaces.length === 0) {
     listEl.innerHTML = `
-      <li class="p-4 sm:p-5 text-sm text-gray-600 dark:text-gray-300">
-        No active visit locations found.
+      <li class="p-5 sm:p-6">
+        <div class="flex flex-col items-center justify-center gap-3 text-gray-500 dark:text-gray-400 py-8">
+          <svg class="w-12 h-12 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          <p class="text-sm font-medium">No active visit locations found</p>
+        </div>
       </li>
     `;
     return;
   }
 
   listEl.innerHTML = activePlaces
-    .map((p) => {
+    .map((p, index) => {
       const name = escapeHtml((p.name || '').trim());
       const addressRaw = (p.location || '').trim();
       const address = addressRaw ? escapeHtml(addressRaw) : 'No address provided';
       return `
-        <li class="p-4 sm:p-5 hover:bg-purple-50/60 dark:hover:bg-purple-900/10 transition-colors">
-          <div class="flex items-start justify-between gap-4">
-            <div class="min-w-0">
-              <div class="font-semibold text-gray-900 dark:text-white">${name}</div>
-              <div class="text-sm text-gray-600 dark:text-gray-300 mt-0.5 break-words">${address}</div>
+        <li class="p-5 sm:p-6 hover:bg-blue-50/80 dark:hover:bg-blue-900/20 transition-all duration-200 group">
+          <div class="flex items-start gap-4">
+            <div class="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold text-sm shadow-md group-hover:scale-110 transition-transform duration-200">
+              ${index + 1}
             </div>
-            <div class="shrink-0 mt-0.5">
-              <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-                Active
-              </span>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-start justify-between gap-4 mb-1.5">
+                <h4 class="font-bold text-lg text-gray-900 dark:text-white group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">${name}</h4>
+                <span class="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Active
+                </span>
+              </div>
+              <div class="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <svg class="w-4 h-4 flex-shrink-0 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                <span class="break-words">${address}</span>
+              </div>
             </div>
           </div>
         </li>
