@@ -15,15 +15,34 @@ body::-webkit-scrollbar {
 
 html::-webkit-scrollbar-track,
 body::-webkit-scrollbar-track {
-  background: rgba(229, 231, 235, 0.4);
-  border-radius: 10px;
-  border: 1px solid rgba(203, 213, 225, 0.2);
-  transition: background 0.3s ease;
+  background: 
+    linear-gradient(
+      to right,
+      rgba(203, 213, 225, 0.3) 0%,
+      rgba(226, 232, 240, 0.4) 50%,
+      rgba(203, 213, 225, 0.3) 100%
+    );
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  box-shadow: 
+    inset 0 2px 4px rgba(0, 0, 0, 0.1),
+    inset 0 -2px 4px rgba(255, 255, 255, 0.5),
+    0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
 }
 
 html::-webkit-scrollbar-track:hover,
 body::-webkit-scrollbar-track:hover {
-  background: rgba(229, 231, 235, 0.6);
+  background: 
+    linear-gradient(
+      to right,
+      rgba(203, 213, 225, 0.4) 0%,
+      rgba(226, 232, 240, 0.5) 50%,
+      rgba(203, 213, 225, 0.4) 100%
+    );
+  box-shadow: 
+    inset 0 2px 4px rgba(0, 0, 0, 0.12),
+    inset 0 -2px 4px rgba(255, 255, 255, 0.6);
 }
 
 /* Also apply to all elements */
@@ -42,61 +61,94 @@ body::-webkit-scrollbar-track:hover {
   border-radius: 10px;
 }
 
-/* Main scrollbar thumb for html/body */
+/* Main scrollbar thumb for html/body - 3D Design */
 html::-webkit-scrollbar-thumb,
 body::-webkit-scrollbar-thumb {
-  background: linear-gradient(
-    180deg,
-    rgba(59, 130, 246, 0.7),
-    rgba(99, 102, 241, 0.7),
-    rgba(37, 99, 235, 0.7)
-  );
+  background: 
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.25) 0%,
+      rgba(59, 130, 246, 0.9) 15%,
+      rgba(37, 99, 235, 0.95) 50%,
+      rgba(29, 78, 216, 0.9) 85%,
+      rgba(0, 0, 0, 0.2) 100%
+    );
   background-size: 100% 200%;
-  border-radius: 10px;
-  border: 2px solid rgba(229, 231, 235, 0.5);
+  border-radius: 12px;
+  border: 
+    1px solid rgba(255, 255, 255, 0.3),
+    1px solid rgba(59, 130, 246, 0.6);
+  border-top: 2px solid rgba(255, 255, 255, 0.5);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.3);
   background-clip: padding-box;
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    0 4px 8px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2),
+    inset 0 0 8px rgba(59, 130, 246, 0.3);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   animation: scrollbarGradient 3s ease infinite;
-  transform: scaleX(1);
+  transform: scaleX(1) perspective(100px) translateZ(0);
+  position: relative;
 }
 
 *::-webkit-scrollbar-thumb {
-  background: linear-gradient(
-    180deg,
-    rgba(59, 130, 246, 0.6),
-    rgba(99, 102, 241, 0.6),
-    rgba(37, 99, 235, 0.6)
-  );
+  background: 
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.2) 0%,
+      rgba(59, 130, 246, 0.8) 15%,
+      rgba(37, 99, 235, 0.85) 50%,
+      rgba(29, 78, 216, 0.8) 85%,
+      rgba(0, 0, 0, 0.15) 100%
+    );
   background-size: 100% 200%;
-  border-radius: 10px;
-  border: 2px solid transparent;
+  border-radius: 12px;
+  border: 
+    1px solid rgba(255, 255, 255, 0.25),
+    1px solid rgba(59, 130, 246, 0.5);
+  border-top: 2px solid rgba(255, 255, 255, 0.4);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.25);
   background-clip: padding-box;
+  box-shadow: 
+    0 2px 3px rgba(0, 0, 0, 0.18),
+    0 3px 6px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.15),
+    inset 0 0 6px rgba(59, 130, 246, 0.25);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   animation: scrollbarGradient 3s ease infinite;
-  transform: scaleX(1);
+  transform: scaleX(1) perspective(100px) translateZ(0);
+  position: relative;
 }
 
-/* Hover state for main scrollbar */
+/* Hover state for main scrollbar - Enhanced 3D */
 html::-webkit-scrollbar-thumb:hover,
 body::-webkit-scrollbar-thumb:hover {
   background: 
     linear-gradient(
       90deg,
       transparent 0%,
-      rgba(255, 255, 255, 0.4) 50%,
+      rgba(255, 255, 255, 0.5) 50%,
       transparent 100%
     ),
     linear-gradient(
       180deg,
-      rgba(59, 130, 246, 1),
-      rgba(99, 102, 241, 1),
-      rgba(139, 92, 246, 1),
-      rgba(37, 99, 235, 1)
+      rgba(255, 255, 255, 0.3) 0%,
+      rgba(59, 130, 246, 1) 15%,
+      rgba(37, 99, 235, 1) 50%,
+      rgba(29, 78, 216, 1) 85%,
+      rgba(0, 0, 0, 0.25) 100%
     );
   background-size: 200% 100%, 100% 200%;
   background-position: -200% 0, 0 0;
   background-clip: padding-box;
-  border: 2px solid rgba(59, 130, 246, 0.5);
+  border: 
+    1px solid rgba(255, 255, 255, 0.4),
+    1px solid rgba(59, 130, 246, 0.7);
+  border-top: 3px solid rgba(255, 255, 255, 0.6);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.3);
   animation: 
     scrollbarGradient 1.5s ease infinite,
     scrollbarHoverGlow 2s ease-in-out infinite,
@@ -104,12 +156,14 @@ body::-webkit-scrollbar-thumb:hover {
     scrollbarBounce 3s ease-in-out infinite,
     scrollbarColorShift 4s ease-in-out infinite;
   box-shadow: 
-    0 0 15px rgba(59, 130, 246, 0.8),
-    0 0 25px rgba(59, 130, 246, 0.6),
-    0 0 35px rgba(99, 102, 241, 0.4),
-    inset 0 0 15px rgba(255, 255, 255, 0.2),
-    inset 0 0 25px rgba(59, 130, 246, 0.3);
-  transform: scaleX(1.25) scaleY(1.08);
+    0 4px 8px rgba(0, 0, 0, 0.25),
+    0 6px 12px rgba(0, 0, 0, 0.2),
+    0 8px 16px rgba(59, 130, 246, 0.3),
+    inset 0 2px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.25),
+    inset 0 0 12px rgba(59, 130, 246, 0.4),
+    inset 0 0 20px rgba(255, 255, 255, 0.1);
+  transform: scaleX(1.25) scaleY(1.08) perspective(100px) translateZ(2px);
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   filter: brightness(1.15) saturate(1.3);
 }
@@ -119,20 +173,25 @@ body::-webkit-scrollbar-thumb:hover {
     linear-gradient(
       90deg,
       transparent 0%,
-      rgba(255, 255, 255, 0.3) 50%,
+      rgba(255, 255, 255, 0.4) 50%,
       transparent 100%
     ),
     linear-gradient(
       180deg,
-      rgba(59, 130, 246, 0.95),
-      rgba(99, 102, 241, 0.95),
-      rgba(139, 92, 246, 0.95),
-      rgba(37, 99, 235, 0.95)
+      rgba(255, 255, 255, 0.25) 0%,
+      rgba(59, 130, 246, 0.95) 15%,
+      rgba(37, 99, 235, 0.98) 50%,
+      rgba(29, 78, 216, 0.95) 85%,
+      rgba(0, 0, 0, 0.2) 100%
     );
   background-size: 200% 100%, 100% 200%;
   background-position: -200% 0, 0 0;
   background-clip: padding-box;
-  border: 2px solid rgba(59, 130, 246, 0.3);
+  border: 
+    1px solid rgba(255, 255, 255, 0.35),
+    1px solid rgba(59, 130, 246, 0.6);
+  border-top: 2px solid rgba(255, 255, 255, 0.5);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.25);
   animation: 
     scrollbarGradient 1.5s ease infinite,
     scrollbarHoverGlow 2s ease-in-out infinite,
@@ -140,27 +199,95 @@ body::-webkit-scrollbar-thumb:hover {
     scrollbarBounce 3s ease-in-out infinite,
     scrollbarColorShift 4s ease-in-out infinite;
   box-shadow: 
-    0 0 10px rgba(59, 130, 246, 0.6),
-    0 0 20px rgba(59, 130, 246, 0.4),
-    0 0 30px rgba(99, 102, 241, 0.3),
-    inset 0 0 10px rgba(255, 255, 255, 0.1),
-    inset 0 0 20px rgba(59, 130, 246, 0.2);
-  transform: scaleX(1.2) scaleY(1.05);
+    0 3px 6px rgba(0, 0, 0, 0.22),
+    0 5px 10px rgba(0, 0, 0, 0.18),
+    0 6px 12px rgba(59, 130, 246, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2),
+    inset 0 0 10px rgba(59, 130, 246, 0.35),
+    inset 0 0 18px rgba(255, 255, 255, 0.08);
+  transform: scaleX(1.2) scaleY(1.05) perspective(100px) translateZ(1px);
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   filter: brightness(1.1) saturate(1.2);
 }
 
-*::-webkit-scrollbar-thumb:active {
-  background: linear-gradient(
-    180deg,
-    rgba(37, 99, 235, 1),
-    rgba(79, 70, 229, 1),
-    rgba(29, 78, 216, 1)
-  );
-  background-size: 100% 200%;
+/* Click/Active state for main scrollbar - Pressed 3D Effect */
+html::-webkit-scrollbar-thumb:active,
+body::-webkit-scrollbar-thumb:active {
+  background: 
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.6) 0%,
+      rgba(255, 255, 255, 0.9) 50%,
+      rgba(255, 255, 255, 0.6) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.4) 0%,
+      rgba(37, 99, 235, 1) 15%,
+      rgba(29, 78, 216, 1) 50%,
+      rgba(15, 23, 42, 0.9) 85%,
+      rgba(0, 0, 0, 0.3) 100%
+    );
+  background-size: 300% 100%, 100% 200%;
+  background-position: -300% 0, 0 0;
   background-clip: padding-box;
-  animation: scrollbarGradient 0.8s ease infinite;
-  box-shadow: 0 0 12px rgba(59, 130, 246, 0.7);
+  border: 
+    1px solid rgba(255, 255, 255, 0.5),
+    1px solid rgba(37, 99, 235, 0.9);
+  border-top: 2px solid rgba(255, 255, 255, 0.7);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.4);
+  animation: 
+    scrollbarGradient 0.6s ease infinite,
+    scrollbarClickPulse 0.5s ease-out,
+    scrollbarClickShimmer 1s ease-in-out infinite,
+    scrollbarClickGlow 1.5s ease-in-out infinite;
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.25),
+    inset 0 3px 6px rgba(0, 0, 0, 0.3),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 0 15px rgba(37, 99, 235, 0.5),
+    0 0 25px rgba(59, 130, 246, 0.8),
+    0 0 45px rgba(99, 102, 241, 0.6);
+  transform: scaleX(1.3) scaleY(1.1) perspective(100px) translateZ(-1px);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  filter: brightness(1.3) saturate(1.5);
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background: 
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.4) 0%,
+      rgba(255, 255, 255, 0.7) 50%,
+      rgba(255, 255, 255, 0.4) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(37, 99, 235, 1),
+      rgba(79, 70, 229, 1),
+      rgba(139, 92, 246, 1),
+      rgba(29, 78, 216, 1)
+    );
+  background-size: 300% 100%, 100% 200%;
+  background-position: -300% 0, 0 0;
+  background-clip: padding-box;
+  border: 2px solid rgba(59, 130, 246, 0.7);
+  animation: 
+    scrollbarGradient 0.6s ease infinite,
+    scrollbarClickPulse 0.5s ease-out,
+    scrollbarClickShimmer 1s ease-in-out infinite,
+    scrollbarClickGlow 1.5s ease-in-out infinite;
+  box-shadow: 
+    0 0 18px rgba(59, 130, 246, 0.9),
+    0 0 35px rgba(59, 130, 246, 0.7),
+    0 0 50px rgba(99, 102, 241, 0.5),
+    inset 0 0 18px rgba(255, 255, 255, 0.25),
+    inset 0 0 28px rgba(59, 130, 246, 0.35);
+  transform: scaleX(1.25) scaleY(1.08);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  filter: brightness(1.25) saturate(1.4);
 }
 
 /* Scrollbar gradient animation */
@@ -260,6 +387,116 @@ body::-webkit-scrollbar-thumb:hover {
   }
 }
 
+/* Click pulse animation */
+@keyframes scrollbarClickPulse {
+  0% {
+    transform: scaleX(1.2) scaleY(1.05);
+    box-shadow: 
+      0 0 10px rgba(59, 130, 246, 0.6),
+      0 0 20px rgba(59, 130, 246, 0.4);
+  }
+  50% {
+    transform: scaleX(1.35) scaleY(1.15);
+    box-shadow: 
+      0 0 25px rgba(59, 130, 246, 1),
+      0 0 45px rgba(59, 130, 246, 0.9),
+      0 0 65px rgba(99, 102, 241, 0.7);
+  }
+  100% {
+    transform: scaleX(1.3) scaleY(1.1);
+    box-shadow: 
+      0 0 20px rgba(59, 130, 246, 1),
+      0 0 40px rgba(59, 130, 246, 0.8),
+      0 0 60px rgba(99, 102, 241, 0.6);
+  }
+}
+
+/* Click shimmer animation */
+@keyframes scrollbarClickShimmer {
+  0% {
+    background-position: -300% 0, 0 0;
+  }
+  50% {
+    background-position: 300% 0, 0 0;
+  }
+  100% {
+    background-position: -300% 0, 0 0;
+  }
+}
+
+/* Click glow animation */
+@keyframes scrollbarClickGlow {
+  0%, 100% {
+    box-shadow: 
+      0 0 20px rgba(59, 130, 246, 1),
+      0 0 40px rgba(59, 130, 246, 0.8),
+      0 0 60px rgba(99, 102, 241, 0.6),
+      inset 0 0 20px rgba(255, 255, 255, 0.3);
+  }
+  50% {
+    box-shadow: 
+      0 0 30px rgba(59, 130, 246, 1),
+      0 0 50px rgba(59, 130, 246, 1),
+      0 0 70px rgba(99, 102, 241, 0.8),
+      inset 0 0 25px rgba(255, 255, 255, 0.4);
+  }
+}
+
+/* Click pulse animation for dark mode */
+@keyframes scrollbarClickPulseDark {
+  0% {
+    transform: scaleX(1.2) scaleY(1.05);
+    box-shadow: 
+      0 0 10px rgba(147, 197, 253, 0.6),
+      0 0 20px rgba(147, 197, 253, 0.4);
+  }
+  50% {
+    transform: scaleX(1.35) scaleY(1.15);
+    box-shadow: 
+      0 0 25px rgba(147, 197, 253, 1),
+      0 0 45px rgba(147, 197, 253, 0.9),
+      0 0 65px rgba(165, 180, 252, 0.7);
+  }
+  100% {
+    transform: scaleX(1.3) scaleY(1.1);
+    box-shadow: 
+      0 0 20px rgba(147, 197, 253, 1),
+      0 0 40px rgba(147, 197, 253, 0.8),
+      0 0 60px rgba(165, 180, 252, 0.6);
+  }
+}
+
+/* Click shimmer animation for dark mode */
+@keyframes scrollbarClickShimmerDark {
+  0% {
+    background-position: -300% 0, 0 0;
+  }
+  50% {
+    background-position: 300% 0, 0 0;
+  }
+  100% {
+    background-position: -300% 0, 0 0;
+  }
+}
+
+/* Click glow animation for dark mode */
+@keyframes scrollbarClickGlowDark {
+  0%, 100% {
+    box-shadow: 
+      0 0 20px rgba(147, 197, 253, 1),
+      0 0 40px rgba(147, 197, 253, 0.8),
+      0 0 60px rgba(165, 180, 252, 0.6),
+      inset 0 0 20px rgba(255, 255, 255, 0.15);
+  }
+  50% {
+    box-shadow: 
+      0 0 30px rgba(147, 197, 253, 1),
+      0 0 50px rgba(147, 197, 253, 1),
+      0 0 70px rgba(165, 180, 252, 0.8),
+      inset 0 0 25px rgba(255, 255, 255, 0.2);
+  }
+}
+
 /* Bounce animation for dark mode */
 @keyframes scrollbarBounceDark {
   0%, 100% {
@@ -314,50 +551,102 @@ html.dark, .dark html, .dark body {
   scrollbar-color: rgba(147, 197, 253, 0.5) transparent;
 }
 
-/* Dark mode track */
+/* Dark mode track - 3D Recessed Design */
 html.dark::-webkit-scrollbar-track,
 .dark html::-webkit-scrollbar-track,
 .dark body::-webkit-scrollbar-track {
-  background: rgba(30, 41, 59, 0.4);
-  border: 1px solid rgba(51, 65, 85, 0.3);
+  background: 
+    linear-gradient(
+      to right,
+      rgba(15, 23, 42, 0.5) 0%,
+      rgba(30, 41, 59, 0.6) 50%,
+      rgba(15, 23, 42, 0.5) 100%
+    );
+  border-radius: 12px;
+  border: 1px solid rgba(51, 65, 85, 0.4);
+  box-shadow: 
+    inset 0 2px 4px rgba(0, 0, 0, 0.3),
+    inset 0 -2px 4px rgba(59, 130, 246, 0.1),
+    0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
 }
 
 html.dark::-webkit-scrollbar-track:hover,
 .dark html::-webkit-scrollbar-track:hover,
 .dark body::-webkit-scrollbar-track:hover {
-  background: rgba(30, 41, 59, 0.6);
+  background: 
+    linear-gradient(
+      to right,
+      rgba(15, 23, 42, 0.6) 0%,
+      rgba(30, 41, 59, 0.7) 50%,
+      rgba(15, 23, 42, 0.6) 100%
+    );
+  box-shadow: 
+    inset 0 2px 4px rgba(0, 0, 0, 0.35),
+    inset 0 -2px 4px rgba(59, 130, 246, 0.15);
 }
 
-/* Dark mode main scrollbar */
+/* Dark mode main scrollbar - 3D Design */
 html.dark::-webkit-scrollbar-thumb,
 .dark html::-webkit-scrollbar-thumb,
 .dark body::-webkit-scrollbar-thumb {
-  background: linear-gradient(
-    180deg,
-    rgba(147, 197, 253, 0.7),
-    rgba(165, 180, 252, 0.7),
-    rgba(96, 165, 250, 0.7)
-  );
+  background: 
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.2) 0%,
+      rgba(147, 197, 253, 0.9) 15%,
+      rgba(96, 165, 250, 0.95) 50%,
+      rgba(59, 130, 246, 0.9) 85%,
+      rgba(0, 0, 0, 0.3) 100%
+    );
   background-size: 100% 200%;
-  border: 2px solid rgba(30, 41, 59, 0.5);
+  border-radius: 12px;
+  border: 
+    1px solid rgba(255, 255, 255, 0.2),
+    1px solid rgba(147, 197, 253, 0.5);
+  border-top: 2px solid rgba(255, 255, 255, 0.4);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.4);
   background-clip: padding-box;
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    0 4px 8px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+    inset 0 0 8px rgba(147, 197, 253, 0.25);
   animation: scrollbarGradient 3s ease infinite;
-  transform: scaleX(1);
+  transform: scaleX(1) perspective(100px) translateZ(0);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
 }
 
 .dark *::-webkit-scrollbar-thumb {
-  background: linear-gradient(
-    180deg,
-    rgba(147, 197, 253, 0.5),
-    rgba(165, 180, 252, 0.5),
-    rgba(96, 165, 250, 0.5)
-  );
+  background: 
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.15) 0%,
+      rgba(147, 197, 253, 0.8) 15%,
+      rgba(96, 165, 250, 0.85) 50%,
+      rgba(59, 130, 246, 0.8) 85%,
+      rgba(0, 0, 0, 0.25) 100%
+    );
   background-size: 100% 200%;
+  border-radius: 12px;
+  border: 
+    1px solid rgba(255, 255, 255, 0.15),
+    1px solid rgba(147, 197, 253, 0.4);
+  border-top: 2px solid rgba(255, 255, 255, 0.3);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.3);
   background-clip: padding-box;
+  box-shadow: 
+    0 2px 3px rgba(0, 0, 0, 0.35),
+    0 3px 6px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+    inset 0 0 6px rgba(147, 197, 253, 0.2);
   animation: scrollbarGradient 3s ease infinite;
-  transform: scaleX(1);
+  transform: scaleX(1) perspective(100px) translateZ(0);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
 }
 
 /* Dark mode hover for main scrollbar */
@@ -435,17 +724,91 @@ html.dark::-webkit-scrollbar-thumb:hover,
   filter: brightness(1.1) saturate(1.2);
 }
 
-.dark *::-webkit-scrollbar-thumb:active {
-  background: linear-gradient(
-    180deg,
-    rgba(96, 165, 250, 1),
-    rgba(129, 140, 248, 1),
-    rgba(59, 130, 246, 1)
-  );
-  background-size: 100% 200%;
+/* Click/Active state for dark mode main scrollbar - Pressed 3D Effect */
+html.dark::-webkit-scrollbar-thumb:active,
+.dark html::-webkit-scrollbar-thumb:active,
+.dark body::-webkit-scrollbar-thumb:active {
+  background: 
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.5) 0%,
+      rgba(255, 255, 255, 0.8) 50%,
+      rgba(255, 255, 255, 0.5) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.3) 0%,
+      rgba(96, 165, 250, 1) 15%,
+      rgba(59, 130, 246, 1) 50%,
+      rgba(30, 58, 138, 0.95) 85%,
+      rgba(0, 0, 0, 0.4) 100%
+    );
+  background-size: 300% 100%, 100% 200%;
+  background-position: -300% 0, 0 0;
   background-clip: padding-box;
-  animation: scrollbarGradient 0.8s ease infinite;
-  box-shadow: 0 0 12px rgba(147, 197, 253, 0.7);
+  border: 
+    1px solid rgba(255, 255, 255, 0.4),
+    1px solid rgba(96, 165, 250, 0.9);
+  border-top: 2px solid rgba(255, 255, 255, 0.6);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.5);
+  animation: 
+    scrollbarGradient 0.6s ease infinite,
+    scrollbarClickPulseDark 0.5s ease-out,
+    scrollbarClickShimmerDark 1s ease-in-out infinite,
+    scrollbarClickGlowDark 1.5s ease-in-out infinite;
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    inset 0 3px 6px rgba(0, 0, 0, 0.4),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 0 15px rgba(96, 165, 250, 0.4),
+    0 0 25px rgba(147, 197, 253, 0.7),
+    0 0 45px rgba(165, 180, 252, 0.5);
+  transform: scaleX(1.3) scaleY(1.1) perspective(100px) translateZ(-1px);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  filter: brightness(1.3) saturate(1.5);
+}
+
+.dark *::-webkit-scrollbar-thumb:active {
+  background: 
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.4) 0%,
+      rgba(255, 255, 255, 0.7) 50%,
+      rgba(255, 255, 255, 0.4) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.25) 0%,
+      rgba(96, 165, 250, 1) 15%,
+      rgba(59, 130, 246, 1) 50%,
+      rgba(30, 58, 138, 0.95) 85%,
+      rgba(0, 0, 0, 0.35) 100%
+    );
+  background-size: 300% 100%, 100% 200%;
+  background-position: -300% 0, 0 0;
+  background-clip: padding-box;
+  border: 
+    1px solid rgba(255, 255, 255, 0.35),
+    1px solid rgba(96, 165, 250, 0.85);
+  border-top: 2px solid rgba(255, 255, 255, 0.55);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.45);
+  animation: 
+    scrollbarGradient 0.6s ease infinite,
+    scrollbarClickPulseDark 0.5s ease-out,
+    scrollbarClickShimmerDark 1s ease-in-out infinite,
+    scrollbarClickGlowDark 1.5s ease-in-out infinite;
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.45),
+    0 2px 4px rgba(0, 0, 0, 0.35),
+    inset 0 3px 6px rgba(0, 0, 0, 0.35),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 0 15px rgba(96, 165, 250, 0.35),
+    0 0 18px rgba(147, 197, 253, 0.8),
+    0 0 35px rgba(165, 180, 252, 0.6);
+  transform: scaleX(1.25) scaleY(1.08) perspective(100px) translateZ(-1px);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  filter: brightness(1.25) saturate(1.4);
 }
 
 /* Corner styling for webkit browsers */
