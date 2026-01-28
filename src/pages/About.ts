@@ -48,39 +48,153 @@ export function AboutPage() {
         </div>
       </div>
 
-      <!-- FAQ Accordion -->
-      <div class="mb-8 sm:mb-12 md:mb-16">
-        <h2 class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-center animate-fade-in-up px-2" style="animation-delay:1s;">GuestGo Experience</h2>
-        <div class="space-y-3 sm:space-y-4 max-w-2xl mx-auto px-2">
-          <div class="faq-item border rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300">
-            <button class="w-full flex justify-between items-center px-4 sm:px-6 py-3 sm:py-4 bg-gray-100 dark:bg-gray-700 font-semibold focus:outline-none faq-question hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200 text-sm sm:text-base">
-              <span>What is GuestGo?</span>
-              <svg class="w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-300 transform faq-icon flex-shrink-0 ml-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
-            </button>
-            <div class="faq-answer px-4 sm:px-6 py-0 bg-white dark:bg-gray-800 max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
-              <div class="py-3 sm:py-4 text-sm sm:text-base">GuestGo is a platform for businesses to manage guest check-ins, analytics, and more, all in one place.</div>
-            </div>
+      <!-- GuestGo Experience - redesigned journey-style accordion -->
+      <section class="mb-8 sm:mb-12 md:mb-16">
+        <div class="max-w-5xl mx-auto bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-900 dark:to-blue-950 border border-blue-100/60 dark:border-blue-900/60 rounded-3xl shadow-xl px-4 sm:px-8 md:px-10 py-6 sm:py-8 md:py-10 relative overflow-hidden">
+          <div class="pointer-events-none absolute inset-0 opacity-40 dark:opacity-30">
+            <div class="absolute -top-24 -right-10 w-56 h-56 bg-blue-200/60 dark:bg-blue-500/10 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-32 -left-10 w-64 h-64 bg-indigo-200/60 dark:bg-indigo-500/10 rounded-full blur-3xl"></div>
           </div>
-          <div class="faq-item border rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300">
-            <button class="w-full flex justify-between items-center px-4 sm:px-6 py-3 sm:py-4 bg-gray-100 dark:bg-gray-700 font-semibold focus:outline-none faq-question hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200 text-sm sm:text-base">
-              <span>Is GuestGo secure?</span>
-              <svg class="w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-300 transform faq-icon flex-shrink-0 ml-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
-            </button>
-            <div class="faq-answer px-4 sm:px-6 py-0 bg-white dark:bg-gray-800 max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
-              <div class="py-3 sm:py-4 text-sm sm:text-base">Yes, we use industry-standard security practices to keep your data safe.</div>
+
+          <div class="relative grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.2fr)] items-start">
+            <!-- Intro copy -->
+            <div class="space-y-4 sm:space-y-5">
+              <p class="inline-flex items-center px-3 py-1 rounded-full bg-blue-100/80 dark:bg-blue-900/40 text-[11px] sm:text-xs font-semibold tracking-wide text-blue-700 dark:text-blue-300 uppercase">
+                Guest journey, end to end
+              </p>
+              <h2 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white leading-tight">
+                GuestGo <span class="text-blue-600 dark:text-blue-400">Experience</span>
+              </h2>
+              <p class="text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-xl">
+                See how a typical visit feels from your guest’s point of view—from the moment they schedule,
+                to secure gate verification, up to feedback after the visit. Each step is designed to be fast,
+                transparent, and human-friendly.
+              </p>
+              <div class="grid grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
+                <div class="flex items-start gap-2">
+                  <div class="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-xs font-semibold">
+                    1
+                  </div>
+                  <div>
+                    <p class="font-semibold text-gray-900 dark:text-gray-100">Frictionless scheduling</p>
+                    <p class="text-[11px] sm:text-xs text-gray-600 dark:text-gray-400">Guests book online in minutes.</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-2">
+                  <div class="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-xs font-semibold">
+                    2
+                  </div>
+                  <div>
+                    <p class="font-semibold text-gray-900 dark:text-gray-100">Smart verification</p>
+                    <p class="text-[11px] sm:text-xs text-gray-600 dark:text-gray-400">QR + face detection at the gate.</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-2">
+                  <div class="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 text-xs font-semibold">
+                    3
+                  </div>
+                  <div>
+                    <p class="font-semibold text-gray-900 dark:text-gray-100">Guided visit</p>
+                    <p class="text-[11px] sm:text-xs text-gray-600 dark:text-gray-400">Clear statuses across all places.</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-2">
+                  <div class="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-xs font-semibold">
+                    4
+                  </div>
+                  <div>
+                    <p class="font-semibold text-gray-900 dark:text-gray-100">Feedback & insights</p>
+                    <p class="text-[11px] sm:text-xs text-gray-600 dark:text-gray-400">Close the loop with surveys.</p>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-          <div class="faq-item border rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300">
-            <button class="w-full flex justify-between items-center px-4 sm:px-6 py-3 sm:py-4 bg-gray-100 dark:bg-gray-700 font-semibold focus:outline-none faq-question hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200 text-sm sm:text-base">
-              <span>Can I customize the guest experience?</span>
-              <svg class="w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-300 transform faq-icon flex-shrink-0 ml-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
-            </button>
-            <div class="faq-answer px-4 sm:px-6 py-0 bg-white dark:bg-gray-800 max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
-              <div class="py-3 sm:py-4 text-sm sm:text-base">Absolutely! GuestGo offers customizable workflows and branding options.</div>
+
+            <!-- Journey accordion -->
+            <div class="space-y-3 sm:space-y-4 relative">
+              <div class="absolute inset-y-4 left-3 sm:left-4 w-px bg-gradient-to-b from-blue-400/70 via-indigo-400/40 to-transparent pointer-events-none hidden sm:block"></div>
+
+              <div class="faq-item relative group bg-white/90 dark:bg-gray-900/80 backdrop-blur-sm border border-blue-100/70 dark:border-blue-800/70 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
+                <div class="absolute left-3 sm:left-4 top-5 sm:top-6 h-3 w-3 rounded-full bg-blue-500 shadow-[0_0_0_4px_rgba(59,130,246,0.25)]"></div>
+                <button class="faq-question w-full flex justify-between items-center gap-3 pl-9 sm:pl-12 pr-4 sm:pr-5 py-3.5 sm:py-4 text-left bg-gradient-to-r from-blue-50/80 via-white to-transparent dark:from-blue-900/40 dark:via-gray-900/80 dark:to-transparent hover:from-blue-100/90 dark:hover:from-blue-800/60 transition-colors duration-300">
+                  <div class="flex items-center gap-3">
+                    <span class="hidden sm:inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white text-sm font-semibold shadow-md">01</span>
+                    <span class="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">Schedule a visit in a few taps</span>
+                  </div>
+                  <svg class="faq-icon w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400 transition-transform duration-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                  </svg>
+                </button>
+                <div class="faq-answer px-4 sm:px-6 py-0 bg-white/95 dark:bg-gray-900/95 max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+                  <div class="py-3 sm:py-4 text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                    Guests choose their destination, purpose, and date from any device. GuestGo automatically enforces visit limits,
+                    shows available slots, and sends a confirmation email with a unique QR code—no phone calls or manual encoding needed.
+                  </div>
+                </div>
+              </div>
+
+              <div class="faq-item relative group bg-white/90 dark:bg-gray-900/80 backdrop-blur-sm border border-emerald-100/70 dark:border-emerald-800/70 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
+                <div class="absolute left-3 sm:left-4 top-5 sm:top-6 h-3 w-3 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.25)]"></div>
+                <button class="faq-question w-full flex justify-between items-center gap-3 pl-9 sm:pl-12 pr-4 sm:pr-5 py-3.5 sm:py-4 text-left bg-gradient-to-r from-emerald-50/80 via-white to-transparent dark:from-emerald-900/40 dark:via-gray-900/80 dark:to-transparent hover:from-emerald-100/90 dark:hover:from-emerald-800/60 transition-colors duration-300">
+                  <div class="flex items-center gap-3">
+                    <span class="hidden sm:inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-white text-sm font-semibold shadow-md">02</span>
+                    <span class="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">Arrive and verify securely at the gate</span>
+                  </div>
+                  <svg class="faq-icon w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 dark:text-emerald-400 transition-transform duration-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                  </svg>
+                </button>
+                <div class="faq-answer px-4 sm:px-6 py-0 bg-white/95 dark:bg-gray-900/95 max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+                  <div class="py-3 sm:py-4 text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                    On arrival, guards simply scan the QR code and optionally verify using AI-powered facial recognition.
+                    Gate staff see live status, visit details, and can mark temporary exits—all while keeping queues short
+                    and security tight.
+                  </div>
+                </div>
+              </div>
+
+              <div class="faq-item relative group bg-white/90 dark:bg-gray-900/80 backdrop-blur-sm border border-indigo-100/70 dark:border-indigo-800/70 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
+                <div class="absolute left-3 sm:left-4 top-5 sm:top-6 h-3 w-3 rounded-full bg-indigo-500 shadow-[0_0_0_4px_rgba(79,70,229,0.25)]"></div>
+                <button class="faq-question w-full flex justify-between items-center gap-3 pl-9 sm:pl-12 pr-4 sm:pr-5 py-3.5 sm:py-4 text-left bg-gradient-to-r from-indigo-50/80 via-white to-transparent dark:from-indigo-900/40 dark:via-gray-900/80 dark:to-transparent hover:from-indigo-100/90 dark:hover:from-indigo-800/60 transition-colors duration-300">
+                  <div class="flex items-center gap-3">
+                    <span class="hidden sm:inline-flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-white text-sm font-semibold shadow-md">03</span>
+                    <span class="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">Move through places with live status</span>
+                  </div>
+                  <svg class="faq-icon w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 dark:text-indigo-400 transition-transform duration-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                  </svg>
+                </button>
+                <div class="faq-answer px-4 sm:px-6 py-0 bg-white/95 dark:bg-gray-900/95 max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+                  <div class="py-3 sm:py-4 text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                    As guests complete requirements across different offices or places, their visit status updates in real time
+                    (Pending, In Progress, Temporary Exit, Completed). This keeps both guests and staff aligned on what’s next.
+                  </div>
+                </div>
+              </div>
+
+              <div class="faq-item relative group bg-white/90 dark:bg-gray-900/80 backdrop-blur-sm border border-amber-100/70 dark:border-amber-800/70 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
+                <div class="absolute left-3 sm:left-4 top-5 sm:top-6 h-3 w-3 rounded-full bg-amber-500 shadow-[0_0_0_4px_rgba(245,158,11,0.25)]"></div>
+                <button class="faq-question w-full flex justify-between items-center gap-3 pl-9 sm:pl-12 pr-4 sm:pr-5 py-3.5 sm:py-4 text-left bg-gradient-to-r from-amber-50/80 via-white to-transparent dark:from-amber-900/40 dark:via-gray-900/80 dark:to-transparent hover:from-amber-100/90 dark:hover:from-amber-800/60 transition-colors duration-300">
+                  <div class="flex items-center gap-3">
+                    <span class="hidden sm:inline-flex h-8 w-8 items-center justify-center rounded-full bg-amber-500 text-white text-sm font-semibold shadow-md">04</span>
+                    <span class="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">Wrap up with feedback that matters</span>
+                  </div>
+                  <svg class="faq-icon w-4 h-4 sm:w-5 sm:h-5 text-amber-600 dark:text-amber-400 transition-transform duration-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                  </svg>
+                </button>
+                <div class="faq-answer px-4 sm:px-6 py-0 bg-white/95 dark:bg-gray-900/95 max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+                  <div class="py-3 sm:py-4 text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                    After the visit, guests can answer a short ISO 25010–inspired survey about their experience.
+                    You get structured feedback on usability, performance, and security—turning every visit into insight
+                    you can act on.
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       <!-- Team Section -->
       <div class="mb-8 sm:mb-12">
