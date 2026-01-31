@@ -196,37 +196,74 @@ export function AboutPage() {
         </div>
       </section>
 
-      <!-- Team Section -->
-      <div class="mb-8 sm:mb-12">
-        <h2 class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-center animate-fade-in-up px-2" style="animation-delay:1.2s;">Meet the Team</h2>
-        <div class="flex flex-wrap justify-center gap-4 sm:gap-6 md:gap-8 px-2">
-          <button class="team-member bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 sm:p-6 text-center transition-all duration-300 ease-out hover:shadow-2xl hover:scale-105 cursor-pointer focus:outline-none animate-fade-in-up w-full sm:w-auto" data-member="glenn" style="animation-delay:1.4s;">
-            <img src="/glenn.jpg" alt="Glenn" class="w-20 h-20 sm:w-24 sm:h-24 rounded-full mx-auto mb-3 sm:mb-4 team-photo object-cover">
-            <h3 class="text-base sm:text-lg font-semibold">Glenn</h3>
-            <p class="text-sm sm:text-base text-gray-600 dark:text-gray-300">Founder & CEO</p>
-          </button>
-          <button class="team-member bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 sm:p-6 text-center transition-all duration-300 ease-out hover:shadow-2xl hover:scale-105 cursor-pointer focus:outline-none animate-fade-in-up w-full sm:w-auto" data-member="justine" style="animation-delay:1.6s;">
-            <img src="/justine.jpg" alt="Justine" class="w-20 h-20 sm:w-24 sm:h-24 rounded-full mx-auto mb-3 sm:mb-4 team-photo object-cover">
-            <h3 class="text-base sm:text-lg font-semibold">Justine</h3>
-            <p class="text-sm sm:text-base text-gray-600 dark:text-gray-300">Product Manager</p>
-          </button>
-          <button class="team-member bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 sm:p-6 text-center transition-all duration-300 ease-out hover:shadow-2xl hover:scale-105 cursor-pointer focus:outline-none animate-fade-in-up w-full sm:w-auto" data-member="ken" style="animation-delay:1.8s;">
-            <img src="/ken.jpg" alt="Ken" class="w-20 h-20 sm:w-24 sm:h-24 rounded-full mx-auto mb-3 sm:mb-4 team-photo object-cover">
-            <h3 class="text-base sm:text-lg font-semibold">Ken</h3>
-            <p class="text-sm sm:text-base text-gray-600 dark:text-gray-300">Lead Developer</p>
-          </button>
-          <button class="team-member bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 sm:p-6 text-center transition-all duration-300 ease-out hover:shadow-2xl hover:scale-105 cursor-pointer focus:outline-none animate-fade-in-up w-full sm:w-auto" data-member="kurt" style="animation-delay:2s;">
-            <img src="/kurt.jpg" alt="Kurt" class="w-20 h-20 sm:w-24 sm:h-24 rounded-full mx-auto mb-3 sm:mb-4 team-photo object-cover">
-            <h3 class="text-base sm:text-lg font-semibold">Kurt</h3>
-            <p class="text-sm sm:text-base text-gray-600 dark:text-gray-300">UI/UX Designer</p>
-          </button>
-          <button class="team-member bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 sm:p-6 text-center transition-all duration-300 ease-out hover:shadow-2xl hover:scale-105 cursor-pointer focus:outline-none animate-fade-in-up w-full sm:w-auto" data-member="walter" style="animation-delay:2.2s;">
-            <img src="/walter.jpg" alt="Walter" class="w-20 h-20 sm:w-24 sm:h-24 rounded-full mx-auto mb-3 sm:mb-4 team-photo object-cover">
-            <h3 class="text-base sm:text-lg font-semibold">Walter</h3>
-            <p class="text-sm sm:text-base text-gray-600 dark:text-gray-300">QA Engineer</p>
-          </button>
+      <!-- Meet the Team -->
+      <section class="mb-10 sm:mb-14 md:mb-16 px-2">
+        <div class="max-w-6xl mx-auto bg-gradient-to-br from-sky-50 via-white to-cyan-50 dark:from-sky-950/40 dark:via-slate-950 dark:to-cyan-950/40 border border-sky-200/70 dark:border-sky-900/50 rounded-3xl shadow-xl overflow-hidden relative">
+          <div class="pointer-events-none absolute inset-0 opacity-50 dark:opacity-30">
+            <div class="absolute -top-20 right-0 w-48 h-48 bg-sky-200/60 dark:bg-sky-500/10 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-24 left-10 w-56 h-56 bg-cyan-200/60 dark:bg-cyan-500/10 rounded-full blur-3xl"></div>
+          </div>
+
+          <div class="relative p-5 sm:p-8 md:p-10 lg:p-12">
+            <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] items-start">
+              <!-- Intro -->
+              <div class="space-y-4 sm:space-y-5">
+                <p class="inline-flex items-center px-3 py-1 rounded-full bg-sky-100/80 dark:bg-sky-900/40 text-[11px] sm:text-xs font-semibold tracking-wide text-sky-700 dark:text-sky-300 uppercase">
+                  The people behind GuestGo
+                </p>
+                <h2 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white leading-tight">
+                  Meet the <span class="text-sky-600 dark:text-sky-400">Team</span>
+                </h2>
+                <p class="text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-md">
+                  Our thesis project team brings together leadership, product, engineering, design, and quality assurance—each member driving GuestGo from idea to production.
+                </p>
+                <p class="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400">
+                  Click a card to read a short bio.
+                </p>
+              </div>
+
+              <!-- Team grid -->
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+                <button class="team-member group relative bg-white/90 dark:bg-gray-900/80 backdrop-blur-sm rounded-2xl border border-sky-100/70 dark:border-sky-800/70 shadow-lg hover:shadow-xl hover:border-sky-200 dark:hover:border-sky-600 transition-all duration-300 p-4 sm:p-5 text-center cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 dark:focus:ring-offset-gray-900" data-member="glenn">
+                  <div class="relative mb-3 sm:mb-4 mx-auto w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden ring-2 ring-sky-100 dark:ring-sky-800 group-hover:ring-sky-300 dark:group-hover:ring-sky-600 transition-all duration-300">
+                    <img src="/glenn.jpg" alt="Glenn" class="team-photo w-full h-full object-cover">
+                  </div>
+                  <h3 class="text-sm sm:text-base font-bold text-gray-900 dark:text-white mb-0.5">Glenn</h3>
+                  <p class="text-[11px] sm:text-xs text-sky-600 dark:text-sky-400 font-medium">Founder & CEO</p>
+                </button>
+                <button class="team-member group relative bg-white/90 dark:bg-gray-900/80 backdrop-blur-sm rounded-2xl border border-emerald-100/70 dark:border-emerald-800/70 shadow-lg hover:shadow-xl hover:border-emerald-200 dark:hover:border-emerald-600 transition-all duration-300 p-4 sm:p-5 text-center cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 dark:focus:ring-offset-gray-900" data-member="justine">
+                  <div class="relative mb-3 sm:mb-4 mx-auto w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden ring-2 ring-emerald-100 dark:ring-emerald-800 group-hover:ring-emerald-300 dark:group-hover:ring-emerald-600 transition-all duration-300">
+                    <img src="/justine.jpg" alt="Justine" class="team-photo w-full h-full object-cover">
+                  </div>
+                  <h3 class="text-sm sm:text-base font-bold text-gray-900 dark:text-white mb-0.5">Justine</h3>
+                  <p class="text-[11px] sm:text-xs text-emerald-600 dark:text-emerald-400 font-medium">Product Manager</p>
+                </button>
+                <button class="team-member group relative bg-white/90 dark:bg-gray-900/80 backdrop-blur-sm rounded-2xl border border-violet-100/70 dark:border-violet-800/70 shadow-lg hover:shadow-xl hover:border-violet-200 dark:hover:border-violet-600 transition-all duration-300 p-4 sm:p-5 text-center cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 dark:focus:ring-offset-gray-900" data-member="ken">
+                  <div class="relative mb-3 sm:mb-4 mx-auto w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden ring-2 ring-violet-100 dark:ring-violet-800 group-hover:ring-violet-300 dark:group-hover:ring-violet-600 transition-all duration-300">
+                    <img src="/ken.jpg" alt="Ken" class="team-photo w-full h-full object-cover">
+                  </div>
+                  <h3 class="text-sm sm:text-base font-bold text-gray-900 dark:text-white mb-0.5">Ken</h3>
+                  <p class="text-[11px] sm:text-xs text-violet-600 dark:text-violet-400 font-medium">Lead Developer</p>
+                </button>
+                <button class="team-member group relative bg-white/90 dark:bg-gray-900/80 backdrop-blur-sm rounded-2xl border border-pink-100/70 dark:border-pink-800/70 shadow-lg hover:shadow-xl hover:border-pink-200 dark:hover:border-pink-600 transition-all duration-300 p-4 sm:p-5 text-center cursor-pointer focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-offset-2 dark:focus:ring-offset-gray-900" data-member="kurt">
+                  <div class="relative mb-3 sm:mb-4 mx-auto w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden ring-2 ring-pink-100 dark:ring-pink-800 group-hover:ring-pink-300 dark:group-hover:ring-pink-600 transition-all duration-300">
+                    <img src="/kurt.jpg" alt="Kurt" class="team-photo w-full h-full object-cover">
+                  </div>
+                  <h3 class="text-sm sm:text-base font-bold text-gray-900 dark:text-white mb-0.5">Kurt</h3>
+                  <p class="text-[11px] sm:text-xs text-pink-600 dark:text-pink-400 font-medium">UI/UX Designer</p>
+                </button>
+                <button class="team-member group relative bg-white/90 dark:bg-gray-900/80 backdrop-blur-sm rounded-2xl border border-amber-100/70 dark:border-amber-800/70 shadow-lg hover:shadow-xl hover:border-amber-200 dark:hover:border-amber-600 transition-all duration-300 p-4 sm:p-5 text-center cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 dark:focus:ring-offset-gray-900 col-span-2 sm:col-span-1 sm:col-start-2" data-member="walter">
+                  <div class="relative mb-3 sm:mb-4 mx-auto w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden ring-2 ring-amber-100 dark:ring-amber-800 group-hover:ring-amber-300 dark:group-hover:ring-amber-600 transition-all duration-300">
+                    <img src="/walter.jpg" alt="Walter" class="team-photo w-full h-full object-cover">
+                  </div>
+                  <h3 class="text-sm sm:text-base font-bold text-gray-900 dark:text-white mb-0.5">Walter</h3>
+                  <p class="text-[11px] sm:text-xs text-amber-600 dark:text-amber-400 font-medium">QA Engineer</p>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
 
 
       ${ThesisTimeline()}
@@ -390,7 +427,7 @@ export function AboutPage() {
       }
       
       .team-member:hover {
-        transform: translateY(-4px) scale(1.05);
+        transform: translateY(-3px);
       }
       
       /* Loading animation for counters */
