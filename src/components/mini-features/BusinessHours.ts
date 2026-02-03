@@ -1,187 +1,87 @@
 export function BusinessHours() {
   return `
-    <div class="mt-12 bg-gradient-to-br from-white to-orange-50 dark:from-gray-800 dark:to-orange-900/20 rounded-2xl shadow-xl p-8 sm:p-10 mx-4 sm:mx-6 lg:mx-8 border-2 border-orange-100 dark:border-orange-800 animate-fade-in">
-      <div class="text-center mb-8">
-        <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl mb-4 shadow-lg animate-bounce-in">
-          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-        </div>
-        <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-3 animate-slide-up">Business Hours</h2>
-        <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400 max-w-2xl mx-auto animate-slide-up-delay">
-          Our support team is available during these hours. For urgent matters, please use our emergency contact.
-        </p>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div class="space-y-4">
-          <div id="schedule-monday-friday" class="flex justify-between items-center p-5 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-xl border-2 border-blue-200 dark:border-blue-700 hover:shadow-lg transition-all duration-300 animate-slide-in-left" style="animation-delay: 0.1s;">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                <span class="text-white font-bold text-sm">M-F</span>
-              </div>
-              <span class="font-bold text-gray-900 dark:text-white">Monday - Friday</span>
+    <section class="mt-12 px-4 sm:px-6 lg:px-8">
+      <div class="max-w-5xl mx-auto flex flex-col lg:flex-row lg:items-stretch gap-6 lg:gap-8 py-8 border-t border-b border-gray-200 dark:border-gray-700">
+        <!-- Heading + schedule list -->
+        <div class="lg:w-72 flex-shrink-0">
+          <div class="flex items-start gap-3 mb-6">
+            <div class="flex-shrink-0 w-1 sm:w-1.5 rounded-full bg-gradient-to-b from-orange-500 to-amber-500 min-h-[2.5rem] sm:min-h-0 sm:h-12"></div>
+            <div>
+              <h2 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-1">Business hours</h2>
+              <p class="text-sm text-gray-600 dark:text-gray-400">
+                Support available during these hours. All times are Philippine Standard Time (PST).
+              </p>
             </div>
-            <span class="text-lg font-semibold text-blue-600 dark:text-blue-400">9:00 AM - 6:00 PM</span>
           </div>
-          <div id="schedule-saturday" class="flex justify-between items-center p-5 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 rounded-xl border-2 border-green-200 dark:border-green-700 hover:shadow-lg transition-all duration-300 animate-slide-in-left" style="animation-delay: 0.2s;">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
-                <span class="text-white font-bold text-sm">SAT</span>
+          <div class="space-y-2 pl-4 sm:pl-5">
+            <div id="schedule-monday-friday" class="schedule-row flex justify-between items-center gap-4 py-3 px-4 rounded-xl border-2 border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/20 transition-all duration-200">
+              <div class="flex items-center gap-3 min-w-0">
+                <span class="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-500 text-white text-xs font-bold flex items-center justify-center">M–F</span>
+                <span class="font-semibold text-gray-900 dark:text-white text-sm">Monday – Friday</span>
               </div>
-              <span class="font-bold text-gray-900 dark:text-white">Saturday</span>
+              <span class="flex-shrink-0 text-sm font-medium text-blue-600 dark:text-blue-400">9:00 AM – 6:00 PM</span>
             </div>
-            <span class="text-lg font-semibold text-green-600 dark:text-green-400">10:00 AM - 4:00 PM</span>
-          </div>
-          <div id="schedule-sunday" class="flex justify-between items-center p-5 bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-xl border-2 border-gray-300 dark:border-gray-600 hover:shadow-lg transition-all duration-300 animate-slide-in-left" style="animation-delay: 0.3s;">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 bg-gray-500 rounded-lg flex items-center justify-center">
-                <span class="text-white font-bold text-sm">SUN</span>
+            <div id="schedule-saturday" class="schedule-row flex justify-between items-center gap-4 py-3 px-4 rounded-xl border-2 border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-900/20 transition-all duration-200">
+              <div class="flex items-center gap-3 min-w-0">
+                <span class="flex-shrink-0 w-8 h-8 rounded-lg bg-green-500 text-white text-xs font-bold flex items-center justify-center">Sat</span>
+                <span class="font-semibold text-gray-900 dark:text-white text-sm">Saturday</span>
               </div>
-              <span class="font-bold text-gray-900 dark:text-white">Sunday</span>
+              <span class="flex-shrink-0 text-sm font-medium text-green-600 dark:text-green-400">10:00 AM – 4:00 PM</span>
             </div>
-            <span class="text-lg font-semibold text-gray-500 dark:text-gray-400">Closed</span>
+            <div id="schedule-sunday" class="schedule-row flex justify-between items-center gap-4 py-3 px-4 rounded-xl border-2 border-gray-300 dark:border-gray-600 bg-gray-100/80 dark:bg-gray-800/50 transition-all duration-200">
+              <div class="flex items-center gap-3 min-w-0">
+                <span class="flex-shrink-0 w-8 h-8 rounded-lg bg-gray-500 text-white text-xs font-bold flex items-center justify-center">Sun</span>
+                <span class="font-semibold text-gray-900 dark:text-white text-sm">Sunday</span>
+              </div>
+              <span class="flex-shrink-0 text-sm font-medium text-gray-500 dark:text-gray-400">Closed</span>
+            </div>
           </div>
         </div>
-        <div class="text-center flex flex-col justify-center">
-          <div id="current-status" class="inline-flex flex-col items-center px-8 py-6 rounded-2xl mb-4 bg-gradient-to-br from-white to-gray-50 dark:from-gray-700 dark:to-gray-800 border-2 border-gray-200 dark:border-gray-600 shadow-lg animate-slide-in-right animate-pulse-glow">
+
+        <!-- Current status -->
+        <div class="flex-1 flex flex-col justify-center min-w-0">
+          <div id="current-status" class="inline-flex flex-col items-center sm:items-start px-6 py-5 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800/80 shadow-sm transition-all duration-200">
             <div class="flex items-center gap-3 mb-2">
-              <div id="status-indicator" class="w-4 h-4 rounded-full bg-gray-400 animate-pulse"></div>
-              <span id="status-text" class="text-xl font-bold text-gray-600 dark:text-gray-400">Checking status...</span>
+              <div id="status-indicator" class="w-3.5 h-3.5 rounded-full bg-gray-400 animate-pulse flex-shrink-0"></div>
+              <span id="status-text" class="text-lg font-bold text-gray-600 dark:text-gray-400">Checking status...</span>
             </div>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
-              <span id="next-opening">Please wait...</span>
-            </p>
+            <p id="next-opening" class="text-sm text-gray-600 dark:text-gray-400">Please wait...</p>
           </div>
-          <div class="mt-4 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-700 animate-fade-in-delay">
-            <p class="text-xs text-blue-800 dark:text-blue-300">
-              <strong>Note:</strong> All times are in Philippine Standard Time (PST). For urgent technical issues, please use the emergency contact form.
-            </p>
-          </div>
+          <p class="mt-4 text-xs text-gray-500 dark:text-gray-500 max-w-md">
+            For urgent technical issues, use the emergency contact form or call the number on the Find us section.
+          </p>
         </div>
       </div>
-    </div>
+    </section>
     <style>
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-        }
-        to {
-          opacity: 1;
-        }
-      }
-      
-      @keyframes slideUp {
-        from {
-          opacity: 0;
-          transform: translateY(20px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-      
-      @keyframes slideInLeft {
-        from {
-          opacity: 0;
-          transform: translateX(-30px);
-        }
-        to {
-          opacity: 1;
-          transform: translateX(0);
-        }
-      }
-      
-      @keyframes slideInRight {
-        from {
-          opacity: 0;
-          transform: translateX(30px);
-        }
-        to {
-          opacity: 1;
-          transform: translateX(0);
-        }
-      }
-      
-      @keyframes bounceIn {
-        0% {
-          opacity: 0;
-          transform: scale(0.3);
-        }
-        50% {
-          opacity: 1;
-          transform: scale(1.05);
-        }
-        70% {
-          transform: scale(0.9);
-        }
-        100% {
-          transform: scale(1);
-        }
-      }
-      
-      @keyframes pulseGlow {
-        0%, 100% {
-          box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
-        }
-        50% {
-          box-shadow: 0 0 20px 5px rgba(59, 130, 246, 0.2);
-        }
-      }
-      
-      .animate-fade-in {
-        animation: fadeIn 0.6s ease-out;
-      }
-      
-      .animate-slide-up {
-        animation: slideUp 0.6s ease-out;
-      }
-      
-      .animate-slide-up-delay {
-        animation: slideUp 0.6s ease-out 0.2s both;
-      }
-      
-      .animate-slide-in-left {
-        animation: slideInLeft 0.6s ease-out both;
-      }
-      
-      .animate-slide-in-right {
-        animation: slideInRight 0.6s ease-out 0.3s both;
-      }
-      
-      .animate-bounce-in {
-        animation: bounceIn 0.8s ease-out;
-      }
-      
-      .animate-pulse-glow {
-        animation: pulseGlow 2s ease-in-out infinite;
-      }
-      
-      .animate-fade-in-delay {
-        animation: fadeIn 0.6s ease-out 0.4s both;
-      }
-      
       .schedule-day-active {
-        transform: scale(1.05);
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-        border-width: 3px !important;
+        transform: scale(1.02);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
       }
-      
-      .schedule-day-active.bg-gradient-to-r.from-blue-50 {
-        border-color: rgb(59, 130, 246) !important;
-        background: linear-gradient(to right, rgb(219, 234, 254), rgb(199, 210, 254)) !important;
+      #schedule-monday-friday.schedule-day-active {
+        border-color: rgb(59, 130, 246);
+        background: rgb(219, 234, 254);
       }
-      
-      .schedule-day-active.bg-gradient-to-r.from-green-50 {
-        border-color: rgb(34, 197, 94) !important;
-        background: linear-gradient(to right, rgb(220, 252, 231), rgb(209, 250, 229)) !important;
+      .dark #schedule-monday-friday.schedule-day-active {
+        border-color: rgb(96, 165, 250);
+        background: rgba(30, 58, 138, 0.3);
       }
-      
-      .schedule-day-active.bg-gradient-to-r.from-gray-100 {
-        border-color: rgb(107, 114, 128) !important;
-        background: linear-gradient(to right, rgb(243, 244, 246), rgb(229, 231, 235)) !important;
+      #schedule-saturday.schedule-day-active {
+        border-color: rgb(34, 197, 94);
+        background: rgb(220, 252, 231);
+      }
+      .dark #schedule-saturday.schedule-day-active {
+        border-color: rgb(74, 222, 128);
+        background: rgba(22, 101, 52, 0.3);
+      }
+      #schedule-sunday.schedule-day-active {
+        border-color: rgb(107, 114, 128);
+        background: rgb(243, 244, 246);
+      }
+      .dark #schedule-sunday.schedule-day-active {
+        border-color: rgb(156, 163, 175);
+        background: rgba(55, 65, 81, 0.5);
       }
     </style>
   `;
 }
-

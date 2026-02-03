@@ -688,10 +688,10 @@ export function setupContactPage(): void {
       // Show loading state initially
       updateBusinessStatus(true);
       
-      // Update status after 5 seconds
+      // Update status after a short delay (DOM ready)
       setTimeout(() => {
         updateBusinessStatus(false);
-      }, 5000);
+      }, 800);
       
       // Update business status every minute
       setInterval(() => {
