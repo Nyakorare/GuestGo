@@ -479,38 +479,30 @@ async function loadFeedback() {
       const visitorName = feedback.visitor_name || 'Anonymous';
       const date = new Date(feedback.submitted_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
       
-      // Create stars HTML
+      // Create stars HTML (5 stars, fill up to rating)
       let starsHtml = '';
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 5; i++) {
         if (i < rating) {
-          starsHtml += '<span class="text-yellow-400 text-xl">★</span>';
+          starsHtml += '<span class="text-amber-400">★</span>';
         } else {
-          starsHtml += '<span class="text-gray-300 dark:text-gray-600 text-xl">★</span>';
+          starsHtml += '<span class="text-gray-300 dark:text-gray-600">★</span>';
         }
       }
-      
-      feedbacksHtml += '<div class="testimonial-item mb-8 p-6 bg-gray-50 dark:bg-gray-700 rounded-lg">' +
-        '<div class="flex items-start space-x-4">' +
-          '<div class="flex-shrink-0">' +
-            '<div class="w-12 h-12 ' + color.bg + ' ' + color.darkBg + ' rounded-full flex items-center justify-center">' +
-              '<svg class="w-6 h-6 ' + color.text + ' ' + color.darkText + '" fill="currentColor" viewBox="0 0 24 24">' +
-                '<path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h4v10h-10z"/>' +
-              '</svg>' +
-            '</div>' +
-          '</div>' +
-          '<div class="flex-1">' +
-            '<blockquote class="text-lg text-gray-700 dark:text-gray-300 italic mb-4">' +
+
+      feedbacksHtml += '<div class="testimonial-item p-4 sm:p-5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/80 hover:border-amber-200 dark:hover:border-amber-800/70 hover:shadow-md transition-all duration-200">' +
+        '<div class="flex gap-4">' +
+          '<div class="flex-shrink-0 w-1 rounded-full ' + color.bg + ' ' + color.darkBg + ' min-h-[4rem]"></div>' +
+          '<div class="min-w-0 flex-1">' +
+            '<blockquote class="text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed mb-4">' +
               '"' + comment + '"' +
             '</blockquote>' +
-            '<div class="flex items-center">' +
-              '<div>' +
-                '<cite class="text-sm font-semibold text-gray-900 dark:text-white">' + visitorName + '</cite>' +
-                '<p class="text-sm text-gray-500 dark:text-gray-400">' + date + '</p>' +
+            '<div class="flex flex-wrap items-center justify-between gap-2">' +
+              '<div class="flex items-center gap-2">' +
+                '<cite class="text-sm font-semibold text-gray-900 dark:text-white not-italic">' + visitorName + '</cite>' +
+                '<span class="text-xs text-gray-500 dark:text-gray-400">' + date + '</span>' +
               '</div>' +
-              '<div class="ml-auto">' +
-                '<div class="flex items-center gap-1">' +
-                  starsHtml +
-                '</div>' +
+              '<div class="flex items-center gap-0.5 text-base" aria-label="Rating: ' + rating + ' out of 5">' +
+                starsHtml +
               '</div>' +
             '</div>' +
           '</div>' +
