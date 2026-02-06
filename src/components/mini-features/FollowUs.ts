@@ -1,7 +1,7 @@
 export function FollowUs() {
   return `
     <section class="mt-12 px-4 sm:px-6 lg:px-8">
-      <div class="max-w-5xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 py-8 border-t border-b border-gray-200 dark:border-gray-700">
+      <div class="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 py-8 border-t border-b border-gray-200 dark:border-gray-700">
         <div class="flex items-start gap-4">
           <div class="flex-shrink-0 w-1 sm:w-1.5 rounded-full bg-gradient-to-b from-blue-500 to-purple-500 min-h-[3rem] sm:min-h-0 sm:h-14"></div>
           <div>

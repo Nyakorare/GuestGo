@@ -1,7 +1,7 @@
 export function BusinessHours() {
   return `
     <section class="mt-12 px-4 sm:px-6 lg:px-8">
-      <div class="max-w-5xl mx-auto flex flex-col lg:flex-row lg:items-stretch gap-6 lg:gap-8 py-8 border-t border-b border-gray-200 dark:border-gray-700">
+      <div class="max-w-6xl mx-auto flex flex-col lg:flex-row lg:items-stretch gap-6 lg:gap-8 py-8 border-t border-b border-gray-200 dark:border-gray-700">
         <!-- Heading + schedule list -->
         <div class="lg:w-72 flex-shrink-0">
           <div class="flex items-start gap-3 mb-6">

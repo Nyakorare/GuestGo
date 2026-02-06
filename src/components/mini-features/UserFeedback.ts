@@ -1,7 +1,7 @@
 export function UserFeedback() {
   return `
     <section class="mt-12 px-4 sm:px-6 lg:px-8">
-      <div class="max-w-5xl mx-auto">
+      <div class="max-w-6xl mx-auto">
         <div class="flex items-start gap-3 mb-6">
           <div class="flex-shrink-0 w-1 sm:w-1.5 rounded-full bg-gradient-to-b from-amber-500 to-yellow-500 min-h-[2.5rem] sm:min-h-0 sm:h-12"></div>
           <div>
