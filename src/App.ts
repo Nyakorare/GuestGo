@@ -168,12 +168,12 @@ export default function setupApp() {
           <div class="flex justify-between items-center h-20">
             <!-- Logo, brand name and theme toggle -->
             <div class="flex items-center space-x-3">
-              <div class="flex items-center space-x-3 group">
+              <a href="#/" class="flex items-center space-x-3 group cursor-pointer no-underline">
                 <img id="guestgo-logo" src="/guestgo-logo-no_word.png" alt="GuestGo Logo" class="h-9 w-auto transition-transform duration-300 group-hover:scale-110">
                 <div class="flex-shrink-0 text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-500 dark:from-blue-400 dark:to-blue-300 bg-clip-text text-transparent">
                   GuestGo
                 </div>
-              </div>
+              </a>
               <!-- Dark mode toggle button -->
               <button id="theme-toggle" class="theme-toggle-btn p-2 rounded-lg text-gray-700 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-800 transition-all duration-200 active:scale-95">
                 <!-- Sun icon (shown in dark mode) -->
