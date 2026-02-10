@@ -168,9 +168,9 @@ export default function setupApp() {
           <div class="flex justify-between items-center h-20">
             <!-- Logo, brand name and theme toggle -->
             <div class="flex items-center space-x-3">
-              <a href="#/" class="flex items-center space-x-3 group cursor-pointer no-underline">
-                <img id="guestgo-logo" src="/guestgo-logo-no_word.png" alt="GuestGo Logo" class="h-9 w-auto transition-transform duration-300 group-hover:scale-110">
-                <div class="flex-shrink-0 text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-500 dark:from-blue-400 dark:to-blue-300 bg-clip-text text-transparent">
+              <a href="#/" class="flex items-center space-x-3 group cursor-pointer no-underline transition-all duration-300 hover:scale-105 active:scale-95">
+                <img id="guestgo-logo" src="/guestgo-logo-no_word.png" alt="GuestGo Logo" class="h-9 w-auto transition-all duration-300 group-hover:scale-110 group-hover:brightness-110 group-active:scale-95">
+                <div class="flex-shrink-0 text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-500 dark:from-blue-400 dark:to-blue-300 bg-clip-text text-transparent transition-all duration-300 group-hover:scale-110 group-hover:from-blue-700 group-hover:to-blue-600 dark:group-hover:from-blue-300 dark:group-hover:to-blue-200 group-active:scale-95">
                   GuestGo
                 </div>
               </a>
