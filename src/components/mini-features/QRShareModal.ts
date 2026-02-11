@@ -10,7 +10,7 @@ const SITE_URL = 'https://guest-go.vercel.app/';
 export async function generateSiteQRCode(): Promise<string> {
   try {
     const qrCodeDataUrl = await QRCode.toDataURL(SITE_URL, {
-      errorCorrectionLevel: 'M',
+      errorCorrectionLevel: 'H',
       type: 'image/png',
       quality: 0.92,
       margin: 2,
@@ -140,7 +140,29 @@ export async function setupQRShareModal(): Promise<void> {
   if (qrContainer) {
     try {
       const qrCodeDataUrl = await generateSiteQRCode();
-      qrContainer.innerHTML = `<img src="${qrCodeDataUrl}" alt="GuestGo QR Code" class="w-full h-full object-contain">`;
+      const mainLogo = document.querySelector('img[alt="GuestGo Logo"]') as HTMLImageElement | null;
+      const logoSrc = mainLogo?.src;
+      
+      qrContainer.innerHTML = `
+        <div class="relative inline-block">
+          <img 
+            src="${qrCodeDataUrl}" 
+            alt="GuestGo QR Code" 
+            class="w-64 h-64 object-contain rounded-lg"
+          >
+          ${logoSrc ? `
+            <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div class="bg-white rounded-xl p-1 shadow-md">
+                <img 
+                  src="${logoSrc}" 
+                  alt="GuestGo Logo" 
+                  class="w-16 h-16 object-contain"
+                >
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      `;
     } catch (error) {
       console.error('Error generating QR code:', error);
       if (qrContainer) {
@@ -196,6 +218,9 @@ export async function setupQRShareModal(): Promise<void> {
       alert('QR code is still loading. Please wait a moment and try again.');
       return;
     }
+    
+    const mainLogo = document.querySelector('img[alt="GuestGo Logo"]') as HTMLImageElement | null;
+    const logoSrc = mainLogo?.src || '';
     
     // Create a new window for printing
     const printWindow = window.open('', '_blank');
@@ -346,7 +371,32 @@ export async function setupQRShareModal(): Promise<void> {
           </div>
           
           <div class="qr-print-container">
-            <img src="${qrImage.src}" alt="GuestGo QR Code" />
+            <div style="position: relative; display: inline-block;">
+              <img src="${qrImage.src}" alt="GuestGo QR Code" />
+              ${logoSrc ? `
+                <div style="
+                  position: absolute;
+                  inset: 0;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  pointer-events: none;
+                ">
+                  <div style="
+                    background: white;
+                    border-radius: 12px;
+                    padding: 4px;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+                  ">
+                    <img 
+                      src="${logoSrc}" 
+                      alt="GuestGo Logo" 
+                      style="width: 72px; height: 72px; object-fit: contain;"
+                    />
+                  </div>
+                </div>
+              ` : ''}
+            </div>
           </div>
           
           <div class="url-section">
