@@ -152,11 +152,11 @@ export async function setupQRShareModal(): Promise<void> {
           >
           ${logoSrc ? `
             <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div class="bg-white rounded-xl p-1 shadow-md">
+              <div class="bg-white rounded-md border-2 border-gray-900 p-[3px]">
                 <img 
                   src="${logoSrc}" 
                   alt="GuestGo Logo" 
-                  class="w-16 h-16 object-contain"
+                  class="w-10 h-10 object-contain"
                 >
               </div>
             </div>
@@ -384,14 +384,14 @@ export async function setupQRShareModal(): Promise<void> {
                 ">
                   <div style="
                     background: white;
-                    border-radius: 12px;
-                    padding: 4px;
-                    box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+                    border-radius: 6px;
+                    padding: 3px;
+                    border: 2px solid #111827;
                   ">
                     <img 
                       src="${logoSrc}" 
                       alt="GuestGo Logo" 
-                      style="width: 72px; height: 72px; object-fit: contain;"
+                      style="width: 48px; height: 48px; object-fit: contain;"
                     />
                   </div>
                 </div>
