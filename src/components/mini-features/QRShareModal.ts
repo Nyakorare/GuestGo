@@ -144,7 +144,7 @@ export async function setupQRShareModal(): Promise<void> {
       const logoSrc = mainLogo?.src;
       
       qrContainer.innerHTML = `
-        <div class="relative inline-block">
+        <div class="relative inline-block transform transition-transform duration-500 hover:scale-105">
           <img 
             src="${qrCodeDataUrl}" 
             alt="GuestGo QR Code" 
@@ -152,7 +152,7 @@ export async function setupQRShareModal(): Promise<void> {
           >
           ${logoSrc ? `
             <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div class="bg-white rounded-md border-2 border-gray-900 p-[3px]">
+              <div class="bg-white rounded-md border-2 border-gray-900 p-[3px] shadow-lg animate-pulse">
                 <img 
                   src="${logoSrc}" 
                   alt="GuestGo Logo" 
