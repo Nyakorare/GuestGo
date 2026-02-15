@@ -416,6 +416,25 @@ export function AboutPage() {
         }
       }
       
+      /* Team modal design: decorative dots */
+      .team-modal-dots {
+        background-image: radial-gradient(circle, currentColor 1.5px, transparent 1.5px);
+        background-size: 8px 8px;
+        pointer-events: none;
+      }
+      .team-modal-dots--bottom {
+        background-size: 6px 6px;
+      }
+      .team-modal-card {
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(59, 130, 246, 0.08);
+      }
+      .dark .team-modal-card {
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(59, 130, 246, 0.12);
+      }
+      .team-modal-avatar-ring {
+        box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+      }
+      
       /* Smooth scrolling */
       html {
         scroll-behavior: smooth;

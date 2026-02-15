@@ -887,9 +887,12 @@ export function setupAboutPageInteractivity() {
     modal.style.bottom = '0';
     
     modal.innerHTML = `
-      <div class="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-4 sm:p-6 md:p-8 max-w-md w-full mx-4 mt-4 sm:mt-8 relative transform scale-75 opacity-0 transition-all duration-500 ease-out">
-        <button id="close-team-modal" class="absolute top-2 right-2 text-gray-500 hover:text-red-500 text-2xl transition-colors duration-200 transform hover:scale-110 z-10">&times;</button>
-        <div id="team-modal-content" class="animate-fade-in-up" style="animation-delay: 0.2s;"></div>
+      <div class="team-modal-card bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-md w-full mx-4 mt-4 sm:mt-8 relative transform scale-75 opacity-0 transition-all duration-500 ease-out overflow-hidden border border-gray-200 dark:border-gray-700">
+        <div class="team-modal-accent absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600"></div>
+        <div class="team-modal-dots absolute top-6 right-6 w-16 h-16 opacity-10 dark:opacity-20" aria-hidden="true"></div>
+        <div class="team-modal-dots team-modal-dots--bottom absolute bottom-6 left-6 w-12 h-12 opacity-10 dark:opacity-20" aria-hidden="true"></div>
+        <button id="close-team-modal" class="absolute top-3 right-3 text-gray-500 hover:text-red-500 text-2xl transition-colors duration-200 transform hover:scale-110 z-10 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">&times;</button>
+        <div id="team-modal-content" class="relative z-[1] p-4 sm:p-6 md:p-8 pt-6 animate-fade-in-up" style="animation-delay: 0.2s;"></div>
       </div>
     `;
     
@@ -937,10 +940,15 @@ export function setupAboutPageInteractivity() {
         
         if (modalContent) {
           modalContent.innerHTML = `
-            <img src="${details.img}" alt="${details.name}" class="w-20 h-20 sm:w-24 sm:h-24 rounded-full mx-auto mb-3 sm:mb-4 object-cover">
-            <h3 class="text-xl sm:text-2xl font-bold mb-2">${details.name}</h3>
-            <p class="text-blue-600 dark:text-blue-400 font-semibold mb-2 text-sm sm:text-base">${details.title}</p>
-            <p class="text-gray-700 dark:text-gray-300 text-sm sm:text-base">${details.bio}</p>
+            <div class="flex justify-center mb-4 sm:mb-5">
+              <div class="team-modal-avatar-ring rounded-full p-1 bg-gradient-to-br from-blue-500 to-indigo-600">
+                <img src="${details.img}" alt="${details.name}" class="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover block">
+              </div>
+            </div>
+            <h3 class="text-xl sm:text-2xl font-bold mb-2 text-center text-gray-900 dark:text-white">${details.name}</h3>
+            <p class="text-blue-600 dark:text-blue-400 font-semibold mb-3 text-sm sm:text-base text-center">${details.title}</p>
+            <div class="h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-gray-600 to-transparent mb-3"></div>
+            <p class="text-gray-700 dark:text-gray-300 text-sm sm:text-base leading-relaxed">${details.bio}</p>
           `;
         }
         
