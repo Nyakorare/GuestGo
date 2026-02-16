@@ -435,6 +435,99 @@ export function AboutPage() {
         box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
       }
       
+      /* Team modal entrance animations */
+      #team-modal.show .team-modal-accent {
+        animation: teamModalAccentIn 0.5s ease-out 0.2s forwards;
+        transform: scaleX(0);
+      }
+      #team-modal.show .team-modal-dots--tr {
+        animation: teamModalDotsIn 0.4s ease-out 0.35s forwards;
+        opacity: 0;
+        transform: scale(0.8);
+      }
+      #team-modal.show .team-modal-dots--bottom {
+        animation: teamModalDotsIn 0.4s ease-out 0.5s forwards;
+        opacity: 0;
+        transform: scale(0.8);
+      }
+      #team-modal.show .team-modal-close-btn {
+        animation: teamModalFadeIn 0.3s ease-out 0.4s forwards;
+        opacity: 0;
+      }
+      #team-modal.show .team-modal-anim {
+        opacity: 0;
+        transform: translateY(12px);
+        animation: teamModalContentIn 0.45s ease-out forwards;
+      }
+      #team-modal.show .team-modal-avatar-wrap {
+        transform: translateY(12px) scale(0.85);
+        animation: teamModalAvatarIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      }
+      #team-modal.show .team-modal-divider {
+        transform: scaleX(0);
+        transform-origin: center;
+        animation: teamModalDividerIn 0.4s ease-out forwards;
+      }
+      
+      @keyframes teamModalAccentIn {
+        from { transform: scaleX(0); }
+        to { transform: scaleX(1); }
+      }
+      @keyframes teamModalDotsIn {
+        from {
+          opacity: 0;
+          transform: scale(0.8);
+        }
+        to {
+          opacity: 0.1;
+          transform: scale(1);
+        }
+      }
+      .dark #team-modal.show .team-modal-dots--tr,
+      .dark #team-modal.show .team-modal-dots--bottom {
+        animation: teamModalDotsInDark 0.4s ease-out forwards;
+      }
+      .dark #team-modal.show .team-modal-dots--tr { animation-delay: 0.35s; }
+      .dark #team-modal.show .team-modal-dots--bottom { animation-delay: 0.5s; }
+      @keyframes teamModalDotsInDark {
+        from {
+          opacity: 0;
+          transform: scale(0.8);
+        }
+        to {
+          opacity: 0.2;
+          transform: scale(1);
+        }
+      }
+      @keyframes teamModalFadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes teamModalContentIn {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @keyframes teamModalAvatarIn {
+        from {
+          opacity: 0;
+          transform: translateY(12px) scale(0.85);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+      @keyframes teamModalDividerIn {
+        from { transform: scaleX(0); }
+        to { transform: scaleX(1); }
+      }
+      
       /* Smooth scrolling */
       html {
         scroll-behavior: smooth;
