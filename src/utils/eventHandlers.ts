@@ -862,11 +862,51 @@ export function setupAboutPageInteractivity() {
 
   // Team Member Popup with smooth animations
   const teamDetails = {
-    glenn: { name: 'Glenn', title: 'Founder & CEO', bio: 'Visionary leader with a passion for guest experience and technology.', img: '/glenn.jpg' },
-    justine: { name: 'Justine', title: 'Product Manager', bio: 'Ensures GuestGo delivers value and innovation to every client.', img: '/justine.jpg' },
-    ken: { name: 'Ken', title: 'Lead Developer', bio: 'Architects robust, scalable systems for seamless guest management.', img: '/ken.jpg' },
-    kurt: { name: 'Kurt', title: 'UI/UX Designer', bio: 'Designs intuitive and beautiful interfaces for all users.', img: '/kurt.jpg' },
-    walter: { name: 'Walter', title: 'QA Engineer', bio: 'Guarantees quality and reliability across the platform.', img: '/walter.jpg' },
+    glenn: {
+      name: 'Glenn',
+      title: 'Founder & CEO',
+      bio: 'Visionary leader with a passion for guest experience and technology.',
+      img: '/glenn.jpg',
+      accentGradientClass: 'from-sky-500 via-sky-600 to-cyan-500',
+      ringGradientClass: 'bg-gradient-to-br from-sky-500 to-cyan-500',
+      titleColorClass: 'text-sky-600 dark:text-sky-400',
+    },
+    justine: {
+      name: 'Justine',
+      title: 'Product Manager',
+      bio: 'Ensures GuestGo delivers value and innovation to every client.',
+      img: '/justine.jpg',
+      accentGradientClass: 'from-emerald-500 via-emerald-600 to-teal-400',
+      ringGradientClass: 'bg-gradient-to-br from-emerald-500 to-teal-400',
+      titleColorClass: 'text-emerald-600 dark:text-emerald-400',
+    },
+    ken: {
+      name: 'Ken',
+      title: 'Lead Developer',
+      bio: 'Architects robust, scalable systems for seamless guest management.',
+      img: '/ken.jpg',
+      accentGradientClass: 'from-violet-500 via-violet-600 to-indigo-500',
+      ringGradientClass: 'bg-gradient-to-br from-violet-500 to-indigo-500',
+      titleColorClass: 'text-violet-600 dark:text-violet-400',
+    },
+    kurt: {
+      name: 'Kurt',
+      title: 'UI/UX Designer',
+      bio: 'Designs intuitive and beautiful interfaces for all users.',
+      img: '/kurt.jpg',
+      accentGradientClass: 'from-pink-500 via-rose-500 to-fuchsia-500',
+      ringGradientClass: 'bg-gradient-to-br from-pink-500 to-rose-500',
+      titleColorClass: 'text-pink-600 dark:text-pink-400',
+    },
+    walter: {
+      name: 'Walter',
+      title: 'QA Engineer',
+      bio: 'Guarantees quality and reliability across the platform.',
+      img: '/walter.jpg',
+      accentGradientClass: 'from-amber-500 via-amber-600 to-orange-400',
+      ringGradientClass: 'bg-gradient-to-br from-amber-500 to-orange-400',
+      titleColorClass: 'text-amber-600 dark:text-amber-400',
+    },
   };
   
   // Create modal dynamically and append to body
@@ -888,7 +928,7 @@ export function setupAboutPageInteractivity() {
     
     modal.innerHTML = `
       <div class="team-modal-card bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-md w-full mx-4 mt-4 sm:mt-8 relative transform scale-75 opacity-0 transition-all duration-500 ease-out overflow-hidden border border-gray-200 dark:border-gray-700">
-        <div class="team-modal-accent absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 origin-left"></div>
+        <div class="team-modal-accent absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r origin-left"></div>
         <div class="team-modal-dots team-modal-dots--tr absolute top-6 right-6 w-16 h-16 opacity-10 dark:opacity-20" aria-hidden="true"></div>
         <div class="team-modal-dots team-modal-dots--bottom absolute bottom-6 left-6 w-12 h-12 opacity-10 dark:opacity-20" aria-hidden="true"></div>
         <button id="close-team-modal" class="team-modal-close-btn absolute top-3 right-3 text-gray-500 hover:text-red-500 text-2xl transition-colors duration-200 transform hover:scale-110 z-10 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">&times;</button>
@@ -939,14 +979,20 @@ export function setupAboutPageInteractivity() {
         const modalContent = document.getElementById('team-modal-content');
         
         if (modalContent) {
+          // Update accent and subtle decorative color to match the selected team member
+          const accentBar = document.querySelector('#team-modal .team-modal-accent') as HTMLElement | null;
+          if (accentBar && (details as any).accentGradientClass) {
+            accentBar.className = `team-modal-accent absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r origin-left ${(details as any).accentGradientClass}`;
+          }
+
           modalContent.innerHTML = `
             <div class="team-modal-anim team-modal-avatar-wrap flex justify-center mb-4 sm:mb-5" style="animation-delay: 0.15s">
-              <div class="team-modal-avatar-ring rounded-full p-1 bg-gradient-to-br from-blue-500 to-indigo-600">
+              <div class="team-modal-avatar-ring rounded-full p-1 ${(details as any).ringGradientClass || 'bg-gradient-to-br from-sky-500 to-cyan-500'}">
                 <img src="${details.img}" alt="${details.name}" class="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover block">
               </div>
             </div>
             <h3 class="team-modal-anim team-modal-name text-xl sm:text-2xl font-bold mb-2 text-center text-gray-900 dark:text-white" style="animation-delay: 0.25s">${details.name}</h3>
-            <p class="team-modal-anim team-modal-title text-blue-600 dark:text-blue-400 font-semibold mb-3 text-sm sm:text-base text-center" style="animation-delay: 0.35s">${details.title}</p>
+            <p class="team-modal-anim team-modal-title ${(details as any).titleColorClass || 'text-sky-600 dark:text-sky-400'} font-semibold mb-3 text-sm sm:text-base text-center" style="animation-delay: 0.35s">${details.title}</p>
             <div class="team-modal-anim team-modal-divider h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-gray-600 to-transparent mb-3" style="animation-delay: 0.45s"></div>
             <p class="team-modal-anim team-modal-bio text-gray-700 dark:text-gray-300 text-sm sm:text-base leading-relaxed" style="animation-delay: 0.55s">${details.bio}</p>
           `;
