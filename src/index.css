@@ -166,6 +166,45 @@
     opacity: 1;
   }
 
+  /* FAQ card animations */
+  .faq-card {
+    @apply relative overflow-hidden;
+    opacity: 0;
+    transform: translateY(16px);
+    animation: fadeInUp 0.6s ease-out forwards;
+  }
+
+  .faq-card:hover {
+    transform: translateY(-2px);
+  }
+
+  .faq-item.active {
+    box-shadow: 0 10px 30px rgba(59, 130, 246, 0.18);
+    border-color: rgb(59 130 246);
+    background-color: rgba(239, 246, 255, 0.9);
+  }
+
+  .dark .faq-item.active {
+    border-color: rgb(96 165 250);
+    background-color: rgba(30, 64, 175, 0.4);
+  }
+
+  .faq-card-delay-1 {
+    animation-delay: 0.05s;
+  }
+
+  .faq-card-delay-2 {
+    animation-delay: 0.12s;
+  }
+
+  .faq-card-delay-3 {
+    animation-delay: 0.2s;
+  }
+
+  .faq-card-delay-4 {
+    animation-delay: 0.28s;
+  }
+
   .track-button-glow {
     background-size: 200% 200%;
     animation: trackGradientShift 6s ease infinite;
@@ -760,7 +799,8 @@
   .track-card,
   .track-button-glow,
   .track-icon-float,
-  .track-fade-in {
+  .track-fade-in,
+  .faq-card {
     animation: none !important;
     transform: none !important;
   }

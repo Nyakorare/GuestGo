@@ -20,7 +20,7 @@ export function FAQ() {
       </div>
       
       <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-        <div class="faq-item group rounded-lg border border-gray-200/80 dark:border-gray-700/80 bg-white/80 dark:bg-gray-900/40 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/60 dark:hover:bg-blue-900/20 transition-colors duration-200">
+        <div class="faq-item faq-card faq-card-delay-1 group rounded-lg border border-gray-200/80 dark:border-gray-700/80 bg-white/80 dark:bg-gray-900/40 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/60 dark:hover:bg-blue-900/20 transition-colors duration-200">
           <button class="w-full flex items-start justify-between gap-3 px-4 sm:px-5 py-3 sm:py-3.5 text-left" data-faq-toggle="scheduling">
             <div class="flex-1">
               <div class="flex items-center gap-2 mb-1">
@@ -46,7 +46,7 @@ export function FAQ() {
           </div>
         </div>
 
-        <div class="faq-item group rounded-lg border border-gray-200/80 dark:border-gray-700/80 bg-white/80 dark:bg-gray-900/40 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/60 dark:hover:bg-blue-900/20 transition-colors duration-200">
+        <div class="faq-item faq-card faq-card-delay-2 group rounded-lg border border-gray-200/80 dark:border-gray-700/80 bg-white/80 dark:bg-gray-900/40 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/60 dark:hover:bg-blue-900/20 transition-colors duration-200">
           <button class="w-full flex items-start justify-between gap-3 px-4 sm:px-5 py-3 sm:py-3.5 text-left" data-faq-toggle="verification">
             <div class="flex-1">
               <div class="flex items-center gap-2 mb-1">
@@ -72,7 +72,7 @@ export function FAQ() {
           </div>
         </div>
 
-        <div class="faq-item group rounded-lg border border-gray-200/80 dark:border-gray-700/80 bg-white/80 dark:bg-gray-900/40 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/60 dark:hover:bg-blue-900/20 transition-colors duration-200">
+        <div class="faq-item faq-card faq-card-delay-3 group rounded-lg border border-gray-200/80 dark:border-gray-700/80 bg-white/80 dark:bg-gray-900/40 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/60 dark:hover:bg-blue-900/20 transition-colors duration-200">
           <button class="w-full flex items-start justify-between gap-3 px-4 sm:px-5 py-3 sm:py-3.5 text-left" data-faq-toggle="qr">
             <div class="flex-1">
               <div class="flex items-center gap-2 mb-1">
@@ -98,7 +98,7 @@ export function FAQ() {
           </div>
         </div>
 
-        <div class="faq-item group rounded-lg border border-gray-200/80 dark:border-gray-700/80 bg-white/80 dark:bg-gray-900/40 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/60 dark:hover:bg-blue-900/20 transition-colors duration-200">
+        <div class="faq-item faq-card faq-card-delay-4 group rounded-lg border border-gray-200/80 dark:border-gray-700/80 bg-white/80 dark:bg-gray-900/40 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/60 dark:hover:bg-blue-900/20 transition-colors duration-200">
           <button class="w-full flex items-start justify-between gap-3 px-4 sm:px-5 py-3 sm:py-3.5 text-left" data-faq-toggle="face-detection">
             <div class="flex-1">
               <div class="flex items-center gap-2 mb-1">
@@ -124,7 +124,7 @@ export function FAQ() {
           </div>
         </div>
 
-        <div class="faq-item group rounded-lg border border-gray-200/80 dark:border-gray-700/80 bg-white/80 dark:bg-gray-900/40 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/60 dark:hover:bg-blue-900/20 transition-colors duration-200">
+        <div class="faq-item faq-card faq-card-delay-2 group rounded-lg border border-gray-200/80 dark:border-gray-700/80 bg-white/80 dark:bg-gray-900/40 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/60 dark:hover:bg-blue-900/20 transition-colors duration-200">
           <button class="w-full flex items-start justify-between gap-3 px-4 sm:px-5 py-3 sm:py-3.5 text-left" data-faq-toggle="tracking">
             <div class="flex-1">
               <div class="flex items-center gap-2 mb-1">
@@ -150,7 +150,7 @@ export function FAQ() {
           </div>
         </div>
 
-        <div class="faq-item group rounded-lg border border-gray-200/80 dark:border-gray-700/80 bg-white/80 dark:bg-gray-900/40 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/60 dark:hover:bg-blue-900/20 transition-colors duration-200">
+        <div class="faq-item faq-card faq-card-delay-3 group rounded-lg border border-gray-200/80 dark:border-gray-700/80 bg-white/80 dark:bg-gray-900/40 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/60 dark:hover:bg-blue-900/20 transition-colors duration-200">
           <button class="w-full flex items-start justify-between gap-3 px-4 sm:px-5 py-3 sm:py-3.5 text-left" data-faq-toggle="limits">
             <div class="flex-1">
               <div class="flex items-center gap-2 mb-1">
@@ -176,7 +176,7 @@ export function FAQ() {
           </div>
         </div>
 
-        <div class="faq-item group rounded-lg border border-gray-200/80 dark:border-gray-700/80 bg-white/80 dark:bg-gray-900/40 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/60 dark:hover:bg-blue-900/20 transition-colors duration-200">
+        <div class="faq-item faq-card faq-card-delay-4 group rounded-lg border border-gray-200/80 dark:border-gray-700/80 bg-white/80 dark:bg-gray-900/40 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/60 dark:hover:bg-blue-900/20 transition-colors duration-200">
           <button class="w-full flex items-start justify-between gap-3 px-4 sm:px-5 py-3 sm:py-3.5 text-left" data-faq-toggle="reschedule">
             <div class="flex-1">
               <div class="flex items-center gap-2 mb-1">
@@ -202,7 +202,7 @@ export function FAQ() {
           </div>
         </div>
 
-        <div class="faq-item group rounded-lg border border-gray-200/80 dark:border-gray-700/80 bg-white/80 dark:bg-gray-900/40 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/60 dark:hover:bg-blue-900/20 transition-colors duration-200">
+        <div class="faq-item faq-card faq-card-delay-1 group rounded-lg border border-gray-200/80 dark:border-gray-700/80 bg-white/80 dark:bg-gray-900/40 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/60 dark:hover:bg-blue-900/20 transition-colors duration-200">
           <button class="w-full flex items-start justify-between gap-3 px-4 sm:px-5 py-3 sm:py-3.5 text-left" data-faq-toggle="feedback">
             <div class="flex-1">
               <div class="flex items-center gap-2 mb-1">
@@ -228,7 +228,7 @@ export function FAQ() {
           </div>
         </div>
 
-        <div class="faq-item group rounded-lg border border-gray-200/80 dark:border-gray-700/80 bg-white/80 dark:bg-gray-900/40 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/60 dark:hover:bg-blue-900/20 transition-colors duration-200">
+        <div class="faq-item faq-card faq-card-delay-2 group rounded-lg border border-gray-200/80 dark:border-gray-700/80 bg-white/80 dark:bg-gray-900/40 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/60 dark:hover:bg-blue-900/20 transition-colors duration-200">
           <button class="w-full flex items-start justify-between gap-3 px-4 sm:px-5 py-3 sm:py-3.5 text-left" data-faq-toggle="temporary-exit">
             <div class="flex-1">
               <div class="flex items-center gap-2 mb-1">
@@ -254,7 +254,7 @@ export function FAQ() {
           </div>
         </div>
 
-        <div class="faq-item group rounded-lg border border-gray-200/80 dark:border-gray-700/80 bg-white/80 dark:bg-gray-900/40 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/60 dark:hover:bg-blue-900/20 transition-colors duration-200 md:col-span-2">
+        <div class="faq-item faq-card faq-card-delay-3 group rounded-lg border border-gray-200/80 dark:border-gray-700/80 bg-white/80 dark:bg-gray-900/40 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/60 dark:hover:bg-blue-900/20 transition-colors duration-200 md:col-span-2">
           <button class="w-full flex items-start justify-between gap-3 px-4 sm:px-5 py-3 sm:py-3.5 text-left" data-faq-toggle="multiple-places">
             <div class="flex-1">
               <div class="flex items-center gap-2 mb-1">
