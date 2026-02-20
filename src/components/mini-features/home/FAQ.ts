@@ -24,7 +24,7 @@ export function FAQ() {
           <button class="w-full flex items-start justify-between gap-3 px-4 sm:px-5 py-3 sm:py-3.5 text-left" data-faq-toggle="scheduling">
             <div class="flex-1">
               <div class="flex items-center gap-2 mb-1">
-                <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40 text-[11px] font-semibold text-blue-700 dark:text-blue-300">
+                <span class="faq-badge inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40 text-[11px] font-semibold text-blue-700 dark:text-blue-300">
                   1
                 </span>
                 <span class="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">
@@ -50,7 +50,7 @@ export function FAQ() {
           <button class="w-full flex items-start justify-between gap-3 px-4 sm:px-5 py-3 sm:py-3.5 text-left" data-faq-toggle="verification">
             <div class="flex-1">
               <div class="flex items-center gap-2 mb-1">
-                <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40 text-[11px] font-semibold text-blue-700 dark:text-blue-300">
+                <span class="faq-badge inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40 text-[11px] font-semibold text-blue-700 dark:text-blue-300">
                   2
                 </span>
                 <span class="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">
@@ -76,7 +76,7 @@ export function FAQ() {
           <button class="w-full flex items-start justify-between gap-3 px-4 sm:px-5 py-3 sm:py-3.5 text-left" data-faq-toggle="qr">
             <div class="flex-1">
               <div class="flex items-center gap-2 mb-1">
-                <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40 text-[11px] font-semibold text-blue-700 dark:text-blue-300">
+                <span class="faq-badge inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40 text-[11px] font-semibold text-blue-700 dark:text-blue-300">
                   3
                 </span>
                 <span class="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">
@@ -102,7 +102,7 @@ export function FAQ() {
           <button class="w-full flex items-start justify-between gap-3 px-4 sm:px-5 py-3 sm:py-3.5 text-left" data-faq-toggle="face-detection">
             <div class="flex-1">
               <div class="flex items-center gap-2 mb-1">
-                <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40 text-[11px] font-semibold text-blue-700 dark:text-blue-300">
+                <span class="faq-badge inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40 text-[11px] font-semibold text-blue-700 dark:text-blue-300">
                   4
                 </span>
                 <span class="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">
@@ -128,7 +128,7 @@ export function FAQ() {
           <button class="w-full flex items-start justify-between gap-3 px-4 sm:px-5 py-3 sm:py-3.5 text-left" data-faq-toggle="tracking">
             <div class="flex-1">
               <div class="flex items-center gap-2 mb-1">
-                <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40 text-[11px] font-semibold text-blue-700 dark:text-blue-300">
+                <span class="faq-badge inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40 text-[11px] font-semibold text-blue-700 dark:text-blue-300">
                   5
                 </span>
                 <span class="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">
@@ -154,7 +154,7 @@ export function FAQ() {
           <button class="w-full flex items-start justify-between gap-3 px-4 sm:px-5 py-3 sm:py-3.5 text-left" data-faq-toggle="limits">
             <div class="flex-1">
               <div class="flex items-center gap-2 mb-1">
-                <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40 text-[11px] font-semibold text-blue-700 dark:text-blue-300">
+                <span class="faq-badge inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40 text-[11px] font-semibold text-blue-700 dark:text-blue-300">
                   6
                 </span>
                 <span class="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">
@@ -180,7 +180,7 @@ export function FAQ() {
           <button class="w-full flex items-start justify-between gap-3 px-4 sm:px-5 py-3 sm:py-3.5 text-left" data-faq-toggle="reschedule">
             <div class="flex-1">
               <div class="flex items-center gap-2 mb-1">
-                <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40 text-[11px] font-semibold text-blue-700 dark:text-blue-300">
+                <span class="faq-badge inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40 text-[11px] font-semibold text-blue-700 dark:text-blue-300">
                   7
                 </span>
                 <span class="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">
@@ -206,7 +206,7 @@ export function FAQ() {
           <button class="w-full flex items-start justify-between gap-3 px-4 sm:px-5 py-3 sm:py-3.5 text-left" data-faq-toggle="feedback">
             <div class="flex-1">
               <div class="flex items-center gap-2 mb-1">
-                <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40 text-[11px] font-semibold text-blue-700 dark:text-blue-300">
+                <span class="faq-badge inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40 text-[11px] font-semibold text-blue-700 dark:text-blue-300">
                   8
                 </span>
                 <span class="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">
@@ -232,7 +232,7 @@ export function FAQ() {
           <button class="w-full flex items-start justify-between gap-3 px-4 sm:px-5 py-3 sm:py-3.5 text-left" data-faq-toggle="temporary-exit">
             <div class="flex-1">
               <div class="flex items-center gap-2 mb-1">
-                <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40 text-[11px] font-semibold text-blue-700 dark:text-blue-300">
+                <span class="faq-badge inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40 text-[11px] font-semibold text-blue-700 dark:text-blue-300">
                   9
                 </span>
                 <span class="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">
@@ -258,7 +258,7 @@ export function FAQ() {
           <button class="w-full flex items-start justify-between gap-3 px-4 sm:px-5 py-3 sm:py-3.5 text-left" data-faq-toggle="multiple-places">
             <div class="flex-1">
               <div class="flex items-center gap-2 mb-1">
-                <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40 text-[11px] font-semibold text-blue-700 dark:text-blue-300">
+                <span class="faq-badge inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40 text-[11px] font-semibold text-blue-700 dark:text-blue-300">
                   10
                 </span>
                 <span class="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">
