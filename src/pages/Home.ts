@@ -1175,11 +1175,11 @@ export function HomePage() {
 
   return `    <div class="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8 md:py-12">
       <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-4 sm:space-y-0 mb-8">
-        <div class="text-center sm:text-left">
-          <h1 id="heroTitle" class="text-2xl sm:text-4xl font-bold text-gray-900 dark:text-white transition-colors duration-200">
+        <div class="text-center sm:text-left hero-section">
+          <h1 id="heroTitle" class="hero-title text-2xl sm:text-4xl font-bold text-gray-900 dark:text-white transition-colors duration-200">
             Welcome to GuestGo
           </h1>
-          <p id="heroSubtitle" class="text-base sm:text-xl text-gray-600 dark:text-gray-300 transition-colors duration-200">
+          <p id="heroSubtitle" class="hero-subtitle text-base sm:text-xl text-gray-600 dark:text-gray-300 transition-colors duration-200">
             Your one-stop solution for guest management and hospitality services.
           </p>
           <div id="featureCards" class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
