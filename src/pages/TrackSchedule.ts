@@ -19,8 +19,8 @@ export function TrackSchedulePage() {
   return `
     <div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-6 sm:py-10 relative overflow-hidden">
       <div class="absolute inset-0 pointer-events-none">
-        <div class="absolute -top-24 -right-16 w-72 h-72 bg-gradient-to-br from-teal-500/30 via-cyan-400/20 to-sky-500/30 blur-3xl animate-pulse-slow"></div>
-        <div class="absolute -bottom-24 -left-16 w-72 h-72 bg-gradient-to-br from-amber-500/20 via-orange-400/20 to-rose-500/20 blur-3xl animate-pulse-slow delay-500"></div>
+        <div class="absolute -top-24 -right-16 w-72 h-72 bg-gradient-to-br from-blue-500/30 via-blue-400/20 to-blue-600/30 blur-3xl animate-pulse-slow"></div>
+        <div class="absolute -bottom-24 -left-16 w-72 h-72 bg-gradient-to-br from-blue-400/20 via-blue-300/20 to-blue-500/20 blur-3xl animate-pulse-slow delay-500"></div>
       </div>
       <div class="relative z-10 w-full px-4 sm:px-8 lg:px-16 xl:px-24 2xl:px-32 space-y-10">
         <!-- Header -->
@@ -40,7 +40,7 @@ export function TrackSchedulePage() {
           <div class="track-card bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900/50 rounded-2xl shadow-xl p-6 sm:p-8 border-2 border-gray-200 dark:border-gray-700">
             <div class="flex items-center justify-between mb-8 pb-4 border-b-2 border-gray-200 dark:border-gray-700">
               <div class="flex items-center gap-3">
-                <div class="w-12 h-12 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg track-icon-float">
+                <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg track-icon-float">
                   <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                   </svg>
@@ -51,7 +51,7 @@ export function TrackSchedulePage() {
               </div>
               <button
                 id="printVisitCardBtn"
-                class="px-5 py-2.5 bg-gradient-to-r from-amber-600 via-orange-500 to-rose-600 text-white rounded-xl hover:from-amber-700 hover:to-rose-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-2 track-button-glow"
+                class="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-xl hover:from-blue-700 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-2 track-button-glow"
               >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
@@ -72,7 +72,7 @@ export function TrackSchedulePage() {
 
             <!-- Feedback Survey Button (for non-logged-in completed visits) -->
             <div id="feedbackSurveyContainer" class="hidden mt-8 track-fade-in track-fade-in-delay-5">
-              <div class="track-card bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/30 dark:to-cyan-900/30 rounded-xl p-6 border-2 border-teal-200 dark:border-teal-700">
+              <div class="track-card bg-gradient-to-br from-blue-50 to-blue-50 dark:from-blue-900/30 dark:to-blue-800/30 rounded-xl p-6 border-2 border-blue-200 dark:border-blue-700">
                 <div class="flex items-center justify-between">
                   <div class="flex-1">
                     <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">
@@ -84,7 +84,7 @@ export function TrackSchedulePage() {
                   </div>
                   <button 
                     id="feedbackSurveyBtn"
-                    class="ml-4 px-6 py-3 bg-gradient-to-r from-teal-600 via-cyan-600 to-sky-600 text-white rounded-xl hover:from-teal-700 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-2 track-button-glow disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    class="ml-4 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-xl hover:from-blue-700 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-2 track-button-glow disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                   >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
@@ -420,7 +420,7 @@ async function updateFeedbackButtonStateForTrackSchedule(visitId: string, button
         </svg>
         Feedback Submitted
       `;
-      button.className = button.className.replace('from-teal-600 via-cyan-600 to-sky-600 hover:from-teal-700 hover:to-cyan-700', 'from-green-600 to-emerald-600');
+      button.className = button.className.replace('from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600', 'from-green-600 to-emerald-600');
     } else {
       button.disabled = false;
       button.innerHTML = `
@@ -429,7 +429,7 @@ async function updateFeedbackButtonStateForTrackSchedule(visitId: string, button
         </svg>
         Feedback Survey
       `;
-      button.className = button.className.replace('from-green-600 to-emerald-600', 'from-teal-600 via-cyan-600 to-sky-600 hover:from-teal-700 hover:to-cyan-700');
+      button.className = button.className.replace('from-green-600 to-emerald-600', 'from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600');
     }
   } catch (error) {
     console.error('Error updating feedback button state:', error);
@@ -1609,7 +1609,7 @@ async function showFaceImagesModal(visitId: string) {
           <!-- Visitor Info -->
           <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
             <div class="flex items-center space-x-2 mb-2">
-              <svg class="h-5 w-5 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg class="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
               <span class="font-medium text-gray-900 dark:text-white">Visitor: ${visitorName}</span>
@@ -1622,7 +1622,7 @@ async function showFaceImagesModal(visitId: string) {
           <!-- Face Images Grid -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <!-- Entrance Face -->
-            <div class="bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/30 dark:to-cyan-900/30 rounded-xl p-4 border-2 border-teal-200 dark:border-teal-700">
+            <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 rounded-xl p-4 border-2 border-blue-200 dark:border-blue-700">
               <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
@@ -1645,7 +1645,7 @@ async function showFaceImagesModal(visitId: string) {
             </div>
 
             <!-- Exit Face -->
-            <div class="bg-gradient-to-br from-amber-50 to-rose-50 dark:from-amber-900/30 dark:to-rose-900/30 rounded-xl p-4 border-2 border-amber-200 dark:border-amber-700">
+            <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 rounded-xl p-4 border-2 border-blue-200 dark:border-blue-700">
               <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
@@ -1713,7 +1713,7 @@ async function showFaceImagesModal(visitId: string) {
           <img 
             src="${decryptedImage}" 
             alt="Entrance face image"
-            class="max-w-full max-h-48 rounded-lg shadow-md border-2 border-teal-300 dark:border-teal-600"
+            class="max-w-full max-h-48 rounded-lg shadow-md border-2 border-blue-300 dark:border-blue-600"
           />
         `;
       } catch (error) {
@@ -1733,7 +1733,7 @@ async function showFaceImagesModal(visitId: string) {
           <img 
             src="${decryptedImage}" 
             alt="Exit face image"
-            class="max-w-full max-h-48 rounded-lg shadow-md border-2 border-amber-300 dark:border-amber-600"
+            class="max-w-full max-h-48 rounded-lg shadow-md border-2 border-blue-300 dark:border-blue-600"
           />
         `;
       } catch (error) {
