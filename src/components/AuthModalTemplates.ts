@@ -70,17 +70,17 @@ export function getLoginModalTemplate(): string {
 export function getSignupModalTemplate(): string {
   return `
     <div id="signup-modal" class="auth-modal-backdrop fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center hidden z-50 transition-all duration-300 ease-out">
-      <div class="auth-modal-content bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border border-gray-200/50 dark:border-gray-700/50 relative overflow-hidden max-h-[90vh] overflow-y-auto">
+      <div class="auth-modal-content bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border border-gray-100 dark:border-gray-700 relative overflow-hidden max-h-[90vh] overflow-y-auto">
         <!-- Decorative gradient background -->
-        <div class="absolute inset-0 bg-gradient-to-br from-purple-50/50 via-transparent to-blue-50/50 dark:from-purple-900/10 dark:via-transparent dark:to-blue-900/10 pointer-events-none"></div>
+        <div class="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-transparent to-blue-100/30 dark:from-blue-900/10 dark:via-transparent dark:to-blue-800/10 pointer-events-none"></div>
         
         <div class="relative z-10">
           <div class="flex justify-between items-center mb-8">
             <div>
-              <h2 class="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent dark:from-purple-400 dark:to-blue-400">Create Account</h2>
+              <h2 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-500 dark:from-blue-400 dark:to-blue-300 bg-clip-text text-transparent">Create Account</h2>
               <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Join us and get started</p>
             </div>
-            <button class="auth-modal-close text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100 transition-all duration-200 hover:rotate-90 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+            <button class="auth-modal-close text-gray-400 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400 transition-all duration-200 hover:rotate-90 p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-gray-700">
               <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
@@ -115,7 +115,7 @@ export function getSignupModalTemplate(): string {
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
                   </div>
-                  <input type="text" id="signup-firstname" required class="auth-input block w-full pl-10 pr-3 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700/50 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200">
+                  <input type="text" id="signup-firstname" required class="auth-input block w-full pl-10 pr-3 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700/50 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200">
                 </div>
               </div>
               
@@ -127,7 +127,7 @@ export function getSignupModalTemplate(): string {
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
                   </div>
-                  <input type="text" id="signup-lastname" required class="auth-input block w-full pl-10 pr-3 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700/50 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200">
+                  <input type="text" id="signup-lastname" required class="auth-input block w-full pl-10 pr-3 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700/50 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200">
                 </div>
               </div>
             </div>
@@ -140,7 +140,7 @@ export function getSignupModalTemplate(): string {
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
                   </svg>
                 </div>
-                <input type="email" id="signup-email" required class="auth-input block w-full pl-10 pr-3 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700/50 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200">
+                <input type="email" id="signup-email" required class="auth-input block w-full pl-10 pr-3 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700/50 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200">
               </div>
             </div>
             
@@ -152,13 +152,13 @@ export function getSignupModalTemplate(): string {
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
                 </div>
-                <input type="password" id="signup-password" required minlength="6" class="auth-input block w-full pl-10 pr-3 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700/50 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200">
+                <input type="password" id="signup-password" required minlength="6" class="auth-input block w-full pl-10 pr-3 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700/50 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200">
               </div>
               <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Must be at least 6 characters</p>
             </div>
             
             <div class="pt-2">
-              <button type="submit" class="auth-submit-btn w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3.5 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center justify-center group">
+              <button type="submit" class="auth-submit-btn w-full bg-gradient-to-r from-blue-600 to-blue-500 dark:from-blue-400 dark:to-blue-300 text-white px-6 py-3.5 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center justify-center group">
                 <span class="group-hover:translate-x-1 transition-transform duration-200">Create Account</span>
                 <svg class="ml-2 h-5 w-5 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
