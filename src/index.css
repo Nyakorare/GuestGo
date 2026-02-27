@@ -661,6 +661,20 @@
   transform: scale(1) !important;
 }
 
+/* Login modal typing indicator */
+.login-typing-indicator.login-typing-active {
+  animation: loginTypingPulse 0.9s ease-in-out infinite;
+}
+
+@keyframes loginTypingPulse {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1px);
+  }
+}
+
 /* Error/Success message animations */
 @keyframes slide-in {
   from {

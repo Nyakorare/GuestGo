@@ -1,6 +1,7 @@
 import supabase from '../config/supabase';
 import { getLoginModalTemplate, getSignupModalTemplate } from './AuthModalTemplates';
 import { logAccountCreation } from '../utils/accountLogging';
+import { setupLoginTypingAnimation } from '../utils/loginTypingAnimation';
 
 export function createLoginModal() {
   return getLoginModalTemplate();
@@ -62,6 +63,9 @@ export function setupAuthEventListeners() {
       }
     });
   }
+
+  // Typing animation for login inputs
+  setupLoginTypingAnimation();
 
   // Signup form handler
   const signupForm = document.getElementById('signup-form') as HTMLFormElement;
