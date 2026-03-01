@@ -34,13 +34,17 @@ function setupTypingAnimationForModal(modalId: string, inputIds: string[]): void
     indicator.classList.remove('auth-typing-active');
     indicator.classList.remove('opacity-100');
     indicator.classList.add('opacity-0');
+    inputs.forEach((input) => input.classList.remove('auth-input-typing'));
   };
 
-  const showTyping = () => {
+  const showTyping = (activeInput: HTMLInputElement) => {
     if (!indicator) return;
     indicator.classList.add('auth-typing-active');
     indicator.classList.remove('opacity-0');
     indicator.classList.add('opacity-100');
+
+    inputs.forEach((input) => input.classList.remove('auth-input-typing'));
+    activeInput.classList.add('auth-input-typing');
 
     if (typingTimeout !== null) {
       window.clearTimeout(typingTimeout);
@@ -52,7 +56,7 @@ function setupTypingAnimationForModal(modalId: string, inputIds: string[]): void
   };
 
   inputs.forEach((input) => {
-    input.addEventListener('input', showTyping);
+    input.addEventListener('input', () => showTyping(input));
     input.addEventListener('blur', hideTyping);
   });
 }
