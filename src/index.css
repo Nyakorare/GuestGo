@@ -661,8 +661,8 @@
   transform: scale(1) !important;
 }
 
-/* Login modal typing indicator */
-.login-typing-indicator.login-typing-active {
+/* Auth modal typing indicator */
+.auth-typing-indicator.auth-typing-active {
   animation: loginTypingPulse 0.9s ease-in-out infinite;
 }
 

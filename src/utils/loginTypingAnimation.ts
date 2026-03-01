@@ -1,42 +1,44 @@
-export function setupLoginTypingAnimation(): void {
-  const loginModal = document.getElementById('login-modal');
-  if (!loginModal) return;
+function setupTypingAnimationForModal(modalId: string, inputIds: string[]): void {
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
 
-  // Create or reuse a typing indicator element
-  let indicator = loginModal.querySelector('.login-typing-indicator') as HTMLElement | null;
+  let indicator = modal.querySelector('.auth-typing-indicator') as HTMLElement | null;
 
   if (!indicator) {
     indicator = document.createElement('p');
     indicator.className =
-      'login-typing-indicator mt-1 text-xs text-blue-500 dark:text-blue-300 opacity-0 transition-opacity duration-200';
+      'auth-typing-indicator mt-1 text-xs text-blue-500 dark:text-blue-300 opacity-0 transition-opacity duration-200';
     indicator.textContent = 'Typing...';
 
     const headingContainer =
-      loginModal.querySelector('.auth-modal-content h2')?.parentElement ||
-      loginModal.querySelector('.auth-modal-content');
+      modal.querySelector('.auth-modal-content h2')?.parentElement ||
+      modal.querySelector('.auth-modal-content');
 
     if (headingContainer) {
       headingContainer.appendChild(indicator);
     }
   }
 
-  const emailInput = document.getElementById('login-email') as HTMLInputElement | null;
-  const passwordInput = document.getElementById('login-password') as HTMLInputElement | null;
+  const inputs: HTMLInputElement[] = [];
+  inputIds.forEach((id) => {
+    const el = document.getElementById(id) as HTMLInputElement | null;
+    if (el) inputs.push(el);
+  });
 
-  if (!emailInput || !passwordInput || !indicator) return;
+  if (!inputs.length || !indicator) return;
 
   let typingTimeout: number | null = null;
 
   const hideTyping = () => {
     if (!indicator) return;
-    indicator.classList.remove('login-typing-active');
+    indicator.classList.remove('auth-typing-active');
     indicator.classList.remove('opacity-100');
     indicator.classList.add('opacity-0');
   };
 
   const showTyping = () => {
     if (!indicator) return;
-    indicator.classList.add('login-typing-active');
+    indicator.classList.add('auth-typing-active');
     indicator.classList.remove('opacity-0');
     indicator.classList.add('opacity-100');
 
@@ -49,9 +51,22 @@ export function setupLoginTypingAnimation(): void {
     }, 600);
   };
 
-  [emailInput, passwordInput].forEach((input) => {
+  inputs.forEach((input) => {
     input.addEventListener('input', showTyping);
     input.addEventListener('blur', hideTyping);
   });
+}
+
+export function setupLoginTypingAnimation(): void {
+  setupTypingAnimationForModal('login-modal', ['login-email', 'login-password']);
+}
+
+export function setupSignupTypingAnimation(): void {
+  setupTypingAnimationForModal('signup-modal', [
+    'signup-firstname',
+    'signup-lastname',
+    'signup-email',
+    'signup-password',
+  ]);
 }
 
