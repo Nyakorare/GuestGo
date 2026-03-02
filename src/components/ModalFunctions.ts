@@ -1,6 +1,7 @@
 import { sendVerificationEmail } from '../config/emailjs';
 import { sendVisitConfirmationEmail } from '../config/email';
 import supabase from '../config/supabase';
+import { initScheduleModalNameValidation } from '../utils/nameInputValidation';
 import { showNotification } from '../pages/dashboard/index';
 import { showLoadingOverlay, updateLoadingOverlay, hideLoadingOverlay } from '../utils/loadingOverlay';
 
@@ -994,6 +995,9 @@ export async function setupEventListeners() {
       }
     });
   }
+
+  // Prevent symbols in first name and last name inputs
+  initScheduleModalNameValidation();
 
   // Sign up modal open/close
   const closeSignUpModalBtn = document.getElementById('closeSignUpModalBtn');
