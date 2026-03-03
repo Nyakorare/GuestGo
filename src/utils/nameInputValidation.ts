@@ -58,3 +58,54 @@ export function initScheduleModalNameValidation(): void {
     lastNameInput.addEventListener('paste', handlePaste);
   }
 }
+
+/**
+ * Validates the \"Other purpose\" textarea to disallow symbols.
+ * Allows letters, numbers, spaces, hyphens, and apostrophes.
+ */
+const PURPOSE_INPUT_PATTERN = /[^\p{L}\p{N}\s\-']/gu;
+
+export function sanitizePurposeInput(value: string): string {
+  return value.replace(PURPOSE_INPUT_PATTERN, '');
+}
+
+/**
+ * Attaches input and paste validation to the main schedule modal's
+ * \"Other purpose\" textarea (id=\"otherPurpose\").
+ */
+export function initOtherPurposeValidation(): void {
+  const otherPurpose = document.getElementById('otherPurpose') as HTMLTextAreaElement | null;
+  if (!otherPurpose) return;
+
+  const handleInput = (e: Event) => {
+    const input = e.target as HTMLTextAreaElement;
+    const cursorPos = input.selectionStart ?? input.value.length;
+    const before = input.value.substring(0, cursorPos);
+    const after = input.value.substring(cursorPos);
+    const sanitizedBefore = sanitizePurposeInput(before);
+    const sanitizedAfter = sanitizePurposeInput(after);
+    const newValue = sanitizedBefore + sanitizedAfter;
+    if (input.value !== newValue) {
+      input.value = newValue;
+      const newCursorPos = sanitizedBefore.length;
+      input.setSelectionRange(newCursorPos, newCursorPos);
+    }
+  };
+
+  const handlePaste = (e: Event) => {
+    const input = e.target as HTMLTextAreaElement;
+    e.preventDefault();
+    const pastedText = (e as ClipboardEvent).clipboardData?.getData('text') ?? '';
+    const sanitized = sanitizePurposeInput(pastedText);
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? start;
+    const before = input.value.substring(0, start);
+    const after = input.value.substring(end);
+    input.value = before + sanitized + after;
+    const newCursorPos = start + sanitized.length;
+    input.setSelectionRange(newCursorPos, newCursorPos);
+  };
+
+  otherPurpose.addEventListener('input', handleInput);
+  otherPurpose.addEventListener('paste', handlePaste);
+}
