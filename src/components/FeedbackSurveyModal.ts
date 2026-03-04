@@ -1,6 +1,7 @@
 import supabase from '../config/supabase';
 import { showNotification } from '../pages/dashboard/index';
 import { computeCriteriaScores, validateAllQuestionsAnswered } from '../utils/feedbackComputation';
+import { initFeedbackCommentsValidation } from '../utils/nameInputValidation';
 
 export interface FeedbackSurveyData {
   visitId: string;
@@ -432,6 +433,9 @@ export function showFeedbackSurveyModal(data: FeedbackSurveyData): void {
   
   // Lock body scroll
   document.body.classList.add('overflow-hidden');
+
+  // Prevent symbols in visitor feedback \"Additional Comments\" textarea
+  initFeedbackCommentsValidation();
 
   // Set up event listeners
   setupFeedbackModalEventListeners(data.visitId);

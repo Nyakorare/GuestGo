@@ -109,3 +109,45 @@ export function initOtherPurposeValidation(): void {
   otherPurpose.addEventListener('input', handleInput);
   otherPurpose.addEventListener('paste', handlePaste);
 }
+
+/**
+ * Attaches input and paste validation to the visitor feedback survey
+ * \"Additional Comments\" textarea (id=\"comments\").
+ * Uses the same no-symbols rule as the \"Other purpose\" field.
+ */
+export function initFeedbackCommentsValidation(): void {
+  const comments = document.getElementById('comments') as HTMLTextAreaElement | null;
+  if (!comments) return;
+
+  const handleInput = (e: Event) => {
+    const input = e.target as HTMLTextAreaElement;
+    const cursorPos = input.selectionStart ?? input.value.length;
+    const before = input.value.substring(0, cursorPos);
+    const after = input.value.substring(cursorPos);
+    const sanitizedBefore = sanitizePurposeInput(before);
+    const sanitizedAfter = sanitizePurposeInput(after);
+    const newValue = sanitizedBefore + sanitizedAfter;
+    if (input.value !== newValue) {
+      input.value = newValue;
+      const newCursorPos = sanitizedBefore.length;
+      input.setSelectionRange(newCursorPos, newCursorPos);
+    }
+  };
+
+  const handlePaste = (e: Event) => {
+    const input = e.target as HTMLTextAreaElement;
+    e.preventDefault();
+    const pastedText = (e as ClipboardEvent).clipboardData?.getData('text') ?? '';
+    const sanitized = sanitizePurposeInput(pastedText);
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? start;
+    const before = input.value.substring(0, start);
+    const after = input.value.substring(end);
+    input.value = before + sanitized + after;
+    const newCursorPos = start + sanitized.length;
+    input.setSelectionRange(newCursorPos, newCursorPos);
+  };
+
+  comments.addEventListener('input', handleInput);
+  comments.addEventListener('paste', handlePaste);
+}
