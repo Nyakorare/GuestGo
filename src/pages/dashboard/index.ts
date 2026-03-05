@@ -524,9 +524,9 @@ export function DashboardPage() {
           </div>
 
           <!-- Philippine Clock -->
-          <div id="philippineClock" class="flex flex-col items-center sm:items-end justify-center bg-white dark:bg-gray-800 rounded-lg shadow-md px-4 py-3 sm:px-6 sm:py-4 border border-gray-200 dark:border-gray-700 w-full sm:w-auto">
+          <div id="philippineClock" class="philippine-clock-card flex flex-col items-center sm:items-end justify-center bg-white dark:bg-gray-800 rounded-lg shadow-md px-4 py-3 sm:px-6 sm:py-4 border border-gray-200 dark:border-gray-700 w-full sm:w-auto">
             <div class="text-center">
-              <div class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white" id="philippineTime">
+              <div class="philippine-clock-time text-lg sm:text-2xl font-bold text-gray-900 dark:text-white" id="philippineTime">
                 Loading...
               </div>
               <div class="text-xs sm:text-sm text-gray-600 dark:text-gray-400" id="philippineDate">
