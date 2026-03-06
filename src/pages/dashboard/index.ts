@@ -8857,9 +8857,9 @@ function updatePhilippineClock() {
   // Get current Philippine time
   const philippineTime = getPhilippineTime();
   
-  // Format time (HH:MM:SS) using the corrected Philippine time
+  // Format time (hh:MM:SS AM/PM) using the corrected Philippine time
   const timeString = philippineTime.toLocaleTimeString('en-US', {
-    hour12: false,
+    hour12: true,
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit'
