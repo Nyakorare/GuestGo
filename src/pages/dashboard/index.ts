@@ -529,10 +529,10 @@ export function DashboardPage() {
               <div class="philippine-clock-time text-lg sm:text-2xl font-bold text-gray-900 dark:text-white" id="philippineTime">
                 Loading...
               </div>
-              <div class="text-xs sm:text-sm text-gray-600 dark:text-gray-400" id="philippineDate">
+              <div class="philippine-clock-date text-xs sm:text-sm text-gray-600 dark:text-gray-400" id="philippineDate">
                 Loading...
               </div>
-              <div class="text-xs text-gray-500 dark:text-gray-500 mt-1">
+              <div class="philippine-clock-label text-xs text-gray-500 dark:text-gray-500 mt-1">
                 🇵🇭 Philippine Time
               </div>
             </div>
@@ -8873,9 +8873,13 @@ function updatePhilippineClock() {
     day: 'numeric'
   });
   
-  // Update the display
+  // Update the display and trigger tick animation on the time
   timeElement.textContent = timeString;
   dateElement.textContent = dateString;
+  timeElement.classList.remove('clock-tick');
+  void timeElement.offsetWidth; // Force reflow to restart animation
+  timeElement.classList.add('clock-tick');
+  setTimeout(() => timeElement.classList.remove('clock-tick'), 350);
 }
 
 // Function to start the Philippine clock

@@ -851,7 +851,20 @@
   .philippine-clock-time {
     position: relative;
     letter-spacing: 0.08em;
-    animation: clockPulse 1.8s ease-in-out infinite;
+    animation: clockTextPulse 2.5s ease-in-out infinite;
+    transition: transform 0.2s ease, text-shadow 0.2s ease;
+  }
+
+  .philippine-clock-time.clock-tick {
+    animation: clockTick 0.35s ease-out;
+  }
+
+  .philippine-clock-date {
+    animation: clockDateFade 3s ease-in-out infinite;
+  }
+
+  .philippine-clock-label {
+    animation: clockLabelSoft 4s ease-in-out infinite;
   }
 
   .philippine-clock-card::before {
@@ -890,13 +903,59 @@
     }
   }
 
-  @keyframes clockPulse {
+  @keyframes clockTextPulse {
     0%,
     100% {
-      transform: translateY(0);
+      text-shadow: 0 0 0 rgba(59, 130, 246, 0);
     }
     50% {
-      transform: translateY(-1px);
+      text-shadow: 0 0 12px rgba(59, 130, 246, 0.25), 0 0 24px rgba(59, 130, 246, 0.12);
+    }
+  }
+
+  .dark .philippine-clock-time {
+    animation: clockTextPulseDark 2.5s ease-in-out infinite;
+  }
+
+  @keyframes clockTextPulseDark {
+    0%,
+    100% {
+      text-shadow: 0 0 0 rgba(96, 165, 250, 0);
+    }
+    50% {
+      text-shadow: 0 0 14px rgba(96, 165, 250, 0.3), 0 0 28px rgba(96, 165, 250, 0.15);
+    }
+  }
+
+  @keyframes clockTick {
+    0% {
+      transform: scale(0.98);
+    }
+    50% {
+      transform: scale(1.03);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  @keyframes clockDateFade {
+    0%,
+    100% {
+      opacity: 0.85;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes clockLabelSoft {
+    0%,
+    100% {
+      opacity: 0.9;
+    }
+    50% {
+      opacity: 1;
     }
   }
 
@@ -1097,7 +1156,11 @@
   .faq-card,
   .hero-title,
   .hero-subtitle,
-  .feature-card {
+  .feature-card,
+  .philippine-clock-card,
+  .philippine-clock-time,
+  .philippine-clock-date,
+  .philippine-clock-label {
     animation: none !important;
     transform: none !important;
   }
