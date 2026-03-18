@@ -1,3 +1,5 @@
+import { scrollToTop } from '../utils/scrollToTop';
+
 /**
  * Enhanced Logs Pagination Component
  * Features:
@@ -149,6 +151,7 @@ export function setupLogsPaginationListeners(
   if (prevBtn) {
     prevBtn.addEventListener('click', () => {
       if (currentPage > 1) {
+        scrollToTop();
         onPageChange(currentPage - 1);
       }
     });
@@ -159,6 +162,7 @@ export function setupLogsPaginationListeners(
   if (nextBtn) {
     nextBtn.addEventListener('click', () => {
       if (currentPage < totalPages) {
+        scrollToTop();
         onPageChange(currentPage + 1);
       }
     });
@@ -170,6 +174,7 @@ export function setupLogsPaginationListeners(
     btn.addEventListener('click', () => {
       const page = parseInt((btn as HTMLElement).dataset.page || '1');
       if (page >= 1 && page <= totalPages && page !== currentPage) {
+        scrollToTop();
         onPageChange(page);
       }
     });
@@ -185,10 +190,13 @@ export function setupLogsPaginationListeners(
       if (e.key === 'Enter') {
         const page = parseInt(pageInput.value);
         if (page >= 1 && page <= totalPages && page !== currentPage) {
+          scrollToTop();
           onPageChange(page);
         } else if (page < 1) {
+          scrollToTop();
           onPageChange(1);
         } else if (page > totalPages) {
+          scrollToTop();
           onPageChange(totalPages);
         }
       }
