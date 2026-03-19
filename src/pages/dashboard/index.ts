@@ -739,10 +739,10 @@ export function DashboardPage() {
 
           <!-- Filters Section -->
           <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 space-y-4">
-            <!-- Search Row with Filters Toggle -->
+            <!-- Search Row with Filters & Top Pagination Toggle -->
             <div class="flex flex-col gap-2">
-              <!-- Search Input and Filters Button Row -->
-              <div class="flex gap-3 items-end">
+              <!-- Search Input and Controls Row -->
+              <div class="flex flex-col md:flex-row gap-3 md:items-end">
                 <!-- Search Input -->
                 <div class="relative flex-1">
                   <label for="logsSearchInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Logs</label>
@@ -760,24 +760,41 @@ export function DashboardPage() {
                     </div>
                   </div>
                 </div>
-                <!-- Filters dropdown toggle button -->
-                <div class="flex-shrink-0">
-                  <button 
-                    id="logsFiltersDropdownBtn"
-                    class="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500"
-                    aria-haspopup="true"
-                    aria-expanded="false"
-                  >
-                    More Filters
-                    <svg class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
+                <!-- Right-side controls: Filters + Top Pagination -->
+                <div class="flex-shrink-0 flex flex-row md:flex-col gap-2">
+                  <!-- Filters dropdown toggle button -->
+                  <div>
+                    <button 
+                      id="logsFiltersDropdownBtn"
+                      class="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                      aria-haspopup="true"
+                      aria-expanded="false"
+                    >
+                      More Filters
+                      <svg class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                  <!-- Top pagination dropdown toggle button -->
+                  <div>
+                    <button
+                      id="logsTopPaginationToggle"
+                      class="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-100 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                      aria-haspopup="true"
+                      aria-expanded="false"
+                    >
+                      Pagination
+                      <svg class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <!-- Dropdown content -->
+            <!-- Filters dropdown content -->
             <div id="logsFiltersDropdown" class="hidden relative">
               <div class="absolute z-20 right-0 w-full sm:w-auto min-w-[280px] max-w-full sm:max-w-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg p-4 space-y-4">
                 <!-- Action Filter -->
@@ -855,6 +872,17 @@ export function DashboardPage() {
                     Cleanup Past Visits
                   </button>
                 </div>
+              </div>
+            </div>
+
+            <!-- Top pagination dropdown content -->
+            <div id="logsTopPaginationDropdown" class="hidden relative mt-2">
+              <div class="absolute z-20 right-0 w-full sm:w-auto min-w-[280px] max-w-full sm:max-w-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg p-3">
+                <div class="flex items-center justify-between mb-2">
+                  <h3 class="text-sm font-medium text-gray-800 dark:text-gray-100">Page Navigation</h3>
+                  <span id="logsTopPaginationSummary" class="text-xs text-gray-500 dark:text-gray-400"></span>
+                </div>
+                <div id="logsTopPagination" class="logs-top-pagination"></div>
               </div>
             </div>
           </div>
@@ -2377,8 +2405,9 @@ async function renderLogs(): Promise<void> {
       `;
       // Update pagination controls for empty state
       const logsPagination = document.getElementById('logsPagination');
+      const logsTopPagination = document.getElementById('logsTopPagination');
       if (logsPagination) {
-        logsPagination.innerHTML = createLogsPagination({
+        const paginationHtml = createLogsPagination({
           currentPage: 1,
           totalPages: 1,
           totalItems: 0,
@@ -2388,6 +2417,10 @@ async function renderLogs(): Promise<void> {
             renderLogs();
           }
         });
+        logsPagination.innerHTML = paginationHtml;
+        if (logsTopPagination) {
+          logsTopPagination.innerHTML = paginationHtml;
+        }
       }
       return;
     }
@@ -2747,38 +2780,40 @@ async function renderLogs(): Promise<void> {
     // Update pagination controls using new component
     const totalLogs = filteredLogs.length;
     const logsPagination = document.getElementById('logsPagination');
+    const logsTopPagination = document.getElementById('logsTopPagination');
+    const logsTopPaginationSummary = document.getElementById('logsTopPaginationSummary');
+
+    const paginationConfig = {
+      currentPage: currentLogsPage,
+      totalPages: totalPages,
+      totalItems: totalLogs,
+      pageSize: logsPageSize,
+      onPageChange: (page: number) => {
+        autoAdvanceLogs = false; // Pause auto-advance when user manually navigates
+        currentLogsPage = page;
+        renderLogs();
+      }
+    };
+
+    const paginationHtml = createLogsPagination(paginationConfig);
+
     if (logsPagination) {
-      logsPagination.innerHTML = createLogsPagination({
-        currentPage: currentLogsPage,
-        totalPages: totalPages,
-        totalItems: totalLogs,
-        pageSize: logsPageSize,
-        onPageChange: (page: number) => {
-          autoAdvanceLogs = false; // Pause auto-advance when user manually navigates
-          currentLogsPage = page;
-          renderLogs();
-        }
-      });
-      
-      // Setup pagination event listeners
-      setupLogsPaginationListeners(
-        {
-          currentPage: currentLogsPage,
-          totalPages: totalPages,
-          totalItems: totalLogs,
-          pageSize: logsPageSize,
-          onPageChange: (page: number) => {
-            autoAdvanceLogs = false; // Pause auto-advance when user manually navigates
-            currentLogsPage = page;
-            renderLogs();
-          }
-        },
-        (page: number) => {
-          autoAdvanceLogs = false; // Pause auto-advance when user manually navigates
-          currentLogsPage = page;
-          renderLogs();
-        }
-      );
+      logsPagination.innerHTML = paginationHtml;
+      setupLogsPaginationListeners(paginationConfig, paginationConfig.onPageChange);
+    }
+
+    if (logsTopPagination) {
+      logsTopPagination.innerHTML = paginationHtml;
+      setupLogsPaginationListeners(paginationConfig, paginationConfig.onPageChange);
+    }
+
+    if (logsTopPaginationSummary) {
+      const startItem = (currentLogsPage - 1) * logsPageSize + 1;
+      const endItem = Math.min(currentLogsPage * logsPageSize, totalLogs);
+      logsTopPaginationSummary.textContent =
+        totalLogs === 0
+          ? 'No logs'
+          : `Showing ${startItem}-${endItem} of ${totalLogs}`;
     }
     
     // Auto-advance to next page if not at the end and auto-advance is enabled
@@ -5456,6 +5491,8 @@ function setupDashboardEventListeners() {
   const actionFilter = document.getElementById('actionFilter');
   const logsFiltersDropdownBtn = document.getElementById('logsFiltersDropdownBtn');
   const logsFiltersDropdown = document.getElementById('logsFiltersDropdown');
+  const logsTopPaginationToggle = document.getElementById('logsTopPaginationToggle');
+  const logsTopPaginationDropdown = document.getElementById('logsTopPaginationDropdown');
 
   // Logs search input event listener
   logsSearchInput?.addEventListener('input', async () => {
@@ -5503,6 +5540,47 @@ function setupDashboardEventListeners() {
         logsFiltersDropdownBtn.setAttribute('aria-expanded', 'false');
         logsFiltersDropdown.classList.add('hidden');
         const arrow = logsFiltersDropdownBtn.querySelector('svg');
+        if (arrow) arrow.classList.remove('rotate-180');
+      }
+    });
+  }
+
+  // Logs top pagination dropdown toggle
+  if (logsTopPaginationToggle && logsTopPaginationDropdown) {
+    logsTopPaginationToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isExpanded = logsTopPaginationToggle.getAttribute('aria-expanded') === 'true';
+      logsTopPaginationToggle.setAttribute('aria-expanded', (!isExpanded).toString());
+      logsTopPaginationDropdown.classList.toggle('hidden');
+      const arrow = logsTopPaginationToggle.querySelector('svg');
+      if (arrow) {
+        if (isExpanded) {
+          arrow.classList.remove('rotate-180');
+        } else {
+          arrow.classList.add('rotate-180');
+        }
+      }
+    });
+
+    // Close on outside click
+    document.addEventListener('click', (e) => {
+      if (
+        !logsTopPaginationToggle.contains(e.target as Node) &&
+        !logsTopPaginationDropdown.contains(e.target as Node)
+      ) {
+        logsTopPaginationToggle.setAttribute('aria-expanded', 'false');
+        logsTopPaginationDropdown.classList.add('hidden');
+        const arrow = logsTopPaginationToggle.querySelector('svg');
+        if (arrow) arrow.classList.remove('rotate-180');
+      }
+    });
+
+    // Close on Escape
+    document.addEventListener('keydown', (e) => {
+      if ((e as KeyboardEvent).key === 'Escape') {
+        logsTopPaginationToggle.setAttribute('aria-expanded', 'false');
+        logsTopPaginationDropdown.classList.add('hidden');
+        const arrow = logsTopPaginationToggle.querySelector('svg');
         if (arrow) arrow.classList.remove('rotate-180');
       }
     });
