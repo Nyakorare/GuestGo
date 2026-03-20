@@ -8,6 +8,7 @@ import { addNotificationToActionBadge, addNotificationToLogContainer, shouldShow
 import { createFlaggedVisitModal, setupFlaggedVisitModalListeners, displayFlaggedVisitDetails } from '../../components/FlaggedVisitModal';
 import { createLogsPagination, setupLogsPaginationListeners } from '../../components/LogsPagination';
 import { initializeLogsLoadingModal, showLogsLoadingModal, hideLogsLoadingModal } from '../../components/LogsLoadingModal';
+import { showLogsMiniLoading } from '../../utils/logsMiniLoading';
 import { setupPrintVisitCard } from '../../Visitor/printVisitCard';
 import { showTodayPendingVisitsModal } from '../../components/TodayPendingVisitsModal';
 import { initializePlaceOnHold, isPlaceOnHold, createOnHoldButton, modifyMarkCompleteButton, getOnHoldExpiration } from '../../components/PlaceOnHold';
@@ -2413,7 +2414,9 @@ async function renderLogs(): Promise<void> {
           totalItems: 0,
           pageSize: logsPageSize,
           onPageChange: (page: number) => {
+            autoAdvanceLogs = false;
             currentLogsPage = page;
+            showLogsMiniLoading();
             renderLogs();
           }
         });
@@ -2791,6 +2794,7 @@ async function renderLogs(): Promise<void> {
       onPageChange: (page: number) => {
         autoAdvanceLogs = false; // Pause auto-advance when user manually navigates
         currentLogsPage = page;
+        showLogsMiniLoading();
         renderLogs();
       }
     };
@@ -2822,6 +2826,7 @@ async function renderLogs(): Promise<void> {
       setTimeout(() => {
         if (autoAdvanceLogs && currentLogsPage < totalPages) {
           currentLogsPage++;
+          showLogsMiniLoading();
           renderLogs();
         }
       }, 2000); // 2 second delay between pages
