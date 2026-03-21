@@ -2160,7 +2160,7 @@ async function loadAccounts() {
   try {
     const { data: accounts, error } = await supabase
       .from('user_roles')
-      .select('user_id, role, created_at, first_name, last_name')
+      .select('user_id, role, created_at, first_name, last_name, email')
       .neq('role', 'admin')
       .order('created_at', { ascending: false });
 
@@ -2174,7 +2174,7 @@ async function loadAccounts() {
       user_id: account.user_id,
       role: account.role,
       created_at: account.created_at,
-      email: 'user@example.com', // We'll get email from auth.users if needed
+      email: account.email || undefined,
       first_name: account.first_name || '',
       last_name: account.last_name || ''
     })) || [];
@@ -2220,6 +2220,9 @@ function renderAccounts(): void {
                         `${account.first_name || ''} ${account.last_name || ''}` : 
                         'Unknown User'
                       }
+                    </div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 font-mono transition-colors duration-200">
+                      ${account.email || 'Unknown Email'}
                     </div>
                     <div class="text-xs text-gray-400 dark:text-gray-500 font-mono transition-colors duration-200">
                       ${account.user_id.substring(0, 8)}...
