@@ -10,6 +10,13 @@ Visitor Management and Gate Access Control system with QR flows and AI-powered f
 - Fast QR generation/scan, gate entry/exit processing, dashboard and logs
 - Role-based access (admin, guards/personnel, staff, visitors)
 
+### SITE STATUS PAGE:
+https://stats.uptimerobot.com/JyYATn0Zv8
+
+### DEPLOYED LINKS:
+MAIN:https://guest-go.vercel.app/
+AI MICROSERVICE: https://guestgo-ai.onrender.com/
+
 ### Quick Start
 
 1) Install dependencies

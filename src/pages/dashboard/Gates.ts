@@ -128,6 +128,16 @@ function renderGatesList(): void {
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div class="flex items-start gap-4 flex-1">
           <div class="flex-shrink-0">
+            <div class="mb-1">
+              <p class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Current Status</p>
+              <p class="text-xs font-semibold ${
+                gate.status === 'open'
+                  ? 'text-green-600 dark:text-green-400'
+                  : 'text-red-600 dark:text-red-400'
+              }">
+                ${gate.status === 'open' ? 'Open' : 'Closed'}
+              </p>
+            </div>
             <div class="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600">
               ${gate.image_url ? `
                 <img src="${gate.image_url}" alt="${gate.name}" class="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
