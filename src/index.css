@@ -273,7 +273,7 @@
   /* Hero section animations */
   .hero-title {
     position: relative;
-    display: inline-block;
+    display: block;
     transition: transform 0.3s ease-out, text-shadow 0.3s ease-out;
   }
 
@@ -299,7 +299,7 @@
 
   .hero-subtitle {
     position: relative;
-    display: inline-block;
+    display: block;
     transition: transform 0.3s ease-out, opacity 0.3s ease-out;
   }
 

@@ -906,7 +906,7 @@ export function HomePage() {
         }
       } else {
         if (heroTitle) heroTitle.textContent = 'Welcome to GuestGo';
-        if (heroSubtitle) heroSubtitle.textContent = 'Your one-stop solution for guest management and hospitality services.';
+        if (heroSubtitle) heroSubtitle.textContent = 'Schedule visits, verify guests, and track arrivals in real time.';
         if (scheduleNowBtn) scheduleNowBtn.textContent = 'Schedule Now';
       }
       
@@ -1180,7 +1180,7 @@ export function HomePage() {
             Welcome to GuestGo
           </h1>
           <p id="heroSubtitle" class="hero-subtitle text-base sm:text-xl text-gray-600 dark:text-gray-300 transition-colors duration-200">
-            Your one-stop solution for guest management and hospitality services.
+            Schedule visits, verify guests, and track arrivals in real time.
           </p>
           <div id="featureCards" class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
             <!-- Feature cards will be populated dynamically based on role -->
