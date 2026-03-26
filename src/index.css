@@ -797,6 +797,39 @@
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
+/* Leaflet Routing Machine dark mode readability */
+.dark .leaflet-routing-container,
+.dark .leaflet-routing-alt,
+.dark .leaflet-routing-geocoders {
+  background-color: #1f2937 !important; /* gray-800 */
+  color: #f3f4f6 !important; /* gray-100 */
+  border-color: #4b5563 !important; /* gray-600 */
+}
+
+.dark .leaflet-routing-container h2,
+.dark .leaflet-routing-container h3,
+.dark .leaflet-routing-container p,
+.dark .leaflet-routing-container span,
+.dark .leaflet-routing-container td,
+.dark .leaflet-routing-container li,
+.dark .leaflet-routing-alt h2,
+.dark .leaflet-routing-alt h3,
+.dark .leaflet-routing-alt p,
+.dark .leaflet-routing-alt span,
+.dark .leaflet-routing-alt td,
+.dark .leaflet-routing-alt li {
+  color: #f3f4f6 !important; /* gray-100 */
+}
+
+.dark .leaflet-routing-alt tr:hover {
+  background-color: #374151 !important; /* gray-700 */
+}
+
+.dark .leaflet-routing-container a,
+.dark .leaflet-routing-container a:hover {
+  color: #93c5fd !important; /* blue-300 */
+}
+
 /* Gate status badges */
 .status-badge {
   display: inline-block;

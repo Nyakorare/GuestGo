@@ -199,7 +199,7 @@ function initAllMaps(): void {
       // Create distance display container
       const distanceContainer = document.createElement('div');
       distanceContainer.id = `distance-display-${mapId}`;
-      distanceContainer.className = 'absolute top-2 right-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3 z-[1000] border-2 border-blue-500';
+      distanceContainer.className = 'absolute bottom-2 left-14 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3 z-[1000] border-2 border-blue-500';
       distanceContainer.style.display = 'none';
       distanceContainer.innerHTML = '<div class="text-sm font-semibold text-gray-900 dark:text-white"><span class="text-blue-600 dark:text-blue-400">Distance: </span><span id="distance-value-' + mapId + '">Calculating...</span></div>';
       
