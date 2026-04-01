@@ -14,7 +14,7 @@ Visitor Management and Gate Access Control system with QR flows and AI-powered f
 https://stats.uptimerobot.com/JyYATn0Zv8
 
 ### DEPLOYED LINKS:
-MAIN:https://guest-go.vercel.app/
+MAIN: https://guest-go.vercel.app/
 AI MICROSERVICE: https://guestgo-ai.onrender.com/
 
 ### Quick Start
