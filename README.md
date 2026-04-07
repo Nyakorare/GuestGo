@@ -1,6 +1,6 @@
 ## GuestGo
 
-Visitor Management System and Gate Access Control system with QR flows and AI-powered face detection/verification.
+Complete & Fully functional RBAC-Visitor Management and Gate Access Control system with QR flows and AI-powered face detection/verification.
 
 ## THESIS: (Technological University of the Philippines - Manila | A.Y. 2025-2026)
 “GuestGo: Enhanced Visitation and Appointment with Facial Recognition and Detection System”
