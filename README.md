@@ -1,6 +1,9 @@
 ## GuestGo
 
-Visitor Management and Gate Access Control system with QR flows and AI-powered face detection/verification.
+Visitor Management System and Gate Access Control system with QR flows and AI-powered face detection/verification.
+
+## THESIS: (Technological University of the Philippines - Manila | A.Y. 2025-2026)
+“GuestGo: Enhanced Visitation and Appointment with Facial Recognition and Detection System”
 
 ### Highlights
 
@@ -14,8 +17,8 @@ Visitor Management and Gate Access Control system with QR flows and AI-powered f
 https://stats.uptimerobot.com/JyYATn0Zv8
 
 ### DEPLOYED LINKS:
-MAIN: https://guest-go.vercel.app/
-AI MICROSERVICE: https://guestgo-ai.onrender.com/
+- MAIN: https://guest-go.vercel.app/
+- AI MICROSERVICE: https://guestgo-ai.onrender.com/
 
 ### Quick Start
 
