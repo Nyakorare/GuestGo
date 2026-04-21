@@ -68,7 +68,6 @@ let currentLogsEndDate = '';
 // Logs pagination variables
 let currentLogsPage = 1;
 const logsPageSize = 10;
-let autoAdvanceLogs = true; // Flag to control auto-advance through pages
 
 // Mapping of available actions for each logs tab
 const LOGS_TAB_ACTIONS = {
@@ -2314,9 +2313,8 @@ async function loadLogs() {
   const logsPagination = document.getElementById('logsPagination');
   
   try {
-    // Reset pagination and enable auto-advance
+    // Reset pagination to first page on fresh load
     currentLogsPage = 1;
-    autoAdvanceLogs = true;
     
     // Show loading modal
     showLogsLoadingModal();
@@ -2340,7 +2338,6 @@ async function loadLogs() {
     
     // Ensure we're on page 1 and disable auto-advance during initial load
     currentLogsPage = 1;
-    autoAdvanceLogs = false; // Disable auto-advance during initial load
     
     // Render logs and wait for it to complete
     await renderLogs();
@@ -2360,10 +2357,6 @@ async function loadLogs() {
       await new Promise(resolve => requestAnimationFrame(resolve));
       await new Promise(resolve => setTimeout(resolve, 200));
     }
-    
-    // Re-enable auto-advance after initial load is complete (if desired)
-    // For now, keep it disabled so user stays on page 1
-    // autoAdvanceLogs = true;
     
     // Final check: ensure we're on page 1
     if (currentLogsPage !== 1) {
@@ -2420,7 +2413,6 @@ async function renderLogs(): Promise<void> {
           totalItems: 0,
           pageSize: logsPageSize,
           onPageChange: (page: number) => {
-            autoAdvanceLogs = false;
             currentLogsPage = page;
             showLogsMiniLoading();
             renderLogs();
@@ -2798,7 +2790,6 @@ async function renderLogs(): Promise<void> {
       totalItems: totalLogs,
       pageSize: logsPageSize,
       onPageChange: (page: number) => {
-        autoAdvanceLogs = false; // Pause auto-advance when user manually navigates
         currentLogsPage = page;
         showLogsMiniLoading();
         renderLogs();
@@ -2826,17 +2817,6 @@ async function renderLogs(): Promise<void> {
           : `Showing ${startItem}-${endItem} of ${totalLogs}`;
     }
     
-    // Auto-advance to next page if not at the end and auto-advance is enabled
-    if (autoAdvanceLogs && currentLogsPage < totalPages) {
-      // Wait a bit before auto-advancing (gives user time to see the page)
-      setTimeout(() => {
-        if (autoAdvanceLogs && currentLogsPage < totalPages) {
-          currentLogsPage++;
-          showLogsMiniLoading();
-          renderLogs();
-        }
-      }, 2000); // 2 second delay between pages
-    }
   }
   
     // Set up history button event listeners after rendering
@@ -6504,7 +6484,6 @@ async function applySearchAndFilterForLogs() {
 
   // Reset pagination to first page when filters change
   currentLogsPage = 1;
-  autoAdvanceLogs = true; // Re-enable auto-advance when filters change
 
   // Update global date filter state
   currentLogsStartDate = startDate;
