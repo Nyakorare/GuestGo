@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 *.local
+.env
 .env.local
 .env.*.local
 
@@ -24,3 +25,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Python virtual envs
+.venv/
+**/.venv/
