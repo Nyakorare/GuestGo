@@ -1487,6 +1487,9 @@ export function DashboardPage() {
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
           <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">Guard Dashboard</h2>
           <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-4">
+            <p id="guardExpectedVisitorsTodayText" class="text-sm text-gray-700 dark:text-gray-300 text-center sm:text-left">
+              Expected visitors for today: <span id="guardExpectedVisitorsTodayCount">0</span>
+            </p>
             <button 
               id="refreshGuardBtn"
               class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 w-full sm:w-auto"
@@ -7192,6 +7195,7 @@ async function loadGuardDashboard() {
 
     // Load guard scan history
     await loadGuardScanHistory();
+    await updateGuardExpectedVisitorsTodayCount();
 
     // Setup event listeners
     const refreshGuardBtn = document.getElementById('refreshGuardBtn');
@@ -7199,7 +7203,10 @@ async function loadGuardDashboard() {
     const guardActionFilter = document.getElementById('guardActionFilter');
 
     refreshGuardBtn?.addEventListener('click', async () => {
-      await loadGuardScanHistory();
+      await Promise.all([
+        loadGuardScanHistory(),
+        updateGuardExpectedVisitorsTodayCount()
+      ]);
     });
 
     guardSearchInput?.addEventListener('input', () => {
@@ -7212,6 +7219,35 @@ async function loadGuardDashboard() {
 
   } catch (error) {
     console.error('Error in loadGuardDashboard:', error);
+  }
+}
+
+async function updateGuardExpectedVisitorsTodayCount() {
+  const countElement = document.getElementById('guardExpectedVisitorsTodayCount');
+  if (!countElement) return;
+
+  try {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const todayLocalDate = `${year}-${month}-${day}`;
+
+    const { count, error } = await supabase
+      .from('scheduled_visits')
+      .select('*', { count: 'exact', head: true })
+      .eq('visit_date', todayLocalDate);
+
+    if (error) {
+      console.error('Error fetching guard expected visitors count:', error);
+      countElement.textContent = '0';
+      return;
+    }
+
+    countElement.textContent = String(count ?? 0);
+  } catch (error) {
+    console.error('Unexpected error fetching guard expected visitors count:', error);
+    countElement.textContent = '0';
   }
 }
 
