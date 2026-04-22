@@ -1298,31 +1298,41 @@ async function sendVisitCompletionEmailForGuard(visitId: string): Promise<void> 
 // Function to retrieve entrance face image for verification
 async function getEntranceFaceImage(visitId: string): Promise<string | null> {
   try {
-    // Get the entrance scan for this visit
+    // Get recent entrance scans for this visit that contain face image payload.
+    // Some entrance scans may exist without usable face data, so we select a small
+    // batch and return the first valid decrypted data URL.
     const { data: entranceScans, error } = await supabase
       .from('gate_scans')
-      .select('face_image_data')
+      .select('face_image_data, scanned_at')
       .eq('visit_id', visitId)
       .eq('scan_type', 'entrance')
+      .not('face_image_data', 'is', null)
       .order('scanned_at', { ascending: false })
-      .limit(1);
+      .limit(5);
 
     if (error || !entranceScans || entranceScans.length === 0) {
       console.error('Error retrieving entrance face image:', error);
       return null;
     }
 
-    const storedImageData = entranceScans[0].face_image_data;
-    if (!storedImageData) {
-      return null;
-    }
-
     // Decrypt the image data if it's encrypted
     // The stored image is already at 400x400 for verification purposes, so use it directly
     const { processFaceImageForDisplay } = await import('../utils/imageCompression');
-    const decryptedImage = processFaceImageForDisplay(storedImageData);
-    
-    return decryptedImage;
+
+    for (const scan of entranceScans) {
+      const storedImageData = scan.face_image_data;
+      if (!storedImageData || typeof storedImageData !== 'string') {
+        continue;
+      }
+
+      const decryptedImage = processFaceImageForDisplay(storedImageData);
+      if (decryptedImage && decryptedImage.startsWith('data:image/')) {
+        return decryptedImage;
+      }
+    }
+
+    console.warn('No valid entrance face image data URL found among recent entrance scans.');
+    return null;
   } catch (error) {
     console.error('Error in getEntranceFaceImage:', error);
     return null;
