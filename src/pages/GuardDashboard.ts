@@ -1704,8 +1704,8 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
         console.log('Face verification result:', verificationResult);
       } catch (verifyError) {
         console.error('Error during face verification:', verifyError);
-        showGuardError('Face Verification Error', 'An error occurred during face verification. Please try again.');
-        return;
+        showGuardWarning('Face Verification Unavailable', 'Verification failed, but exit will still be logged and face data will be saved.');
+        verificationResult = { match: false, similarity: 0, error: 'Verification request failed', serviceUnavailable: true };
       }
 
       // If service is unavailable, allow fallback.
@@ -1714,13 +1714,11 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
       if (verificationResult.serviceUnavailable) {
         const isEntranceFaceIssue = verificationResult.error?.includes('Entrance face could not be verified');
         if (isEntranceFaceIssue) {
-          console.warn('Entrance face could not be verified in stored image, blocking exit logging');
-          showGuardError(
-            'Face Verification Error',
-            'Entrance face not detected/verified. Exit cannot be logged. Please re-do entrance scan with a clear face capture first.'
+          console.warn('Entrance face could not be verified in stored image, proceeding with exit logging');
+          showGuardWarning(
+            'Entrance Face Verification Issue',
+            'Entrance face could not be verified, but exit will still be logged and face data will be saved.'
           );
-
-          return;
         } else {
           console.warn('Face verification service unavailable, proceeding with exit logging');
           showGuardWarning(
@@ -1731,26 +1729,14 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
         // Continue to log exit even though verification failed - leave similarity as null
         // This will trigger the fallback success message
       } else if (verificationResult.error) {
-        // For other errors (invalid images, etc.), block the exit.
-        // Do not reopen capture automatically; retake flow is disabled during exit logging.
+        // For other verification errors, proceed with fallback logging.
         console.error('Face verification error:', verificationResult.error);
-        showGuardError('Face Verification Error', `${verificationResult.error}`);
-        return;
+        showGuardWarning('Face Verification Error', `${verificationResult.error}. Exit will still be logged and face data will be saved.`);
       } else if (!verificationResult.match) {
-        // Faces don't match - block exit.
-        // Do not reopen capture automatically; retake flow is disabled during exit logging.
+        // Faces don't match - proceed with fallback logging.
         const similarityPercent = (verificationResult.similarity * 100).toFixed(1);
         console.warn(`Face verification failed: similarity ${similarityPercent}%`);
-        // Show toast notification in top right
-        showErrorToast(
-          `Face verification failed: Face does not match entrance picture. Similarity: ${similarityPercent}%.`,
-          5000
-        );
-        showGuardError(
-          'Face Verification Failed', 
-          `Face does not match the entrance picture. Similarity: ${similarityPercent}%.`
-        );
-        return;
+        showGuardWarning('Face Verification Failed', `Face does not match entrance picture (${similarityPercent}% similarity). Exit will still be logged.`);
       } else {
         // Faces match, proceed with exit logging
         exitSimilarityPercent = (verificationResult.similarity * 100).toFixed(1);
