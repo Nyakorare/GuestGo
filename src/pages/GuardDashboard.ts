@@ -1405,18 +1405,17 @@ async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Pr
       }
 
       // If entrance face (base) is not detected but exit face is detected,
-      // allow exit to proceed with a warning (similar to service unavailable)
-      // This can happen if the entrance image is corrupted, low quality, or API has issues
+      // treat as a hard verification failure and block exit.
+      // This avoids completing exits when we cannot match against entrance face.
       if (!result.base?.found) {
-        console.warn('handleResult: Entrance face not detected in stored image, but exit face detected. Allowing exit with warning.', {
+        console.warn('handleResult: Entrance face not detected in stored image; blocking exit verification.', {
           baseFound: result.base?.found,
           probeFound: result.probe?.found
         });
         return {
           match: false,
           similarity: 0,
-          error: 'Entrance face could not be verified in stored image. Exit will proceed without face verification.',
-          serviceUnavailable: true // Treat as service unavailable to allow exit
+          error: 'Entrance face not detected in stored image. Please re-do entrance scan with a clear face capture.'
         };
       }
   
@@ -1699,16 +1698,19 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
         return;
       }
 
-      // If service is unavailable or entrance face can't be detected, allow exit to proceed with a warning
+      // If service is unavailable, allow fallback.
+      // But if the error is specifically about entrance face verification, block exit.
       // Check this FIRST before checking error, since serviceUnavailable also sets error
       if (verificationResult.serviceUnavailable) {
         const isEntranceFaceIssue = verificationResult.error?.includes('Entrance face could not be verified');
         if (isEntranceFaceIssue) {
-          console.warn('Entrance face could not be verified in stored image, proceeding with exit logging');
-          showGuardWarning(
-            'Entrance Face Verification Issue', 
-            'The entrance face image could not be verified. Exit will be logged without face verification. This may occur if the entrance image quality is low or corrupted.'
+          console.warn('Entrance face could not be verified in stored image, blocking exit logging');
+          showGuardError(
+            'Face Verification Error',
+            'Entrance face not detected/verified. Exit cannot be logged. Please re-do entrance scan with a clear face capture first.'
           );
+
+          return;
         } else {
           console.warn('Face verification service unavailable, proceeding with exit logging');
           showGuardWarning(
