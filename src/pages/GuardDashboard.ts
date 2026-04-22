@@ -1552,19 +1552,11 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
       return;
     }
 
-    // Get the default gate ID (you might want to make this configurable)
-    const { data: gates, error: gatesError } = await supabase
-      .from('gates')
-      .select('id')
-      .eq('gate_type', 'both')
-      .limit(1);
-
-    if (gatesError || !gates || gates.length === 0) {
-      showGuardError('Gate Error', 'No suitable gate found for scanning.');
+    const gateId = await getAssignedGateId(user.id);
+    if (!gateId) {
+      showGuardError('Gate Error', 'No gate assignment found. Please set your assigned gate first.');
       return;
     }
-
-    const gateId = gates[0].id;
 
     // Process face image for storage (compress and encrypt)
     const { processFaceImageForStorage } = await import('../utils/imageCompression');
@@ -1882,6 +1874,26 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
   } catch (error) {
     console.error('Error in logGuardActionWithFaceImage:', error);
     showGuardError('Error', `Error logging ${action} with face image.`);
+  }
+}
+
+async function getAssignedGateId(guardUserId: string): Promise<string | null> {
+  try {
+    const { data, error } = await supabase.rpc('get_assigned_gate_for_guard', {
+      p_guard_user_id: guardUserId,
+      p_requested_by: guardUserId
+    });
+
+    if (error) {
+      console.error('Error getting assigned gate:', error);
+      return null;
+    }
+
+    if (!data || data.length === 0) return null;
+    return data[0].gate_id || null;
+  } catch (error) {
+    console.error('Unexpected error getting assigned gate:', error);
+    return null;
   }
 }
 

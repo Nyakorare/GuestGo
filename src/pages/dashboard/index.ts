@@ -184,6 +184,7 @@ export function DashboardPage() {
         const gatesTab = document.getElementById('gatesTab');
         const feedbackTab = document.getElementById('feedbackTab');
         const aiStatusTab = document.getElementById('aiStatusTab');
+        const guardGateAssignmentsTab = document.getElementById('guardGateAssignmentsTab');
         const visitorSettingsTab = document.getElementById('visitorSettingsTab');
     const placesContent = document.getElementById('placesContent');
     const accountsContent = document.getElementById('accountsContent');
@@ -191,6 +192,7 @@ export function DashboardPage() {
     const gatesContent = document.getElementById('gatesContent');
     const feedbackContent = document.getElementById('feedbackContent');
     const aiStatusContent = document.getElementById('aiStatusContent');
+    const guardGateAssignmentsContent = document.getElementById('guardGateAssignmentsContent');
     const visitorSettingsContent = document.getElementById('visitorSettingsContent');
 
         if (roleData.role === 'log') {
@@ -204,6 +206,7 @@ export function DashboardPage() {
           if (gatesTab) gatesTab.classList.add('hidden');
           if (feedbackTab) feedbackTab.classList.add('hidden');
           if (guardDashboardTab) guardDashboardTab.classList.add('hidden');
+          if (guardGateAssignmentsTab) guardGateAssignmentsTab.classList.add('hidden');
           if (aiStatusTab) aiStatusTab.classList.add('hidden');
           if (visitorSettingsTab) visitorSettingsTab.classList.add('hidden');
           if (placesContent) placesContent.classList.add('hidden');
@@ -212,6 +215,7 @@ export function DashboardPage() {
           if (gatesContent) gatesContent.classList.add('hidden');
           if (feedbackContent) feedbackContent.classList.add('hidden');
           if (aiStatusContent) aiStatusContent.classList.add('hidden');
+          if (guardGateAssignmentsContent) guardGateAssignmentsContent.classList.add('hidden');
           if (visitorSettingsContent) visitorSettingsContent.classList.add('hidden');
           
           // Show refresh all button for log role
@@ -240,6 +244,7 @@ export function DashboardPage() {
           if (gatesTab) gatesTab.classList.remove('hidden');
           if (feedbackTab) feedbackTab.classList.remove('hidden');
           if (guardDashboardTab) guardDashboardTab.classList.add('hidden');
+          if (guardGateAssignmentsTab) guardGateAssignmentsTab.classList.add('hidden');
           if (aiStatusTab) aiStatusTab.classList.remove('hidden');
           if (visitorSettingsTab) visitorSettingsTab.classList.remove('hidden');
           if (placesContent) placesContent.classList.remove('hidden');
@@ -248,6 +253,7 @@ export function DashboardPage() {
           if (gatesContent) gatesContent.classList.add('hidden');
           if (feedbackContent) feedbackContent.classList.add('hidden');
           if (aiStatusContent) aiStatusContent.classList.add('hidden');
+          if (guardGateAssignmentsContent) guardGateAssignmentsContent.classList.add('hidden');
           if (visitorSettingsContent) visitorSettingsContent.classList.add('hidden');
           
           // Hide refresh all button for admin role
@@ -272,6 +278,7 @@ export function DashboardPage() {
           if (gatesTab) gatesTab.classList.add('hidden');
           if (feedbackTab) feedbackTab.classList.add('hidden');
           if (guardDashboardTab) guardDashboardTab.classList.add('hidden');
+          if (guardGateAssignmentsTab) guardGateAssignmentsTab.classList.add('hidden');
           if (aiStatusTab) aiStatusTab.classList.add('hidden');
           if (visitorSettingsTab) visitorSettingsTab.classList.add('hidden');
           if (placesContent) placesContent.classList.add('hidden');
@@ -294,6 +301,7 @@ export function DashboardPage() {
           if (gatesTab) gatesTab.classList.add('hidden');
           if (feedbackTab) feedbackTab.classList.add('hidden');
           if (guardDashboardTab) guardDashboardTab.classList.remove('hidden');
+          if (guardGateAssignmentsTab) guardGateAssignmentsTab.classList.remove('hidden');
           if (aiStatusTab) aiStatusTab.classList.remove('hidden');
           if (visitorSettingsTab) visitorSettingsTab.classList.add('hidden');
           if (placesContent) placesContent.classList.add('hidden');
@@ -302,6 +310,7 @@ export function DashboardPage() {
           if (gatesContent) gatesContent.classList.add('hidden');
           if (feedbackContent) feedbackContent.classList.add('hidden');
           if (aiStatusContent) aiStatusContent.classList.add('hidden');
+          if (guardGateAssignmentsContent) guardGateAssignmentsContent.classList.add('hidden');
           if (visitorSettingsContent) visitorSettingsContent.classList.add('hidden');
           
           // Hide refresh all button for guard role
@@ -313,6 +322,7 @@ export function DashboardPage() {
           
           // Set Guard Dashboard tab as active by default
           setTabActive(guardDashboardTab);
+          setTabInactive(guardGateAssignmentsTab);
           setTabInactive(aiStatusTab);
           
           // Setup admin tab event listeners (needed for AI Status tab)
@@ -330,6 +340,7 @@ export function DashboardPage() {
           if (gatesTab) gatesTab.classList.add('hidden');
           if (feedbackTab) feedbackTab.classList.add('hidden');
           if (guardDashboardTab) guardDashboardTab.classList.add('hidden');
+          if (guardGateAssignmentsTab) guardGateAssignmentsTab.classList.add('hidden');
           if (aiStatusTab) aiStatusTab.classList.add('hidden');
           if (visitorSettingsTab) visitorSettingsTab.classList.add('hidden');
           if (placesContent) placesContent.classList.add('hidden');
@@ -356,6 +367,7 @@ export function DashboardPage() {
           if (gatesTab) gatesTab.classList.add('hidden');
           if (feedbackTab) feedbackTab.classList.add('hidden');
           if (guardDashboardTab) guardDashboardTab.classList.add('hidden');
+          if (guardGateAssignmentsTab) guardGateAssignmentsTab.classList.add('hidden');
           if (aiStatusTab) aiStatusTab.classList.add('hidden');
           if (visitorSettingsTab) visitorSettingsTab.classList.add('hidden');
           if (placesContent) placesContent.classList.add('hidden');
@@ -578,6 +590,12 @@ export function DashboardPage() {
                 class="hidden w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
               >
                 Guard Dashboard
+              </button>
+              <button
+                id="guardGateAssignmentsTab"
+                class="hidden w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+              >
+                Gate Settings
               </button>
               <button 
                 id="aiStatusTab"
@@ -895,6 +913,10 @@ export function DashboardPage() {
 
       <div id="gatesContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
         <!-- Gates Management Content will be loaded here -->
+      </div>
+
+      <div id="guardGateAssignmentsContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
+        <!-- Guard Gate Assignment Content will be loaded here -->
       </div>
 
       <!-- Feedback Content -->
@@ -3953,6 +3975,17 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
           return `<div><span class="font-medium">Gate Deleted:</span> <span class="font-semibold text-red-600">${parsedDetails.gate_name || 'Unknown Gate'}</span></div>
                   <div><span class="font-medium">Deleted:</span> ${parsedDetails.deleted_at ? new Date(parsedDetails.deleted_at).toLocaleString() : 'Unknown time'}</div>`;
         }
+
+        if (parsedDetails.update_type === 'guard_assignment') {
+          const oldGuard = parsedDetails.old_guard_name || 'Unassigned';
+          const newGuard = parsedDetails.new_guard_name || 'Unassigned';
+          let detailsHtml = `<div><span class="font-medium">Gate:</span> <span class="font-semibold">${parsedDetails.gate_name || 'Unknown Gate'}</span></div>`;
+          detailsHtml += `<div><span class="font-medium">Guard Assignment:</span> <span class="text-red-600 dark:text-red-400">${oldGuard}</span> <span class="text-gray-500">→</span> <span class="text-green-600 dark:text-green-400">${newGuard}</span></div>`;
+          if (parsedDetails.updated_at) {
+            detailsHtml += `<div><span class="font-medium">Updated:</span> ${new Date(parsedDetails.updated_at).toLocaleString()}</div>`;
+          }
+          return detailsHtml;
+        }
         
         // Regular gate update
         const changes = [];
@@ -6148,12 +6181,14 @@ function setupAdminTabEventListeners() {
   const accountsTab = document.getElementById('accountsTab');
   const gatesTab = document.getElementById('gatesTab');
   const feedbackTab = document.getElementById('feedbackTab');
+  const guardGateAssignmentsTab = document.getElementById('guardGateAssignmentsTab');
   const aiStatusTab = document.getElementById('aiStatusTab');
   const visitorSettingsTab = document.getElementById('visitorSettingsTab');
   const placesContent = document.getElementById('placesContent');
   const accountsContent = document.getElementById('accountsContent');
   const gatesContent = document.getElementById('gatesContent');
   const feedbackContent = document.getElementById('feedbackContent');
+  const guardGateAssignmentsContent = document.getElementById('guardGateAssignmentsContent');
   const aiStatusContent = document.getElementById('aiStatusContent');
   const visitorSettingsContent = document.getElementById('visitorSettingsContent');
 
@@ -6163,12 +6198,14 @@ function setupAdminTabEventListeners() {
     setTabInactive(accountsTab);
     setTabInactive(gatesTab);
     setTabInactive(feedbackTab);
+    setTabInactive(guardGateAssignmentsTab);
     setTabInactive(aiStatusTab);
     setTabInactive(visitorSettingsTab);
     placesContent?.classList.remove('hidden');
     accountsContent?.classList.add('hidden');
     gatesContent?.classList.add('hidden');
     feedbackContent?.classList.add('hidden');
+    guardGateAssignmentsContent?.classList.add('hidden');
     aiStatusContent?.classList.add('hidden');
     visitorSettingsContent?.classList.add('hidden');
     // Clear gates content when switching away
@@ -6196,12 +6233,14 @@ function setupAdminTabEventListeners() {
     setTabInactive(placesTab);
     setTabInactive(gatesTab);
     setTabInactive(feedbackTab);
+    setTabInactive(guardGateAssignmentsTab);
     setTabInactive(aiStatusTab);
     setTabInactive(visitorSettingsTab);
     accountsContent?.classList.remove('hidden');
     placesContent?.classList.add('hidden');
     gatesContent?.classList.add('hidden');
     feedbackContent?.classList.add('hidden');
+    guardGateAssignmentsContent?.classList.add('hidden');
     aiStatusContent?.classList.add('hidden');
     // Clear gates content when switching away
     if (gatesContent) {
@@ -6228,12 +6267,14 @@ function setupAdminTabEventListeners() {
     setTabInactive(placesTab);
     setTabInactive(accountsTab);
     setTabInactive(feedbackTab);
+    setTabInactive(guardGateAssignmentsTab);
     setTabInactive(aiStatusTab);
     setTabInactive(visitorSettingsTab);
     gatesContent?.classList.remove('hidden');
     placesContent?.classList.add('hidden');
     accountsContent?.classList.add('hidden');
     feedbackContent?.classList.add('hidden');
+    guardGateAssignmentsContent?.classList.add('hidden');
     aiStatusContent?.classList.add('hidden');
     visitorSettingsContent?.classList.add('hidden');
     // Clear feedback content when switching away
@@ -6262,12 +6303,14 @@ function setupAdminTabEventListeners() {
     setTabInactive(placesTab);
     setTabInactive(accountsTab);
     setTabInactive(gatesTab);
+    setTabInactive(guardGateAssignmentsTab);
     setTabInactive(aiStatusTab);
     setTabInactive(visitorSettingsTab);
     feedbackContent?.classList.remove('hidden');
     placesContent?.classList.add('hidden');
     accountsContent?.classList.add('hidden');
     gatesContent?.classList.add('hidden');
+    guardGateAssignmentsContent?.classList.add('hidden');
     aiStatusContent?.classList.add('hidden');
     // Clear gates content when switching away
     if (gatesContent) {
@@ -6293,10 +6336,12 @@ function setupAdminTabEventListeners() {
   const guardDashboardTab = document.getElementById('guardDashboardTab');
   guardDashboardTab?.addEventListener('click', () => {
     setTabActive(guardDashboardTab);
+    setTabInactive(guardGateAssignmentsTab);
     setTabInactive(aiStatusTab);
     // Show guard content and hide AI Status content
     const guardContent = document.getElementById('guardContent');
     if (guardContent) guardContent.classList.remove('hidden');
+    guardGateAssignmentsContent?.classList.add('hidden');
     if (aiStatusContent) aiStatusContent.classList.add('hidden');
     // Clear AI Status content when switching away
     if (aiStatusContent) {
@@ -6308,6 +6353,29 @@ function setupAdminTabEventListeners() {
     }
   });
 
+  // Guard Gate Assignment tab event listener
+  guardGateAssignmentsTab?.addEventListener('click', () => {
+    setTabActive(guardGateAssignmentsTab);
+    setTabInactive(guardDashboardTab);
+    setTabInactive(aiStatusTab);
+    const guardContent = document.getElementById('guardContent');
+    if (guardContent) guardContent.classList.add('hidden');
+    guardGateAssignmentsContent?.classList.remove('hidden');
+    if (aiStatusContent) aiStatusContent.classList.add('hidden');
+    if (aiStatusContent) {
+      aiStatusContent.innerHTML = '';
+    }
+    if (visitorSettingsContent) {
+      visitorSettingsContent.innerHTML = '';
+    }
+    import('./GuardGateAssignments').then(module => {
+      if (guardGateAssignmentsContent) {
+        guardGateAssignmentsContent.innerHTML = module.renderGuardGateAssignments();
+      }
+      module.setupGuardGateAssignmentsEventListeners();
+    });
+  });
+
   // AI Status tab event listener
   aiStatusTab?.addEventListener('click', () => {
     setTabActive(aiStatusTab);
@@ -6315,6 +6383,7 @@ function setupAdminTabEventListeners() {
     setTabInactive(accountsTab);
     setTabInactive(gatesTab);
     setTabInactive(feedbackTab);
+    setTabInactive(guardGateAssignmentsTab);
     setTabInactive(visitorSettingsTab);
     guardDashboardTab?.classList.remove('bg-blue-600', 'text-white');
     guardDashboardTab?.classList.add('bg-gray-100', 'text-gray-700');
@@ -6326,6 +6395,7 @@ function setupAdminTabEventListeners() {
     // Hide guard content when switching to AI Status
     const guardContent = document.getElementById('guardContent');
     if (guardContent) guardContent.classList.add('hidden');
+    guardGateAssignmentsContent?.classList.add('hidden');
     // Clear gates content when switching away
     if (gatesContent) {
       gatesContent.innerHTML = '';
@@ -6353,6 +6423,7 @@ function setupAdminTabEventListeners() {
     setTabInactive(accountsTab);
     setTabInactive(gatesTab);
     setTabInactive(feedbackTab);
+    setTabInactive(guardGateAssignmentsTab);
     setTabInactive(aiStatusTab);
     visitorSettingsContent?.classList.remove('hidden');
     placesContent?.classList.add('hidden');
@@ -6360,6 +6431,7 @@ function setupAdminTabEventListeners() {
     gatesContent?.classList.add('hidden');
     feedbackContent?.classList.add('hidden');
     aiStatusContent?.classList.add('hidden');
+    guardGateAssignmentsContent?.classList.add('hidden');
     // Clear gates content when switching away
     if (gatesContent) {
       gatesContent.innerHTML = '';

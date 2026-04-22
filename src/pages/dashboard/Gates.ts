@@ -18,8 +18,24 @@ interface Gate {
   updater_name?: string;
 }
 
+interface GuardAccount {
+  user_id: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+}
+
+interface GateAssignment {
+  gate_id: string;
+  guard_user_id: string | null;
+  guard_name?: string | null;
+  guard_email?: string | null;
+}
+
 let allGates: Gate[] = [];
 let filteredGates: Gate[] = [];
+let allGuards: GuardAccount[] = [];
+let gateAssignments: Record<string, GateAssignment | undefined> = {};
 
 export function renderGates(): string {
   return `
@@ -96,12 +112,51 @@ export async function loadGates(): Promise<void> {
     }
 
     allGates = gates || [];
+    await Promise.all([loadGuards(), loadGateAssignments(user.id)]);
     filteredGates = [...allGates];
     renderGatesList();
   } catch (error) {
     console.error('Error loading gates:', error);
     showNotification('Failed to load gates. Please try again.', 'error');
   }
+}
+
+async function loadGuards(): Promise<void> {
+  const { data, error } = await supabase
+    .from('user_roles')
+    .select('user_id, first_name, last_name, email')
+    .eq('role', 'guard')
+    .order('first_name', { ascending: true });
+
+  if (error) {
+    console.error('Error loading guards:', error);
+    allGuards = [];
+    return;
+  }
+
+  allGuards = data || [];
+}
+
+async function loadGateAssignments(userId: string): Promise<void> {
+  const { data, error } = await supabase.rpc('get_gate_guard_assignments', {
+    p_user_id: userId
+  });
+
+  if (error) {
+    console.error('Error loading gate assignments:', error);
+    gateAssignments = {};
+    return;
+  }
+
+  gateAssignments = (data || []).reduce((acc: Record<string, GateAssignment>, item: GateAssignment) => {
+    acc[item.gate_id] = item;
+    return acc;
+  }, {});
+}
+
+function getGuardDisplayName(guard: GuardAccount): string {
+  const fullName = `${guard.first_name || ''} ${guard.last_name || ''}`.trim();
+  return fullName || guard.email || 'Unknown Guard';
 }
 
 function renderGatesList(): void {
@@ -123,7 +178,13 @@ function renderGatesList(): void {
     return;
   }
 
-  gatesListElement.innerHTML = filteredGates.map(gate => `
+  gatesListElement.innerHTML = filteredGates.map(gate => {
+    const assignment = gateAssignments[gate.id];
+    const assignedGuardText = assignment?.guard_user_id
+      ? (assignment.guard_name || assignment.guard_email || 'Assigned Guard')
+      : 'Unassigned';
+
+    return `
     <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-4 border border-gray-200 dark:border-gray-700 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 hover:border-gray-300 dark:hover:border-gray-600 group">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div class="flex items-start gap-4 flex-1">
@@ -179,6 +240,7 @@ function renderGatesList(): void {
             <div class="flex flex-wrap gap-4 text-xs text-gray-500 dark:text-gray-400">
               <span>Created: ${new Date(gate.created_at).toLocaleDateString()}</span>
               ${gate.creator_name ? `<span>by ${gate.creator_name}</span>` : ''}
+              <span>Guard: ${assignedGuardText}</span>
               ${gate.updated_at !== gate.created_at ? `
                 <span>Updated: ${new Date(gate.updated_at).toLocaleDateString()}</span>
                 ${gate.updater_name ? `<span>by ${gate.updater_name}</span>` : ''}
@@ -212,6 +274,13 @@ function renderGatesList(): void {
           >
             Edit
           </button>
+
+          <button
+            onclick="window.gateActions.assignGuard('${gate.id}')"
+            class="px-3 py-1 text-sm bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-md font-medium transition-colors dark:bg-indigo-900 dark:text-indigo-300 dark:hover:bg-indigo-800"
+          >
+            Assign Guard
+          </button>
           
           <button 
             onclick="window.gateActions.viewGateDetails('${gate.id}')"
@@ -229,7 +298,7 @@ function renderGatesList(): void {
         </div>
       </div>
     </div>
-  `).join('');
+  `}).join('');
 }
 
 function applySearchAndFilter(): void {
@@ -360,8 +429,132 @@ export const gateActions = {
     }
 
     showChangeImageModal(gate);
+  },
+
+  assignGuard(gateId: string): void {
+    const gate = allGates.find(g => g.id === gateId);
+    if (!gate) {
+      showNotification('Gate not found', 'error');
+      return;
+    }
+
+    showAssignGuardModal(gate);
   }
 };
+
+function showAssignGuardModal(gate: Gate): void {
+  const currentAssignment = gateAssignments[gate.id];
+  const assignedGuardIds = new Set(
+    Object.values(gateAssignments)
+      .map((assignment) => assignment?.guard_user_id)
+      .filter((guardId): guardId is string => Boolean(guardId))
+  );
+
+  const guardOptions = [
+    '<option value="">Unassigned</option>',
+    ...allGuards.map(guard => {
+      const isAssignedElsewhere =
+        assignedGuardIds.has(guard.user_id) &&
+        currentAssignment?.guard_user_id !== guard.user_id;
+
+      if (isAssignedElsewhere) {
+        return '';
+      }
+
+      const selected = currentAssignment?.guard_user_id === guard.user_id ? 'selected' : '';
+      return `<option value="${guard.user_id}" ${selected}>${getGuardDisplayName(guard)}</option>`;
+    })
+  ].join('');
+
+  const modalHtml = `
+    <div id="assignGuardModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+        <div class="p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Assign Guard</h3>
+            <button onclick="closeModal('assignGuardModal')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+
+          <form id="assignGuardForm" class="space-y-4">
+            <input type="hidden" id="assignGuardGateId" value="${gate.id}">
+            <div class="text-sm text-gray-700 dark:text-gray-300">
+              Gate: <span class="font-semibold">${gate.name}</span>
+            </div>
+            <div>
+              <label for="assignGuardSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Guard</label>
+              <select
+                id="assignGuardSelect"
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              >
+                ${guardOptions}
+              </select>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Changing assignment updates gate logs.</p>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+              <button
+                type="submit"
+                class="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+              >
+                Save Assignment
+              </button>
+              <button
+                type="button"
+                onclick="closeModal('assignGuardModal')"
+                class="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  setupAssignGuardForm();
+}
+
+function setupAssignGuardForm(): void {
+  const form = document.getElementById('assignGuardForm') as HTMLFormElement | null;
+  if (!form) return;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const gateId = (document.getElementById('assignGuardGateId') as HTMLInputElement).value;
+    const selectedGuardId = (document.getElementById('assignGuardSelect') as HTMLSelectElement).value || null;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const { error } = await supabase.rpc('assign_guard_to_gate', {
+        p_gate_id: gateId,
+        p_guard_user_id: selectedGuardId,
+        p_assigned_by: user.id
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      showNotification('Guard assignment saved successfully', 'success');
+      closeModal('assignGuardModal');
+      await loadGates();
+    } catch (error) {
+      console.error('Error assigning guard:', error);
+      showNotification('Failed to save guard assignment. Please try again.', 'error');
+    }
+  });
+}
 
 function showAddGateModal(): void {
   const modalHtml = `
