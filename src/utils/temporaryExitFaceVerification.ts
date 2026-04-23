@@ -3,38 +3,77 @@
 // It compares the current face to the entrance scan but does not save anything.
 
 import supabase from '../config/supabase';
-import { showErrorToast } from './toastNotification';
+import {
+  showVerificationError,
+  showVerificationSuccess,
+  showVerificationWarning
+} from './verificationResultNotification';
 
 /**
  * Retrieves the entrance face image for a visit
  */
 async function getEntranceFaceImage(visitId: string): Promise<string | null> {
   try {
-    // Get the entrance scan for this visit
+    // Anchor lookup to the exact scheduled visit entrance metadata first.
+    const { data: visitRow, error: visitError } = await supabase
+      .from('scheduled_visits')
+      .select('gate_entrance_scanned, gate_entrance_scanned_at, gate_entrance_scanned_by')
+      .eq('id', visitId)
+      .single();
+
+    if (visitError || !visitRow?.gate_entrance_scanned) {
+      console.error('Error retrieving visit entrance metadata:', visitError);
+      return null;
+    }
+
     const { data: entranceScans, error } = await supabase
       .from('gate_scans')
-      .select('face_image_data')
+      .select('face_image_data, scanned_at, scanned_by')
       .eq('visit_id', visitId)
       .eq('scan_type', 'entrance')
-      .order('scanned_at', { ascending: false })
-      .limit(1);
+      .not('face_image_data', 'is', null)
+      .order('scanned_at', { ascending: false });
 
     if (error || !entranceScans || entranceScans.length === 0) {
       console.error('Error retrieving entrance face image:', error);
       return null;
     }
 
-    const storedImageData = entranceScans[0].face_image_data;
-    if (!storedImageData) {
-      return null;
-    }
-
     // Decrypt the image data if it's encrypted
     // The stored image is already at 400x400 for verification purposes, so use it directly
     const { processFaceImageForDisplay } = await import('./imageCompression');
-    const decryptedImage = processFaceImageForDisplay(storedImageData);
-    
-    return decryptedImage;
+
+    const entranceAt = visitRow.gate_entrance_scanned_at
+      ? new Date(visitRow.gate_entrance_scanned_at).getTime()
+      : null;
+    const entranceBy = visitRow.gate_entrance_scanned_by || null;
+
+    // Prefer exact guard match and nearest timestamp to the visit's entrance metadata.
+    const candidateScans = entranceBy
+      ? entranceScans.filter((scan) => scan.scanned_by === entranceBy)
+      : entranceScans;
+
+    const orderedCandidates = [...candidateScans].sort((a, b) => {
+      if (!entranceAt) return 0;
+      const aTime = new Date(a.scanned_at).getTime();
+      const bTime = new Date(b.scanned_at).getTime();
+      return Math.abs(aTime - entranceAt) - Math.abs(bTime - entranceAt);
+    });
+
+    for (const scan of orderedCandidates) {
+      const storedImageData = scan.face_image_data;
+      if (!storedImageData || typeof storedImageData !== 'string') {
+        continue;
+      }
+
+      const decryptedImage = processFaceImageForDisplay(storedImageData);
+      if (decryptedImage && decryptedImage.startsWith('data:image/')) {
+        return decryptedImage;
+      }
+    }
+
+    console.warn('No valid entrance face image data URL found for the exact visit entrance scan.');
+    return null;
   } catch (error) {
     console.error('Error in getEntranceFaceImage:', error);
     return null;
@@ -229,6 +268,7 @@ export async function verifyTemporaryExitFace(visitId: string): Promise<{ succes
     const entranceFaceImage = await getEntranceFaceImage(visitId);
     
     if (!entranceFaceImage) {
+      showVerificationError('Face verification failed: no saved entrance face for this scanned visit QR.');
       return {
         success: false,
         error: 'Unable to retrieve entrance face image for verification. Please ensure the entrance was scanned with face detection.'
@@ -240,6 +280,7 @@ export async function verifyTemporaryExitFace(visitId: string): Promise<{ succes
     const faceResult = await openFaceDetectionModal();
     
     if (!faceResult || !faceResult.success || !faceResult.croppedImageDataUrl) {
+      showVerificationWarning('Face verification cancelled or no face detected. Please try again.');
       return {
         success: false,
         error: 'Face detection was not completed. Please try again.'
@@ -265,6 +306,7 @@ export async function verifyTemporaryExitFace(visitId: string): Promise<{ succes
 
     // If service is unavailable, block temporary exit (unlike exit which allows it)
     if (verificationResult.serviceUnavailable) {
+      showVerificationError('Face verification service is unavailable. Temporary exit is blocked.');
       return {
         success: false,
         error: 'Face verification service is not available. Please ensure the Python AI service is running.'
@@ -274,6 +316,7 @@ export async function verifyTemporaryExitFace(visitId: string): Promise<{ succes
     // Check for other errors
     if (verificationResult.error) {
       console.error('Temporary Exit Face Verification error:', verificationResult.error);
+      showVerificationError(`Face verification error: ${verificationResult.error}.`);
       return {
         success: false,
         error: `${verificationResult.error}. Please retake the photo.`
@@ -285,11 +328,7 @@ export async function verifyTemporaryExitFace(visitId: string): Promise<{ succes
       const similarityPercent = (verificationResult.similarity * 100).toFixed(1);
       console.warn(`Temporary Exit Face Verification failed: similarity ${similarityPercent}%`);
       
-      // Show toast notification
-      showErrorToast(
-        `Face verification failed: Face does not match entrance picture. Similarity: ${similarityPercent}%. Please try again.`,
-        5000
-      );
+      showVerificationWarning(`Face verification failed: ${similarityPercent}% similarity. Please retake the photo.`);
       
       return {
         success: false,
@@ -300,6 +339,7 @@ export async function verifyTemporaryExitFace(visitId: string): Promise<{ succes
     // Faces match - allow temporary exit
     const similarityPercent = (verificationResult.similarity * 100).toFixed(1);
     console.log(`Temporary Exit Face Verification successful. Similarity: ${similarityPercent}%`);
+    showVerificationSuccess(`Face verified successfully (${similarityPercent}% match).`);
     
     return {
       success: true

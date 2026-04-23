@@ -1,7 +1,11 @@
 import supabase from '../config/supabase';
 import { type VisitQRData } from '../utils/qrCode';
 import jsQR from 'jsqr';
-import { showErrorToast } from '../utils/toastNotification';
+import {
+  showVerificationError,
+  showVerificationSuccess,
+  showVerificationWarning
+} from '../utils/verificationResultNotification';
 
 export function GuardDashboardPage() {
   return `
@@ -984,8 +988,7 @@ function showGuardVisitConfirmationModal(visitData: VisitQRData) {
       }
       
       if (!verificationResult.success) {
-        // Face verification failed
-        showGuardError('Face Verification Failed', verificationResult.error || 'Face verification failed. Please try again.');
+        // Face verification failed; popup notification is already shown by verifier.
         return;
       }
 
@@ -1298,17 +1301,25 @@ async function sendVisitCompletionEmailForGuard(visitId: string): Promise<void> 
 // Function to retrieve entrance face image for verification
 async function getEntranceFaceImage(visitId: string): Promise<string | null> {
   try {
-    // Get recent entrance scans for this visit that contain face image payload.
-    // Some entrance scans may exist without usable face data, so we select a small
-    // batch and return the first valid decrypted data URL.
+    // Anchor lookup to the exact scheduled visit entrance metadata.
+    const { data: visitRow, error: visitError } = await supabase
+      .from('scheduled_visits')
+      .select('gate_entrance_scanned, gate_entrance_scanned_at, gate_entrance_scanned_by')
+      .eq('id', visitId)
+      .single();
+
+    if (visitError || !visitRow?.gate_entrance_scanned) {
+      console.error('Error retrieving visit entrance metadata:', visitError);
+      return null;
+    }
+
     const { data: entranceScans, error } = await supabase
       .from('gate_scans')
-      .select('face_image_data, scanned_at')
+      .select('face_image_data, scanned_at, scanned_by')
       .eq('visit_id', visitId)
       .eq('scan_type', 'entrance')
       .not('face_image_data', 'is', null)
-      .order('scanned_at', { ascending: false })
-      .limit(5);
+      .order('scanned_at', { ascending: false });
 
     if (error || !entranceScans || entranceScans.length === 0) {
       console.error('Error retrieving entrance face image:', error);
@@ -1319,7 +1330,24 @@ async function getEntranceFaceImage(visitId: string): Promise<string | null> {
     // The stored image is already at 400x400 for verification purposes, so use it directly
     const { processFaceImageForDisplay } = await import('../utils/imageCompression');
 
-    for (const scan of entranceScans) {
+    const entranceAt = visitRow.gate_entrance_scanned_at
+      ? new Date(visitRow.gate_entrance_scanned_at).getTime()
+      : null;
+    const entranceBy = visitRow.gate_entrance_scanned_by || null;
+
+    // Prefer exact guard match and nearest timestamp to the entrance marker.
+    const candidateScans = entranceBy
+      ? entranceScans.filter((scan) => scan.scanned_by === entranceBy)
+      : entranceScans;
+
+    const orderedCandidates = [...candidateScans].sort((a, b) => {
+      if (!entranceAt) return 0;
+      const aTime = new Date(a.scanned_at).getTime();
+      const bTime = new Date(b.scanned_at).getTime();
+      return Math.abs(aTime - entranceAt) - Math.abs(bTime - entranceAt);
+    });
+
+    for (const scan of orderedCandidates) {
       const storedImageData = scan.face_image_data;
       if (!storedImageData || typeof storedImageData !== 'string') {
         continue;
@@ -1331,7 +1359,7 @@ async function getEntranceFaceImage(visitId: string): Promise<string | null> {
       }
     }
 
-    console.warn('No valid entrance face image data URL found among recent entrance scans.');
+    console.warn('No valid entrance face image data URL found for the exact visit entrance scan.');
     return null;
   } catch (error) {
     console.error('Error in getEntranceFaceImage:', error);
@@ -1668,7 +1696,7 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
       const entranceFaceImage = await getEntranceFaceImage(visitData.visitId);
       
       if (!entranceFaceImage) {
-        showGuardError('Face Verification Error', 'Unable to retrieve entrance face image for verification. Please ensure the entrance was scanned with face detection.');
+        showVerificationError('Face verification failed: no saved entrance face for this scanned visit QR.');
         return;
       }
 
@@ -1680,13 +1708,13 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
       // Validate both images are in correct format before verification
       if (!entranceFaceImage || !entranceFaceImage.startsWith('data:image/')) {
         console.error('Invalid entrance face image format:', entranceFaceImage?.substring(0, 50));
-        showGuardError('Face Verification Error', 'Entrance face image is in invalid format. Please ensure the entrance was scanned with face detection.');
+        showVerificationError('Face verification failed: saved entrance face format is invalid.');
         return;
       }
 
       if (!compressedExitImage || !compressedExitImage.startsWith('data:image/')) {
         console.error('Invalid exit face image format:', compressedExitImage?.substring(0, 50));
-        showGuardError('Face Verification Error', 'Exit face image is in invalid format. Please retake the photo.');
+        showVerificationError('Face verification failed: current exit face format is invalid. Please retake.');
         return;
       }
 
@@ -1704,7 +1732,7 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
         console.log('Face verification result:', verificationResult);
       } catch (verifyError) {
         console.error('Error during face verification:', verifyError);
-        showGuardWarning('Face Verification Unavailable', 'Verification failed, but exit will still be logged and face data will be saved.');
+        showVerificationWarning('Face verification request failed. Exit will still be logged with saved face data.');
         verificationResult = { match: false, similarity: 0, error: 'Verification request failed', serviceUnavailable: true };
       }
 
@@ -1715,32 +1743,27 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
         const isEntranceFaceIssue = verificationResult.error?.includes('Entrance face could not be verified');
         if (isEntranceFaceIssue) {
           console.warn('Entrance face could not be verified in stored image, proceeding with exit logging');
-          showGuardWarning(
-            'Entrance Face Verification Issue',
-            'Entrance face could not be verified, but exit will still be logged and face data will be saved.'
-          );
+          showVerificationWarning('Saved entrance face could not be verified. Exit will still be logged.');
         } else {
           console.warn('Face verification service unavailable, proceeding with exit logging');
-          showGuardWarning(
-            'Face Verification Service Unavailable', 
-            'The face verification service is not available. Exit will be logged without verification. Please ensure the Python AI service is running for future scans.'
-          );
+          showVerificationWarning('Face verification service unavailable. Exit will be logged without verification.');
         }
         // Continue to log exit even though verification failed - leave similarity as null
         // This will trigger the fallback success message
       } else if (verificationResult.error) {
         // For other verification errors, proceed with fallback logging.
         console.error('Face verification error:', verificationResult.error);
-        showGuardWarning('Face Verification Error', `${verificationResult.error}. Exit will still be logged and face data will be saved.`);
+        showVerificationWarning(`Face verification error: ${verificationResult.error}. Exit will still be logged.`);
       } else if (!verificationResult.match) {
         // Faces don't match - proceed with fallback logging.
         const similarityPercent = (verificationResult.similarity * 100).toFixed(1);
         console.warn(`Face verification failed: similarity ${similarityPercent}%`);
-        showGuardWarning('Face Verification Failed', `Face does not match entrance picture (${similarityPercent}% similarity). Exit will still be logged.`);
+        showVerificationWarning(`Face mismatch (${similarityPercent}%). Exit will still be logged.`);
       } else {
         // Faces match, proceed with exit logging
         exitSimilarityPercent = (verificationResult.similarity * 100).toFixed(1);
         console.log(`Face verification successful. Similarity: ${exitSimilarityPercent}%`);
+        showVerificationSuccess(`Face verified successfully (${exitSimilarityPercent}% match).`);
       }
       
       // For guards, we don't use the visitor gate scanning functions
@@ -1985,35 +2008,6 @@ function showGuardSuccess(message: string) {
     setTimeout(() => {
       messageSection.classList.add('hidden');
     }, 3000);
-  }
-}
-
-function showGuardWarning(title: string, message: string) {
-  const messageSection = document.getElementById('guardMessageSection');
-  if (messageSection) {
-    messageSection.classList.remove('hidden');
-    messageSection.innerHTML = `
-      <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-        <div class="flex">
-          <div class="flex-shrink-0">
-            <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-            </svg>
-          </div>
-          <div class="ml-3">
-            <h3 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">${title}</h3>
-            <div class="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
-              <p>${message}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-    
-    // Hide message after 5 seconds
-    setTimeout(() => {
-      messageSection.classList.add('hidden');
-    }, 5000);
   }
 }
 
