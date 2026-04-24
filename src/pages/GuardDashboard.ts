@@ -12,7 +12,7 @@ export function GuardDashboardPage() {
     <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
       <!-- Header -->
       <div class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div class="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8">
+        <div class="w-full px-2 sm:px-4 md:px-6 lg:px-8">
           <div class="flex flex-col sm:flex-row justify-between items-center py-4 space-y-2 sm:space-y-0">
             <div class="flex items-center w-full sm:w-auto justify-between sm:justify-start">
               <button 
@@ -41,111 +41,113 @@ export function GuardDashboardPage() {
       </div>
 
       <!-- Main Content -->
-      <div class="max-w-4xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-8">
-        <!-- Scanner Section -->
-        <div id="scannerSection" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-6 mb-6">
-          <div class="text-center mb-6">
-            <h2 class="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-2">Scan Visit QR Code</h2>
-            <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">Point your camera at a scheduled visit QR code to log entrance or exit</p>
-          </div>
-          
-          <!-- Camera Feed -->
-          <div class="relative">
-            <video 
-              id="guardVideo" 
-              class="w-full max-w-xs sm:max-w-md md:max-w-lg mx-auto rounded-lg border-2 border-gray-300 dark:border-gray-600"
-              autoplay
-              muted
-              playsinline
-            ></video>
-            <canvas id="guardCanvas" class="hidden"></canvas>
-            
-            <!-- Scanner Overlay -->
-            <div id="guardScannerOverlay" class="absolute inset-0 max-w-xs sm:max-w-md md:max-w-lg mx-auto flex items-center justify-center pointer-events-none hidden">
-              <div class="w-48 h-48 sm:w-64 sm:h-64 border-2 border-blue-500 rounded-lg relative">
-                <div class="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-blue-500"></div>
-                <div class="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-blue-500"></div>
-                <div class="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-blue-500"></div>
-                <div class="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-blue-500"></div>
-                
-                <!-- Scanning Animation -->
-                <div id="guardScanningLine" class="absolute top-0 left-0 w-full h-1 bg-blue-500 animate-pulse"></div>
-                
-                <!-- Focus Indicator -->
-                <div id="guardFocusIndicator" class="absolute inset-0 border-2 border-green-500 rounded-lg opacity-0 transition-opacity duration-300"></div>
-              </div>
+      <div class="w-full px-0 sm:px-0 md:px-0 lg:px-0 py-0 sm:py-2">
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-4 mb-6">
+          <!-- Scanner Section -->
+          <div id="scannerSection" class="xl:col-span-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-6">
+            <div class="text-center mb-6">
+              <h2 class="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-2">Scan Visit QR Code</h2>
+              <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">Point your camera at a scheduled visit QR code to log entrance or exit</p>
             </div>
             
-            <!-- Live Feedback -->
-            <div id="guardLiveFeedback" class="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 text-white px-2 py-1 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium max-w-xs w-full sm:max-w-md">
-              <div class="flex items-center space-x-2">
-                <div id="guardFeedbackIcon" class="w-4 h-4">
-                  <svg class="w-full h-full" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
-                  </svg>
+            <!-- Camera Feed -->
+            <div class="relative">
+              <video 
+                id="guardVideo" 
+                class="w-full max-w-2xl mx-auto rounded-lg border-2 border-gray-300 dark:border-gray-600"
+                autoplay
+                muted
+                playsinline
+              ></video>
+              <canvas id="guardCanvas" class="hidden"></canvas>
+              
+              <!-- Scanner Overlay -->
+              <div id="guardScannerOverlay" class="absolute inset-0 max-w-2xl mx-auto flex items-center justify-center pointer-events-none hidden">
+                <div class="w-48 h-48 sm:w-64 sm:h-64 border-2 border-blue-500 rounded-lg relative">
+                  <div class="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-blue-500"></div>
+                  <div class="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-blue-500"></div>
+                  <div class="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-blue-500"></div>
+                  <div class="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-blue-500"></div>
+                  
+                  <!-- Scanning Animation -->
+                  <div id="guardScanningLine" class="absolute top-0 left-0 w-full h-1 bg-blue-500 animate-pulse"></div>
+                  
+                  <!-- Focus Indicator -->
+                  <div id="guardFocusIndicator" class="absolute inset-0 border-2 border-green-500 rounded-lg opacity-0 transition-opacity duration-300"></div>
                 </div>
-                <span id="guardFeedbackText">Position QR code in frame</span>
+              </div>
+              
+              <!-- Live Feedback -->
+              <div id="guardLiveFeedback" class="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 text-white px-2 py-1 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium max-w-xs w-full sm:max-w-md">
+                <div class="flex items-center space-x-2">
+                  <div id="guardFeedbackIcon" class="w-4 h-4">
+                    <svg class="w-full h-full" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+                    </svg>
+                  </div>
+                  <span id="guardFeedbackText">Position QR code in frame</span>
+                </div>
               </div>
             </div>
-          </div>
-          
-          <!-- Controls -->
-          <div class="flex flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-4 mt-6">
-            <button 
-              id="guardStartScanBtn"
-              class="w-full sm:w-auto px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200 font-medium"
-            >
-              Start Scanner
-            </button>
-            <button 
-              id="guardStopScanBtn"
-              class="w-full sm:w-auto px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors duration-200 font-medium hidden"
-            >
-              Stop Scanner
-            </button>
-            <button 
-              id="guardSwitchCameraBtn"
-              class="w-full sm:w-auto px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors duration-200 font-medium"
-            >
-              Switch Camera
-            </button>
-          </div>
-          
-          <!-- Status -->
-          <div id="guardScannerStatus" class="text-center mt-4">
-            <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Click "Start Scanner" to begin</p>
-            <div id="guardPerformanceIndicator" class="hidden mt-2">
-              <p class="text-xs text-blue-600 dark:text-blue-400">
-                Scan Rate: <span id="guardScanRate">0</span> FPS • 
-                Interval: <span id="guardScanInterval">100</span>ms
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Manual Visit ID Section -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-6 mb-6">
-          <div class="text-center mb-6">
-            <h2 class="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-2">Manual Visit ID Entry</h2>
-            <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">Enter a visit ID manually if QR scanning is not available</p>
-          </div>
-          
-          <div class="max-w-md mx-auto">
-            <div class="flex flex-col sm:flex-row gap-2">
-              <input 
-                type="text" 
-                id="manualVisitIdInput"
-                placeholder="Enter visit ID (e.g., 123e4567-e89b-12d3-a456-426614174000)"
-                class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white text-sm"
-              />
+            
+            <!-- Controls -->
+            <div class="flex flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-4 mt-6">
               <button 
-                id="manualVisitIdBtn"
-                class="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 font-medium"
+                id="guardStartScanBtn"
+                class="w-full sm:w-auto px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200 font-medium"
               >
-                Lookup Visit
+                Start Scanner
+              </button>
+              <button 
+                id="guardStopScanBtn"
+                class="w-full sm:w-auto px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors duration-200 font-medium hidden"
+              >
+                Stop Scanner
+              </button>
+              <button 
+                id="guardSwitchCameraBtn"
+                class="w-full sm:w-auto px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors duration-200 font-medium"
+              >
+                Switch Camera
               </button>
             </div>
-            <div id="manualVisitIdError" class="mt-2 text-sm text-red-600 dark:text-red-400 hidden"></div>
+            
+            <!-- Status -->
+            <div id="guardScannerStatus" class="text-center mt-4">
+              <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Click "Start Scanner" to begin</p>
+              <div id="guardPerformanceIndicator" class="hidden mt-2">
+                <p class="text-xs text-blue-600 dark:text-blue-400">
+                  Scan Rate: <span id="guardScanRate">0</span> FPS • 
+                  Interval: <span id="guardScanInterval">100</span>ms
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Manual Visit ID Section -->
+          <div class="xl:col-span-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-6 h-fit">
+            <div class="text-center mb-6">
+              <h2 class="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-2">Manual Visit ID Entry</h2>
+              <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">Enter a visit ID manually if QR scanning is not available</p>
+            </div>
+            
+            <div class="w-full">
+              <div class="flex flex-col gap-2">
+                <input 
+                  type="text" 
+                  id="manualVisitIdInput"
+                  placeholder="Enter visit ID (e.g., 123e4567-e89b-12d3-a456-426614174000)"
+                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white text-sm"
+                />
+                <button 
+                  id="manualVisitIdBtn"
+                  class="w-full px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 font-medium"
+                >
+                  Lookup Visit
+                </button>
+              </div>
+              <div id="manualVisitIdError" class="mt-2 text-sm text-red-600 dark:text-red-400 hidden"></div>
+            </div>
           </div>
         </div>
 
