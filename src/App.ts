@@ -194,7 +194,7 @@ export default function setupApp() {
               <a href="#/contact" class="nav-link-enhanced">Contact Us</a>
               <a href="#/track-schedule" class="nav-link-enhanced" id="track-schedule-link">Track Schedule</a>
               <a href="#/dashboard" class="nav-link-enhanced hidden" id="dashboard-link">Dashboard</a>
-              <a href="#/guard-dashboard" class="nav-link-enhanced hidden" id="guard-dashboard-link">Guard Dashboard</a>
+              <a href="#/guard-dashboard" class="nav-link-enhanced hidden" id="guard-dashboard-link">Scanner</a>
               <a href="#/qr-scanner" class="nav-link-enhanced hidden" id="qr-scanner-link">QR Scanner</a>
             </div>
 
@@ -271,7 +271,7 @@ export default function setupApp() {
               <a href="#/contact" class="block px-3 py-2.5 rounded-lg text-gray-800 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-800 transition-all duration-200 font-medium">Contact Us</a>
               <a href="#/track-schedule" class="block px-3 py-2.5 rounded-lg text-gray-800 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-800 transition-all duration-200 font-medium" id="mobile-track-schedule-link">Track Schedule</a>
               <a href="#/dashboard" class="block px-3 py-2.5 rounded-lg text-gray-800 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-800 transition-all duration-200 font-medium hidden" id="mobile-dashboard-link">Dashboard</a>
-              <a href="#/guard-dashboard" class="block px-3 py-2.5 rounded-lg text-gray-800 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-800 transition-all duration-200 font-medium hidden" id="mobile-guard-dashboard-link">Guard Dashboard</a>
+              <a href="#/guard-dashboard" class="block px-3 py-2.5 rounded-lg text-gray-800 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-800 transition-all duration-200 font-medium hidden" id="mobile-guard-dashboard-link">Scanner</a>
               <a href="#/qr-scanner" class="block px-3 py-2.5 rounded-lg text-gray-800 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-800 transition-all duration-200 font-medium hidden" id="mobile-qr-scanner-link">QR Scanner</a>
               <div id="mobile-auth-buttons" style="display: none;">
                 <!-- Content will be dynamically updated based on auth state -->

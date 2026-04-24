@@ -23,7 +23,7 @@ export function GuardDashboardPage() {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                 </svg>
               </button>
-              <h1 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Guard Dashboard</h1>
+              <h1 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Scanner</h1>
             </div>
             <div class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
               <button 
