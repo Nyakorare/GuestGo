@@ -15,6 +15,7 @@ import { initializePlaceOnHold, isPlaceOnHold, createOnHoldButton, modifyMarkCom
 import { checkAndShowPlaceOnHoldNotification } from '../../components/PlaceOnHoldNotificationModal';
 import { calculateVisitDuration } from '../../utils/visitDuration';
 import { loadVisitorSettings, shouldShowScanButtons } from '../../components/VisitorSettings';
+import { renderMinimalGuardDashboard, renderGuardScanHistoryRows } from './guard/MinimalGuardDashboard';
 
 interface Place {
   id: string;
@@ -519,7 +520,7 @@ export function DashboardPage() {
     });
   }, 0);
   return `
-    <div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-6 sm:py-12">
+    <div class="w-full -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-0">
       <div class="flex flex-col gap-4 mb-8">
         <!-- Header Row 1: Logo, Title, and Clock -->
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -589,13 +590,13 @@ export function DashboardPage() {
                 id="guardDashboardTab"
                 class="hidden w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
               >
-                Guard Dashboard
+                Scan History
               </button>
               <button
                 id="guardGateAssignmentsTab"
                 class="hidden w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
               >
-                Gate Settings
+                Assigned Gate Settings
               </button>
               <button 
                 id="aiStatusTab"
@@ -1505,64 +1506,6 @@ export function DashboardPage() {
 
       <!-- Guard Dashboard Content -->
       <div id="guardContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-          <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">Guard Dashboard</h2>
-          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-4">
-            <p id="guardExpectedVisitorsTodayText" class="text-sm text-gray-700 dark:text-gray-300 text-center sm:text-left">
-              Expected visitors for today: <span id="guardExpectedVisitorsTodayCount">0</span>
-            </p>
-            <button 
-              id="refreshGuardBtn"
-              class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 w-full sm:w-auto"
-            >
-              Refresh
-            </button>
-          </div>
-        </div>
-
-        <!-- Guard Scan History Section -->
-        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6">
-          <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
-            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Scan History</h3>
-            <div class="flex flex-col sm:flex-row gap-2">
-              <!-- Search Input -->
-              <div class="relative">
-                <input 
-                  type="text" 
-                  id="guardSearchInput"
-                  placeholder="Search scan history..."
-                  class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
-                >
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                  </svg>
-                </div>
-              </div>
-              <!-- Action Filter -->
-              <select 
-                id="guardActionFilter"
-                class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-              >
-                <option value="all">All Actions</option>
-                <option value="entrance">Entrance</option>
-                <option value="exit">Exit</option>
-                <option value="temporary_exit">Temporary Exit</option>
-              </select>
-            </div>
-          </div>
-          
-          <!-- Scan History List -->
-          <div id="guardScanHistoryList" class="space-y-4">
-            <!-- Scan history will be loaded here -->
-          </div>
-        <!-- Pagination -->
-        <div id="guardScanHistoryPagination" class="flex items-center justify-between mt-4">
-          <button id="guardPrevPageBtn" class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded disabled:opacity-50">Previous</button>
-          <span id="guardPageInfo" class="text-sm text-gray-700 dark:text-gray-300">Page 1</span>
-          <button id="guardNextPageBtn" class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded disabled:opacity-50">Next</button>
-        </div>
-        </div>
       </div>
 
       <!-- Edit Place Modal -->
@@ -7242,6 +7185,7 @@ async function loadGuardDashboard() {
     const guardContent = document.getElementById('guardContent');
     if (guardContent) {
       guardContent.classList.remove('hidden');
+      guardContent.innerHTML = renderMinimalGuardDashboard();
     }
 
     // Load guard scan history
@@ -7362,13 +7306,11 @@ function renderGuardScanHistory(scanHistory: any[]) {
 
   if (scanHistory.length === 0) {
     guardScanHistoryList.innerHTML = `
-      <div class="text-center py-8">
-        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-        </svg>
-        <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No scan history</h3>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Your scan history will appear here after you log entrance, exit, or temporary exit actions.</p>
-      </div>
+      <tr>
+        <td colspan="4" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+          No scan history yet. Entrance, exit, and temporary exit actions will appear here.
+        </td>
+      </tr>
     `;
     if (pageInfo) pageInfo.textContent = 'Page 1';
     if (prevBtn) prevBtn.disabled = true;
@@ -7380,71 +7322,7 @@ function renderGuardScanHistory(scanHistory: any[]) {
   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
   const pageItems = scanHistory.slice(startIndex, endIndex);
 
-  const scanHistoryHtml = pageItems.map(scan => {
-    const details = scan.details || {};
-    const normalizedAction = (details.action || '').toLowerCase() || (scan.action === 'visit_temporary_exit' ? 'temporary_exit' : 'unknown');
-    const visitId = details.visit_id || 'Unknown';
-    const timestamp = new Date(scan.created_at);
-    
-    return `
-      <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow duration-200">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center space-x-3">
-            <div class="flex-shrink-0">
-              <div class="w-10 h-10 rounded-full flex items-center justify-center ${
-                normalizedAction === 'entrance' ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-200' :
-                normalizedAction === 'exit' ? 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-200' :
-                normalizedAction === 'temporary_exit' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-200' :
-                'bg-gray-100 text-gray-600 dark:bg-gray-900 dark:text-gray-200'
-              }">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  ${normalizedAction === 'entrance' ? 
-                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>' :
-                    normalizedAction === 'exit' ?
-                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path>' :
-                    normalizedAction === 'temporary_exit' ?
-                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3"></path>' :
-                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>'
-                  }
-                </svg>
-              </div>
-            </div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center space-x-2">
-                <h4 class="text-sm font-medium text-gray-900 dark:text-white">
-                  ${normalizedAction === 'entrance' ? 'Entrance Logged' : normalizedAction === 'exit' ? 'Exit Logged' : normalizedAction === 'temporary_exit' ? 'Temporary Exit Logged' : 'Action Logged'}
-                </h4>
-                <span class="px-2 py-1 text-xs font-medium rounded-full ${
-                  normalizedAction === 'entrance' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                  normalizedAction === 'exit' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                  normalizedAction === 'temporary_exit' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                  'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-                }">
-                  ${normalizedAction.charAt(0).toUpperCase() + normalizedAction.slice(1)}
-                </span>
-              </div>
-              <p class="text-sm text-gray-500 dark:text-gray-400">
-                Visit ID: ${visitId.substring(0, 8)}...
-              </p>
-              <p class="text-xs text-gray-400 dark:text-gray-500">
-                ${timestamp.toLocaleDateString()} at ${timestamp.toLocaleTimeString()}
-              </p>
-            </div>
-          </div>
-          <div class="flex-shrink-0">
-            <button 
-              onclick="viewGuardScanDetails('${scan.id}')"
-              class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium"
-            >
-              View Details
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  guardScanHistoryList.innerHTML = scanHistoryHtml;
+  guardScanHistoryList.innerHTML = renderGuardScanHistoryRows(pageItems);
 
   // Update pagination controls
   if (pageInfo) pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;

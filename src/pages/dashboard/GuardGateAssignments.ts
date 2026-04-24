@@ -15,7 +15,7 @@ export function renderGuardGateAssignments(): string {
   return `
     <div>
       <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-        <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">My Gate Settings</h2>
+        <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">Assigned Gate Settings</h2>
         <button
           id="guardGateRefreshBtn"
           class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 w-full sm:w-auto"
