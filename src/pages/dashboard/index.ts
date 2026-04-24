@@ -16,6 +16,7 @@ import { checkAndShowPlaceOnHoldNotification } from '../../components/PlaceOnHol
 import { calculateVisitDuration } from '../../utils/visitDuration';
 import { loadVisitorSettings, shouldShowScanButtons } from '../../components/VisitorSettings';
 import { renderMinimalGuardDashboard, renderGuardScanHistoryRows } from './guard/MinimalGuardDashboard';
+import { renderGuardAnalyticsChart } from './guard/GuardScanAnalytics';
 
 interface Place {
   id: string;
@@ -292,7 +293,7 @@ export function DashboardPage() {
           
           loadPersonnelDashboard();
         } else if (roleData.role === 'guard') {
-          // Guard: show guard content and AI Status tab, hide other admin tabs
+          // Guard: show guard content and combined Gate/AI tab, hide other admin tabs
           const guardDashboardTab = document.getElementById('guardDashboardTab');
           const adminRefreshBtn = document.getElementById('adminRefreshBtn');
           if (adminTabs) adminTabs.classList.remove('hidden');
@@ -303,7 +304,7 @@ export function DashboardPage() {
           if (feedbackTab) feedbackTab.classList.add('hidden');
           if (guardDashboardTab) guardDashboardTab.classList.remove('hidden');
           if (guardGateAssignmentsTab) guardGateAssignmentsTab.classList.remove('hidden');
-          if (aiStatusTab) aiStatusTab.classList.remove('hidden');
+          if (aiStatusTab) aiStatusTab.classList.add('hidden');
           if (visitorSettingsTab) visitorSettingsTab.classList.add('hidden');
           if (placesContent) placesContent.classList.add('hidden');
           if (accountsContent) accountsContent.classList.add('hidden');
@@ -596,7 +597,7 @@ export function DashboardPage() {
                 id="guardGateAssignmentsTab"
                 class="hidden w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
               >
-                Assigned Gate Settings
+                Gate & AI Status
               </button>
               <button 
                 id="aiStatusTab"
@@ -6311,11 +6312,27 @@ function setupAdminTabEventListeners() {
     if (visitorSettingsContent) {
       visitorSettingsContent.innerHTML = '';
     }
-    import('./GuardGateAssignments').then(module => {
+    Promise.all([import('./GuardGateAssignments'), import('./AIStatus')]).then(([gateModule, aiModule]) => {
       if (guardGateAssignmentsContent) {
-        guardGateAssignmentsContent.innerHTML = module.renderGuardGateAssignments();
+        guardGateAssignmentsContent.innerHTML = `
+          <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <section id="guardCombinedGatePane" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4"></section>
+            <section id="guardCombinedAiPane" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4"></section>
+          </div>
+        `;
       }
-      module.setupGuardGateAssignmentsEventListeners();
+
+      const gatePane = document.getElementById('guardCombinedGatePane');
+      if (gatePane) {
+        gatePane.innerHTML = gateModule.renderGuardGateAssignments();
+      }
+      gateModule.setupGuardGateAssignmentsEventListeners();
+
+      const aiPane = document.getElementById('guardCombinedAiPane');
+      if (aiPane) {
+        aiPane.innerHTML = aiModule.renderAIStatus();
+      }
+      aiModule.setupAIStatusEventListeners();
     });
   });
 
@@ -7290,10 +7307,93 @@ async function loadGuardScanHistory() {
 // Function to render guard scan history
 function renderGuardScanHistory(scanHistory: any[]) {
   const guardScanHistoryList = document.getElementById('guardScanHistoryList');
+  const guardAnalyticsContainer = document.getElementById('guardAnalyticsContainer');
   const pageInfo = document.getElementById('guardPageInfo');
   const prevBtn = document.getElementById('guardPrevPageBtn') as HTMLButtonElement | null;
   const nextBtn = document.getElementById('guardNextPageBtn') as HTMLButtonElement | null;
   if (!guardScanHistoryList) return;
+
+  if (guardAnalyticsContainer) {
+    const allScans = (window as any).guardScanHistory || [];
+    const analyticsRange = (window as any).guardAnalyticsRange || 'all_time';
+    guardAnalyticsContainer.innerHTML = renderGuardAnalyticsChart(allScans, analyticsRange);
+
+    const rangeFilter = document.getElementById('guardAnalyticsRangeFilter') as HTMLSelectElement | null;
+    rangeFilter?.addEventListener('change', () => {
+      (window as any).guardAnalyticsRange = rangeFilter.value || 'all_time';
+      renderGuardScanHistory((window as any).guardFilteredScanHistory || (window as any).guardScanHistory || []);
+    });
+
+    const fullscreenBtn = document.getElementById('guardAnalyticsFullscreenBtn') as HTMLButtonElement | null;
+    const analyticsShell = document.getElementById('guardAnalyticsChartShell') as HTMLElement | null;
+    const setFullscreenIcon = (isFullscreen: boolean) => {
+      if (!fullscreenBtn) return;
+      fullscreenBtn.innerHTML = isFullscreen
+        ? `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9V6a1 1 0 011-1h3m8 4V6a1 1 0 00-1-1h-3m-8 10v3a1 1 0 001 1h3m8-4v3a1 1 0 01-1 1h-3"></path></svg>`
+        : `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 3H5a2 2 0 00-2 2v3m16 0V5a2 2 0 00-2-2h-3m-6 18H5a2 2 0 01-2-2v-3m16 0v3a2 2 0 01-2 2h-3"></path></svg>`;
+      fullscreenBtn.title = isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen';
+      fullscreenBtn.setAttribute('aria-label', fullscreenBtn.title);
+    };
+
+    fullscreenBtn?.addEventListener('click', async () => {
+      if (!analyticsShell) return;
+      try {
+        const doc: any = document;
+        if (document.fullscreenElement || doc.webkitFullscreenElement) {
+          if (document.exitFullscreen) {
+            await document.exitFullscreen();
+          } else if (doc.webkitExitFullscreen) {
+            doc.webkitExitFullscreen();
+          }
+          return;
+        }
+
+        const shell: any = analyticsShell;
+        if (shell.requestFullscreen) {
+          await shell.requestFullscreen();
+        } else if (shell.webkitRequestFullscreen) {
+          shell.webkitRequestFullscreen();
+        }
+      } catch (error) {
+        console.error('Error toggling analytics fullscreen:', error);
+      }
+    });
+
+    setFullscreenIcon(document.fullscreenElement === analyticsShell);
+    if (!(window as any)._guardAnalyticsFullscreenListenerBound) {
+      (window as any)._guardAnalyticsFullscreenListenerBound = true;
+      document.addEventListener('fullscreenchange', () => {
+        const shell = document.getElementById('guardAnalyticsChartShell');
+        setFullscreenIcon(document.fullscreenElement === shell);
+      });
+    }
+
+    const tooltip = document.getElementById('guardAnalyticsTooltip') as HTMLDivElement | null;
+    const tooltipTargets = analyticsShell?.querySelectorAll('.guard-analytics-tooltip-target');
+    const hideTooltip = () => {
+      if (!tooltip) return;
+      tooltip.classList.add('hidden');
+    };
+    tooltipTargets?.forEach((target) => {
+      target.addEventListener('mouseenter', (event) => {
+        if (!tooltip || !analyticsShell) return;
+        const el = event.currentTarget as HTMLElement;
+        const tip = el.getAttribute('data-tip') || '';
+        tooltip.textContent = tip;
+        tooltip.classList.remove('hidden');
+      });
+      target.addEventListener('mousemove', (event) => {
+        if (!tooltip || !analyticsShell) return;
+        const rect = analyticsShell.getBoundingClientRect();
+        const mouseEvent = event as MouseEvent;
+        const left = mouseEvent.clientX - rect.left + 12;
+        const top = mouseEvent.clientY - rect.top - 16;
+        tooltip.style.left = `${Math.max(8, Math.min(left, rect.width - 180))}px`;
+        tooltip.style.top = `${Math.max(8, top)}px`;
+      });
+      target.addEventListener('mouseleave', hideTooltip);
+    });
+  }
 
   // Pagination state
   const itemsPerPage = 10;

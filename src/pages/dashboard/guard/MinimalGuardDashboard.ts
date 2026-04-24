@@ -45,28 +45,36 @@ export function renderMinimalGuardDashboard(): string {
         </div>
       </div>
 
-      <div class="overflow-x-auto">
-        <table class="min-w-full text-sm">
-          <thead class="bg-gray-50 dark:bg-gray-700/40 text-left text-gray-700 dark:text-gray-300">
-            <tr>
-              <th class="px-4 py-3 font-medium">Action</th>
-              <th class="px-4 py-3 font-medium">Visit ID</th>
-              <th class="px-4 py-3 font-medium">Timestamp</th>
-              <th class="px-4 py-3 font-medium text-right">Details</th>
-            </tr>
-          </thead>
-          <tbody id="guardScanHistoryList" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
-        </table>
-      </div>
+      <div class="p-4">
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
+          <div id="guardAnalyticsContainer" class="xl:col-span-4 border border-gray-200 dark:border-gray-700 rounded-lg p-4"></div>
 
-      <div id="guardScanHistoryPagination" class="p-4 flex items-center justify-between border-t border-gray-200 dark:border-gray-700">
-        <button id="guardPrevPageBtn" class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-200 disabled:opacity-50">
-          Previous
-        </button>
-        <span id="guardPageInfo" class="text-sm text-gray-700 dark:text-gray-300">Page 1</span>
-        <button id="guardNextPageBtn" class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-200 disabled:opacity-50">
-          Next
-        </button>
+          <div class="xl:col-span-8 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="min-w-full text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-700/40 text-left text-gray-700 dark:text-gray-300">
+                  <tr>
+                    <th class="px-4 py-3 font-medium">Action</th>
+                    <th class="px-4 py-3 font-medium">Visit ID</th>
+                    <th class="px-4 py-3 font-medium">Timestamp</th>
+                    <th class="px-4 py-3 font-medium text-right">Details</th>
+                  </tr>
+                </thead>
+                <tbody id="guardScanHistoryList" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+              </table>
+            </div>
+
+            <div id="guardScanHistoryPagination" class="p-4 flex items-center justify-between border-t border-gray-200 dark:border-gray-700">
+              <button id="guardPrevPageBtn" class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-200 disabled:opacity-50">
+                Previous
+              </button>
+              <span id="guardPageInfo" class="text-sm text-gray-700 dark:text-gray-300">Page 1</span>
+              <button id="guardNextPageBtn" class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-200 disabled:opacity-50">
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   `;
@@ -117,3 +125,4 @@ export function renderGuardScanHistoryRows(scanHistory: any[]): string {
     `;
   }).join('');
 }
+
