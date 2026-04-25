@@ -17,6 +17,7 @@ import { calculateVisitDuration } from '../../utils/visitDuration';
 import { loadVisitorSettings, shouldShowScanButtons } from '../../components/VisitorSettings';
 import { renderMinimalGuardDashboard, renderGuardScanHistoryRows } from './guard/MinimalGuardDashboard';
 import { renderGuardAnalyticsChart } from './guard/GuardScanAnalytics';
+import { renderMinimalLogsDashboard } from './log/MinimalLogsDashboard';
 
 interface Place {
   id: string;
@@ -730,188 +731,7 @@ export function DashboardPage() {
         <div id="accountsList" class="overflow-x-auto"></div>
       </div>
 
-      <div id="logsContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
-        <div class="flex flex-col gap-6 mb-6">
-          <!-- Header Section -->
-          <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-            <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">System Logs</h2>
-            <button 
-              id="refreshLogsBtn"
-              class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 w-full sm:w-auto flex items-center justify-center gap-2"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-              </svg>
-              Refresh Logs
-            </button>
-          </div>
-
-          <!-- Category Tabs -->
-          <div class="flex flex-row flex-wrap gap-2">
-            <button id="logsTabAll" class="px-4 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm">All</button>
-            <button id="logsTabGate" class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm">Gate</button>
-            <button id="logsTabPlace" class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm">Place</button>
-            <button id="logsTabPersonnel" class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm">Personnel</button>
-            <button id="logsTabAccount" class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm">Account</button>
-            <button id="logsTabSchedules" class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm">Schedules</button>
-            <button id="logsTabFeedback" class="px-4 py-2 rounded-md bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm">Feedback</button>
-          </div>
-
-          <!-- Filters Section -->
-          <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 space-y-4">
-            <!-- Search Row with Filters & Top Pagination Toggle -->
-            <div class="flex flex-col gap-2">
-              <!-- Search Input and Controls Row -->
-              <div class="flex flex-col md:flex-row gap-3 md:items-end">
-                <!-- Search Input -->
-                <div class="relative flex-1">
-                  <label for="logsSearchInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Logs</label>
-                  <div class="relative">
-                    <input 
-                      type="text" 
-                      id="logsSearchInput"
-                      placeholder="Search by user, action, or details..."
-                      class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
-                    >
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-                <!-- Right-side controls: Filters + Top Pagination -->
-                <div class="flex-shrink-0 flex flex-row md:flex-col gap-2">
-                  <!-- Filters dropdown toggle button -->
-                  <div>
-                    <button 
-                      id="logsFiltersDropdownBtn"
-                      class="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500"
-                      aria-haspopup="true"
-                      aria-expanded="false"
-                    >
-                      More Filters
-                      <svg class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                  </div>
-                  <!-- Top pagination dropdown toggle button -->
-                  <div>
-                    <button
-                      id="logsTopPaginationToggle"
-                      class="inline-flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-100 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500"
-                      aria-haspopup="true"
-                      aria-expanded="false"
-                    >
-                      Pagination
-                      <svg class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Filters dropdown content -->
-            <div id="logsFiltersDropdown" class="hidden relative">
-              <div class="absolute z-20 right-0 w-full sm:w-auto min-w-[280px] max-w-full sm:max-w-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg p-4 space-y-4">
-                <!-- Action Filter -->
-                <div class="flex-1">
-                  <label for="actionFilter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Action Type</label>
-                  <select 
-                    id="actionFilter"
-                    class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
-                  >
-                    <option value="all">All Actions</option>
-                    <option value="password_change">Password Change</option>
-                    <option value="place_update">Place Update</option>
-                    <option value="personnel_availability_change">Personnel Availability Change</option>
-                    <option value="place_create">Place Create</option>
-                    <option value="place_delete">Place Delete</option>
-                    <option value="personnel_assignment">Personnel Assignment</option>
-                    <option value="personnel_removal">Personnel Removal</option>
-                    <option value="personnel_availability_change">Personnel Availability Change</option>
-                    <option value="visit_scheduled">Visit Scheduled</option>
-                    <option value="visit_completed">Visit Completed</option>
-                    <option value="visit_completed_flagged">Visit Completed (Flagged)</option>
-                    <option value="visit_unsuccessful">Visit Unsuccessful</option>
-                    <option value="gate_create">Gate Create</option>
-                    <option value="gate_update">Gate Update</option>
-                    <option value="gate_status_change">Gate Status Change</option>
-                    <option value="gate_entrance_scan">Gate Entrance Scan</option>
-                    <option value="gate_exit_scan">Gate Exit Scan</option>
-                    <option value="visit_feedback_submitted">Visit Feedback Submitted</option>
-                    <option value="place_visit_limit_update">Place Visit Limit Update</option>
-                    <option value="role_change">Role Change</option>
-                    <option value="account_created">Account Created</option>
-                  </select>
-                </div>
-
-                <!-- Date Filter Row -->
-                <div class="flex flex-col sm:flex-row gap-4">
-                  <!-- Start Date -->
-                  <div class="flex-1">
-                    <label for="logsStartDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Start Date</label>
-                    <input 
-                      type="date" 
-                      id="logsStartDate"
-                      class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
-                    >
-                  </div>
-                  <!-- End Date -->
-                  <div class="flex-1">
-                    <label for="logsEndDate" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">End Date</label>
-                    <input 
-                      type="date" 
-                      id="logsEndDate"
-                      class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
-                    >
-                  </div>
-                </div>
-
-                <!-- Filter Actions -->
-                <div class="flex flex-col sm:flex-row gap-2 sm:items-end">
-                  <button 
-                    id="clearLogsDateFilterBtn"
-                    class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm flex items-center justify-center gap-2"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                    Clear Dates
-                  </button>
-                  <button 
-                    id="cleanupVisitsBtn"
-                    class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 text-sm flex items-center justify-center gap-2"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                    </svg>
-                    Cleanup Past Visits
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Top pagination dropdown content -->
-            <div id="logsTopPaginationDropdown" class="hidden relative mt-2">
-              <div class="absolute z-20 right-0 w-full sm:w-auto min-w-[280px] max-w-full sm:max-w-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg p-3">
-                <div class="flex items-center justify-between mb-2">
-                  <h3 class="text-sm font-medium text-gray-800 dark:text-gray-100">Page Navigation</h3>
-                  <span id="logsTopPaginationSummary" class="text-xs text-gray-500 dark:text-gray-400"></span>
-                </div>
-                <div id="logsTopPagination" class="logs-top-pagination"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div id="logsList" class="logs-container space-y-4"></div>
-        
-        <!-- Logs Pagination Controls -->
-        <div id="logsPagination"></div>
-      </div>
+      ${renderMinimalLogsDashboard()}
 
       <div id="gatesContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
         <!-- Gates Management Content will be loaded here -->
@@ -2301,6 +2121,7 @@ async function loadLogs() {
     const logs = await getLogs();
     allLogs = logs || [];
     filteredLogs = [...allLogs];
+    renderLogsAnalytics();
     
     // Ensure we're on page 1 and disable auto-advance during initial load
     currentLogsPage = 1;
@@ -2559,8 +2380,7 @@ async function renderLogs(): Promise<void> {
     );
 
     logsList.innerHTML = `
-      <!-- Desktop Table View (hidden on mobile) -->
-      <div class="hidden lg:block overflow-x-auto logs-table-container">
+      <div class="overflow-x-auto logs-table-container border border-gray-200 dark:border-gray-700 rounded-lg">
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead class="bg-gray-50 dark:bg-gray-800">
             <tr>
@@ -2653,95 +2473,6 @@ async function renderLogs(): Promise<void> {
           </tbody>
         </table>
       </div>
-
-      <!-- Mobile Card View (visible on mobile and tablet) -->
-      <div class="lg:hidden space-y-4 logs-mobile-container">
-        ${(formattedDetails as any[]).map((log: any) => `
-          <div class="relative bg-white dark:bg-gray-700 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 p-4 pl-8 hover:shadow-md hover:border-gray-300 dark:hover:border-gray-500 transition-all duration-200 ease-in-out transform hover:scale-[1.02] hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer group">
-            ${shouldShowNotification(log.displayAction) ? `
-              <div class="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 ${(getNotificationConfig(log.displayAction)?.className) || 'bg-red-500'} rounded-full animate-pulse group-hover:scale-110 transition-transform duration-200" title="Important notification"></div>
-            ` : ''}
-            <div class="flex flex-col space-y-3">
-              <!-- Header with timestamp and action -->
-              <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                <div class="flex-1">
-                  <div class="text-sm text-gray-500 dark:text-gray-400 mb-1 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors duration-200">
-                    ${new Date(log.created_at).toLocaleString()}
-                  </div>
-                  <div class="text-sm text-gray-900 dark:text-white font-medium group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors duration-200">
-                    ${log.user_roles ? 
-                      `${log.user_roles.first_name || ''} ${log.user_roles.last_name || ''}`.trim() || 
-                      log.user_roles.email || 
-                      'Unknown User' 
-                      : 'Guest User'}
-                  </div>
-                  ${log.user_roles ? 
-                    `<div class="text-xs text-gray-500 font-mono group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors duration-200">${log.user_id.substring(0, 8)}...</div>` 
-                    : ''}
-                </div>
-                <div class="flex-shrink-0">
-                  <div class="flex items-center space-x-2">
-                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full transition-all duration-200 group-hover:scale-105 ${
-                      log.displayAction === 'password_change' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                      log.displayAction === 'place_update' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                      log.displayAction === 'place_availability_toggle' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                      log.displayAction === 'place_create' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                      log.displayAction === 'place_delete' ? 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200' :
-                      log.displayAction === 'personnel_assignment' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
-                      log.displayAction === 'personnel_removal' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
-                      log.displayAction === 'personnel_availability_change' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' :
-                      log.displayAction === 'visit_scheduled' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' :
-                      log.displayAction === 'visit_temporary_exit' ? 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200' :
-                      log.displayAction === 'visit_completed' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
-                      log.displayAction === 'visit_completed_flagged' 
-                        ? ((log.parsedDetails?.resolved === true || (typeof log.details === 'object' && log.details?.resolved === true))
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                          : 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200') :
-                      log.displayAction === 'visit_unsuccessful' ? 'bg-red-200 text-red-900 dark:bg-red-800 dark:text-red-100' :
-                      log.displayAction === 'place_visit_limit_update' ? 'bg-blue-200 text-blue-900 dark:bg-blue-800 dark:text-blue-100' :
-                      log.displayAction === 'visit_feedback_submitted' ? 'bg-cyan-200 text-cyan-900 dark:bg-cyan-800 dark:text-cyan-100' :
-                      log.displayAction === 'gate_create' ? 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200' :
-                      log.displayAction === 'gate_update' ? 'bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-900 dark:text-fuchsia-200' :
-                      log.displayAction === 'gate_status_change' ? 'bg-lime-100 text-lime-800 dark:bg-lime-900 dark:text-lime-200' :
-                      log.displayAction === 'gate_entrance_scan' ? 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200' :
-                      log.displayAction === 'gate_exit_scan' ? 'bg-orange-200 text-orange-900 dark:bg-orange-800 dark:text-orange-100' :
-                      log.displayAction === 'visit_flagged_no_exit' ? 'bg-stone-100 text-stone-800 dark:bg-stone-900 dark:text-stone-200' :
-                      log.displayAction === 'role_change' ? 'bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200' :
-                      log.displayAction === 'account_created' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' :
-                      log.displayAction === 'visit_reschedule_requested' ? 'bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-200' :
-                      log.displayAction === 'visit_reschedule_accepted' ? 'bg-emerald-200 text-emerald-900 dark:bg-emerald-800 dark:text-emerald-100' :
-                      log.displayAction === 'visit_reschedule_declined' ? 'bg-rose-200 text-rose-900 dark:bg-rose-800 dark:text-rose-100' :
-                      'bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200'
-                    }">
-                      ${log.displayAction === 'visit_completed_flagged' 
-                        ? ((log.parsedDetails?.resolved === true || (typeof log.details === 'object' && log.details?.resolved === true)) ? 'Visit Completed' : 'Completed (Flagged)') 
-                        : log.displayAction.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
-                    </span>
-                    ${log.displayAction === 'visit_completed_flagged' ? `
-                      <button 
-                        onclick="displayFlaggedVisitDetails('${log.details?.visit_id || log.details?.id || 'unknown'}')"
-                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-all duration-200 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 group-hover:scale-110"
-                        title="View full visit details"
-                      >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
-                        </svg>
-                      </button>
-                    ` : ''}
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Details section -->
-              <div class="border-t border-gray-200 dark:border-gray-600 pt-3 group-hover:border-gray-300 dark:group-hover:border-gray-500 transition-colors duration-200">
-                <div class="text-sm text-gray-900 dark:text-white group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors duration-200">
-                  ${log.formattedDetails}
-                </div>
-              </div>
-            </div>
-          </div>
-        `).join('')}
-      </div>
     `;
     
     // Update pagination controls using new component
@@ -2782,6 +2513,7 @@ async function renderLogs(): Promise<void> {
           ? 'No logs'
           : `Showing ${startItem}-${endItem} of ${totalLogs}`;
     }
+    renderLogsAnalytics();
     
   }
   
@@ -2790,35 +2522,6 @@ async function renderLogs(): Promise<void> {
       setupHistoryButtonListeners();
     }, 100);
     
-    // Prevent scrollwheel on hover for logs containers
-    const logsTableContainer = logsList.querySelector('.logs-table-container');
-    const logsMobileContainer = logsList.querySelector('.logs-mobile-container');
-    
-    const preventWheelOnHover = (element: HTMLElement | null) => {
-      if (!element) return;
-      
-      let isHovering = false;
-      
-      element.addEventListener('mouseenter', () => {
-        isHovering = true;
-        element.style.overflow = 'hidden';
-      });
-      
-      element.addEventListener('mouseleave', () => {
-        isHovering = false;
-        element.style.overflow = '';
-      });
-      
-      element.addEventListener('wheel', (e) => {
-        if (isHovering) {
-          e.preventDefault();
-          e.stopPropagation();
-        }
-      }, { passive: false });
-    };
-    
-    preventWheelOnHover(logsTableContainer as HTMLElement);
-    preventWheelOnHover(logsMobileContainer as HTMLElement);
 }
 // Function to format log details for display
 async function formatLogDetails(details: any, action: string, log?: any): Promise<string> {
@@ -6647,7 +6350,111 @@ async function applySearchAndFilterForLogs() {
   }
 
   filteredLogs = filtered;
+  renderLogsAnalytics();
   await renderLogs();
+}
+
+function renderLogsAnalytics() {
+  const totalElement = document.getElementById('logsAnalyticsTotal');
+  const todayElement = document.getElementById('logsAnalyticsToday');
+  const flaggedElement = document.getElementById('logsAnalyticsFlagged');
+  const topActionsElement = document.getElementById('logsAnalyticsTopActions');
+  const chartElement = document.getElementById('logsAnalyticsChart');
+  if (!totalElement || !todayElement || !flaggedElement || !topActionsElement || !chartElement) return;
+
+  const now = new Date();
+  const todayKey = now.toISOString().slice(0, 10);
+  const visibleLogs = filteredLogs || [];
+
+  const todayCount = visibleLogs.filter((log) => {
+    try {
+      return new Date(log.created_at).toISOString().slice(0, 10) === todayKey;
+    } catch (_) {
+      return false;
+    }
+  }).length;
+
+  const unresolvedFlaggedCount = visibleLogs.filter((log) => {
+    const action = String(log?.action || '').toLowerCase();
+    if (action !== 'visit_completed_flagged') return false;
+    const details = typeof log?.details === 'string' ? safeParseLogDetails(log.details) : log?.details;
+    return details?.resolved !== true;
+  }).length;
+
+  const actionCounts = new Map<string, number>();
+  visibleLogs.forEach((log) => {
+    const action = String(log?.action || 'unknown');
+    actionCounts.set(action, (actionCounts.get(action) || 0) + 1);
+  });
+  const topActions = [...actionCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4);
+
+  totalElement.textContent = String(visibleLogs.length);
+  todayElement.textContent = String(todayCount);
+  flaggedElement.textContent = String(unresolvedFlaggedCount);
+  topActionsElement.innerHTML = topActions.length
+    ? topActions.map(([action, count]) => `
+      <div class="flex items-center justify-between gap-2">
+        <span class="truncate">${action.replace(/_/g, ' ')}</span>
+        <span class="font-semibold text-gray-900 dark:text-white">${count}</span>
+      </div>
+    `).join('')
+    : '<p class="text-xs text-gray-500 dark:text-gray-400">No data</p>';
+
+  chartElement.innerHTML = renderLogsAnalyticsChart(visibleLogs);
+}
+
+function safeParseLogDetails(raw: string): any {
+  try {
+    return JSON.parse(raw);
+  } catch (_) {
+    return null;
+  }
+}
+
+function renderLogsAnalyticsChart(logs: any[]): string {
+  const today = new Date();
+  const series: Array<{ key: string; label: string; count: number }> = [];
+
+  for (let i = 6; i >= 0; i -= 1) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - i);
+    const key = date.toISOString().slice(0, 10);
+    const label = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    series.push({ key, label, count: 0 });
+  }
+
+  const indexByKey = new Map(series.map((entry) => [entry.key, entry]));
+  logs.forEach((log) => {
+    try {
+      const key = new Date(log.created_at).toISOString().slice(0, 10);
+      const day = indexByKey.get(key);
+      if (day) day.count += 1;
+    } catch (_) {
+      // ignore invalid dates
+    }
+  });
+
+  const maxCount = Math.max(1, ...series.map((entry) => entry.count));
+  const bars = series.map((entry) => {
+    const height = Math.max(6, Math.round((entry.count / maxCount) * 100));
+    return `
+      <div class="flex flex-col items-center justify-end gap-1 h-full">
+        <span class="text-[10px] text-gray-500 dark:text-gray-400">${entry.count}</span>
+        <div class="w-full max-w-6 rounded-sm bg-blue-500/90 dark:bg-blue-400/90" style="height:${height}%"></div>
+        <span class="text-[10px] text-gray-500 dark:text-gray-400">${entry.label}</span>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="h-full">
+      <div class="grid grid-cols-7 gap-2 items-end h-full">
+        ${bars}
+      </div>
+    </div>
+  `;
 }
 
 // Function to assign personnel to a place
