@@ -2599,6 +2599,65 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
       }
     };
 
+    /** Load place display names for a visit from scheduled_visit_places (source of truth when log details omit names). */
+    const fetchPlaceNamesFromVisitId = async (visitId: string): Promise<string[]> => {
+      if (!isLikelyUuid(visitId)) return [];
+      try {
+        const { data, error } = await supabase
+          .from('scheduled_visit_places')
+          .select(`
+            place_id,
+            places_to_visit (
+              name
+            )
+          `)
+          .eq('visit_id', visitId);
+
+        if (error || !data?.length) return [];
+        return data
+          .map((row: any) => row.places_to_visit?.name)
+          .filter((n: any) => n != null && String(n).trim() !== '');
+      } catch {
+        return [];
+      }
+    };
+
+    const buildVisitScheduledPlacesLine = async (parsed: any): Promise<string> => {
+      if (parsed.visit_id) {
+        const fromDb = await fetchPlaceNamesFromVisitId(String(parsed.visit_id));
+        if (fromDb.length === 1) {
+          return `<div><span class="font-medium">Place:</span> ${fromDb[0]}</div>`;
+        }
+        if (fromDb.length > 1) {
+          return `<div><span class="font-medium">Places (${fromDb.length}):</span> ${fromDb.join(', ')}</div>`;
+        }
+      }
+
+      if (parsed.place_ids && Array.isArray(parsed.place_ids) && parsed.place_ids.length > 1) {
+        const placeNames = Array.isArray(parsed.place_names) ? parsed.place_names : [];
+        const hasNames = placeNames.some((n: any) => n != null && String(n).trim() !== '');
+        if (hasNames) {
+          return `<div><span class="font-medium">Places (${parsed.total_places || placeNames.length}):</span> ${placeNames.join(', ')}</div>`;
+        }
+        const resolved = await Promise.all(
+          parsed.place_ids.map((id: string) => getPlaceName(String(id)))
+        );
+        return `<div><span class="font-medium">Places (${parsed.place_ids.length}):</span> ${resolved.join(', ')}</div>`;
+      }
+      if (parsed.place_names && Array.isArray(parsed.place_names) && parsed.place_names.length === 1) {
+        return `<div><span class="font-medium">Place:</span> ${parsed.place_names[0]}</div>`;
+      }
+      if (parsed.place_ids && Array.isArray(parsed.place_ids) && parsed.place_ids.length === 1) {
+        const visitPlaceName = await getPlaceName(String(parsed.place_ids[0]));
+        return `<div><span class="font-medium">Place:</span> ${visitPlaceName}</div>`;
+      }
+      if (parsed.place_id && isLikelyUuid(String(parsed.place_id))) {
+        const n = await getPlaceName(String(parsed.place_id));
+        return `<div><span class="font-medium">Place:</span> ${n}</div>`;
+      }
+      return `<div><span class="font-medium">Place:</span> Unknown place</div>`;
+    };
+
     // Helper function to get user name from user_roles
     const getUserName = async (userId: string) => {
       if (!userId) return 'Unknown user';
@@ -2917,22 +2976,8 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
         const visitorName = parsedDetails.visitor_name || 
           `${parsedDetails.visitor_first_name || ''} ${parsedDetails.visitor_last_name || ''}`.trim();
         
-        // Check if this is a multi-place visit
-        if (parsedDetails.place_ids && Array.isArray(parsedDetails.place_ids) && parsedDetails.place_ids.length > 1) {
-          // Multi-place visit
-          const placeNames = Array.isArray(parsedDetails.place_names) ? parsedDetails.place_names : [];
-          placesHtml = `<div><span class="font-medium">Places (${parsedDetails.total_places || placeNames.length}):</span> ${placeNames.join(', ')}</div>`;
-        } else if (parsedDetails.place_names && Array.isArray(parsedDetails.place_names) && parsedDetails.place_names.length === 1) {
-          // Single place visit - use the place name from the log
-          placesHtml = `<div><span class="font-medium">Place:</span> ${parsedDetails.place_names[0]}</div>`;
-        } else if (parsedDetails.place_ids && Array.isArray(parsedDetails.place_ids) && parsedDetails.place_ids.length === 1) {
-          // Single place visit - try to get place name from database
-          const visitPlaceName = await getPlaceName(parsedDetails.place_ids[0]);
-          placesHtml = `<div><span class="font-medium">Place:</span> ${visitPlaceName}</div>`;
-        } else {
-          // Fallback
-          placesHtml = `<div><span class="font-medium">Place:</span> Unknown</div>`;
-        }
+        // Resolve place(s): prefer scheduled_visit_places for visit_id, then log JSON (handles incomplete log details)
+        placesHtml = await buildVisitScheduledPlacesLine(parsedDetails);
         
         // Check if the visit has a current status (e.g., marked as unsuccessful or completed)
         let statusHtml = '';
@@ -3403,7 +3448,12 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
 
       case 'visit_completed': {
         const visitIdDisplay = parsedDetails.visit_id ? parsedDetails.visit_id.substring(0, 8) + '...' : 'Unknown';
-        const completedVisitPlaceName = await getPlaceName(parsedDetails.place_id);
+        let completedVisitPlaceName = await getPlaceName(parsedDetails.place_id);
+        if (completedVisitPlaceName === 'Unknown place' && parsedDetails.visit_id) {
+          const fromVisit = await fetchPlaceNamesFromVisitId(String(parsedDetails.visit_id));
+          if (fromVisit.length === 1) completedVisitPlaceName = fromVisit[0];
+          else if (fromVisit.length > 1) completedVisitPlaceName = fromVisit.join(', ');
+        }
         const completedAt = parsedDetails.completed_at ? new Date(parsedDetails.completed_at).toLocaleString() : 'Unknown';
         const visitorName = parsedDetails.visitor_name || 
           `${parsedDetails.visitor_first_name || ''} ${parsedDetails.visitor_last_name || ''}`.trim() || 
@@ -3419,7 +3469,50 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
       }
       case 'visit_completed_flagged': {
         const completedBy = parsedDetails.completed_by ? await getUserName(parsedDetails.completed_by) : 'System';
-        const completedDate = parsedDetails.completed_at ? new Date(parsedDetails.completed_at).toLocaleString() : 'Unknown';
+        let completedAtRaw: string | null = parsedDetails.completed_at || null;
+        if (!completedAtRaw && parsedDetails.resolved_at) {
+          completedAtRaw = parsedDetails.resolved_at;
+        }
+        if (!completedAtRaw && parsedDetails.marked_at) {
+          completedAtRaw = parsedDetails.marked_at;
+        }
+        if (!completedAtRaw && parsedDetails.executed_at) {
+          completedAtRaw = parsedDetails.executed_at;
+        }
+
+        if (!completedAtRaw && Array.isArray(parsedDetails.history) && parsedDetails.history.length > 0) {
+          const completionEvent = [...parsedDetails.history].reverse().find((event: any) =>
+            ['completed', 'visit_completed', 'completed_flagged', 'visit_resolved'].includes(String(event?.event || '').toLowerCase())
+          );
+          if (completionEvent?.timestamp) {
+            completedAtRaw = completionEvent.timestamp;
+          }
+        }
+
+        if (!completedAtRaw && parsedDetails.visit_id) {
+          try {
+            const { data: visitRow } = await supabase
+              .from('scheduled_visits')
+              .select('completed_at, updated_at, status')
+              .eq('id', parsedDetails.visit_id)
+              .single();
+            if (visitRow?.completed_at) {
+              completedAtRaw = visitRow.completed_at;
+            } else if (visitRow?.status === 'completed' && visitRow?.updated_at) {
+              // Some rows are completed without completed_at persisted; use latest row update as fallback.
+              completedAtRaw = visitRow.updated_at;
+            }
+          } catch (_) {
+            // Keep Unknown fallback if DB lookup fails.
+          }
+        }
+
+        if (!completedAtRaw && log?.created_at) {
+          // Final reliable fallback: timestamp of this log entry itself.
+          completedAtRaw = log.created_at;
+        }
+
+        const completedDate = completedAtRaw ? new Date(completedAtRaw).toLocaleString() : 'Unknown';
 
         // Check if this visit has been resolved
         const isResolved = parsedDetails.resolved === true;
@@ -3444,62 +3537,16 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
           });
         }
 
-        // If history exists in details, render it similarly to visit_scheduled
-        let historyHtml = '';
-        if (historyArray.length > 0) {
-          const historyId = `history-${log?.id || Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-          const historyItems = historyArray.map((event: any) => {
-            try {
-              const eventType = event.event ? event.event.charAt(0).toUpperCase() + event.event.slice(1).replace(/_/g, ' ') : 'Event';
-              const eventTime = event.timestamp ? new Date(event.timestamp).toLocaleString() : '';
-              let details = '';
-              if (event.details) {
-                if (event.details.by) {
-                  const byName = typeof event.details.by === 'string' && event.details.by.length > 50 
-                    ? event.details.by.substring(0, 50) + '...' 
-                    : event.details.by;
-                  details += `<span class='text-xs text-gray-500 dark:text-gray-400'>(By: ${byName})</span> `;
-                }
-                if (event.details.note) {
-                  details += `<span class='text-xs text-gray-500 dark:text-gray-400'>Note: ${event.details.note}</span> `;
-                }
-                if (event.details.reason) {
-                  details += `<span class='text-xs text-red-500 dark:text-red-400'>Reason: ${event.details.reason}</span> `;
-                }
-                if (event.details.auto_marked) {
-                  details += `<span class='text-xs text-orange-500 dark:text-orange-400'>(Auto-marked by system)</span> `;
-                }
-                // Special handling for visit_resolved event
-                if (event.event === 'visit_resolved' && event.details.reason) {
-                  details += `<div class='mt-1 p-2 bg-green-50 dark:bg-green-900/20 rounded border-l-4 border-green-400'><span class='text-xs font-medium text-green-800 dark:text-green-200'>Resolution Reason:</span> <span class='text-xs text-green-700 dark:text-green-300'>${event.details.reason}</span></div>`;
-                }
-              }
-              return `<li class="py-2 border-b border-gray-100 dark:border-gray-700 last:border-b-0"><span class='font-semibold'>${eventType}</span> <span class='text-xs text-gray-400'>${eventTime}</span> ${details}</li>`;
-            } catch (error) {
-              console.error('Error processing history event:', error, event);
-              return `<li class="py-2 border-b border-gray-100 dark:border-gray-700 last:border-b-0"><span class='font-semibold text-red-600'>Error processing event</span></li>`;
-            }
-          }).filter(item => item).join('');
-
-          historyHtml = `
-            <div class="mt-2">
-              <button 
-                class="text-blue-600 hover:text-blue-800 dark:text-blue-500 dark:hover:text-blue-400 text-sm font-medium flex items-center gap-1 w-full justify-between p-2 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors duration-200"
-                id="btn-${historyId}"
-              >
-                <span>See History (${historyArray.length} events)</span>
-                <svg class="w-4 h-4 transition-transform duration-200" id="icon-${historyId}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                </svg>
-              </button>
-              <div class="hidden mt-2 bg-gray-50 dark:bg-gray-800 rounded-md p-3" id="${historyId}">
-                <ul class="space-y-1 text-sm">
-                  ${historyItems}
-                </ul>
-              </div>
-            </div>`;
-        }
+        const historyVisitorName = parsedDetails.visitor_name ||
+          `${parsedDetails.visitor_first_name || ''} ${parsedDetails.visitor_last_name || ''}`.trim() ||
+          'Visitor';
+        const historyHtml = await buildVisitHistorySection({
+          parsedDetails: {
+            ...parsedDetails,
+            history: historyArray
+          },
+          visitorName: historyVisitorName
+        });
 
         // Determine status display based on resolution
         let statusDisplay = '';
@@ -3553,6 +3600,14 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
           const visitPlaceName = await getPlaceName(parsedDetails.place_id);
           if (visitPlaceName) {
             placesHtml = `<div><span class="font-medium">Place:</span> ${visitPlaceName}</div>`;
+          }
+        }
+        if (!placesHtml && parsedDetails.visit_id) {
+          const fromVisit = await fetchPlaceNamesFromVisitId(String(parsedDetails.visit_id));
+          if (fromVisit.length === 1) {
+            placesHtml = `<div><span class="font-medium">Place:</span> ${fromVisit[0]}</div>`;
+          } else if (fromVisit.length > 1) {
+            placesHtml = `<div><span class="font-medium">Places:</span> ${fromVisit.join(', ')}</div>`;
           }
         }
         
