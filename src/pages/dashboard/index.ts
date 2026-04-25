@@ -18,6 +18,7 @@ import { loadVisitorSettings, shouldShowScanButtons } from '../../components/Vis
 import { renderMinimalGuardDashboard, renderGuardScanHistoryRows } from './guard/MinimalGuardDashboard';
 import { renderGuardAnalyticsChart } from './guard/GuardScanAnalytics';
 import { renderMinimalLogsDashboard } from './log/MinimalLogsDashboard';
+import { renderMinimalVisitorDashboard, renderVisitorAnalyticsStatusBreakdown, renderVisitorAnalyticsTopPlaces, renderVisitorAnalyticsChart } from './visitor/MinimalVisitorDashboard';
 
 interface Place {
   id: string;
@@ -56,6 +57,10 @@ let currentVisitorSearchTerm = '';
 let currentVisitorStatusFilter = 'all';
 let allVisitorVisits: any[] = [];
 let filteredVisitorVisits: any[] = [];
+let currentVisitorTodayFiltered: any[] = [];
+let currentVisitorFutureFiltered: any[] = [];
+let currentVisitorPastFiltered: any[] = [];
+let currentVisitorAnalyticsRange: 'last_7_days' | 'last_30_days' = 'last_7_days';
 let hasShownPendingFeedbackModal = false;
 let hasShownPendingRescheduleModal = false;
 
@@ -356,7 +361,11 @@ export function DashboardPage() {
           
           // Show visitor content
           const visitorContent = document.getElementById('visitorContent');
-          if (visitorContent) visitorContent.classList.remove('hidden');
+          if (visitorContent) {
+            visitorContent.classList.remove('hidden');
+            visitorContent.className = 'bg-white dark:bg-gray-800 shadow rounded-lg p-3 sm:p-5 min-h-[calc(100vh-13rem)]';
+            visitorContent.innerHTML = renderMinimalVisitorDashboard();
+          }
           
           loadVisitorDashboard();
         } else {
@@ -8641,7 +8650,9 @@ async function applyVisitorTodayFilters() {
     filteredVisits = filteredVisits.filter(visit => visit.status === currentVisitorStatusFilter);
   }
 
+  currentVisitorTodayFiltered = filteredVisits;
   await displayVisitorTodayVisits(filteredVisits);
+  renderVisitorAnalytics();
 }
 
 // Function to apply filters for future visits
@@ -8668,7 +8679,9 @@ async function applyVisitorFutureFilters() {
     });
   }
 
+  currentVisitorFutureFiltered = filteredVisits;
   await displayVisitorFutureVisits(filteredVisits);
+  renderVisitorAnalytics();
 }
 
 // Function to apply filters for past visits
@@ -8732,7 +8745,67 @@ async function applyVisitorPastFilters() {
     });
   }
 
+  currentVisitorPastFiltered = filteredVisits;
   await displayVisitorPastVisits(filteredVisits);
+  renderVisitorAnalytics();
+}
+
+function renderVisitorAnalytics() {
+  const visible = [
+    ...(Array.isArray(currentVisitorTodayFiltered) ? currentVisitorTodayFiltered : []),
+    ...(Array.isArray(currentVisitorFutureFiltered) ? currentVisitorFutureFiltered : []),
+    ...(Array.isArray(currentVisitorPastFiltered) ? currentVisitorPastFiltered : []),
+  ];
+
+  const visibleCount = visible.length;
+  const todayCount = Array.isArray(currentVisitorTodayFiltered) ? currentVisitorTodayFiltered.length : 0;
+  const upcomingCount = Array.isArray(currentVisitorFutureFiltered) ? currentVisitorFutureFiltered.length : 0;
+  const pastCount = Array.isArray(currentVisitorPastFiltered) ? currentVisitorPastFiltered.length : 0;
+
+  const visibleEl = document.getElementById('visitorAnalyticsVisible');
+  const todayEl = document.getElementById('visitorAnalyticsToday');
+  const upcomingEl = document.getElementById('visitorAnalyticsUpcoming');
+  const pastEl = document.getElementById('visitorAnalyticsPast');
+
+  if (visibleEl) visibleEl.textContent = String(visibleCount);
+  if (todayEl) todayEl.textContent = String(todayCount);
+  if (upcomingEl) upcomingEl.textContent = String(upcomingCount);
+  if (pastEl) pastEl.textContent = String(pastCount);
+
+  const statusCounts: Record<string, number> = {};
+  const placeCounts: Record<string, number> = {};
+
+  for (const visit of visible) {
+    const status = String(visit?.status || 'unknown');
+    statusCounts[status] = (statusCounts[status] || 0) + 1;
+
+    const places = Array.isArray(visit?.places) ? visit.places : [];
+    for (const p of places) {
+      const name = String(p?.place_name || '').trim();
+      if (!name) continue;
+      placeCounts[name] = (placeCounts[name] || 0) + 1;
+    }
+  }
+
+  const statusBreakdownEl = document.getElementById('visitorAnalyticsStatusBreakdown');
+  if (statusBreakdownEl) statusBreakdownEl.innerHTML = renderVisitorAnalyticsStatusBreakdown(statusCounts);
+
+  const topPlacesEl = document.getElementById('visitorAnalyticsTopPlaces');
+  if (topPlacesEl) topPlacesEl.innerHTML = renderVisitorAnalyticsTopPlaces(placeCounts);
+
+  const chartEl = document.getElementById('visitorAnalyticsChart');
+  if (chartEl) chartEl.innerHTML = renderVisitorAnalyticsChart(allVisitorVisits, currentVisitorAnalyticsRange);
+
+  const rangeSelect = document.getElementById('visitorAnalyticsRangeFilter') as HTMLSelectElement | null;
+  if (rangeSelect && !rangeSelect.dataset.bound) {
+    rangeSelect.value = currentVisitorAnalyticsRange;
+    rangeSelect.dataset.bound = 'true';
+    rangeSelect.addEventListener('change', () => {
+      const next = rangeSelect.value === 'last_30_days' ? 'last_30_days' : 'last_7_days';
+      currentVisitorAnalyticsRange = next;
+      if (chartEl) chartEl.innerHTML = renderVisitorAnalyticsChart(allVisitorVisits, currentVisitorAnalyticsRange);
+    });
+  }
 }
 
 // Helper function to get current Philippine time
@@ -11627,8 +11700,8 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
   visitorCurrentVisitsList.innerHTML = visitsHtml;
   
   // Update feedback button states for completed visits
-  const completedVisits = visits.filter(visit => visit.status === 'completed');
-  for (const visit of completedVisits) {
+  const completedVisitsForButtonsToday = visits.filter(visit => visit.status === 'completed');
+  for (const visit of completedVisitsForButtonsToday) {
     updateFeedbackButtonState(visit.id);
   }
   
@@ -11639,6 +11712,210 @@ async function displayVisitorCurrentVisits(visits: any[]): Promise<void> {
       checkAndShowPlaceOnHoldNotification(visit.id, places);
     }
   }
+}
+
+function escapeHtmlBasic(value: string): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function getVisitorStatusLabel(visit: any, completedPlaces: number, totalPlaces: number): string {
+  const visitDate = new Date(visit?.visit_date);
+  const isPast = visitDate < new Date();
+  const isToday = visitDate.toDateString() === new Date().toDateString();
+
+  if (visit?.status === 'completed_flagged') {
+    if (!isToday && isPast) return 'Completed (Flagged)';
+    return (completedPlaces === totalPlaces && totalPlaces > 0) ? 'In Progress' : 'Pending';
+  }
+  if (visit?.status === 'completed') return 'Completed';
+  if (visit?.status === 'pending' && completedPlaces === totalPlaces && totalPlaces > 0) return 'In Progress';
+  if (visit?.status === 'pending') return 'Pending';
+  if (visit?.status === 'temporary_exit') return 'Temporary Exit';
+  if (visit?.status === 'unsuccessful' || visit?.status === 'failed') return 'Unsuccessful';
+  if (visit?.status === 'cancelled') return 'Cancelled';
+  return String(visit?.status || 'Unknown').charAt(0).toUpperCase() + String(visit?.status || 'unknown').slice(1);
+}
+
+function getVisitorStatusBadgeClass(visit: any, completedPlaces: number, totalPlaces: number): string {
+  if (visit?.status === 'completed') return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+  if (visit?.status === 'completed_flagged') return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
+  if (visit?.status === 'unsuccessful' || visit?.status === 'failed') return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+  if (visit?.status === 'cancelled') return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+  if (visit?.status === 'pending' && completedPlaces === totalPlaces && totalPlaces > 0) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+  if (visit?.status === 'temporary_exit') return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+  return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+}
+
+function renderVisitorVisitRow(
+  visit: any,
+  opts: { userRole: string | null; scanButtonsEnabled: boolean; context: 'today' | 'future' | 'past' }
+): string {
+  const visitDate = new Date(visit.visit_date);
+  const places = Array.isArray(visit.places) ? visit.places : [];
+  const completedPlaces = places.filter((p: any) => p?.status === 'completed').length;
+  const totalPlaces = places.length;
+  const progress = calculateVisitProgress(visit);
+
+  const statusLabel = getVisitorStatusLabel(visit, completedPlaces, totalPlaces);
+  const badgeClass = getVisitorStatusBadgeClass(visit, completedPlaces, totalPlaces);
+
+  const placesText = places
+    .map((p: any) => p?.place_name)
+    .filter((n: any) => Boolean(n))
+    .join(', ');
+
+  const purposeText = `${visit.purpose || ''}${visit.other_purpose ? ` - ${visit.other_purpose}` : ''}`.trim() || '—';
+  const safePlacesJson = JSON.stringify(places.map((p: any) => p.place_name)).replace(/"/g, '&quot;');
+  const visitorFullName = `${visit.visitor_first_name || ''} ${visit.visitor_last_name || ''}`.trim();
+
+  const showPrint = !['unsuccessful', 'failed', 'completed', 'completed_flagged'].includes(String(visit.status || ''));
+
+  const canScanEntrance =
+    opts.context === 'today'
+    && opts.userRole === 'visitor'
+    && opts.scanButtonsEnabled
+    && ((visit.status === 'pending' && !visit.gate_entrance_scanned) || visit.status === 'temporary_exit');
+
+  const canScanExit =
+    opts.context === 'today'
+    && opts.userRole === 'visitor'
+    && opts.scanButtonsEnabled
+    && (visit.status === 'pending' || visit.status === 'in_progress')
+    && visit.gate_entrance_scanned
+    && !visit.gate_exit_scanned
+    && completedPlaces === totalPlaces
+    && totalPlaces > 0;
+
+  const needsPlacesBeforeExit =
+    opts.context === 'today'
+    && opts.userRole === 'visitor'
+    && (visit.status === 'pending' || visit.status === 'in_progress')
+    && visit.gate_entrance_scanned
+    && !visit.gate_exit_scanned
+    && (completedPlaces < totalPlaces || totalPlaces === 0);
+
+  const canRequestReschedule =
+    opts.context === 'future'
+    && opts.userRole === 'visitor'
+    && visit.status === 'pending'
+    && !visit.reschedule_attempted
+    && visit.reschedule_status !== 'pending';
+
+  const rescheduleRequested = opts.context === 'future' && opts.userRole === 'visitor' && visit.reschedule_status === 'pending';
+
+  const feedbackButton =
+    visit.status === 'completed'
+      ? `
+        <button
+          id="feedbackBtn_${escapeHtmlBasic(visit.id)}"
+          class="px-2.5 py-1.5 text-xs rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          onclick="openFeedbackSurvey('${escapeHtmlBasic(visit.id)}', '${escapeHtmlBasic(visitorFullName)}', '${escapeHtmlBasic(visit.visit_date)}', ${safePlacesJson})"
+        >
+          Feedback
+        </button>
+      `
+      : '';
+
+  const actions = `
+    <div class="flex flex-wrap justify-end gap-2">
+      <button
+        class="px-2.5 py-1.5 text-xs rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 copy-btn"
+        title="Copy Visit ID"
+        onclick="copyVisitId('${escapeHtmlBasic(visit.id)}', this)"
+      >
+        Copy ID
+      </button>
+      ${showPrint ? `
+        <button
+          class="px-2.5 py-1.5 text-xs rounded-md border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/20 text-purple-800 dark:text-purple-200 hover:bg-purple-100 dark:hover:bg-purple-900/30"
+          title="Print Visit Card with QR Code"
+          onclick="printVisitCard('${escapeHtmlBasic(visit.id)}')"
+        >
+          Print
+        </button>
+      ` : ''}
+      ${canScanEntrance ? `
+        <button
+          class="px-2.5 py-1.5 text-xs rounded-md bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-800"
+          title="Scan Gate Entrance to Start Visit"
+          onclick="scanGateEntrance('${escapeHtmlBasic(visit.id)}')"
+        >
+          Scan Entrance
+        </button>
+      ` : ''}
+      ${canScanExit ? `
+        <button
+          class="px-2.5 py-1.5 text-xs rounded-md bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 hover:bg-purple-200 dark:hover:bg-purple-800"
+          title="Scan Gate Exit to Complete Visit"
+          onclick="scanGateExit('${escapeHtmlBasic(visit.id)}')"
+        >
+          Scan Exit
+        </button>
+      ` : ''}
+      ${needsPlacesBeforeExit ? `
+        <button
+          disabled
+          class="px-2.5 py-1.5 text-xs rounded-md bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed"
+          title="All places must be completed by personnel before scanning exit gate"
+        >
+          Scan Exit
+        </button>
+      ` : ''}
+      ${rescheduleRequested ? `
+        <span
+          class="px-2.5 py-1.5 text-xs rounded-md bg-teal-50 text-teal-700 dark:bg-teal-900/40 dark:text-teal-200 border border-teal-200 dark:border-teal-800"
+          title="Reschedule request sent. Please wait for confirmation."
+        >
+          Request Sent
+        </span>
+      ` : ''}
+      ${canRequestReschedule ? `
+        <button
+          class="px-2.5 py-1.5 text-xs rounded-md bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200 hover:bg-teal-200 dark:hover:bg-teal-800"
+          title="Request reschedule for this visit"
+          onclick="window.requestVisitRescheduleForVisit && window.requestVisitRescheduleForVisit('${escapeHtmlBasic(visit.id)}', '${escapeHtmlBasic(visit.visit_date)}', '${escapeHtmlBasic(String(visit.purpose || ''))}')"
+        >
+          Request Reschedule
+        </button>
+      ` : ''}
+      ${feedbackButton}
+    </div>
+  `;
+
+  return `
+    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+      <td class="px-4 py-3 whitespace-nowrap text-gray-700 dark:text-gray-200">${escapeHtmlBasic(visitDate.toLocaleDateString())}</td>
+      <td class="px-4 py-3 text-gray-700 dark:text-gray-200">
+        <div class="font-medium">${escapeHtmlBasic(purposeText)}</div>
+        <div class="text-xs text-gray-500 dark:text-gray-400 font-mono">ID: ${escapeHtmlBasic(visit.id)}</div>
+      </td>
+      <td class="px-4 py-3 text-gray-600 dark:text-gray-300">
+        ${placesText ? escapeHtmlBasic(placesText) : '<span class="text-gray-400">—</span>'}
+      </td>
+      <td class="px-4 py-3">
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${badgeClass}">
+          ${escapeHtmlBasic(statusLabel)}
+        </span>
+        <div class="mt-2 w-44 max-w-full">
+          <div class="flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400">
+            <span>Progress</span>
+            <span class="font-medium text-gray-700 dark:text-gray-200">${progress.percentage}%</span>
+          </div>
+          <div class="mt-1 h-1.5 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+            <div class="h-full rounded-full bg-blue-600" style="width: ${progress.percentage}%"></div>
+          </div>
+        </div>
+      </td>
+      <td class="px-4 py-3 text-right">
+        ${actions}
+      </td>
+    </tr>
+  `;
 }
 
 // Function to display visitor's today visits
@@ -11670,18 +11947,33 @@ async function displayVisitorTodayVisits(visits: any[]): Promise<void> {
 
   if (visits.length === 0) {
     visitorTodayVisitsList.innerHTML = `
-      <div class="text-center py-8">
-        <div class="text-gray-500 dark:text-gray-400">
-          <svg class="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          <p class="text-lg font-medium">No visits scheduled for today</p>
-          <p class="text-sm">You don't have any visits scheduled for today.</p>
-        </div>
-      </div>
+      <tr>
+        <td colspan="5" class="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
+          No visits scheduled for today.
+        </td>
+      </tr>
     `;
     return;
   }
+
+  // Minimal table rendering (rows) for the Today tab
+  visitorTodayVisitsList.innerHTML = visits
+    .map((visit) => renderVisitorVisitRow(visit, { userRole, scanButtonsEnabled, context: 'today' }))
+    .join('');
+
+  const completedVisitsForButtons = visits.filter(visit => visit.status === 'completed');
+  for (const visit of completedVisitsForButtons) {
+    updateFeedbackButtonState(visit.id);
+  }
+
+  for (const visit of visits) {
+    const places = Array.isArray(visit.places) ? visit.places : [];
+    if (places.length > 0) {
+      checkAndShowPlaceOnHoldNotification(visit.id, places);
+    }
+  }
+
+  return;
 
   let visitsHtml = '';
   
@@ -12002,19 +12294,7 @@ async function displayVisitorTodayVisits(visits: any[]): Promise<void> {
 
   visitorTodayVisitsList.innerHTML = visitsHtml;
   
-  // Update feedback button states for completed visits
-  const completedVisits = visits.filter(visit => visit.status === 'completed');
-  for (const visit of completedVisits) {
-    updateFeedbackButtonState(visit.id);
-  }
-  
-  // Check and show on-hold notification for each visit
-  for (const visit of visits) {
-    const places = Array.isArray(visit.places) ? visit.places : [];
-    if (places.length > 0) {
-      checkAndShowPlaceOnHoldNotification(visit.id, places);
-    }
-  }
+  // (Legacy card renderer continues below; new table renderer returns earlier.)
 }
 
 // Function to display visitor's future visits
@@ -12046,18 +12326,32 @@ async function displayVisitorFutureVisits(visits: any[]): Promise<void> {
 
   if (visits.length === 0) {
     visitorFutureVisitsList.innerHTML = `
-      <div class="text-center py-8">
-        <div class="text-gray-500 dark:text-gray-400">
-          <svg class="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          <p class="text-lg font-medium">No future visits scheduled</p>
-          <p class="text-sm">You don't have any visits scheduled for the future.</p>
-        </div>
-      </div>
+      <tr>
+        <td colspan="5" class="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
+          No future visits scheduled.
+        </td>
+      </tr>
     `;
     return;
   }
+
+  visitorFutureVisitsList.innerHTML = visits
+    .map((visit) => renderVisitorVisitRow(visit, { userRole, scanButtonsEnabled, context: 'future' }))
+    .join('');
+
+  const completedVisitsLegacy = visits.filter(visit => visit.status === 'completed');
+  for (const visit of completedVisitsLegacy) {
+    updateFeedbackButtonState(visit.id);
+  }
+
+  for (const visit of visits) {
+    const places = Array.isArray(visit.places) ? visit.places : [];
+    if (places.length > 0) {
+      checkAndShowPlaceOnHoldNotification(visit.id, places);
+    }
+  }
+
+  return;
 
   let visitsHtml = '';
   
@@ -12380,18 +12674,25 @@ async function displayVisitorPastVisits(visits: any[]): Promise<void> {
 
   if (visits.length === 0) {
     visitorPastVisitsList.innerHTML = `
-      <div class="text-center py-8">
-        <div class="text-gray-500 dark:text-gray-400">
-          <svg class="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <p class="text-lg font-medium">No past schedules found</p>
-          <p class="text-sm">You haven't completed any visits yet.</p>
-        </div>
-      </div>
+      <tr>
+        <td colspan="5" class="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
+          No past schedules found.
+        </td>
+      </tr>
     `;
     return;
   }
+
+  visitorPastVisitsList.innerHTML = visits
+    .map((visit) => renderVisitorVisitRow(visit, { userRole: null, scanButtonsEnabled: false, context: 'past' }))
+    .join('');
+
+  const completedVisitsLegacyA = visits.filter(visit => visit.status === 'completed');
+  for (const visit of completedVisitsLegacyA) {
+    updateFeedbackButtonState(visit.id);
+  }
+
+  return;
 
   let visitsHtml = '';
   
@@ -12688,8 +12989,8 @@ async function displayVisitorPastVisits(visits: any[]): Promise<void> {
   visitorPastVisitsList.innerHTML = visitsHtml;
   
   // Update feedback button states for completed visits
-  const completedVisits = visits.filter(visit => visit.status === 'completed');
-  for (const visit of completedVisits) {
+  const completedVisitsLegacyB = visits.filter(visit => visit.status === 'completed');
+  for (const visit of completedVisitsLegacyB) {
     updateFeedbackButtonState(visit.id);
   }
 }

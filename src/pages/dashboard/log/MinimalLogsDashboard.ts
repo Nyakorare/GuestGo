@@ -4,6 +4,12 @@ export function renderMinimalLogsDashboard(): string {
       <div class="grid grid-cols-1 xl:grid-cols-12 gap-4 h-full">
         <aside class="xl:col-span-3 border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50/60 dark:bg-gray-900/30 h-full">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Logs Analytics</h2>
+          <div class="rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 mb-3">
+            <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Activity Trend (7 days)</p>
+            <div id="logsAnalyticsChart" class="h-32">
+              <p class="text-xs text-gray-500 dark:text-gray-400">No data</p>
+            </div>
+          </div>
           <div class="space-y-3">
             <div class="rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
               <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Visible Logs</p>
@@ -20,12 +26,6 @@ export function renderMinimalLogsDashboard(): string {
             <div class="rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
               <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Top Actions</p>
               <div id="logsAnalyticsTopActions" class="space-y-2 text-sm text-gray-700 dark:text-gray-300">
-                <p class="text-xs text-gray-500 dark:text-gray-400">No data</p>
-              </div>
-            </div>
-            <div class="rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
-              <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Activity Trend (7 days)</p>
-              <div id="logsAnalyticsChart" class="h-32">
                 <p class="text-xs text-gray-500 dark:text-gray-400">No data</p>
               </div>
             </div>
