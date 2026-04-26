@@ -2987,6 +2987,18 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
         })
         .filter(item => item);
       
+      const buildTempExitHistoryItem = async (row: any): Promise<{ time: number; html: string }> => {
+        const whenRaw = row?.details?.timestamp || row?.created_at;
+        const guardId = row?.details?.guard_id;
+        const guardName = guardId ? await getUserName(guardId) : 'Guard';
+        const timeText = whenRaw ? new Date(whenRaw).toLocaleString() : 'Unknown time';
+        const time = whenRaw ? new Date(whenRaw).getTime() : 0;
+        return {
+          time,
+          html: `<li class="py-1 border-b border-gray-100 dark:border-gray-700 last:border-b-0"><span class='font-semibold'>Temporary Exit</span> <span class='text-xs text-gray-400'>${timeText}</span> <span class='text-xs text-blue-500'>(By: ${guardName})</span></li>`
+        };
+      };
+
       let tempExitItems: string[] = [];
       if (visitId) {
         try {
@@ -2994,15 +3006,33 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
             .from('logs')
             .select('created_at, details')
             .eq('action', 'visit_temporary_exit')
-            .contains('details', { visit_id: visitId });
-          if (!tempErr && Array.isArray(tempExitLogs)) {
-            tempExitItems = await Promise.all(tempExitLogs.map(async (row: any) => {
-              const when = row?.details?.timestamp || row?.created_at;
-              const guardId = row?.details?.guard_id;
-              const guardName = guardId ? await getUserName(guardId) : 'Guard';
-              const timeText = when ? new Date(when).toLocaleString() : 'Unknown time';
-              return `<li class="py-1 border-b border-gray-100 dark:border-gray-700 last:border-b-0"><span class='font-semibold'>Temporary Exit</span> <span class='text-xs text-gray-400'>${timeText}</span> <span class='text-xs text-blue-500'>(By: ${guardName})</span></li>`;
-            }));
+            .eq('details->>visit_id', String(visitId));
+          const { data: tempExitGuardActionLogs, error: guardTempErr } = await supabase
+            .from('logs')
+            .select('created_at, details')
+            .eq('action', 'guard_action')
+            .eq('details->>visit_id', String(visitId))
+            .eq('details->>action', 'temporary_exit');
+
+          if (!tempErr && !guardTempErr) {
+            const allTempExitLogs = [
+              ...(Array.isArray(tempExitLogs) ? tempExitLogs : []),
+              ...(Array.isArray(tempExitGuardActionLogs) ? tempExitGuardActionLogs : [])
+            ];
+            const uniqueLogs = allTempExitLogs.filter((row: any, index: number, arr: any[]) => {
+              const when = row?.details?.timestamp || row?.created_at || '';
+              const guard = row?.details?.guard_id || '';
+              const key = `${when}-${guard}`;
+              return arr.findIndex((candidate: any) => {
+                const candidateWhen = candidate?.details?.timestamp || candidate?.created_at || '';
+                const candidateGuard = candidate?.details?.guard_id || '';
+                return `${candidateWhen}-${candidateGuard}` === key;
+              }) === index;
+            });
+            const mapped = await Promise.all(uniqueLogs.map(buildTempExitHistoryItem));
+            tempExitItems = mapped
+              .sort((a, b) => a.time - b.time)
+              .map((item) => item.html);
           }
         } catch (error) {
           console.error('Error fetching temporary-exit logs:', error);
@@ -3322,6 +3352,18 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
           }).filter(item => item);
 
           // Fetch temporary-exit logs for this visit and append as history items with time
+          const buildTempExitHistoryItem = async (row: any): Promise<{ time: number; html: string }> => {
+            const whenRaw = row?.details?.timestamp || row?.created_at;
+            const guardId = row?.details?.guard_id;
+            const guardName = guardId ? await getUserName(guardId) : 'Guard';
+            const timeText = whenRaw ? new Date(whenRaw).toLocaleString() : 'Unknown time';
+            const time = whenRaw ? new Date(whenRaw).getTime() : 0;
+            return {
+              time,
+              html: `<li class="py-1 border-b border-gray-100 dark:border-gray-700 last:border-b-0"><span class='font-semibold'>Temporary Exit</span> <span class='text-xs text-gray-400'>${timeText}</span> <span class='text-xs text-blue-500'>(By: ${guardName})</span></li>`
+            };
+          };
+
           let tempExitItems: string[] = [];
           if (parsedDetails.visit_id) {
             try {
@@ -3329,15 +3371,33 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
                 .from('logs')
                 .select('created_at, details')
                 .eq('action', 'visit_temporary_exit')
-                .contains('details', { visit_id: parsedDetails.visit_id });
-              if (!tempErr && Array.isArray(tempExitLogs)) {
-                tempExitItems = await Promise.all(tempExitLogs.map(async (row: any) => {
-                  const when = row?.details?.timestamp || row?.created_at;
-                  const guardId = row?.details?.guard_id;
-                  const guardName = guardId ? await getUserName(guardId) : 'Guard';
-                  const timeText = when ? new Date(when).toLocaleString() : 'Unknown time';
-                  return `<li class="py-1 border-b border-gray-100 dark:border-gray-700 last:border-b-0"><span class='font-semibold'>Temporary Exit</span> <span class='text-xs text-gray-400'>${timeText}</span> <span class='text-xs text-blue-500'>(By: ${guardName})</span></li>`;
-                }));
+                .eq('details->>visit_id', String(parsedDetails.visit_id));
+              const { data: tempExitGuardActionLogs, error: guardTempErr } = await supabase
+                .from('logs')
+                .select('created_at, details')
+                .eq('action', 'guard_action')
+                .eq('details->>visit_id', String(parsedDetails.visit_id))
+                .eq('details->>action', 'temporary_exit');
+
+              if (!tempErr && !guardTempErr) {
+                const allTempExitLogs = [
+                  ...(Array.isArray(tempExitLogs) ? tempExitLogs : []),
+                  ...(Array.isArray(tempExitGuardActionLogs) ? tempExitGuardActionLogs : [])
+                ];
+                const uniqueLogs = allTempExitLogs.filter((row: any, index: number, arr: any[]) => {
+                  const when = row?.details?.timestamp || row?.created_at || '';
+                  const guard = row?.details?.guard_id || '';
+                  const key = `${when}-${guard}`;
+                  return arr.findIndex((candidate: any) => {
+                    const candidateWhen = candidate?.details?.timestamp || candidate?.created_at || '';
+                    const candidateGuard = candidate?.details?.guard_id || '';
+                    return `${candidateWhen}-${candidateGuard}` === key;
+                  }) === index;
+                });
+                const mapped = await Promise.all(uniqueLogs.map(buildTempExitHistoryItem));
+                tempExitItems = mapped
+                  .sort((a, b) => a.time - b.time)
+                  .map((item) => item.html);
               }
             } catch (e) {
               console.error('Error fetching temporary-exit logs:', e);
@@ -9087,96 +9147,15 @@ if (typeof window !== 'undefined') {
   });
 }
 
-// Function to check if dropdown would be clipped by viewport or scrollable container
-function wouldDropdownBeClipped(button: HTMLElement, estimatedHeight: number = 250): boolean {
-  const buttonRect = button.getBoundingClientRect();
-  const viewportHeight = window.innerHeight;
-  const spaceBelowViewport = viewportHeight - buttonRect.bottom;
-  
-  // Check viewport space first - if not enough space in viewport, use modal
-  if (spaceBelowViewport < estimatedHeight) {
-    return true;
-  }
-  
-  // Check if inside a scrollable container that would clip it
-  let current: HTMLElement | null = button.parentElement;
-  
-  while (current && current !== document.body) {
-    const style = window.getComputedStyle(current);
-    const overflowY = style.overflowY;
-    const overflow = style.overflow;
-    
-    // Check if this container has overflow constraints
-    if (overflowY === 'auto' || overflowY === 'scroll' || overflow === 'auto' || overflow === 'scroll') {
-      const containerRect = current.getBoundingClientRect();
-      const scrollTop = current.scrollTop;
-      const scrollHeight = current.scrollHeight;
-      const clientHeight = current.clientHeight;
-      
-      // Calculate visible space below button within the container's viewport
-      const spaceBelowInContainerViewport = containerRect.bottom - buttonRect.bottom;
-      
-      // Check if we're near the bottom of the scrollable content
-      const isNearBottom = (scrollTop + clientHeight) >= scrollHeight - 50;
-      
-      // If there's not enough visible space below AND we're near the bottom of scrollable content
-      if (spaceBelowInContainerViewport < estimatedHeight && isNearBottom) {
-        return true;
-      }
-    }
-    
-    current = current.parentElement;
-  }
-  
-  return false;
-}
-
 // Function to toggle history dropdown
 function toggleHistory(historyId: string) {
   const historyDiv = document.getElementById(historyId);
   const button = document.getElementById(`btn-${historyId}`);
   const icon = document.getElementById(`icon-${historyId}`);
 
-  // Mobile: show modal popup
-  if (window.innerWidth <= 768) {
-    ensureHistoryModalExists();
-    if (historyDiv) {
-      const modal = document.getElementById('historyModal');
-      const modalContent = document.getElementById('historyModalContent');
-      if (modal && modalContent) {
-        // Copy the history list HTML only
-        const ul = historyDiv.querySelector('ul');
-        modalContent.innerHTML = ul ? ul.outerHTML : '<div class="text-gray-500">No history events.</div>';
-        modal.classList.remove('hidden');
-      }
-    }
-    return;
-  }
-
-  // Desktop: toggle dropdown
   if (historyDiv && button && icon) {
     const isHidden = historyDiv.classList.contains('hidden');
     if (isHidden) {
-      // Temporarily show dropdown to measure its actual height
-      historyDiv.classList.remove('hidden');
-      const dropdownHeight = historyDiv.offsetHeight;
-      historyDiv.classList.add('hidden');
-      
-      // Check if dropdown would be clipped
-      if (wouldDropdownBeClipped(button, dropdownHeight + 20)) {
-        // Use modal approach when dropdown would be clipped
-        ensureHistoryModalExists();
-        const modal = document.getElementById('historyModal');
-        const modalContent = document.getElementById('historyModalContent');
-        if (modal && modalContent) {
-          const ul = historyDiv.querySelector('ul');
-          modalContent.innerHTML = ul ? ul.outerHTML : '<div class="text-gray-500">No history events.</div>';
-          modal.classList.remove('hidden');
-        }
-        return;
-      }
-      
-      // Show dropdown normally
       historyDiv.classList.remove('hidden');
       icon.style.transform = 'rotate(180deg)';
       const span = button.querySelector('span');
@@ -13544,29 +13523,6 @@ function handleHistoryButtonTouch(event: TouchEvent) {
   const button = event.currentTarget as HTMLElement;
   const historyId = button.id.replace('btn-', '');
   toggleHistory(historyId);
-}
-
-// Add this function to inject the modal HTML if it doesn't exist
-function ensureHistoryModalExists() {
-  if (!document.getElementById('historyModal')) {
-    const modal = document.createElement('div');
-    modal.id = 'historyModal';
-    modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 hidden';
-    modal.innerHTML = `
-      <div class="bg-white dark:bg-gray-900 rounded-lg shadow-lg max-w-md w-full mx-4 p-4 relative">
-        <button id="closeHistoryModal" class="absolute top-2 right-2 text-gray-400 hover:text-gray-700 dark:hover:text-white text-2xl font-bold">&times;</button>
-        <div id="historyModalContent" class="max-h-[60vh] overflow-y-auto"></div>
-      </div>
-    `;
-    document.body.appendChild(modal);
-    document.getElementById('closeHistoryModal')?.addEventListener('click', () => {
-      modal.classList.add('hidden');
-    });
-    // Also close on background click
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) modal.classList.add('hidden');
-    });
-  }
 }
 // Global function to show flagged visit details (accessible from onclick)
 (window as any).showFlaggedVisitDetails = async function(visitId: string) {
