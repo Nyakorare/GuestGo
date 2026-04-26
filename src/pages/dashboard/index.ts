@@ -194,6 +194,8 @@ export function DashboardPage() {
         const aiStatusTab = document.getElementById('aiStatusTab');
         const guardGateAssignmentsTab = document.getElementById('guardGateAssignmentsTab');
         const visitorSettingsTab = document.getElementById('visitorSettingsTab');
+    const adminWorkspace = document.getElementById('adminWorkspace');
+    const adminAnalyticsContainer = document.getElementById('adminAnalyticsContainer');
     const placesContent = document.getElementById('placesContent');
     const accountsContent = document.getElementById('accountsContent');
     const logsContent = document.getElementById('logsContent');
@@ -232,6 +234,8 @@ export function DashboardPage() {
           // Hide visitor content
           const visitorContent = document.getElementById('visitorContent');
           if (visitorContent) visitorContent.classList.add('hidden');
+          if (adminAnalyticsContainer) adminAnalyticsContainer.classList.add('hidden');
+          if (adminWorkspace) adminWorkspace.classList.remove('xl:grid-cols-12');
           
           // Load logs immediately
           loadLogs();
@@ -270,8 +274,11 @@ export function DashboardPage() {
           // Hide visitor content
           const visitorContent = document.getElementById('visitorContent');
           if (visitorContent) visitorContent.classList.add('hidden');
+          if (adminAnalyticsContainer) adminAnalyticsContainer.classList.remove('hidden');
+          if (adminWorkspace) adminWorkspace.classList.add('xl:grid-cols-12');
           
           loadPlaces();
+          renderAdminAnalytics();
           // Setup admin tab event listeners
           setupAdminTabEventListeners();
           // Do NOT call loadLogs() here; logs will load when logs tab is clicked
@@ -296,6 +303,8 @@ export function DashboardPage() {
           
           // Hide refresh all button for personnel role
           if (adminRefreshBtn) adminRefreshBtn.classList.add('hidden');
+          if (adminAnalyticsContainer) adminAnalyticsContainer.classList.add('hidden');
+          if (adminWorkspace) adminWorkspace.classList.remove('xl:grid-cols-12');
           
           loadPersonnelDashboard();
         } else if (roleData.role === 'guard') {
@@ -323,6 +332,8 @@ export function DashboardPage() {
           
           // Hide refresh all button for guard role
           if (adminRefreshBtn) adminRefreshBtn.classList.add('hidden');
+          if (adminAnalyticsContainer) adminAnalyticsContainer.classList.add('hidden');
+          if (adminWorkspace) adminWorkspace.classList.remove('xl:grid-cols-12');
           
           // Show guard content
           const guardContent = document.getElementById('guardContent');
@@ -358,6 +369,8 @@ export function DashboardPage() {
           
           // Hide refresh all button for visitor role
           if (adminRefreshBtn) adminRefreshBtn.classList.add('hidden');
+          if (adminAnalyticsContainer) adminAnalyticsContainer.classList.add('hidden');
+          if (adminWorkspace) adminWorkspace.classList.remove('xl:grid-cols-12');
           
           // Show visitor content
           const visitorContent = document.getElementById('visitorContent');
@@ -389,6 +402,8 @@ export function DashboardPage() {
           
           // Hide refresh all button for other roles
           if (adminRefreshBtn) adminRefreshBtn.classList.add('hidden');
+          if (adminAnalyticsContainer) adminAnalyticsContainer.classList.add('hidden');
+          if (adminWorkspace) adminWorkspace.classList.remove('xl:grid-cols-12');
         }
       }
     }
@@ -531,8 +546,8 @@ export function DashboardPage() {
     });
   }, 0);
   return `
-    <div class="w-full -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-0">
-      <div class="flex flex-col gap-4 mb-8">
+    <div class="w-full -mx-4 sm:-mx-6 lg:-mx-8 px-2 sm:px-4 lg:px-6 py-0 min-h-screen">
+      <div class="flex flex-col gap-3 mb-4">
         <!-- Header Row 1: Logo, Title, and Clock -->
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
@@ -637,9 +652,12 @@ export function DashboardPage() {
         </div>
       </div>
 
+      <div id="adminWorkspace" class="grid grid-cols-1 xl:grid-cols-12 gap-3">
+      <aside id="adminAnalyticsContainer" class="hidden xl:col-span-3 bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700 p-3 h-fit"></aside>
+      <div class="xl:col-span-9 space-y-3">
       <!-- Admin Content -->
-      <div id="placesContent" class="bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
-        <div class="flex flex-col gap-6 mb-6">
+      <div id="placesContent" class="bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-3 border border-gray-200 dark:border-gray-700">
+        <div class="flex flex-col gap-3 mb-3">
           <!-- Header Section -->
           <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">Places Management</h2>
@@ -655,17 +673,17 @@ export function DashboardPage() {
           </div>
 
           <!-- Filters Section -->
-          <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-            <div class="flex flex-col lg:flex-row gap-4">
+          <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-2">
+            <div class="flex flex-col lg:flex-row gap-2">
               <!-- Search Input -->
               <div class="relative flex-1">
-                <label for="placesSearchInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Places</label>
+                <label for="placesSearchInput" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Search Places</label>
                 <div class="relative">
                   <input 
                     type="text" 
                     id="placesSearchInput"
                     placeholder="Search by name, location, or description..."
-                    class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
+                    class="pl-9 pr-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
                   >
                   <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -676,10 +694,10 @@ export function DashboardPage() {
               </div>
               <!-- Availability Filter -->
               <div class="flex-1 lg:max-w-xs">
-                <label for="availabilityFilter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Availability Status</label>
+                <label for="availabilityFilter" class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Availability</label>
                 <select 
                   id="availabilityFilter"
-                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
+                  class="px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full"
                 >
                   <option value="all">All Places</option>
                   <option value="available">Available Only</option>
@@ -692,7 +710,7 @@ export function DashboardPage() {
         <div id="placesList" class="space-y-4"></div>
       </div>
 
-      <div id="accountsContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
+      <div id="accountsContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-4 border border-gray-200 dark:border-gray-700">
         <div class="flex flex-col gap-6 mb-6">
           <!-- Header Section -->
           <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
@@ -742,31 +760,31 @@ export function DashboardPage() {
 
       ${renderMinimalLogsDashboard()}
 
-      <div id="gatesContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
+      <div id="gatesContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-4 border border-gray-200 dark:border-gray-700">
         <!-- Gates Management Content will be loaded here -->
       </div>
 
-      <div id="guardGateAssignmentsContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
+      <div id="guardGateAssignmentsContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-4 border border-gray-200 dark:border-gray-700">
         <!-- Guard Gate Assignment Content will be loaded here -->
       </div>
 
       <!-- Feedback Content -->
-      <div id="feedbackContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
+      <div id="feedbackContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-4 border border-gray-200 dark:border-gray-700">
         <!-- Feedback Management Content will be loaded here -->
       </div>
 
       <!-- AI Status Content -->
-      <div id="aiStatusContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
+      <div id="aiStatusContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-4 border border-gray-200 dark:border-gray-700">
         <!-- AI Status Content will be loaded here -->
       </div>
 
       <!-- Visitor Settings Content -->
-      <div id="visitorSettingsContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
+      <div id="visitorSettingsContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-4 border border-gray-200 dark:border-gray-700">
         <!-- Visitor Settings Content will be loaded here -->
       </div>
 
       <!-- Personnel Dashboard Content -->
-      <div id="personnelContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
+      <div id="personnelContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-4 border border-gray-200 dark:border-gray-700">
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
           <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">Personnel Dashboard</h2>
           <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-4">
@@ -1119,7 +1137,7 @@ export function DashboardPage() {
         </div>
       </div>
       <!-- Visitor Dashboard Content -->
-      <div id="visitorContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
+      <div id="visitorContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-4 border border-gray-200 dark:border-gray-700">
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
           <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">My Scheduled Visits</h2>
           <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-4">
@@ -1335,7 +1353,7 @@ export function DashboardPage() {
       </div>
 
       <!-- Guard Dashboard Content -->
-      <div id="guardContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-6">
+      <div id="guardContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-4 border border-gray-200 dark:border-gray-700">
       </div>
 
       <!-- Edit Place Modal -->
@@ -1621,6 +1639,8 @@ export function DashboardPage() {
           </div>
         </div>
       </div>
+      </div>
+      </div>
     </div>
   `;
 }
@@ -1804,122 +1824,82 @@ function renderPlaces(): void {
           <p class="text-gray-500 dark:text-gray-400">No places found matching your criteria.</p>
         </div>
       `;
+      renderAdminAnalytics();
       return;
     }
 
-    placesList.innerHTML = filteredPlaces.map((place: any) => `
-      <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg transition-all duration-300 ease-in-out hover:bg-gray-100 dark:hover:bg-gray-600 hover:shadow-lg hover:scale-[1.02] cursor-pointer border border-transparent hover:border-gray-200 dark:hover:border-gray-500">
-        <div class="flex-1">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white">${place.name}</h3>
-          <p class="text-sm text-gray-500 dark:text-gray-400">${place.description || 'No description'}</p>
-          <p class="text-sm text-gray-500 dark:text-gray-400">Location: ${place.location}</p>
-          <div class="mt-2 flex flex-wrap gap-2">
-            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-              place.is_available 
-                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-            }">
-              ${place.is_available ? 'Available' : 'Unavailable'}
-            </span>
-            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${place.limit_type === 'weekly' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'}">
-              Weekly: ${place.visits_this_week || 0}/${place.current_week_visit_limit || 50}
-            </span>
-            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${place.limit_type === 'monthly' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'}">
-              Monthly: ${place.visits_this_month || 0}/${place.monthly_visit_limit || 200}
-            </span>
-            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
-              Enforced: ${place.limit_type === 'weekly' ? 'Weekly' : 'Monthly'}
-            </span>
-          </div>
-          ${place.assigned_personnel && place.assigned_personnel.length > 0 ? `
-            <div class="mt-2">
-              <p class="text-sm text-gray-600 dark:text-gray-300 font-medium">Assigned Personnel:</p>
-              <div class="mt-1 space-y-1">
+    const placeRows = filteredPlaces.map((place: any) => `
+      <tr class="border-b border-gray-200 dark:border-gray-700 align-top">
+        <td class="px-3 py-3">
+          <p class="text-sm font-medium text-gray-900 dark:text-white">${place.name}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">${place.description || 'No description'}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">${place.location}</p>
+        </td>
+        <td class="px-3 py-3">
+          <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+            place.is_available ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+          }">
+            ${place.is_available ? 'Available' : 'Unavailable'}
+          </span>
+        </td>
+        <td class="px-3 py-3 text-xs text-gray-600 dark:text-gray-300">
+          <div>Weekly: ${place.visits_this_week || 0}/${place.current_week_visit_limit || 50}</div>
+          <div>Monthly: ${place.visits_this_month || 0}/${place.monthly_visit_limit || 200}</div>
+          <div>Enforced: ${(place.limit_type || 'weekly') === 'weekly' ? 'Weekly' : 'Monthly'}</div>
+        </td>
+        <td class="px-3 py-3">
+          ${(place.assigned_personnel && place.assigned_personnel.length > 0)
+            ? `
+              <div class="space-y-1">
                 ${(place.assigned_personnel as any[]).map((personnel: any) => `
-                  <div class="flex items-center justify-between bg-white dark:bg-gray-600 rounded px-2 py-1 transition-all duration-200 ease-in-out hover:bg-gray-50 dark:hover:bg-gray-500 hover:shadow-sm">
-                    <span class="text-sm text-gray-700 dark:text-gray-300">
-                      ${personnel.first_name || personnel.last_name ? 
-                        `${personnel.first_name || ''} ${personnel.last_name || ''}` : 
-                        `Personnel (${personnel.user_id.substring(0, 8)}...)`
-                      }
-                      <br><span class="text-xs text-gray-500 font-mono">${personnel.user_id.substring(0, 8)}...</span>
-                    </span>
-                    <button 
-                      onclick="window.removePersonnelFromPlace('${place.id}', '${personnel.user_id}')"
-                      class="text-red-600 hover:text-red-800 dark:text-red-500 dark:hover:text-red-400 text-sm transition-colors duration-200 ease-in-out hover:scale-110 transform"
-                      title="Remove personnel"
-                    >
-                      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                  <div class="flex items-center justify-between gap-2 text-xs bg-gray-50 dark:bg-gray-700 rounded px-2 py-1">
+                    <span class="text-gray-700 dark:text-gray-200">${personnel.first_name || personnel.last_name ? `${personnel.first_name || ''} ${personnel.last_name || ''}` : `Personnel (${personnel.user_id.substring(0, 8)}...)`}</span>
+                    <button onclick="window.removePersonnelFromPlace('${place.id}', '${personnel.user_id}')" class="text-red-600 hover:text-red-800 dark:text-red-400" title="Remove personnel">Remove</button>
                   </div>
                 `).join('')}
               </div>
-            </div>
-          ` : `
-            <div class="mt-2">
-              <p class="text-sm text-gray-500 dark:text-gray-400">No personnel assigned</p>
-            </div>
-          `}
-          ${place.purposes && place.purposes.length > 0 ? `
-            <div class="mt-2">
-              <p class="text-sm text-gray-600 dark:text-gray-300 font-medium">Visit Purposes:</p>
-              <div class="mt-1 flex flex-wrap gap-2">
-                ${(place.purposes as any[]).map((purpose: any) => `
-                  <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-700" title="Required advance notice: ${purpose.required_days === 0 ? 'Same day allowed' : purpose.required_days + ' day' + (purpose.required_days > 1 ? 's' : '')}">
-                    <span>${purpose.purpose.replace(/"/g, '&quot;').replace(/'/g, '&#39;')}</span>
-                    <span class="ml-1 text-amber-600 dark:text-amber-400">(${purpose.required_days === 0 ? 'Same day' : purpose.required_days + 'd'})</span>
-                  </span>
-                `).join('')}
-              </div>
-            </div>
-          ` : `
-            <div class="mt-2">
-              <p class="text-sm text-gray-500 dark:text-gray-400">No purposes configured</p>
-            </div>
-          `}
-        </div>
-        <div class="flex items-center space-x-4">
-          <button 
-            ${!(place.assigned_personnel && place.assigned_personnel.length > 0) ? 'disabled' : `onclick="window.openVisitLimitModal('${place.id}', '${place.name}', ${place.current_week_visit_limit || 50}, ${place.monthly_visit_limit || 200}, ${place.visits_this_week || 0}, ${place.visits_this_month || 0}, '${place.limit_type || 'weekly'}')"`}
-            class="${!(place.assigned_personnel && place.assigned_personnel.length > 0) ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50' : 'text-purple-600 hover:text-purple-800 dark:text-purple-500 dark:hover:text-purple-400 transition-colors duration-200 ease-in-out hover:scale-110 transform'}"
-            title="${!(place.assigned_personnel && place.assigned_personnel.length > 0) ? 'Edit visit limits (disabled: no assigned personnel)' : 'Edit visit limits'}"
-          >
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-          </button>
-          <button 
-            onclick="window.assignPersonnelToPlace('${place.id}')"
-            class="text-blue-600 hover:text-blue-800 dark:text-blue-500 dark:hover:text-blue-400 transition-colors duration-200 ease-in-out hover:scale-110 transform"
-            title="Assign personnel"
-          >
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-          </button>
-          <button 
-            onclick="window.editPlace('${place.id}')"
-            class="text-blue-600 hover:text-blue-800 dark:text-blue-500 dark:hover:text-blue-400 transition-colors duration-200 ease-in-out hover:scale-110 transform"
-          >
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-          </button>
-          <button 
-            ${place.is_available ? 'disabled' : `onclick="window.openDeletePlaceModal('${place.id}', '${place.name.replace(/"/g, '&quot;')}')"`}
-            class="${place.is_available ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50' : 'text-red-600 hover:text-red-800 dark:text-red-500 dark:hover:text-red-400 transition-colors duration-200 ease-in-out hover:scale-110 transform'}"
-            title="${place.is_available ? 'Delete disabled: place is available' : 'Delete place'}"
-          >
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m-1-2a2 2 0 00-2-2h-2a2 2 0 00-2 2H4m16 0H4" />
-            </svg>
-          </button>
-        </div>
-      </div>
+            `
+            : `<span class="text-xs text-gray-500 dark:text-gray-400">None</span>`
+          }
+        </td>
+        <td class="px-3 py-3">
+          ${(place.purposes && place.purposes.length > 0)
+            ? `<div class="flex flex-wrap gap-1">${(place.purposes as any[]).map((purpose: any) => `<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">${purpose.purpose.replace(/"/g, '&quot;').replace(/'/g, '&#39;')} (${purpose.required_days === 0 ? 'same day' : `${purpose.required_days}d`})</span>`).join('')}</div>`
+            : `<span class="text-xs text-gray-500 dark:text-gray-400">None</span>`
+          }
+        </td>
+        <td class="px-3 py-3 text-right">
+          <div class="flex items-center justify-end gap-2">
+            <button ${!(place.assigned_personnel && place.assigned_personnel.length > 0) ? 'disabled' : `onclick="window.openVisitLimitModal('${place.id}', '${place.name}', ${place.current_week_visit_limit || 50}, ${place.monthly_visit_limit || 200}, ${place.visits_this_week || 0}, ${place.visits_this_month || 0}, '${place.limit_type || 'weekly'}')"`} class="px-2 py-1 text-xs rounded border border-purple-300 text-purple-700 dark:text-purple-300 disabled:opacity-40" title="Edit visit limits">Limits</button>
+            <button onclick="window.assignPersonnelToPlace('${place.id}')" class="px-2 py-1 text-xs rounded border border-blue-300 text-blue-700 dark:text-blue-300" title="Assign personnel">Assign</button>
+            <button onclick="window.editPlace('${place.id}')" class="px-2 py-1 text-xs rounded border border-blue-300 text-blue-700 dark:text-blue-300">Edit</button>
+            <button ${place.is_available ? 'disabled' : `onclick="window.openDeletePlaceModal('${place.id}', '${place.name.replace(/"/g, '&quot;')}')"`} class="px-2 py-1 text-xs rounded border border-red-300 text-red-700 dark:text-red-300 disabled:opacity-40" title="${place.is_available ? 'Delete disabled: place is available' : 'Delete place'}">Delete</button>
+          </div>
+        </td>
+      </tr>
     `).join('');
+
+    placesList.innerHTML = `
+      <div class="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-md">
+        <table class="min-w-full text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-700/40 text-left text-gray-700 dark:text-gray-300">
+            <tr>
+              <th class="px-3 py-2 font-medium">Place</th>
+              <th class="px-3 py-2 font-medium">Status</th>
+              <th class="px-3 py-2 font-medium">Limits</th>
+              <th class="px-3 py-2 font-medium">Personnel</th>
+              <th class="px-3 py-2 font-medium">Purposes</th>
+              <th class="px-3 py-2 font-medium text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${placeRows}
+          </tbody>
+        </table>
+      </div>
+    `;
   }
+  renderAdminAnalytics();
 }
 // Function to apply search and filter
 function applySearchAndFilter() {
@@ -1993,6 +1973,7 @@ function renderAccounts(): void {
           <p class="text-gray-500 dark:text-gray-400">No accounts found matching your criteria.</p>
         </div>
       `;
+      renderAdminAnalytics();
       return;
     }
 
@@ -2059,6 +2040,103 @@ function renderAccounts(): void {
       </div>
     `;
   }
+  renderAdminAnalytics();
+}
+
+function renderAdminAnalytics(): void {
+  const analyticsContainer = document.getElementById('adminAnalyticsContainer');
+  if (!analyticsContainer || analyticsContainer.classList.contains('hidden')) return;
+
+  const availablePlaces = allPlaces.filter((place: any) => place.is_available).length;
+  const unavailablePlaces = Math.max(0, allPlaces.length - availablePlaces);
+  const assignedPersonnelCount = allPlaces.reduce((total: number, place: any) => total + (place.assigned_personnel?.length || 0), 0);
+  const roleCounts = filteredAccounts.reduce((acc: Record<string, number>, account: any) => {
+    const key = account.role || 'unknown';
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+  const adminTrendChart = renderAdminTrendLineChart();
+
+  analyticsContainer.innerHTML = `
+    <div class="space-y-3">
+      <div class="border-b border-gray-200 dark:border-gray-700 pb-2">
+        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Admin Analytics</h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Operational summary for your dashboard</p>
+      </div>
+      ${adminTrendChart}
+      <table class="min-w-full text-xs">
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+          <tr><td class="py-2 text-gray-600 dark:text-gray-300">Total Places</td><td class="py-2 text-right font-semibold text-gray-900 dark:text-white">${allPlaces.length}</td></tr>
+          <tr><td class="py-2 text-gray-600 dark:text-gray-300">Available Places</td><td class="py-2 text-right font-semibold text-green-700 dark:text-green-300">${availablePlaces}</td></tr>
+          <tr><td class="py-2 text-gray-600 dark:text-gray-300">Unavailable Places</td><td class="py-2 text-right font-semibold text-red-700 dark:text-red-300">${unavailablePlaces}</td></tr>
+          <tr><td class="py-2 text-gray-600 dark:text-gray-300">Personnel Assignments</td><td class="py-2 text-right font-semibold text-gray-900 dark:text-white">${assignedPersonnelCount}</td></tr>
+          <tr><td class="py-2 text-gray-600 dark:text-gray-300">Managed Accounts</td><td class="py-2 text-right font-semibold text-gray-900 dark:text-white">${allAccounts.length}</td></tr>
+        </tbody>
+      </table>
+      <div class="border border-gray-200 dark:border-gray-700 rounded-md p-2">
+        <p class="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Accounts by Role</p>
+        <div class="space-y-1 text-xs">
+          <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-300">Log</span><span class="font-semibold text-gray-900 dark:text-white">${roleCounts.log || 0}</span></div>
+          <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-300">Personnel</span><span class="font-semibold text-gray-900 dark:text-white">${roleCounts.personnel || 0}</span></div>
+          <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-300">Guard</span><span class="font-semibold text-gray-900 dark:text-white">${roleCounts.guard || 0}</span></div>
+          <div class="flex justify-between"><span class="text-gray-600 dark:text-gray-300">Visitor</span><span class="font-semibold text-gray-900 dark:text-white">${roleCounts.visitor || 0}</span></div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderAdminTrendLineChart(): string {
+  const topPlaces = [...allPlaces]
+    .sort((a: any, b: any) => (b.visits_this_month || 0) - (a.visits_this_month || 0))
+    .slice(0, 8);
+
+  if (!topPlaces.length) {
+    return `
+      <div class="border border-gray-200 dark:border-gray-700 rounded-md p-2">
+        <p class="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Visits Trend</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">No place data yet.</p>
+      </div>
+    `;
+  }
+
+  const points = topPlaces.map((place: any, index: number) => ({
+    label: String(place.name || `Place ${index + 1}`),
+    weekly: Number(place.visits_this_week || 0),
+    monthly: Number(place.visits_this_month || 0),
+    x: topPlaces.length === 1 ? 10 : 10 + (index * (80 / (topPlaces.length - 1)))
+  }));
+
+  const maxValue = Math.max(1, ...points.map((point) => Math.max(point.weekly, point.monthly)));
+  const toY = (value: number) => 56 - ((value / maxValue) * 42);
+
+  const weeklyPath = points
+    .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${toY(point.weekly).toFixed(2)}`)
+    .join(' ');
+  const monthlyPath = points
+    .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${toY(point.monthly).toFixed(2)}`)
+    .join(' ');
+
+  return `
+    <div class="border border-gray-200 dark:border-gray-700 rounded-md p-2">
+      <div class="flex items-center justify-between mb-1">
+        <p class="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Visits Trend</p>
+        <p class="text-[10px] text-gray-500 dark:text-gray-400">Top ${topPlaces.length} places</p>
+      </div>
+      <svg viewBox="0 0 100 60" class="w-full h-36 text-gray-500 dark:text-gray-300" aria-label="Admin visits trend line chart" role="img">
+        <line x1="10" y1="56" x2="92" y2="56" stroke="currentColor" stroke-opacity="0.3"></line>
+        <line x1="10" y1="14" x2="10" y2="56" stroke="currentColor" stroke-opacity="0.2"></line>
+        <path d="${weeklyPath}" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+        <path d="${monthlyPath}" fill="none" stroke="#9333ea" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+        ${points.map((point) => `<circle cx="${point.x.toFixed(2)}" cy="${toY(point.weekly).toFixed(2)}" r="1.1" fill="#2563eb"></circle>`).join('')}
+        ${points.map((point) => `<circle cx="${point.x.toFixed(2)}" cy="${toY(point.monthly).toFixed(2)}" r="1.1" fill="#9333ea"></circle>`).join('')}
+      </svg>
+      <div class="flex items-center gap-3 text-[11px]">
+        <span class="inline-flex items-center gap-1 text-gray-700 dark:text-gray-200"><span class="w-2 h-2 rounded-full bg-blue-600"></span>Weekly</span>
+        <span class="inline-flex items-center gap-1 text-gray-700 dark:text-gray-200"><span class="w-2 h-2 rounded-full bg-purple-600"></span>Monthly</span>
+      </div>
+    </div>
+  `;
 }
 
 // Function to apply search and filter for accounts
