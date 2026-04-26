@@ -28,7 +28,7 @@ async function getEntranceFaceImage(visitId: string): Promise<string | null> {
 
     const { data: entranceScans, error } = await supabase
       .from('gate_scans')
-      .select('face_image_data, scanned_at, scanned_by')
+      .select('face_image_data, scanned_at, scanned_by, face_detection_confidence')
       .eq('visit_id', visitId)
       .eq('scan_type', 'entrance')
       .not('face_image_data', 'is', null)
@@ -48,21 +48,29 @@ async function getEntranceFaceImage(visitId: string): Promise<string | null> {
       : null;
     const entranceBy = visitRow.gate_entrance_scanned_by || null;
 
-    // Prefer exact guard match and nearest timestamp to the visit's entrance metadata.
-    const candidateScans = entranceBy
-      ? entranceScans.filter((scan) => scan.scanned_by === entranceBy)
-      : entranceScans;
+    const orderedCandidates = [...entranceScans].sort((a, b) => {
+      const score = (scan: any): number => {
+        let total = 0;
+        if (entranceBy && scan.scanned_by === entranceBy) total += 1000;
+        if (entranceAt) {
+          const scanTime = new Date(scan.scanned_at).getTime();
+          const diffMs = Math.abs(scanTime - entranceAt);
+          // Strongly favor scans close to the recorded entrance timestamp.
+          total += Math.max(0, 600000 - diffMs) / 1000;
+        }
+        const confidence = typeof scan.face_detection_confidence === 'number'
+          ? scan.face_detection_confidence
+          : 0;
+        total += confidence * 100;
+        return total;
+      };
 
-    const orderedCandidates = [...candidateScans].sort((a, b) => {
-      if (!entranceAt) return 0;
-      const aTime = new Date(a.scanned_at).getTime();
-      const bTime = new Date(b.scanned_at).getTime();
-      return Math.abs(aTime - entranceAt) - Math.abs(bTime - entranceAt);
+      return score(b) - score(a);
     });
 
     for (const scan of orderedCandidates) {
       const storedImageData = scan.face_image_data;
-      if (!storedImageData || typeof storedImageData !== 'string') {
+      if (!storedImageData || typeof storedImageData !== 'string' || storedImageData.length < 100) {
         continue;
       }
 
@@ -93,13 +101,18 @@ async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Pr
       return { match: false, similarity: 0, error: 'Invalid exit face image format' };
     }
 
+    // Normalize images to improve detector consistency across saved/recaptured inputs.
+    const { compressImageDataUrl } = await import('./imageCompression');
+    const normalizedEntrance = await compressImageDataUrl(entranceFaceImage, 0.92, 512, 512).catch(() => entranceFaceImage);
+    const normalizedProbe = await compressImageDataUrl(exitFaceImage, 0.92, 512, 512).catch(() => exitFaceImage);
+
     const { 
       LOCAL_API_URL, 
       DEPLOYED_API_URL, 
       setApiUrlPreference 
     } = await import('../config/python-api');
 
-    const performVerification = async (apiUrl: string) => {
+    const performVerification = async (apiUrl: string, baseImage: string, probeImage: string) => {
       try {
         const response = await fetch(`${apiUrl}/metrics/verify-images`, {
           method: 'POST',
@@ -107,8 +120,8 @@ async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Pr
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            base_image: entranceFaceImage,
-            probe_image: exitFaceImage
+            base_image: baseImage,
+            probe_image: probeImage
           })
         });
 
@@ -195,7 +208,11 @@ async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Pr
     // Always check local API first, regardless of preferences
     try {
       console.log('Temporary Exit Face Verification: Checking local AI service first...');
-      const result = await performVerification(LOCAL_API_URL);
+      let result = await performVerification(LOCAL_API_URL, normalizedEntrance, normalizedProbe);
+      // Retry once with original images if face detection failed on normalized payloads.
+      if (!result?.base?.found || !result?.probe?.found) {
+        result = await performVerification(LOCAL_API_URL, entranceFaceImage, exitFaceImage);
+      }
       console.log('Temporary Exit Face Verification: Local AI service responded successfully');
       setApiUrlPreference('local');
       return handleResult(result);
@@ -204,7 +221,10 @@ async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Pr
       if (isNetworkError(localError)) {
         console.warn('Temporary Exit Face Verification: Local AI API unreachable, falling back to deployed endpoint.');
         try {
-          const fallbackResult = await performVerification(DEPLOYED_API_URL);
+          let fallbackResult = await performVerification(DEPLOYED_API_URL, normalizedEntrance, normalizedProbe);
+          if (!fallbackResult?.base?.found || !fallbackResult?.probe?.found) {
+            fallbackResult = await performVerification(DEPLOYED_API_URL, entranceFaceImage, exitFaceImage);
+          }
           console.log('Temporary Exit Face Verification: Deployed AI service responded successfully');
           setApiUrlPreference('deployed');
           return handleResult(fallbackResult);
@@ -277,7 +297,11 @@ export async function verifyTemporaryExitFace(visitId: string): Promise<{ succes
 
     // Open face detection modal to capture current face
     const { openFaceDetectionModal } = await import('./AI-Face-Detection/blazefaceModal');
-    const faceResult = await openFaceDetectionModal();
+    const faceResult = await openFaceDetectionModal({
+      referenceImageDataUrl: entranceFaceImage,
+      referenceTitle: 'Saved Entrance Face',
+      referenceSubtitle: 'Temporary exit verification reference'
+    });
     
     if (!faceResult || !faceResult.success || !faceResult.croppedImageDataUrl) {
       showVerificationWarning('Face verification cancelled or no face detected. Please try again.');

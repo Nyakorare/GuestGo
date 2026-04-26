@@ -2,6 +2,7 @@
 import { safeJsonParse } from '../safe-json-parse';
 import * as blazeface from '@tensorflow-models/blazeface';
 import * as tf from '@tensorflow/tfjs';
+import { clearFaceVerificationReference, renderFaceVerificationReference } from '../faceVerificationModalReference';
 
 // API URLs
 const LOCAL_API_URL = 'http://localhost:5000';
@@ -265,6 +266,7 @@ function hideModal(shouldRefresh: boolean = true) {
   if (wrapper) {
     wrapper.classList.add('hidden');
     stopCamera();
+    clearFaceVerificationReference();
     
     // Refresh the page when closing the modal (unless explicitly told not to, e.g., when confirming)
     if (shouldRefresh) {
@@ -272,6 +274,7 @@ function hideModal(shouldRefresh: boolean = true) {
     }
   } else {
     stopCamera();
+    clearFaceVerificationReference();
   }
 }
 
@@ -283,7 +286,13 @@ export type FaceDetectionOutcome = {
   confidence?: number;
 };
 
-export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
+export type FaceDetectionModalOptions = {
+  referenceImageDataUrl?: string | null;
+  referenceTitle?: string;
+  referenceSubtitle?: string;
+};
+
+export async function openFaceDetectionModal(options: FaceDetectionModalOptions = {}): Promise<FaceDetectionOutcome> {
   const wrapper = createModal();
   const video = wrapper.querySelector('#faceVideo') as HTMLVideoElement;
   const canvas = wrapper.querySelector('#faceCanvas') as HTMLCanvasElement;
@@ -316,6 +325,29 @@ export async function openFaceDetectionModal(): Promise<FaceDetectionOutcome> {
   const captureProcessingIndicator = wrapper.querySelector('#captureProcessingIndicator') as HTMLElement;
   const captureProcessingText = wrapper.querySelector('#captureProcessingText') as HTMLElement;
   const captureBtnDefaultLabel = (captureBtn?.textContent?.trim() || 'Take Photo');
+
+  // Always reset UI state so retries don't reuse stale preview/capture state.
+  cameraSection.classList.remove('hidden');
+  previewSection.classList.add('hidden');
+  startBtn.classList.add('hidden');
+  captureBtn.classList.add('hidden');
+  retakeBtn.classList.add('hidden');
+  confirmBtn.disabled = true;
+  statusEl.textContent = 'Allow camera access, position your face in the camera frame, then take a photo.';
+  originalImage.src = '';
+  croppedImage.src = '';
+  croppedImagePlaceholder.style.display = 'flex';
+  croppedImagePlaceholder.textContent = 'Cropped face preview';
+  captureBtn.textContent = captureBtnDefaultLabel;
+  captureBtn.classList.remove('cursor-wait');
+  clearFaceVerificationReference();
+  if (options.referenceImageDataUrl) {
+    renderFaceVerificationReference({
+      imageDataUrl: options.referenceImageDataUrl,
+      title: options.referenceTitle || 'Saved Entrance Face',
+      subtitle: options.referenceSubtitle || 'Comparing your current face with this saved entrance face.'
+    });
+  }
 
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas 2D context unavailable');

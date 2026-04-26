@@ -10,7 +10,7 @@ export function QRScannerPage() {
     <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
       <!-- Header -->
       <div class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div class="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8">
+        <div class="w-full px-2 sm:px-4 md:px-6 lg:px-8">
           <div class="flex flex-col sm:flex-row justify-between items-center py-4 space-y-2 sm:space-y-0">
             <div class="flex items-center w-full sm:w-auto justify-between sm:justify-start">
               <button 
@@ -45,9 +45,9 @@ export function QRScannerPage() {
       </div>
 
       <!-- Main Content -->
-      <div class="max-w-4xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-8">
+      <div class="w-full -mx-4 sm:-mx-6 lg:-mx-8 px-2 sm:px-4 lg:px-6 py-0 sm:py-2">
         <!-- Scanner Section -->
-        <div id="scannerSection" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-6 mb-6">
+        <div id="scannerSection" class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-5 mb-3">
           <div class="text-center mb-6">
             <h2 class="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-2">Scan Visit QR Code</h2>
             <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">Point your camera at a GuestGo visit QR code to view details</p>
@@ -57,7 +57,7 @@ export function QRScannerPage() {
           <div class="relative">
             <video 
               id="qrVideo" 
-              class="w-full max-w-xs sm:max-w-md md:max-w-lg mx-auto rounded-lg border-2 border-gray-300 dark:border-gray-600"
+              class="w-full h-[46vh] sm:h-[52vh] xl:h-[60vh] rounded-lg border-2 border-gray-300 dark:border-gray-600 object-cover bg-black"
               autoplay
               muted
               playsinline
@@ -65,7 +65,7 @@ export function QRScannerPage() {
             <canvas id="qrCanvas" class="hidden"></canvas>
             
             <!-- Scanner Overlay -->
-            <div id="scannerOverlay" class="absolute inset-0 max-w-xs sm:max-w-md md:max-w-lg mx-auto flex items-center justify-center pointer-events-none hidden">
+            <div id="scannerOverlay" class="absolute inset-0 flex items-center justify-center pointer-events-none hidden">
               <div class="w-48 h-48 sm:w-64 sm:h-64 border-2 border-blue-500 rounded-lg relative">
                 <div class="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-blue-500"></div>
                 <div class="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-blue-500"></div>
@@ -81,7 +81,7 @@ export function QRScannerPage() {
             </div>
             
             <!-- Live Feedback -->
-            <div id="liveFeedback" class="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 text-white px-2 py-1 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium max-w-xs w-full sm:max-w-md">
+            <div id="liveFeedback" class="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 text-white px-2 py-1 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium w-[92%] sm:w-auto sm:max-w-md">
               <div class="flex items-center space-x-2">
                 <div id="feedbackIcon" class="w-4 h-4">
                   <svg class="w-full h-full" fill="currentColor" viewBox="0 0 20 20">
@@ -174,7 +174,7 @@ export function QRScannerPage() {
         </div>
 
         <!-- QR Data Preview Section -->
-        <div id="qrPreviewSection" class="hidden bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-6 mb-6">
+        <div id="qrPreviewSection" class="hidden bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-5 mb-3">
           <div class="flex flex-col sm:flex-row justify-between items-center mb-4 space-y-2 sm:space-y-0">
             <h2 class="text-base sm:text-lg font-medium text-gray-900 dark:text-white">QR Code Detected</h2>
             <div class="flex space-x-2">
@@ -201,7 +201,7 @@ export function QRScannerPage() {
         </div>
 
         <!-- Results Section -->
-        <div id="resultsSection" class="hidden bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-6">
+        <div id="resultsSection" class="hidden bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-5">
           <div class="flex flex-col sm:flex-row justify-between items-center mb-4 space-y-2 sm:space-y-0">
             <h2 class="text-base sm:text-lg font-medium text-gray-900 dark:text-white">Visit Details</h2>
             <button 

@@ -41,10 +41,10 @@ export function GuardDashboardPage() {
       </div>
 
       <!-- Main Content -->
-      <div class="w-full px-0 sm:px-0 md:px-0 lg:px-0 py-0 sm:py-2">
-        <div class="grid grid-cols-1 xl:grid-cols-12 gap-4 mb-6">
+      <div class="w-full -mx-4 sm:-mx-6 lg:-mx-8 px-2 sm:px-4 lg:px-6 py-0">
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-3 mb-3">
           <!-- Scanner Section -->
-          <div id="scannerSection" class="xl:col-span-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-6">
+          <div id="scannerSection" class="xl:col-span-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-5 h-full">
             <div class="text-center mb-6">
               <h2 class="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-2">Scan Visit QR Code</h2>
               <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">Point your camera at a scheduled visit QR code to log entrance or exit</p>
@@ -54,7 +54,7 @@ export function GuardDashboardPage() {
             <div class="relative">
               <video 
                 id="guardVideo" 
-                class="w-full max-w-2xl mx-auto rounded-lg border-2 border-gray-300 dark:border-gray-600"
+                class="w-full h-[46vh] sm:h-[52vh] xl:h-[60vh] rounded-lg border-2 border-gray-300 dark:border-gray-600 object-cover bg-black"
                 autoplay
                 muted
                 playsinline
@@ -62,7 +62,7 @@ export function GuardDashboardPage() {
               <canvas id="guardCanvas" class="hidden"></canvas>
               
               <!-- Scanner Overlay -->
-              <div id="guardScannerOverlay" class="absolute inset-0 max-w-2xl mx-auto flex items-center justify-center pointer-events-none hidden">
+              <div id="guardScannerOverlay" class="absolute inset-0 flex items-center justify-center pointer-events-none hidden">
                 <div class="w-48 h-48 sm:w-64 sm:h-64 border-2 border-blue-500 rounded-lg relative">
                   <div class="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-blue-500"></div>
                   <div class="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-blue-500"></div>
@@ -78,7 +78,7 @@ export function GuardDashboardPage() {
               </div>
               
               <!-- Live Feedback -->
-              <div id="guardLiveFeedback" class="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 text-white px-2 py-1 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium max-w-xs w-full sm:max-w-md">
+              <div id="guardLiveFeedback" class="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 text-white px-2 py-1 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium w-[92%] sm:w-auto sm:max-w-md">
                 <div class="flex items-center space-x-2">
                   <div id="guardFeedbackIcon" class="w-4 h-4">
                     <svg class="w-full h-full" fill="currentColor" viewBox="0 0 20 20">
@@ -125,7 +125,7 @@ export function GuardDashboardPage() {
           </div>
 
           <!-- Manual Visit ID Section -->
-          <div class="xl:col-span-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-6 h-fit">
+          <div class="xl:col-span-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-5 h-full">
             <div class="text-center mb-6">
               <h2 class="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-2">Manual Visit ID Entry</h2>
               <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">Enter a visit ID manually if QR scanning is not available</p>
@@ -152,7 +152,7 @@ export function GuardDashboardPage() {
         </div>
 
         <!-- QR Data Preview Section -->
-        <div id="guardQrPreviewSection" class="hidden bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-6 mb-6">
+        <div id="guardQrPreviewSection" class="hidden bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-5 mb-3">
           <div class="flex flex-col sm:flex-row justify-between items-center mb-4 space-y-2 sm:space-y-0">
             <h2 class="text-base sm:text-lg font-medium text-gray-900 dark:text-white">Visit QR Code Detected</h2>
             <div class="flex space-x-2">
@@ -1026,9 +1026,29 @@ function showGuardVisitConfirmationModal(visitData: VisitQRData) {
         `;
       }
 
+      // Load the exact saved entrance face first so it can be shown as verification reference.
+      const entranceFaceImageForVerification = await getEntranceFaceImage(visitData.visitId);
+      if (!entranceFaceImageForVerification) {
+        if (exitBtn) {
+          exitBtn.disabled = false;
+          exitBtn.innerHTML = `
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path>
+            </svg>
+            <span>Log Exit</span>
+          `;
+        }
+        showVerificationError('Face verification failed: no saved entrance face for this scanned visit QR.');
+        return;
+      }
+
       // Require face detection before logging exit
       const { openFaceDetectionModal } = await import('../utils/AI-Face-Detection/blazefaceModal');
-      const result = await openFaceDetectionModal();
+      const result = await openFaceDetectionModal({
+        referenceImageDataUrl: entranceFaceImageForVerification,
+        referenceTitle: 'Saved Entrance Face',
+        referenceSubtitle: 'Exit verification reference'
+      });
       
       // Reset button state
       if (exitBtn) {
@@ -1048,7 +1068,7 @@ function showGuardVisitConfirmationModal(visitData: VisitQRData) {
           confidence: result.confidence,
           detectionsCount: result.detections?.length || 0
         });
-        await logGuardActionWithFaceImage('exit', visitData, result);
+        await logGuardActionWithFaceImage('exit', visitData, result, entranceFaceImageForVerification);
       } else {
         console.log('Face detection failed or incomplete:', result);
         showGuardError('Face Required', 'Face detection was not completed. Exit not logged.');
@@ -1317,7 +1337,7 @@ async function getEntranceFaceImage(visitId: string): Promise<string | null> {
 
     const { data: entranceScans, error } = await supabase
       .from('gate_scans')
-      .select('face_image_data, scanned_at, scanned_by')
+      .select('face_image_data, scanned_at, scanned_by, face_detection_confidence')
       .eq('visit_id', visitId)
       .eq('scan_type', 'entrance')
       .not('face_image_data', 'is', null)
@@ -1337,21 +1357,28 @@ async function getEntranceFaceImage(visitId: string): Promise<string | null> {
       : null;
     const entranceBy = visitRow.gate_entrance_scanned_by || null;
 
-    // Prefer exact guard match and nearest timestamp to the entrance marker.
-    const candidateScans = entranceBy
-      ? entranceScans.filter((scan) => scan.scanned_by === entranceBy)
-      : entranceScans;
+    const orderedCandidates = [...entranceScans].sort((a, b) => {
+      const score = (scan: any): number => {
+        let total = 0;
+        if (entranceBy && scan.scanned_by === entranceBy) total += 1000;
+        if (entranceAt) {
+          const scanTime = new Date(scan.scanned_at).getTime();
+          const diffMs = Math.abs(scanTime - entranceAt);
+          total += Math.max(0, 600000 - diffMs) / 1000;
+        }
+        const confidence = typeof scan.face_detection_confidence === 'number'
+          ? scan.face_detection_confidence
+          : 0;
+        total += confidence * 100;
+        return total;
+      };
 
-    const orderedCandidates = [...candidateScans].sort((a, b) => {
-      if (!entranceAt) return 0;
-      const aTime = new Date(a.scanned_at).getTime();
-      const bTime = new Date(b.scanned_at).getTime();
-      return Math.abs(aTime - entranceAt) - Math.abs(bTime - entranceAt);
+      return score(b) - score(a);
     });
 
     for (const scan of orderedCandidates) {
       const storedImageData = scan.face_image_data;
-      if (!storedImageData || typeof storedImageData !== 'string') {
+      if (!storedImageData || typeof storedImageData !== 'string' || storedImageData.length < 100) {
         continue;
       }
 
@@ -1380,13 +1407,18 @@ async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Pr
       return { match: false, similarity: 0, error: 'Invalid exit face image format' };
     }
 
+    // Normalize images for more stable detection in verification service.
+    const { compressImageDataUrl } = await import('../utils/imageCompression');
+    const normalizedEntrance = await compressImageDataUrl(entranceFaceImage, 0.92, 512, 512).catch(() => entranceFaceImage);
+    const normalizedProbe = await compressImageDataUrl(exitFaceImage, 0.92, 512, 512).catch(() => exitFaceImage);
+
     const { 
       LOCAL_API_URL, 
       DEPLOYED_API_URL, 
       setApiUrlPreference 
     } = await import('../config/python-api');
 
-    const performVerification = async (apiUrl: string) => {
+    const performVerification = async (apiUrl: string, baseImage: string, probeImage: string) => {
       try {
         const response = await fetch(`${apiUrl}/metrics/verify-images`, {
           method: 'POST',
@@ -1394,8 +1426,8 @@ async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Pr
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            base_image: entranceFaceImage,
-            probe_image: exitFaceImage
+            base_image: baseImage,
+            probe_image: probeImage
           })
         });
 
@@ -1498,7 +1530,10 @@ async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Pr
     // Always check local API first, regardless of preferences
     try {
       console.log('Guard Dashboard: Checking local AI service first...');
-      const result = await performVerification(LOCAL_API_URL);
+      let result = await performVerification(LOCAL_API_URL, normalizedEntrance, normalizedProbe);
+      if (!result?.base?.found || !result?.probe?.found) {
+        result = await performVerification(LOCAL_API_URL, entranceFaceImage, exitFaceImage);
+      }
       console.log('Guard Dashboard: Local AI service responded successfully');
       setApiUrlPreference('local');
       return handleResult(result);
@@ -1507,7 +1542,10 @@ async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Pr
       if (isNetworkError(localError)) {
         console.warn('Guard Dashboard: Local AI API unreachable, falling back to deployed endpoint.');
         try {
-          const fallbackResult = await performVerification(DEPLOYED_API_URL);
+          let fallbackResult = await performVerification(DEPLOYED_API_URL, normalizedEntrance, normalizedProbe);
+          if (!fallbackResult?.base?.found || !fallbackResult?.probe?.found) {
+            fallbackResult = await performVerification(DEPLOYED_API_URL, entranceFaceImage, exitFaceImage);
+          }
           console.log('Guard Dashboard: Deployed AI service responded successfully');
           console.log('Guard Dashboard: Deployed API result:', JSON.stringify(fallbackResult, null, 2));
           setApiUrlPreference('deployed');
@@ -1562,7 +1600,12 @@ async function verifyFaces(entranceFaceImage: string, exitFaceImage: string): Pr
   }
 }
 
-async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitData: VisitQRData, faceResult: any) {
+async function logGuardActionWithFaceImage(
+  action: 'entrance' | 'exit',
+  visitData: VisitQRData,
+  faceResult: any,
+  entranceFaceImageOverride?: string
+) {
   let exitSimilarityPercent: string | null = null; // Store similarity for exit success message
   
   try {
@@ -1695,7 +1738,7 @@ async function logGuardActionWithFaceImage(action: 'entrance' | 'exit', visitDat
       console.log('Logging guard exit action with face data...');
       
       // Verify exit face with entrance face before logging exit
-      const entranceFaceImage = await getEntranceFaceImage(visitData.visitId);
+      const entranceFaceImage = entranceFaceImageOverride || await getEntranceFaceImage(visitData.visitId);
       
       if (!entranceFaceImage) {
         showVerificationError('Face verification failed: no saved entrance face for this scanned visit QR.');
