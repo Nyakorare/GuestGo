@@ -18,6 +18,7 @@ import { loadVisitorSettings, shouldShowScanButtons } from '../../components/Vis
 import { renderMinimalGuardDashboard, renderGuardScanHistoryRows } from './guard/MinimalGuardDashboard';
 import { renderGuardAnalyticsChart } from './guard/GuardScanAnalytics';
 import { renderMinimalLogsDashboard } from './log/MinimalLogsDashboard';
+import { renderPersonnelAnalytics } from './personnel/MinimalPersonnelDashboard';
 import { renderMinimalVisitorDashboard, renderVisitorAnalyticsStatusBreakdown, renderVisitorAnalyticsTopPlaces, renderVisitorAnalyticsChart } from './visitor/MinimalVisitorDashboard';
 
 interface Place {
@@ -305,6 +306,10 @@ export function DashboardPage() {
           if (adminRefreshBtn) adminRefreshBtn.classList.add('hidden');
           if (adminAnalyticsContainer) adminAnalyticsContainer.classList.add('hidden');
           if (adminWorkspace) adminWorkspace.classList.remove('xl:grid-cols-12');
+          const personnelContent = document.getElementById('personnelContent');
+          if (personnelContent) {
+            personnelContent.className = 'bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-4 border border-gray-200 dark:border-gray-700 min-h-[calc(100vh-12rem)]';
+          }
           
           loadPersonnelDashboard();
         } else if (roleData.role === 'guard') {
@@ -784,7 +789,7 @@ export function DashboardPage() {
       </div>
 
       <!-- Personnel Dashboard Content -->
-      <div id="personnelContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-4 border border-gray-200 dark:border-gray-700">
+      <div id="personnelContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-2 sm:p-4 border border-gray-200 dark:border-gray-700 min-h-[calc(100vh-12rem)]">
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
           <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">Personnel Dashboard</h2>
           <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-4">
@@ -878,12 +883,33 @@ export function DashboardPage() {
           </div>
         </div>
         <!-- Assignment Content -->
-        <div id="assignmentContent" class="space-y-4">
-          <div id="personnelAssignmentInfo" class="space-y-4"></div>
+        <div id="assignmentContent" class="space-y-4 min-h-0">
+          <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
+            <div class="overflow-x-auto">
+              <table class="min-w-full text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-700/40 text-left text-gray-700 dark:text-gray-300">
+                  <tr>
+                    <th class="px-4 py-3 font-medium">Assigned Place</th>
+                    <th class="px-4 py-3 font-medium">Availability</th>
+                    <th class="px-4 py-3 font-medium">Limits</th>
+                    <th class="px-4 py-3 font-medium">Purpose(s)</th>
+                    <th class="px-4 py-3 font-medium">Updated</th>
+                    <th class="px-4 py-3 font-medium text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="personnelAssignmentInfo" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+              </table>
+            </div>
+          </div>
         </div>
         <!-- Scheduled Visits Content -->
-        <div id="visitsContent" class="hidden space-y-4">
-          <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4 mb-6">
+        <div id="visitsContent" class="hidden min-h-0">
+          <div class="grid grid-cols-1 xl:grid-cols-12 gap-4 min-h-[calc(100vh-18rem)]">
+            <aside id="personnelAnalyticsContainer" class="xl:col-span-3 border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-gray-50/60 dark:bg-gray-900/30">
+              <p class="text-sm text-gray-500 dark:text-gray-400">Loading analytics...</p>
+            </aside>
+            <section class="xl:col-span-9 border border-gray-200 dark:border-gray-700 rounded-lg p-3 flex flex-col min-h-0 bg-white dark:bg-gray-800">
+          <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4 mb-4">
             <div class="flex items-center gap-4">
               <h3 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Scheduled Visits</h3>
               <!-- Refresh Button positioned next to title -->
@@ -965,7 +991,25 @@ export function DashboardPage() {
               Future Schedules
             </button>
           </div>
-          <div id="scheduledVisitsList" class="space-y-4"></div>
+          <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden flex-1 min-h-0 bg-white dark:bg-gray-800">
+            <div class="overflow-x-auto h-full">
+              <table class="min-w-full text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-700/40 text-left text-gray-700 dark:text-gray-300">
+                  <tr>
+                    <th class="px-4 py-3 font-medium">Visitor</th>
+                    <th class="px-4 py-3 font-medium">Visit Date</th>
+                    <th class="px-4 py-3 font-medium">Place</th>
+                    <th class="px-4 py-3 font-medium">Purpose</th>
+                    <th class="px-4 py-3 font-medium">Status</th>
+                    <th class="px-4 py-3 font-medium text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="scheduledVisitsList" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+              </table>
+            </div>
+          </div>
+            </section>
+          </div>
         </div>
         <!-- Reschedule Requests Content -->
         <div id="requestsContent" class="hidden space-y-4">
@@ -1133,7 +1177,23 @@ export function DashboardPage() {
               </div>
             </div>
           </div>
-          <div id="finishedVisitsList" class="space-y-4"></div>
+          <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="min-w-full text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-700/40 text-left text-gray-700 dark:text-gray-300">
+                  <tr>
+                    <th class="px-4 py-3 font-medium">Visitor</th>
+                    <th class="px-4 py-3 font-medium">Visit</th>
+                    <th class="px-4 py-3 font-medium">Place</th>
+                    <th class="px-4 py-3 font-medium">Completed</th>
+                    <th class="px-4 py-3 font-medium">Completed By</th>
+                    <th class="px-4 py-3 font-medium text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="finishedVisitsList" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
       <!-- Visitor Dashboard Content -->
@@ -7013,19 +7073,13 @@ async function loadPersonnelDashboard() {
 
     if (personnelAssignmentInfo) {
       if (isAssigned) {
-        // Get today's date string for comparison
-        const today = new Date();
-        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-        
-        // Fetch purposes for all assigned places
         const placeIds = availabilityData.map((a: any) => a.place_id);
         const { data: allPurposes } = await supabase
           .from('place_purposes')
           .select('*')
           .in('place_id', placeIds)
           .order('purpose');
-        
-        // Create a map of purposes by place_id
+
         const purposesByPlace = new Map<string, any[]>();
         (allPurposes || []).forEach((purpose: any) => {
           if (!purposesByPlace.has(purpose.place_id)) {
@@ -7033,154 +7087,55 @@ async function loadPersonnelDashboard() {
           }
           purposesByPlace.get(purpose.place_id)!.push(purpose);
         });
-        
-        // Show all assignments
+
         personnelAssignmentInfo.innerHTML = availabilityData.map((assignment: any) => {
-          // Compute unavailable date display (only show if date is today or in the future)
-          let unavailableDateDisplay = '';
-          if (assignment.unavailable_from) {
-            const unavailableDate = new Date(assignment.unavailable_from);
-            const unavailableDateStr = `${unavailableDate.getFullYear()}-${String(unavailableDate.getMonth() + 1).padStart(2, '0')}-${String(unavailableDate.getDate()).padStart(2, '0')}`;
-            // Only show if the date is today or in the future (not in the past)
-            const isTodayOrFuture = unavailableDateStr >= todayStr;
-            
-            if (isTodayOrFuture) {
-              const isFutureDate = unavailableDateStr > todayStr;
-              const isUpcoming = assignment.is_available && isFutureDate;
-              
-              unavailableDateDisplay = `
-                <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
-                  <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Unavailable Date:</p>
-                  <p class="text-sm text-gray-600 dark:text-gray-400">
-                    ${isUpcoming
-                      ? `Will be unavailable from: <span class="font-medium text-orange-600 dark:text-orange-400">${formatDate(assignment.unavailable_from)}</span>`
-                      : `Unavailable from: <span class="font-medium text-red-600 dark:text-red-400">${formatDate(assignment.unavailable_from)}</span>`
-                    }
-                  </p>
-                </div>
-              `;
-            }
-          }
-          
-          // Get purposes for this place
           const placePurposes = purposesByPlace.get(assignment.place_id) || [];
-          const purposesDisplay = placePurposes.length > 0 ? `
-            <div class="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 mt-4">
-              <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-2">Visit Purposes:</h4>
-              <div class="flex flex-wrap gap-2">
-                ${placePurposes.map((purpose: any) => `
-                  <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-700" title="Required advance notice: ${purpose.required_days === 0 ? 'Same day allowed' : purpose.required_days + ' day' + (purpose.required_days > 1 ? 's' : '')}">
-                    <span>${purpose.purpose.replace(/"/g, '&quot;').replace(/'/g, '&#39;')}</span>
-                    <span class="ml-1 text-amber-600 dark:text-amber-400">(${purpose.required_days === 0 ? 'Same day' : purpose.required_days + 'd'})</span>
-                  </span>
-                `).join('')}
-              </div>
-            </div>
-          ` : `
-            <div class="bg-gray-50 dark:bg-gray-600 rounded-lg p-3 mt-4">
-              <p class="text-sm text-gray-500 dark:text-gray-400">No purposes configured</p>
-            </div>
-          `;
-          
+          const purposesDisplay = placePurposes.length > 0
+            ? placePurposes.map((purpose: any) => `${purpose.purpose} (${purpose.required_days === 0 ? 'same day' : `${purpose.required_days}d`})`).join(', ')
+            : 'No purposes';
+
           return `
-          <div class="bg-white dark:bg-gray-700 rounded-lg shadow p-6 mb-4 transition-all duration-300 ease-in-out hover:shadow-xl hover:scale-[1.02] hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer border border-transparent hover:border-gray-200 dark:hover:border-gray-500">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-xl font-semibold text-gray-900 dark:text-white">${assignment.place_name}</h3>
-              <span class="inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
-                assignment.is_available 
-                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                  : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-              }">
-                ${assignment.is_available ? 'Available' : 'Unavailable'}
-              </span>
-            </div>
-            <div class="space-y-3">
-              <div>
-                <p class="text-sm text-gray-600 dark:text-gray-300">${assignment.place_description || 'No description available'}</p>
-              </div>
-              <div>
-                <p class="text-sm text-gray-600 dark:text-gray-300"><strong>Location:</strong> ${assignment.place_location || 'No location specified'}</p>
-              </div>
-              <div>
-                <p class="text-sm text-gray-600 dark:text-gray-300"><strong>Assigned since:</strong> ${new Date(assignment.assigned_at).toLocaleDateString()}</p>
-              </div>
-              
-              <!-- Visit Purposes -->
-              ${purposesDisplay}
-              
-              <!-- Visit Limit Information -->
-              <div class="bg-gray-50 dark:bg-gray-600 rounded-lg p-3 mt-4">
-                <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-2">Visit Limits</h4>
-                <div class="grid grid-cols-2 gap-3">
-                  <div class="text-center">
-                    <div class="text-lg font-bold ${assignment.limit_type === 'weekly' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}">${assignment.visits_this_week || 0}</div>
-                    <div class="text-xs text-gray-600 dark:text-gray-300">This Week</div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400">Limit: ${assignment.weekly_visit_limit || 50}</div>
-                  </div>
-                  <div class="text-center">
-                    <div class="text-lg font-bold ${assignment.limit_type === 'monthly' ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400 dark:text-gray-500'}">${assignment.visits_this_month || 0}</div>
-                    <div class="text-xs text-gray-600 dark:text-gray-300">This Month</div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400">Limit: ${assignment.monthly_visit_limit || 200}</div>
-                  </div>
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+              <td class="px-4 py-3">
+                <p class="font-medium text-gray-900 dark:text-white">${assignment.place_name}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">${assignment.place_location || 'No location'}</p>
+              </td>
+              <td class="px-4 py-3">
+                <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${assignment.is_available ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'}">
+                  ${assignment.is_available ? 'Available' : 'Unavailable'}
+                </span>
+                ${assignment.unavailable_from ? `<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">From: ${formatDate(assignment.unavailable_from)}</p>` : ''}
+              </td>
+              <td class="px-4 py-3 text-xs text-gray-700 dark:text-gray-300">
+                <p>Week: ${assignment.visits_this_week || 0}/${assignment.weekly_visit_limit || 50}</p>
+                <p>Month: ${assignment.visits_this_month || 0}/${assignment.monthly_visit_limit || 200}</p>
+                <p class="text-gray-500 dark:text-gray-400">Enforced: ${assignment.limit_type === 'monthly' ? 'Monthly' : 'Weekly'}</p>
+              </td>
+              <td class="px-4 py-3 text-xs text-gray-700 dark:text-gray-300 max-w-xs">${purposesDisplay}</td>
+              <td class="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">${new Date(assignment.updated_at).toLocaleString()}</td>
+              <td class="px-4 py-3">
+                <div class="flex flex-wrap justify-end gap-2">
+                  <button onclick="window.togglePersonnelAvailability('${assignment.place_id}', ${assignment.is_available})" class="px-2.5 py-1.5 text-xs rounded-md bg-blue-600 text-white hover:bg-blue-700">
+                    ${assignment.is_available ? 'Mark Unavailable' : 'Mark Available'}
+                  </button>
+                  <button onclick="window.openVisitLimitModal('${assignment.place_id}', '${assignment.place_name}', ${assignment.weekly_visit_limit || 50}, ${assignment.monthly_visit_limit || 200}, ${assignment.visits_this_week || 0}, ${assignment.visits_this_month || 0}, '${assignment.limit_type || 'weekly'}')" class="px-2.5 py-1.5 text-xs rounded-md bg-purple-600 text-white hover:bg-purple-700" title="Edit visit limits">
+                    Limits
+                  </button>
+                  <button onclick="window.editPlacePurposes('${assignment.place_id}', '${assignment.place_name}')" class="px-2.5 py-1.5 text-xs rounded-md bg-green-600 text-white hover:bg-green-700" title="Edit purposes">
+                    Purpose
+                  </button>
                 </div>
-                <div class="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
-                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
-                    Enforced: ${assignment.limit_type === 'weekly' ? 'Weekly' : 'Monthly'}
-                  </span>
-                </div>
-                <div class="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
-                  Week: ${assignment.week_start ? formatDate(assignment.week_start) : 'N/A'} - ${assignment.week_end ? formatDate(assignment.week_end) : 'N/A'}
-                </div>
-              </div>
-              
-              ${!assignment.is_available && assignment.unavailability_reason ? `
-                <div>
-                  <p class="text-sm text-gray-600 dark:text-gray-300"><strong>Reason for unavailability:</strong></p>
-                  <p class="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-600 p-2 rounded mt-1">${assignment.unavailability_reason}</p>
-                </div>
-              ` : ''}
-              <div>
-                <p class="text-sm text-gray-600 dark:text-gray-300"><strong>Last updated:</strong> ${new Date(assignment.updated_at).toLocaleString()}</p>
-              </div>
-            </div>
-            <div class="mt-6 flex gap-3">
-              <button 
-                onclick="window.togglePersonnelAvailability('${assignment.place_id}', ${assignment.is_available})"
-                class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 ease-in-out hover:scale-105 hover:shadow-lg"
-              >
-                ${assignment.is_available ? 'Mark as Unavailable' : 'Mark as Available'}
-              </button>
-              <button 
-                onclick="window.openVisitLimitModal('${assignment.place_id}', '${assignment.place_name}', ${assignment.weekly_visit_limit || 50}, ${assignment.monthly_visit_limit || 200}, ${assignment.visits_this_week || 0}, ${assignment.visits_this_month || 0}, '${assignment.limit_type || 'weekly'}')"
-                class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all duration-200 ease-in-out hover:scale-105 hover:shadow-lg"
-                title="Edit visit limits"
-              >
-                Edit Limits
-              </button>
-              <button 
-                onclick="window.editPlacePurposes('${assignment.place_id}', '${assignment.place_name}')"
-                class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 ease-in-out hover:scale-105 hover:shadow-lg"
-                title="Edit purposes"
-              >
-                Purpose
-              </button>
-            </div>
-            ${unavailableDateDisplay}
-          </div>
-        `;
+              </td>
+            </tr>
+          `;
         }).join('');
       } else {
         personnelAssignmentInfo.innerHTML = `
-          <div class="bg-white dark:bg-gray-700 rounded-lg shadow p-6 transition-all duration-300 ease-in-out hover:shadow-xl hover:scale-[1.02] hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer border border-transparent hover:border-gray-200 dark:hover:border-gray-500">
-            <div class="text-center">
-              <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No Assignment</h3>
-              <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">You are not currently assigned to any place.</p>
-              <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">Contact an administrator to get assigned to a place.</p>
-            </div>
-          </div>
+          <tr>
+            <td colspan="6" class="px-4 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
+              You are not currently assigned to any place. Contact an administrator.
+            </td>
+          </tr>
         `;
       }
     }
@@ -7842,8 +7797,6 @@ function startAutomaticStatusUpdates() {
     clearInterval(statusUpdateInterval);
   }
   
-  console.log('Starting automatic status updates...');
-  
   // Update statuses every 1 minute for more responsive updates
   statusUpdateInterval = setInterval(async () => {
     try {
@@ -7900,8 +7853,6 @@ async function updateVisitStatuses() {
     // Reload the visits to reflect the changes
     console.log('Reloading scheduled visits...');
     await loadScheduledVisits();
-    
-    console.log('Reloading finished schedules...');
     await loadFinishedSchedules();
     
     // Also refresh the current view if we're on the visits tab
@@ -8143,10 +8094,14 @@ async function loadFinishedSchedules() {
     );
 
     // Get unique personnel IDs who completed or marked visits as unsuccessful
-    const personnelIds = [...new Set(finishedVisits.map(visit => visit.completed_by).filter(id => id))];
+    const personnelIds = [...new Set(
+      finishedVisits
+        .flatMap((visit) => [visit.completed_by, visit.place_completed_by])
+        .filter((id) => Boolean(id))
+    )];
     
     // Fetch personnel information
-    let personnelInfo = {};
+    let personnelInfo: Record<string, any> = {};
     if (personnelIds.length > 0) {
       const { data: personnel, error: personnelError } = await supabase
         .from('user_roles')
@@ -8156,16 +8111,18 @@ async function loadFinishedSchedules() {
       if (personnelError) throw personnelError;
       
       // Create a map of user_id to personnel info
-      personnelInfo = personnel?.reduce((acc, person) => {
+      personnelInfo = personnel?.reduce((acc: Record<string, any>, person: any) => {
         acc[person.user_id] = person;
         return acc;
-      }, {}) || {};
+      }, {} as Record<string, any>) || {};
     }
 
     // Combine visit data with personnel info
     allFinishedVisits = finishedVisits.map(visit => ({
       ...visit,
-      completed_by_info: visit.completed_by ? personnelInfo[visit.completed_by] : null
+      completed_by_info: (visit.place_completed_by && personnelInfo[visit.place_completed_by])
+        || (visit.completed_by && personnelInfo[visit.completed_by])
+        || null
     }));
 
     // Populate place filter options
@@ -8275,20 +8232,31 @@ async function applyVisitsFilters() {
 async function displayScheduledVisits(visits: any[]): Promise<void> {
   const visitsList = document.getElementById('scheduledVisitsList');
   if (!visitsList) return;
+  const personnelAnalyticsContainer = document.getElementById('personnelAnalyticsContainer');
+  if (personnelAnalyticsContainer) {
+    const rangeLabel = currentScheduleType === 'today'
+      ? 'Today schedules'
+      : currentScheduleType === 'future'
+        ? 'Future schedules'
+        : 'All active schedules';
+    personnelAnalyticsContainer.innerHTML = renderPersonnelAnalytics(visits, rangeLabel);
+  }
 
   if (visits.length === 0) {
     visitsList.innerHTML = `
-      <div class="text-center py-8">
-        <div class="text-gray-500 dark:text-gray-400 text-lg">No scheduled visits found</div>
-        <div class="text-gray-400 dark:text-gray-500 text-sm mt-2">
+      <tr>
+        <td colspan="6" class="text-center py-8">
+          <div class="text-gray-500 dark:text-gray-400 text-lg">No scheduled visits found</div>
+          <div class="text-gray-400 dark:text-gray-500 text-sm mt-2">
           ${currentSearchTerm || currentRoleFilter !== 'all' || currentScheduleType !== 'all' 
             ? 'Try adjusting your search or filters' 
             : 'No visits are currently scheduled'}
-        </div>
-        <div class="text-xs text-gray-400 dark:text-gray-500 mt-4">
-          Last updated: ${new Date().toLocaleTimeString()} (Auto-refreshing every 30 seconds)
-        </div>
-      </div>
+          </div>
+          <div class="text-xs text-gray-400 dark:text-gray-500 mt-4">
+            Last updated: ${new Date().toLocaleTimeString()} (Auto-refreshing every 30 seconds)
+          </div>
+        </td>
+      </tr>
     `;
     return;
   }
@@ -8363,28 +8331,10 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
                        visit.place_status === 'pending' &&
                        visitDateStr === todayStr &&
                        (!gateScanRequired || gateEntranceScanned);
-
-    // Check if user meets basic requirements but visit is in the future
-    const meetsBasicRequirements = userRole === 'personnel' && 
-                                  userAssignments.includes(visit.place_id) && 
-                                  visit.place_status === 'pending';
+    const meetsBasicRequirements = userRole === 'personnel' &&
+                                   userAssignments.includes(visit.place_id) &&
+                                   visit.place_status === 'pending';
     const isFutureVisit = visitDateStr > todayStr;
-    
-    // Gate scanning is only for visitors, not personnel
-    const needsGateScan = false; // Personnel cannot scan gates
-
-    // Show multi-place visit indicator
-    const multiPlaceIndicator = visit.total_places > 1 ? `
-      <div class="mb-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-400 transition-all duration-200 hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:shadow-sm">
-        <div class="flex items-center justify-between">
-          <span class="text-sm font-medium text-blue-800 dark:text-blue-200">Multi-Place Visit</span>
-          <span class="text-sm text-blue-600 dark:text-blue-400">${visit.completed_places}/${visit.total_places} places completed</span>
-        </div>
-        <div class="mt-1 w-full bg-blue-200 dark:bg-blue-800 rounded-full h-1.5">
-          <div class="bg-blue-500 h-1.5 rounded-full transition-all duration-300" style="width: ${visit.total_places > 0 ? (visit.completed_places / visit.total_places) * 100 : 0}%"></div>
-        </div>
-      </div>
-    ` : '';
 
     // Status label logic
     let statusLabel = '';
@@ -8408,108 +8358,79 @@ async function displayScheduledVisits(visits: any[]): Promise<void> {
       statusLabel = visit.status.charAt(0).toUpperCase() + visit.status.slice(1);
     }
 
+    const placeStatusLabel = visit.place_status === 'completed'
+      ? 'Completed'
+      : (visit.place_status === 'unsuccessful' || visit.place_status === 'failed')
+        ? 'Failed'
+        : 'Pending';
+
+    const multiPlaceInfo = visit.total_places > 1
+      ? `<p class="text-xs text-blue-700 dark:text-blue-300 mt-1">Multi-place: ${visit.completed_places}/${visit.total_places} places completed</p>`
+      : '';
+
+    let actionsHtml = '';
+    let noteHtml = '';
+    if (gateScanRequired && !gateEntranceScanned) {
+      noteHtml = `<p class="text-xs text-orange-700 dark:text-orange-300">Gate entrance scan required before completion.</p>`;
+      actionsHtml = `<span class="text-xs text-orange-700 dark:text-orange-300">Waiting gate scan</span>`;
+    } else if (canComplete) {
+      const onHold = isPlaceOnHold(visit.visit_id, visit.place_id);
+      let expirationTime = '';
+      if (onHold) {
+        const exp = getOnHoldExpiration(visit.visit_id, visit.place_id);
+        if (exp) {
+          expirationTime = new Date(exp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+      }
+      const markCompleteBtn = onHold
+        ? `<button disabled class="px-2.5 py-1.5 bg-gray-300 text-gray-500 rounded-md cursor-not-allowed text-xs" title="On-hold until ${expirationTime}">On-Hold</button>`
+        : `<button onclick="showCompletePlaceConfirmModal('${visit.visit_id}', '${visit.place_id}')" class="px-2.5 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 text-xs">Complete</button>`;
+      const onHoldBtn = createOnHoldButton(visit.visit_id, visit.place_id, () => {
+        loadScheduledVisits();
+      });
+      actionsHtml = `<div class="flex justify-end gap-2">${markCompleteBtn}${onHoldBtn}</div>`;
+    } else if (meetsBasicRequirements && isFutureVisit) {
+      noteHtml = `<p class="text-xs text-gray-600 dark:text-gray-300">Cannot complete yet - scheduled for future date.</p>`;
+      actionsHtml = `<span class="text-xs text-gray-500 dark:text-gray-400">Future schedule</span>`;
+    } else if (visit.place_status === 'completed') {
+      noteHtml = `<p class="text-xs text-green-700 dark:text-green-300">Place already completed.</p>`;
+      actionsHtml = `<span class="text-xs text-green-700 dark:text-green-300">Completed</span>`;
+    } else if (visit.status === 'completed_flagged' && visitDateStr < todayStr) {
+      actionsHtml = `<button onclick="showFlaggedVisitDetails('${visit.visit_id}')" class="px-2.5 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-xs">Details</button>`;
+      noteHtml = `<p class="text-xs text-orange-700 dark:text-orange-300">Completed (Flagged) - process started but not fully completed.</p>`;
+    } else if ((visit.status === 'pending' || visit.status === 'in_progress') && visitDateStr === todayStr && visit.total_places > 0 && visit.completed_places === visit.total_places && !visit.gate_exit_scanned) {
+      noteHtml = `<p class="text-xs text-yellow-700 dark:text-yellow-300">All places completed - waiting for exit scan or end of day.</p>`;
+      actionsHtml = `<span class="text-xs text-yellow-700 dark:text-yellow-300">Waiting exit scan</span>`;
+    } else {
+      actionsHtml = `<span class="text-xs text-gray-500 dark:text-gray-400">No action</span>`;
+    }
+
     return `
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 transition-all duration-300 ease-in-out hover:shadow-lg hover:shadow-blue-100 dark:hover:shadow-blue-900/20 hover:scale-[1.02] hover:border-blue-200 dark:hover:border-blue-600 cursor-pointer transform">
-        <div class="flex justify-between items-start mb-4">
-          <div>
-            <h4 class="text-lg font-semibold text-gray-900 dark:text-white">${visitorName}</h4>
-            <p class="text-gray-600 dark:text-gray-400">${visitorEmail}</p>
-            <p class="text-xs text-gray-500 dark:text-gray-400">
-              ${isLoggedIn ? 'Logged-in User' : 'Guest User'} • ID: ${visitorId}
-            </p>
+      <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+        <td class="px-4 py-3">
+          <p class="font-medium text-gray-900 dark:text-white">${visitorName}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">${visitorEmail}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">${isLoggedIn ? 'Logged-in' : 'Guest'} • ${visitorId}</p>
+        </td>
+        <td class="px-4 py-3 text-gray-700 dark:text-gray-300">${scheduledDate}<br><span class="text-xs text-gray-500 dark:text-gray-400">${scheduledTime}</span></td>
+        <td class="px-4 py-3 text-gray-700 dark:text-gray-300">
+          ${visit.place_name || 'Unknown Place'}<br>
+          <span class="text-xs text-gray-500 dark:text-gray-400">${visit.place_location || 'No location'}</span><br>
+          <span class="inline-flex mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${(statusColors as any)[visit.place_status] || statusColors.pending}">${placeStatusLabel}</span>
+        </td>
+        <td class="px-4 py-3 text-gray-700 dark:text-gray-300">
+          ${visit.purpose || 'No purpose specified'}
+          ${multiPlaceInfo}
+          ${noteHtml ? `<div class="mt-1">${noteHtml}</div>` : ''}
+        </td>
+        <td class="px-4 py-3">
+          <div class="flex flex-col items-start gap-1">
+            <span class="px-2 py-0.5 rounded-full text-xs font-medium ${(statusColors as any)[visit.status] || statusColors.pending}">${statusLabel}</span>
+            <span class="px-2 py-0.5 rounded-full text-xs font-medium ${(roleColors as any)[visitorRole] || roleColors.guest}">${visitorRole}</span>
           </div>
-          <div class="flex space-x-2">
-            <span class="px-2 py-1 rounded-full text-xs font-medium ${(statusColors as any)[visit.status] || statusColors.pending}">
-              ${statusLabel}
-            </span>
-            <span class="px-2 py-1 rounded-full text-xs font-medium ${(roleColors as any)[visitorRole] || roleColors.guest}">
-              ${visitorRole}
-            </span>
-          </div>
-        </div>
-        
-        ${multiPlaceIndicator}
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Scheduled Date</p>
-            <p class="text-gray-900 dark:text-white font-medium">${scheduledDate} at ${scheduledTime}</p>
-          </div>
-          <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Purpose</p>
-            <p class="text-gray-900 dark:text-white">${visit.purpose || 'No purpose specified'}</p>
-          </div>
-        </div>
-        
-        <div class="mb-4">
-          <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Your Assignment</p>
-          <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border-l-4 ${visit.place_status === 'completed' ? 'border-green-400' : visit.place_status === 'unsuccessful' || visit.place_status === 'failed' ? 'border-red-400' : 'border-yellow-400'} transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-600 hover:shadow-sm">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm font-medium text-gray-900 dark:text-white">${visit.place_name || 'Unknown Place'}</p>
-                <p class="text-xs text-gray-600 dark:text-gray-400">${visit.place_location || 'No location specified'}</p>
-              </div>
-              <span class="px-2 py-1 rounded-full text-xs font-medium ${(statusColors as any)[visit.place_status] || statusColors.pending}">
-                ${visit.place_status === 'completed' ? 'Completed' : visit.place_status === 'unsuccessful' || visit.place_status === 'failed' ? 'Failed' : 'Pending'}
-              </span>
-            </div>
-          </div>
-        </div>
-        
-        ${gateScanRequired && !gateEntranceScanned ? `
-          <div class="flex justify-end">
-            <div class="px-4 py-2 bg-orange-100 text-orange-700 rounded-md text-sm font-medium">
-              ⚠️ Gate entrance scan required by visitor before completion
-            </div>
-          </div>
-        ` : canComplete ? (() => {
-          const onHold = isPlaceOnHold(visit.visit_id, visit.place_id);
-          let expirationTime = '';
-          if (onHold) {
-            const exp = getOnHoldExpiration(visit.visit_id, visit.place_id);
-            if (exp) {
-              expirationTime = new Date(exp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            }
-          }
-          const markCompleteBtn = onHold 
-            ? `<button disabled class="px-4 py-2 bg-gray-300 text-gray-500 rounded-md cursor-not-allowed text-sm font-medium" title="On-hold until ${expirationTime}">Mark Place Complete (On-Hold)</button>`
-            : `<button onclick="showCompletePlaceConfirmModal('${visit.visit_id}', '${visit.place_id}')" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 text-sm font-medium transition-all duration-200 hover:scale-105 hover:shadow-md">Mark Place Complete</button>`;
-          const onHoldBtn = createOnHoldButton(visit.visit_id, visit.place_id, () => {
-            loadScheduledVisits();
-          });
-          return `<div class="flex justify-end space-x-2">${markCompleteBtn}${onHoldBtn}</div>`;
-        })() : meetsBasicRequirements && isFutureVisit ? `
-          <div class="flex justify-end">
-            <div class="px-4 py-2 bg-gray-100 text-gray-600 rounded-md text-sm font-medium">
-              Cannot complete - scheduled for future date (${scheduledDate})
-            </div>
-          </div>
-        ` : visit.place_status === 'completed' ? `
-          <div class="flex justify-end">
-            <div class="px-4 py-2 bg-green-100 text-green-700 rounded-md text-sm font-medium">
-              ✓ Place completed
-            </div>
-          </div>
-        ` : visit.status === 'completed_flagged' && visitDateStr < todayStr ? `
-          <div class="flex justify-end space-x-2">
-                          <div class="px-4 py-2 bg-orange-100 text-orange-700 rounded-md text-sm font-medium">
-                ⚠️ Completed (Flagged) - Process started but not fully completed
-              </div>
-            <button 
-              onclick="showFlaggedVisitDetails('${visit.visit_id}')"
-              class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm font-medium transition-all duration-200 hover:scale-105 hover:shadow-md"
-            >
-              Details
-            </button>
-          </div>
-        ` : (visit.status === 'pending' || visit.status === 'in_progress') && visitDateStr === todayStr && visit.total_places > 0 && visit.completed_places === visit.total_places && !visit.gate_exit_scanned ? `
-          <div class="flex justify-end">
-            <div class="px-4 py-2 bg-yellow-100 text-yellow-700 rounded-md text-sm font-medium">
-              ⏳ All places completed - waiting for exit scan or end of day
-            </div>
-          </div>
-        ` : ''}
-      </div>
+        </td>
+        <td class="px-4 py-3 text-right">${actionsHtml}</td>
+      </tr>
     `;
   }).join('');
 }
@@ -13264,14 +13185,16 @@ function displayFinishedVisits(visits: any[]): void {
 
   if (visits.length === 0) {
     finishedVisitsList.innerHTML = `
-      <div class="text-center py-8">
-        <div class="text-gray-500 dark:text-gray-400 text-lg">No finished visits found</div>
-        <div class="text-gray-400 dark:text-gray-500 text-sm mt-2">
+      <tr>
+        <td colspan="6" class="text-center py-8">
+          <div class="text-gray-500 dark:text-gray-400 text-lg">No finished visits found</div>
+          <div class="text-gray-400 dark:text-gray-500 text-sm mt-2">
           ${currentFinishedSearchTerm || currentFinishedRoleFilter !== 'all' || currentFinishedPlaceFilter !== 'all' || currentFinishedDateFilter !== 'all' || currentFinishedSpecificDate || currentFinishedScheduleType !== 'today' || currentPastFinishedStartDate || currentPastFinishedEndDate
             ? 'Try adjusting your search or filters' 
             : 'No visits have been completed or marked as unsuccessful'}
-        </div>
-      </div>
+          </div>
+        </td>
+      </tr>
     `;
     return;
   }
@@ -13298,49 +13221,51 @@ function displayFinishedVisits(visits: any[]): void {
       guest: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
     };
 
-    const completedByInfo = visit.completed_by_info && (visit.completed_by || visit.status === 'unsuccessful') ? 
+    const completedByInfo = visit.completed_by_info && (visit.place_completed_by || visit.completed_by || visit.status === 'unsuccessful') ? 
       `${visit.completed_by_info.first_name} ${visit.completed_by_info.last_name}` : 
-      (visit.completed_by ? 'Unknown' : 'N/A');
+      ((visit.place_completed_by || visit.completed_by) ? 'Unknown' : 'N/A');
+
+    const statusLabel = visit.status === 'completed_flagged'
+      ? 'Completed (Flagged)'
+      : visit.status === 'unsuccessful'
+        ? 'Unsuccessful'
+        : visit.status;
 
     return `
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 transition-all duration-300 ease-in-out hover:shadow-lg hover:shadow-blue-500/20 hover:scale-[1.02] hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-gray-700 cursor-pointer group">
-        <div class="flex justify-between items-start mb-4">
-          <div>
-            <h4 class="text-lg font-semibold text-gray-900 dark:text-white transition-colors duration-200 group-hover:text-blue-600 dark:group-hover:text-blue-400">${visitorName}</h4>
-            <p class="text-gray-600 dark:text-gray-400 transition-colors duration-200 group-hover:text-gray-700 dark:group-hover:text-gray-300">${visitorEmail}</p>
-            <p class="text-xs text-gray-500 dark:text-gray-400">
-              ${isLoggedIn ? 'Logged-in User' : 'Guest User'} • ID: ${visitorId}
-            </p>
-          </div>
-          <div class="flex space-x-2">
-            <span class="px-2 py-1 rounded-full text-xs font-medium ${(statusColors as any)[visit.status] || statusColors.completed} transition-all duration-200 group-hover:scale-105">
-              ${visit.status === 'completed_flagged' ? 'Completed (Flagged)' : visit.status === 'unsuccessful' ? 'Unsuccessful' : visit.status}
-            </span>
-            <span class="px-2 py-1 rounded-full text-xs font-medium ${(roleColors as any)[visitorRole] || roleColors.guest} transition-all duration-200 group-hover:scale-105">
-              ${visitorRole}
-            </span>
-          </div>
-        </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <p class="text-sm text-gray-600 dark:text-gray-400"><strong>Visit Date:</strong> ${visitDate}</p>
-            <p class="text-sm text-gray-600 dark:text-gray-400"><strong>Purpose:</strong> ${visit.purpose}</p>
-            ${visit.other_purpose ? `<p class="text-sm text-gray-600 dark:text-gray-400"><strong>Additional Details:</strong> ${visit.other_purpose}</p>` : ''}
-          </div>
-          <div>
-            <p class="text-sm text-gray-600 dark:text-gray-400"><strong>Place:</strong> ${visit.place_name}</p>
-            <p class="text-sm text-gray-600 dark:text-gray-400"><strong>Completed:</strong> ${completedDate} at ${completedTime}</p>
-            <p class="text-sm text-gray-600 dark:text-gray-400"><strong>Completed By:</strong> ${completedByInfo}</p>
-          </div>
-        </div>
-        
-        <div class="border-t border-gray-200 dark:border-gray-700 pt-4 transition-colors duration-200 group-hover:border-blue-300 dark:group-hover:border-blue-600">
-          <p class="text-xs text-gray-500 dark:text-gray-400 transition-colors duration-200 group-hover:text-gray-600 dark:group-hover:text-gray-300">
+      <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+        <td class="px-4 py-3">
+          <p class="font-medium text-gray-900 dark:text-white">${visitorName}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">${visitorEmail}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">${isLoggedIn ? 'Logged-in User' : 'Guest User'} • ID: ${visitorId}</p>
+          <span class="inline-flex mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${(roleColors as any)[visitorRole] || roleColors.guest}">
+            ${visitorRole}
+          </span>
+        </td>
+        <td class="px-4 py-3 text-gray-700 dark:text-gray-300">
+          <p><span class="font-medium">Visit Date:</span> ${visitDate}</p>
+          <p><span class="font-medium">Purpose:</span> ${visit.purpose || 'N/A'}</p>
+          ${visit.other_purpose ? `<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Additional: ${visit.other_purpose}</p>` : ''}
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
             Scheduled: ${toPhilippineTime(new Date(visit.scheduled_at)).toLocaleDateString()} at ${toPhilippineTime(new Date(visit.scheduled_at)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </p>
-        </div>
-      </div>
+        </td>
+        <td class="px-4 py-3 text-gray-700 dark:text-gray-300">
+          <p class="font-medium">${visit.place_name || 'N/A'}</p>
+        </td>
+        <td class="px-4 py-3 text-gray-700 dark:text-gray-300">
+          ${completedDate} at ${completedTime}
+        </td>
+        <td class="px-4 py-3 text-gray-700 dark:text-gray-300">
+          ${completedByInfo}
+        </td>
+        <td class="px-4 py-3 text-right">
+          <div class="flex justify-end">
+            <span class="px-2 py-1 rounded-full text-xs font-medium ${(statusColors as any)[visit.status] || statusColors.completed}">
+              ${statusLabel}
+            </span>
+          </div>
+        </td>
+      </tr>
     `;
   }).join('');
 }
