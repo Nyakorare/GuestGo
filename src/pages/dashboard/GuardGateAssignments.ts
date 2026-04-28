@@ -1,4 +1,5 @@
 import supabase from '../../config/supabase';
+import { generateSimpleGateQRCode } from '../../utils/qrCode';
 
 interface GuardAssignedGate {
   gate_id: string;
@@ -92,11 +93,104 @@ function renderAssignmentCard(): void {
           </button>
         </div>
       </div>
+      <div id="guardGateDetailsPanel" class="bg-white dark:bg-gray-800 shadow rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+        <h4 class="text-base font-semibold text-gray-900 dark:text-white mb-4">Gate Details</h4>
+        <div class="text-sm text-gray-500 dark:text-gray-400">Loading gate details...</div>
+      </div>
     `;
   }
 
   const editBtn = document.getElementById('guardEditGateAssignmentBtn');
   editBtn?.addEventListener('click', showGuardAssignmentModal);
+
+  if (currentAssignedGate) {
+    void renderGateDetailsPanel(currentAssignedGate);
+  }
+}
+
+async function renderGateDetailsPanel(gate: GuardAssignedGate): Promise<void> {
+  const panel = document.getElementById('guardGateDetailsPanel');
+  if (!panel) return;
+
+  const assignedAtText = gate.assigned_at
+    ? new Date(gate.assigned_at).toLocaleString()
+    : 'Not available';
+
+  let qrCodeHtml = `
+    <div class="w-44 h-44 mx-auto rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center text-xs text-gray-500 dark:text-gray-400">
+      QR unavailable
+    </div>
+  `;
+
+  try {
+    const qrCodeDataUrl = await generateSimpleGateQRCode(gate.gate_id);
+    qrCodeHtml = `
+      <div class="bg-white p-2 rounded-lg border border-gray-200 dark:border-gray-700 inline-block">
+        <img src="${qrCodeDataUrl}" alt="Assigned gate QR code" class="w-44 h-44 object-contain" />
+      </div>
+    `;
+  } catch (error) {
+    console.error('Error generating assigned gate QR code:', error);
+  }
+
+  panel.innerHTML = `
+    <h4 class="text-base font-semibold text-gray-900 dark:text-white mb-4">Gate Details</h4>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div class="flex justify-center lg:justify-start">
+        ${qrCodeHtml}
+      </div>
+      <div class="space-y-2">
+        <div class="text-sm text-gray-700 dark:text-gray-300"><span class="font-medium">Gate Name:</span> ${gate.gate_name}</div>
+        <div class="text-sm text-gray-700 dark:text-gray-300"><span class="font-medium">Gate ID:</span> <span class="font-mono text-xs">${gate.gate_id}</span></div>
+        <div class="text-sm text-gray-700 dark:text-gray-300"><span class="font-medium">Type:</span> ${gate.gate_type}</div>
+        <div class="text-sm text-gray-700 dark:text-gray-300"><span class="font-medium">Status:</span> ${gate.gate_status}</div>
+        <div class="text-sm text-gray-700 dark:text-gray-300"><span class="font-medium">Location:</span> ${gate.gate_location || 'Not set'}</div>
+        <div class="text-sm text-gray-700 dark:text-gray-300"><span class="font-medium">Assigned At:</span> ${assignedAtText}</div>
+      </div>
+    </div>
+  `;
+
+  const qrImg = panel.querySelector('img[alt="Assigned gate QR code"]') as HTMLImageElement | null;
+  if (qrImg) {
+    qrImg.classList.add('cursor-zoom-in', 'transition-transform', 'duration-200', 'hover:scale-105');
+    qrImg.title = 'Click to enlarge QR code';
+    qrImg.addEventListener('click', () => openAssignedGateQrModal(qrImg.src));
+  }
+}
+
+function openAssignedGateQrModal(qrSrc: string): void {
+  const existing = document.getElementById('assignedGateQrModal');
+  if (existing) existing.remove();
+
+  const modalHtml = `
+    <div id="assignedGateQrModal" class="fixed inset-0 bg-black bg-opacity-70 z-[100] flex items-center justify-center p-4">
+      <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl p-3 sm:p-4 max-w-3xl w-full">
+        <button
+          id="closeAssignedGateQrModalBtn"
+          class="absolute top-2 right-2 text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100 p-1 rounded"
+          aria-label="Close QR preview"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+        <div class="pt-6 sm:pt-4 flex items-center justify-center">
+          <img src="${qrSrc}" alt="Enlarged assigned gate QR code" class="w-full max-w-[520px] h-auto object-contain rounded-md border border-gray-200 dark:border-gray-700" />
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+  const modal = document.getElementById('assignedGateQrModal');
+  const closeBtn = document.getElementById('closeAssignedGateQrModalBtn');
+  const close = () => modal?.remove();
+
+  closeBtn?.addEventListener('click', close);
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) close();
+  });
 }
 
 function showGuardAssignmentModal(): void {
