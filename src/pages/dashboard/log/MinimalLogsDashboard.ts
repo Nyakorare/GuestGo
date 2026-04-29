@@ -44,9 +44,9 @@ export function renderMinimalLogsDashboard(): string {
                 <p class="text-xs text-gray-500 dark:text-gray-400">No data</p>
               </div>
             </div>
-            <div id="logsAnalyticsInsightsPanel" class="rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
+            <div id="logsAnalyticsInsightsPanel" class="rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 md:col-span-2 xl:col-span-3">
               <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Analytics</p>
-              <div id="logsStatisticsTabContent" class="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+              <div id="logsStatisticsTabContent" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 text-sm text-gray-700 dark:text-gray-300">
                 <p class="text-xs text-gray-500 dark:text-gray-400">No data</p>
               </div>
             </div>

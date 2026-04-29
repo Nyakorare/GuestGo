@@ -61,7 +61,10 @@ export function renderLogsStatisticsTab(
 ): string {
   const visibleLogs = Array.isArray(logs) ? logs : [];
   const visitLogs = visibleLogs.filter((log) => String(log?.action || '').startsWith('visit_'));
-  const guestVisitLogs = visitLogs.filter((log) => String(log?.user_roles?.role || '').toLowerCase() === 'guest');
+  const guestVisitLogs = visitLogs.filter((log) => {
+    const role = String(log?.user_roles?.role || '').toLowerCase();
+    return role === 'guest' || role === 'visitor';
+  });
 
   const placeCount = new Map<string, number>();
   visitLogs.forEach((log) => {
@@ -175,15 +178,15 @@ export function renderLogsStatisticsTab(
       <div class="rounded-md border-l-4 border-l-violet-500 border border-gray-200 dark:border-gray-700 bg-violet-50/60 dark:bg-violet-900/20 p-3">
         <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Average Guest Visits</p>
         <p class="text-2xl font-semibold text-gray-900 dark:text-white mt-1">${averageVisitPerGuest.toFixed(1)}</p>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Visit events per guest account</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Visit events per guest/visitor account</p>
       </div>
       <div class="rounded-md border-l-4 border-l-rose-500 border border-gray-200 dark:border-gray-700 bg-rose-50/60 dark:bg-rose-900/20 p-3">
         <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Repeat Guest Rate</p>
         <p class="text-2xl font-semibold text-gray-900 dark:text-white mt-1">${repeatGuestRate.toFixed(1)}%</p>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${repeatGuestCount} repeat guests out of ${guestCount.size || 0}</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${repeatGuestCount} repeat guest/visitor accounts out of ${guestCount.size || 0}</p>
       </div>
       <div class="rounded-md border-l-4 border-l-violet-500 border border-gray-200 dark:border-gray-700 bg-violet-50/60 dark:bg-violet-900/20 p-3">
-        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Top Guest Accounts by Visits</p>
+        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Top Guest/Visitor Accounts by Visits</p>
         <div class="space-y-2">
           ${renderRankedList(topGuests, topGuestMax, 'No guest visit data')}
         </div>
@@ -237,5 +240,5 @@ export function renderLogsStatisticsTab(
     outcome_insights: `${outcomeCards}`,
   };
 
-  return `<div class="space-y-3">${sectionsByFilter[previewFilter] || sectionsByFilter.overview}</div>`;
+  return `<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">${sectionsByFilter[previewFilter] || sectionsByFilter.overview}</div>`;
 }
