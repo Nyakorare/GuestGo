@@ -2,15 +2,30 @@ export function renderMinimalLogsDashboard(): string {
   return `
     <div id="logsContent" class="hidden bg-white dark:bg-gray-800 shadow rounded-lg p-3 sm:p-5 min-h-[calc(100vh-13rem)]">
       <div class="grid grid-cols-1 xl:grid-cols-12 gap-4 h-full">
-        <aside class="xl:col-span-3 border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50/60 dark:bg-gray-900/30 h-full">
+        <aside id="logsAnalyticsPane" class="xl:col-span-3 border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50/60 dark:bg-gray-900/30 h-full">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Logs Analytics</h2>
-          <div class="rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 mb-3">
-            <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Activity Trend (7 days)</p>
+          <div id="logsGraphCard" class="rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 mb-3">
+            <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-2">
+              <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Activity Trend</p>
+              <div id="logsAnalyticsTypeFilterWrap" class="w-full sm:w-auto">
+                <label for="logsAnalyticsTypeFilter" class="block text-[11px] text-gray-500 dark:text-gray-400 mb-1">Analytics View</label>
+                <select id="logsAnalyticsTypeFilter" class="w-full sm:w-56 px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xs focus:ring-blue-500 focus:border-blue-500">
+                  <option value="overview">Overview</option>
+                  <option value="daily_activity">Daily Activity (7 Days)</option>
+                  <option value="action_breakdown">Action Breakdown</option>
+                  <option value="hourly_activity">Hourly Activity</option>
+                  <option value="place_insights">Place Insights</option>
+                  <option value="guest_insights">Guest Insights</option>
+                  <option value="time_insights">Time Insights</option>
+                  <option value="outcome_insights">Outcome Insights</option>
+                </select>
+              </div>
+            </div>
             <div id="logsAnalyticsChart" class="h-32">
               <p class="text-xs text-gray-500 dark:text-gray-400">No data</p>
             </div>
           </div>
-          <div class="space-y-3">
+          <div id="logsAnalyticsDetails" class="space-y-3">
             <div class="rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
               <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Visible Logs</p>
               <p id="logsAnalyticsTotal" class="text-2xl font-semibold text-gray-900 dark:text-white mt-1">0</p>
@@ -29,10 +44,16 @@ export function renderMinimalLogsDashboard(): string {
                 <p class="text-xs text-gray-500 dark:text-gray-400">No data</p>
               </div>
             </div>
+            <div id="logsAnalyticsInsightsPanel" class="rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
+              <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Analytics</p>
+              <div id="logsStatisticsTabContent" class="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                <p class="text-xs text-gray-500 dark:text-gray-400">No data</p>
+              </div>
+            </div>
           </div>
         </aside>
 
-        <section class="xl:col-span-9 border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4 h-full flex flex-col">
+        <section id="logsMainPane" class="xl:col-span-9 border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4 h-full flex flex-col">
           <div class="flex flex-col gap-4 mb-4">
             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
               <h2 class="text-xl font-semibold text-gray-900 dark:text-white">System Logs</h2>

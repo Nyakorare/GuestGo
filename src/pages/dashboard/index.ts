@@ -18,6 +18,8 @@ import { loadVisitorSettings, shouldShowScanButtons } from '../../components/Vis
 import { renderMinimalGuardDashboard, renderGuardScanHistoryRows } from './guard/MinimalGuardDashboard';
 import { renderGuardAnalyticsChart } from './guard/GuardScanAnalytics';
 import { renderMinimalLogsDashboard } from './log/MinimalLogsDashboard';
+import { renderLogsAnalyticsChart } from './log/LogsAnalyticsChart';
+import { renderLogsStatisticsTab } from './log/LogsStatisticsTab';
 import { renderPersonnelAnalytics } from './personnel/MinimalPersonnelDashboard';
 import { renderMinimalVisitorDashboard, renderVisitorAnalyticsStatusBreakdown, renderVisitorAnalyticsTopPlaces, renderVisitorAnalyticsChart } from './visitor/MinimalVisitorDashboard';
 
@@ -73,6 +75,16 @@ let currentVisitorPastEndDate = '';
 let currentLogsTabFilter = 'all';
 let currentLogsStartDate = '';
 let currentLogsEndDate = '';
+let currentLogsAnalyticsType:
+  | 'overview'
+  | 'daily_activity'
+  | 'action_breakdown'
+  | 'hourly_activity'
+  | 'place_insights'
+  | 'guest_insights'
+  | 'time_insights'
+  | 'outcome_insights' = 'overview';
+let currentLogsViewMode: 'logs' | 'analytics' = 'logs';
 
 // Logs pagination variables
 let currentLogsPage = 1;
@@ -158,6 +170,18 @@ const LOGS_TAB_ACTIONS = {
     { value: 'all', label: 'All Actions' },
     { value: 'visit_feedback_submitted', label: 'Visit Feedback Submitted' },
   ],
+  statistics: [
+    { value: 'all', label: 'All Actions' },
+    { value: 'visit_scheduled', label: 'Visit Scheduled' },
+    { value: 'visit_completed', label: 'Visit Completed' },
+    { value: 'visit_completed_flagged', label: 'Visit Completed (Flagged)' },
+    { value: 'visit_unsuccessful', label: 'Visit Unsuccessful' },
+    { value: 'visit_feedback_submitted', label: 'Visit Feedback Submitted' },
+    { value: 'visit_reschedule_requested', label: 'Visit Reschedule Requested' },
+    { value: 'visit_reschedule_accepted', label: 'Visit Reschedule Accepted' },
+    { value: 'visit_reschedule_declined', label: 'Visit Reschedule Declined' },
+    { value: 'account_created', label: 'Account Created' },
+  ],
 };
 
 export function DashboardPage() {
@@ -192,6 +216,7 @@ export function DashboardPage() {
         const accountsTab = document.getElementById('accountsTab');
         const gatesTab = document.getElementById('gatesTab');
         const feedbackTab = document.getElementById('feedbackTab');
+        const analyticsTab = document.getElementById('analyticsTab');
         const aiStatusTab = document.getElementById('aiStatusTab');
         const guardGateAssignmentsTab = document.getElementById('guardGateAssignmentsTab');
         const visitorSettingsTab = document.getElementById('visitorSettingsTab');
@@ -212,6 +237,7 @@ export function DashboardPage() {
           const adminRefreshBtn = document.getElementById('adminRefreshBtn');
           if (adminTabs) adminTabs.classList.remove('hidden');
           if (logsTab) logsTab.classList.remove('hidden');
+          if (analyticsTab) analyticsTab.classList.remove('hidden');
           if (placesTab) placesTab.classList.add('hidden');
           if (accountsTab) accountsTab.classList.add('hidden');
           if (gatesTab) gatesTab.classList.add('hidden');
@@ -220,6 +246,8 @@ export function DashboardPage() {
           if (guardGateAssignmentsTab) guardGateAssignmentsTab.classList.add('hidden');
           if (aiStatusTab) aiStatusTab.classList.add('hidden');
           if (visitorSettingsTab) visitorSettingsTab.classList.add('hidden');
+          setTabActive(logsTab);
+          setTabInactive(analyticsTab);
           if (placesContent) placesContent.classList.add('hidden');
           if (accountsContent) accountsContent.classList.add('hidden');
           if (logsContent) logsContent.classList.remove('hidden');
@@ -246,6 +274,7 @@ export function DashboardPage() {
           const adminRefreshBtn = document.getElementById('adminRefreshBtn');
           if (adminTabs) adminTabs.classList.remove('hidden');
           if (logsTab) logsTab.classList.add('hidden');
+          if (analyticsTab) analyticsTab.classList.add('hidden');
           // Set Places tab as active (default)
           setTabActive(placesTab);
           // Set all other tabs as inactive
@@ -289,6 +318,7 @@ export function DashboardPage() {
           const adminRefreshBtn = document.getElementById('adminRefreshBtn');
           if (adminTabs) adminTabs.classList.add('hidden');
           if (logsTab) logsTab.classList.add('hidden');
+          if (analyticsTab) analyticsTab.classList.add('hidden');
           if (placesTab) placesTab.classList.add('hidden');
           if (accountsTab) accountsTab.classList.add('hidden');
           if (gatesTab) gatesTab.classList.add('hidden');
@@ -318,6 +348,7 @@ export function DashboardPage() {
           const adminRefreshBtn = document.getElementById('adminRefreshBtn');
           if (adminTabs) adminTabs.classList.remove('hidden');
           if (logsTab) logsTab.classList.add('hidden');
+          if (analyticsTab) analyticsTab.classList.add('hidden');
           if (placesTab) placesTab.classList.add('hidden');
           if (accountsTab) accountsTab.classList.add('hidden');
           if (gatesTab) gatesTab.classList.add('hidden');
@@ -359,6 +390,7 @@ export function DashboardPage() {
           const adminRefreshBtn = document.getElementById('adminRefreshBtn');
           if (adminTabs) adminTabs.classList.add('hidden');
           if (logsTab) logsTab.classList.add('hidden');
+          if (analyticsTab) analyticsTab.classList.add('hidden');
           if (placesTab) placesTab.classList.add('hidden');
           if (accountsTab) accountsTab.classList.add('hidden');
           if (gatesTab) gatesTab.classList.add('hidden');
@@ -392,6 +424,7 @@ export function DashboardPage() {
           const adminRefreshBtn = document.getElementById('adminRefreshBtn');
           if (adminTabs) adminTabs.classList.add('hidden');
           if (logsTab) logsTab.classList.add('hidden');
+          if (analyticsTab) analyticsTab.classList.add('hidden');
           if (placesTab) placesTab.classList.add('hidden');
           if (accountsTab) accountsTab.classList.add('hidden');
           if (gatesTab) gatesTab.classList.add('hidden');
@@ -604,6 +637,12 @@ export function DashboardPage() {
                 class="w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
               >
                 Logs
+              </button>
+              <button
+                id="analyticsTab"
+                class="hidden w-full sm:w-auto px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+              >
+                Analytics
               </button>
               <button 
                 id="gatesTab"
@@ -5825,7 +5864,8 @@ function setupDashboardEventListeners() {
   const logsTabAccount = document.getElementById('logsTabAccount');
   const logsTabSchedules = document.getElementById('logsTabSchedules');
   const logsTabFeedback = document.getElementById('logsTabFeedback');
-  const logsTabButtons = [logsTabAll, logsTabGate, logsTabPlace, logsTabPersonnel, logsTabAccount, logsTabSchedules, logsTabFeedback];
+  const logsTabAnalytics = document.getElementById('logsTabAnalytics');
+  const logsTabButtons = [logsTabAll, logsTabGate, logsTabPlace, logsTabPersonnel, logsTabAccount, logsTabSchedules, logsTabFeedback, logsTabAnalytics];
 
   function setLogsTabActive(tab) {
     logsTabButtons.forEach(btn => {
@@ -5900,12 +5940,69 @@ function setupDashboardEventListeners() {
     updateLogsActionFilterOptions();
     applySearchAndFilterForLogs();
   });
-
   // When logs tab is shown, update the action filter options
   const logsTab = document.getElementById('logsTab');
+  const analyticsTab = document.getElementById('analyticsTab');
+  const logsAnalyticsTypeFilter = document.getElementById('logsAnalyticsTypeFilter') as HTMLSelectElement | null;
+  if (logsAnalyticsTypeFilter) {
+    logsAnalyticsTypeFilter.value = currentLogsAnalyticsType;
+    logsAnalyticsTypeFilter.addEventListener('change', () => {
+      const selected = logsAnalyticsTypeFilter.value as
+        | 'overview'
+        | 'daily_activity'
+        | 'action_breakdown'
+        | 'hourly_activity'
+        | 'place_insights'
+        | 'guest_insights'
+        | 'time_insights'
+        | 'outcome_insights';
+      currentLogsAnalyticsType = selected || 'overview';
+      renderLogsAnalytics();
+    });
+  }
   if (logsTab) {
     logsTab.addEventListener('click', () => {
+      setTabActive(logsTab);
+      setTabInactive(analyticsTab);
+      setLogsViewMode('logs');
+      const logsTabAll = document.getElementById('logsTabAll') as HTMLElement | null;
+      if (logsTabAll) {
+        logsTabAll.click();
+      }
       updateLogsActionFilterOptions();
+    });
+  }
+  if (analyticsTab) {
+    analyticsTab.addEventListener('click', () => {
+      const logsContent = document.getElementById('logsContent');
+      const placesContent = document.getElementById('placesContent');
+      const accountsContent = document.getElementById('accountsContent');
+      const gatesContent = document.getElementById('gatesContent');
+      const feedbackContent = document.getElementById('feedbackContent');
+      const guardGateAssignmentsContent = document.getElementById('guardGateAssignmentsContent');
+      const aiStatusContent = document.getElementById('aiStatusContent');
+      const visitorSettingsContent = document.getElementById('visitorSettingsContent');
+
+      setTabActive(analyticsTab);
+      setTabInactive(logsTab);
+      setLogsViewMode('analytics');
+      logsContent?.classList.remove('hidden');
+      placesContent?.classList.add('hidden');
+      accountsContent?.classList.add('hidden');
+      gatesContent?.classList.add('hidden');
+      feedbackContent?.classList.add('hidden');
+      guardGateAssignmentsContent?.classList.add('hidden');
+      aiStatusContent?.classList.add('hidden');
+      visitorSettingsContent?.classList.add('hidden');
+
+      const logsTabAnalytics = document.getElementById('logsTabAnalytics') as HTMLElement | null;
+      if (logsTabAnalytics) {
+        logsTabAnalytics.click();
+      } else {
+        currentLogsTabFilter = 'statistics';
+        updateLogsActionFilterOptions();
+        applySearchAndFilterForLogs();
+      }
     });
   }
 
@@ -5914,6 +6011,44 @@ function setupDashboardEventListeners() {
   if (adminRefreshBtn) {
     adminRefreshBtn.addEventListener('click', refreshAllAdminData);
   }
+}
+
+function setLogsViewMode(mode: 'logs' | 'analytics') {
+  currentLogsViewMode = mode;
+  const analyticsPane = document.getElementById('logsAnalyticsPane');
+  const mainPane = document.getElementById('logsMainPane');
+  const graphCard = document.getElementById('logsGraphCard');
+  const details = document.getElementById('logsAnalyticsDetails');
+  const chart = document.getElementById('logsAnalyticsChart');
+  const analyticsTypeFilterWrap = document.getElementById('logsAnalyticsTypeFilterWrap');
+  const analyticsInsightsPanel = document.getElementById('logsAnalyticsInsightsPanel');
+
+  if (mode === 'analytics') {
+    analyticsTypeFilterWrap?.classList.remove('hidden');
+    analyticsInsightsPanel?.classList.remove('hidden');
+    mainPane?.classList.add('hidden');
+    analyticsPane?.classList.remove('xl:col-span-3');
+    analyticsPane?.classList.add('xl:col-span-12');
+    details?.classList.remove('hidden');
+    details?.classList.add('grid', 'md:grid-cols-2', 'xl:grid-cols-3', 'gap-3');
+    graphCard?.classList.remove('mb-3');
+    graphCard?.classList.add('mb-0');
+    chart?.classList.remove('h-32');
+    chart?.classList.add('h-72');
+    return;
+  }
+
+  analyticsTypeFilterWrap?.classList.add('hidden');
+  analyticsInsightsPanel?.classList.add('hidden');
+  mainPane?.classList.remove('hidden');
+  analyticsPane?.classList.remove('xl:col-span-12');
+  analyticsPane?.classList.add('xl:col-span-3');
+  details?.classList.remove('grid', 'md:grid-cols-2', 'xl:grid-cols-3', 'gap-3');
+  details?.classList.remove('hidden');
+  graphCard?.classList.remove('mb-0');
+  graphCard?.classList.add('mb-3');
+  chart?.classList.remove('h-72');
+  chart?.classList.add('h-32');
 }
 
 // Function to update schedule type tab visual states
@@ -6606,6 +6741,8 @@ async function applySearchAndFilterForLogs() {
         return log.action && (log.action.startsWith('visit_'));
       } else if (currentLogsTabFilter === 'feedback') {
         return log.action && log.action === 'visit_feedback_submitted';
+      } else if (currentLogsTabFilter === 'statistics') {
+        return true;
       }
       return true;
     }).map(({ log }) => log);
@@ -6622,7 +6759,25 @@ function renderLogsAnalytics() {
   const flaggedElement = document.getElementById('logsAnalyticsFlagged');
   const topActionsElement = document.getElementById('logsAnalyticsTopActions');
   const chartElement = document.getElementById('logsAnalyticsChart');
+  const statisticsTabElement = document.getElementById('logsStatisticsTabContent');
+  const analyticsTypeFilterWrap = document.getElementById('logsAnalyticsTypeFilterWrap');
+  const analyticsInsightsPanel = document.getElementById('logsAnalyticsInsightsPanel');
   if (!totalElement || !todayElement || !flaggedElement || !topActionsElement || !chartElement) return;
+
+  if (analyticsTypeFilterWrap) {
+    if (currentLogsViewMode === 'analytics') {
+      analyticsTypeFilterWrap.classList.remove('hidden');
+    } else {
+      analyticsTypeFilterWrap.classList.add('hidden');
+    }
+  }
+  if (analyticsInsightsPanel) {
+    if (currentLogsViewMode === 'analytics') {
+      analyticsInsightsPanel.classList.remove('hidden');
+    } else {
+      analyticsInsightsPanel.classList.add('hidden');
+    }
+  }
 
   const now = new Date();
   const todayKey = now.toISOString().slice(0, 10);
@@ -6664,7 +6819,15 @@ function renderLogsAnalytics() {
     `).join('')
     : '<p class="text-xs text-gray-500 dark:text-gray-400">No data</p>';
 
-  chartElement.innerHTML = renderLogsAnalyticsChart(visibleLogs);
+  const chartType = (currentLogsAnalyticsType === 'daily_activity' ||
+    currentLogsAnalyticsType === 'action_breakdown' ||
+    currentLogsAnalyticsType === 'hourly_activity')
+    ? currentLogsAnalyticsType
+    : 'daily_activity';
+  chartElement.innerHTML = renderLogsAnalyticsChart(visibleLogs, chartType, currentLogsViewMode);
+  if (statisticsTabElement) {
+    statisticsTabElement.innerHTML = renderLogsStatisticsTab(visibleLogs, currentLogsAnalyticsType);
+  }
 }
 
 function safeParseLogDetails(raw: string): any {
@@ -6673,50 +6836,6 @@ function safeParseLogDetails(raw: string): any {
   } catch (_) {
     return null;
   }
-}
-
-function renderLogsAnalyticsChart(logs: any[]): string {
-  const today = new Date();
-  const series: Array<{ key: string; label: string; count: number }> = [];
-
-  for (let i = 6; i >= 0; i -= 1) {
-    const date = new Date(today);
-    date.setDate(today.getDate() - i);
-    const key = date.toISOString().slice(0, 10);
-    const label = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    series.push({ key, label, count: 0 });
-  }
-
-  const indexByKey = new Map(series.map((entry) => [entry.key, entry]));
-  logs.forEach((log) => {
-    try {
-      const key = new Date(log.created_at).toISOString().slice(0, 10);
-      const day = indexByKey.get(key);
-      if (day) day.count += 1;
-    } catch (_) {
-      // ignore invalid dates
-    }
-  });
-
-  const maxCount = Math.max(1, ...series.map((entry) => entry.count));
-  const bars = series.map((entry) => {
-    const height = Math.max(6, Math.round((entry.count / maxCount) * 100));
-    return `
-      <div class="flex flex-col items-center justify-end gap-1 h-full">
-        <span class="text-[10px] text-gray-500 dark:text-gray-400">${entry.count}</span>
-        <div class="w-full max-w-6 rounded-sm bg-blue-500/90 dark:bg-blue-400/90" style="height:${height}%"></div>
-        <span class="text-[10px] text-gray-500 dark:text-gray-400">${entry.label}</span>
-      </div>
-    `;
-  }).join('');
-
-  return `
-    <div class="h-full">
-      <div class="grid grid-cols-7 gap-2 items-end h-full">
-        ${bars}
-      </div>
-    </div>
-  `;
 }
 
 // Function to assign personnel to a place
