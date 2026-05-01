@@ -7,20 +7,32 @@ export function renderMinimalLogsDashboard(): string {
           <div id="logsGraphCard" class="rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 mb-3">
             <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-2">
               <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Activity Trend</p>
-              <div id="logsAnalyticsTypeFilterWrap" class="w-full sm:w-auto">
-                <label for="logsAnalyticsTypeFilter" class="block text-[11px] text-gray-500 dark:text-gray-400 mb-1">Analytics View</label>
-                <select id="logsAnalyticsTypeFilter" class="w-full sm:w-56 px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xs focus:ring-blue-500 focus:border-blue-500">
-                  <option value="overview">Overview</option>
-                  <option value="daily_activity">Daily Activity (7 Days)</option>
-                  <option value="action_breakdown">Action Breakdown</option>
-                  <option value="hourly_activity">Hourly Activity</option>
-                  <option value="face_detection_avg">Face Detection Average</option>
-                  <option value="vface_verification_avg">VFace Verification Average</option>
-                  <option value="place_insights">Place Insights</option>
-                  <option value="guest_insights">Guest Insights</option>
-                  <option value="time_insights">Time Insights</option>
-                  <option value="outcome_insights">Outcome Insights</option>
-                </select>
+              <div id="logsAnalyticsTypeFilterWrap" class="w-full sm:w-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <label for="logsAnalyticsTypeFilter" class="block text-[11px] text-gray-500 dark:text-gray-400 mb-1">Analytics View</label>
+                  <select id="logsAnalyticsTypeFilter" class="w-full sm:w-56 px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xs focus:ring-blue-500 focus:border-blue-500">
+                    <option value="overview">Overview</option>
+                    <option value="daily_activity">Daily Activity (7 Days)</option>
+                    <option value="action_breakdown">Action Breakdown</option>
+                    <option value="hourly_activity">Hourly Activity</option>
+                    <option value="face_detection_avg">Face Detection Average</option>
+                    <option value="vface_verification_avg">VFace Verification Average</option>
+                    <option value="place_insights">Place Insights</option>
+                    <option value="guest_insights">Guest Insights</option>
+                    <option value="time_insights">Time Insights</option>
+                    <option value="outcome_insights">Outcome Insights</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="logsAnalyticsGenderFilter" class="block text-[11px] text-gray-500 dark:text-gray-400 mb-1">Gender</label>
+                  <select id="logsAnalyticsGenderFilter" class="w-full sm:w-44 px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xs focus:ring-blue-500 focus:border-blue-500">
+                    <option value="all">All Genders</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                    <option value="unknown">Unknown / Not Set</option>
+                  </select>
+                </div>
               </div>
             </div>
             <div id="logsAnalyticsChart" class="h-32">

@@ -5485,6 +5485,7 @@ function setupDashboardEventListeners() {
   const logsSearchInput = document.getElementById('logsSearchInput');
   const actionFilter = document.getElementById('actionFilter');
   const logsGenderFilter = document.getElementById('logsGenderFilter');
+  const logsAnalyticsGenderFilter = document.getElementById('logsAnalyticsGenderFilter');
   const logsFiltersDropdownBtn = document.getElementById('logsFiltersDropdownBtn');
   const logsFiltersDropdown = document.getElementById('logsFiltersDropdown');
   const logsTopPaginationToggle = document.getElementById('logsTopPaginationToggle');
@@ -5502,6 +5503,17 @@ function setupDashboardEventListeners() {
 
   // Gender filter event listener
   logsGenderFilter?.addEventListener('change', async () => {
+    if (logsAnalyticsGenderFilter && logsGenderFilter instanceof HTMLSelectElement) {
+      (logsAnalyticsGenderFilter as HTMLSelectElement).value = logsGenderFilter.value;
+    }
+    await applySearchAndFilterForLogs();
+  });
+
+  // Analytics gender filter event listener
+  logsAnalyticsGenderFilter?.addEventListener('change', async () => {
+    if (logsGenderFilter && logsAnalyticsGenderFilter instanceof HTMLSelectElement) {
+      (logsGenderFilter as HTMLSelectElement).value = logsAnalyticsGenderFilter.value;
+    }
     await applySearchAndFilterForLogs();
   });
 
@@ -5606,8 +5618,15 @@ function setupDashboardEventListeners() {
   clearLogsDateFilterBtn?.addEventListener('click', async () => {
     if (logsStartDate) logsStartDate.value = '';
     if (logsEndDate) logsEndDate.value = '';
+    if (logsGenderFilter && logsGenderFilter instanceof HTMLSelectElement) {
+      logsGenderFilter.value = 'all';
+    }
+    if (logsAnalyticsGenderFilter && logsAnalyticsGenderFilter instanceof HTMLSelectElement) {
+      logsAnalyticsGenderFilter.value = 'all';
+    }
     currentLogsStartDate = '';
     currentLogsEndDate = '';
+    currentLogsGenderFilter = 'all';
     await applySearchAndFilterForLogs();
   });
   
@@ -5994,6 +6013,10 @@ function setupDashboardEventListeners() {
       renderLogsAnalytics();
     });
   }
+  const logsGenderFilterElement = document.getElementById('logsGenderFilter') as HTMLSelectElement | null;
+  const logsAnalyticsGenderFilterElement = document.getElementById('logsAnalyticsGenderFilter') as HTMLSelectElement | null;
+  if (logsGenderFilterElement) logsGenderFilterElement.value = currentLogsGenderFilter;
+  if (logsAnalyticsGenderFilterElement) logsAnalyticsGenderFilterElement.value = currentLogsGenderFilter;
   if (logsTab) {
     logsTab.addEventListener('click', () => {
       setTabActive(logsTab);
@@ -6641,14 +6664,18 @@ async function applySearchAndFilterForLogs() {
   const searchInput = document.getElementById('logsSearchInput') as HTMLInputElement;
   const actionFilter = document.getElementById('actionFilter') as HTMLSelectElement;
   const genderFilter = document.getElementById('logsGenderFilter') as HTMLSelectElement;
+  const analyticsGenderFilter = document.getElementById('logsAnalyticsGenderFilter') as HTMLSelectElement;
   const startDateInput = document.getElementById('logsStartDate') as HTMLInputElement;
   const endDateInput = document.getElementById('logsEndDate') as HTMLInputElement;
   
   const searchTerm = searchInput?.value.toLowerCase() || '';
   const actionValue = actionFilter?.value || 'all';
-  const genderValue = genderFilter?.value || 'all';
+  const genderValue = analyticsGenderFilter?.value || genderFilter?.value || 'all';
   const startDate = startDateInput?.value || '';
   const endDate = endDateInput?.value || '';
+
+  if (genderFilter) genderFilter.value = genderValue;
+  if (analyticsGenderFilter) analyticsGenderFilter.value = genderValue;
 
   // Reset pagination to first page when filters change
   currentLogsPage = 1;
@@ -6822,7 +6849,12 @@ function renderLogsAnalytics() {
   const statisticsTabElement = document.getElementById('logsStatisticsTabContent');
   const analyticsTypeFilterWrap = document.getElementById('logsAnalyticsTypeFilterWrap');
   const analyticsInsightsPanel = document.getElementById('logsAnalyticsInsightsPanel');
+  const logsGenderFilterElement = document.getElementById('logsGenderFilter') as HTMLSelectElement | null;
+  const logsAnalyticsGenderFilterElement = document.getElementById('logsAnalyticsGenderFilter') as HTMLSelectElement | null;
   if (!totalElement || !todayElement || !flaggedElement || !topActionsElement || !chartElement) return;
+
+  if (logsGenderFilterElement) logsGenderFilterElement.value = currentLogsGenderFilter;
+  if (logsAnalyticsGenderFilterElement) logsAnalyticsGenderFilterElement.value = currentLogsGenderFilter;
 
   if (analyticsTypeFilterWrap) {
     if (currentLogsViewMode === 'analytics') {

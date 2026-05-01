@@ -263,6 +263,32 @@ export function renderLogsStatisticsTab(
       </div>
   `;
 
+  const dailyCards = `
+      <div class="rounded-md border-l-4 border-l-cyan-500 border border-gray-200 dark:border-gray-700 bg-cyan-50/60 dark:bg-cyan-900/20 p-3">
+        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Average Visits per Date</p>
+        <p class="text-2xl font-semibold text-gray-900 dark:text-white mt-1">${averageVisitPerDate.toFixed(1)}</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Visit events per active date</p>
+      </div>
+      <div class="rounded-md border-l-4 border-l-fuchsia-500 border border-gray-200 dark:border-gray-700 bg-fuchsia-50/60 dark:bg-fuchsia-900/20 p-3">
+        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Busiest Visit Date</p>
+        <p class="text-lg font-semibold text-gray-900 dark:text-white mt-1">${busiestDayLabel}</p>
+        <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">${busiestDayCount} visit event${busiestDayCount === 1 ? '' : 's'}</p>
+      </div>
+  `;
+
+  const hourlyCards = `
+      <div class="rounded-md border-l-4 border-l-emerald-500 border border-gray-200 dark:border-gray-700 bg-emerald-50/60 dark:bg-emerald-900/20 p-3">
+        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Peak Visit Hour</p>
+        <p class="text-lg font-semibold text-gray-900 dark:text-white mt-1">${peakHourLabel}</p>
+        <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">${peakHourCount} visit event${peakHourCount === 1 ? '' : 's'} around this hour</p>
+      </div>
+      <div class="rounded-md border-l-4 border-l-teal-500 border border-gray-200 dark:border-gray-700 bg-teal-50/60 dark:bg-teal-900/20 p-3">
+        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Top Visit Weekday</p>
+        <p class="text-lg font-semibold text-gray-900 dark:text-white mt-1">${topWeekdayLabel}</p>
+        <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">${topWeekdayCount} visit event${topWeekdayCount === 1 ? '' : 's'}</p>
+      </div>
+  `;
+
   const outcomeCards = `
       <div class="rounded-md border-l-4 border-l-sky-500 border border-gray-200 dark:border-gray-700 bg-sky-50/60 dark:bg-sky-900/20 p-3">
         <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Average Places per Visit</p>
@@ -289,13 +315,29 @@ export function renderLogsStatisticsTab(
       </div>
   `;
 
+  const faceDetectionCards = `
+      <div class="rounded-md border-l-4 border-l-emerald-500 border border-gray-200 dark:border-gray-700 bg-emerald-50/60 dark:bg-emerald-900/20 p-3">
+        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Average Face Detection</p>
+        <p class="text-2xl font-semibold text-gray-900 dark:text-white mt-1">${avgFaceDetection.toFixed(1)}%</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${faceDetectionSamples} logs with confidence data</p>
+      </div>
+  `;
+
+  const vfaceCards = `
+      <div class="rounded-md border-l-4 border-l-purple-500 border border-gray-200 dark:border-gray-700 bg-purple-50/60 dark:bg-purple-900/20 p-3">
+        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Average VFace Similarity</p>
+        <p class="text-2xl font-semibold text-gray-900 dark:text-white mt-1">${avgVfaceSimilarity.toFixed(1)}%</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${vfaceVerificationRate.toFixed(1)}% verified match rate (${vfaceSamples} samples)</p>
+      </div>
+  `;
+
   const sectionsByFilter: Record<AnalyticsPreviewFilter, string> = {
     overview: `${placeCards}${guestCards}${timeCards}${outcomeCards}${faceCards}`,
-    daily_activity: `${timeCards}`,
+    daily_activity: `${dailyCards}`,
     action_breakdown: `${outcomeCards}`,
-    hourly_activity: `${timeCards}`,
-    face_detection_avg: `${faceCards}`,
-    vface_verification_avg: `${faceCards}`,
+    hourly_activity: `${hourlyCards}`,
+    face_detection_avg: `${faceDetectionCards}`,
+    vface_verification_avg: `${vfaceCards}`,
     place_insights: `${placeCards}`,
     guest_insights: `${guestCards}`,
     time_insights: `${timeCards}`,
