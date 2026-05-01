@@ -120,27 +120,41 @@ async function verifyFaces(
     const normalizedProbe = await compressImageDataUrl(currentFaceImage, 0.92, 512, 512).catch(() => currentFaceImage);
 
     const {
+      getEffectiveApiUrl,
       LOCAL_API_URL,
       DEPLOYED_API_URL,
       setApiUrlPreference
     } = await import('../config/python-api');
 
     const performVerification = async (apiUrl: string, baseImage: string, probeImage: string) => {
-      const response = await fetch(`${apiUrl}/metrics/verify-images`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          base_image: baseImage,
-          probe_image: probeImage
-        })
-      });
+      try {
+        const response = await fetch(`${apiUrl}/metrics/verify-images`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            base_image: baseImage,
+            probe_image: probeImage
+          })
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || 'Face verification failed');
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+          throw new Error(errorData.error || 'Face verification failed');
+        }
+
+        return response.json();
+      } catch (fetchError) {
+        if (
+          fetchError instanceof TypeError ||
+          (fetchError instanceof Error &&
+            (fetchError.message.includes('Failed to fetch') ||
+              fetchError.message.includes('ERR_CONNECTION_REFUSED') ||
+              fetchError.message.includes('NetworkError')))
+        ) {
+          throw new TypeError('Network error: Connection refused or service unavailable');
+        }
+        throw fetchError;
       }
-
-      return response.json();
     };
 
     const isNetworkError = (error: unknown): boolean => {
@@ -159,6 +173,7 @@ async function verifyFaces(
     const handleResult = (result: any) => {
       if (!result) {
         return {
+          valid: false,
           match: false,
           similarity: 0,
           error: 'Invalid response from face verification service'
@@ -167,6 +182,7 @@ async function verifyFaces(
 
       if (!result.base?.found || !result.probe?.found) {
         return {
+          valid: false,
           match: false,
           similarity: 0,
           error: !result.base?.found ? 'Entrance face not detected' : 'Current face not detected'
@@ -179,41 +195,66 @@ async function verifyFaces(
       const isMatch = result.match && similarity >= threshold;
 
       return {
+        valid: true,
         match: isMatch,
         similarity
       };
     };
 
-    try {
-      let result = await performVerification(LOCAL_API_URL, normalizedEntrance, normalizedProbe);
-      if (!result?.base?.found || !result?.probe?.found) {
-        result = await performVerification(LOCAL_API_URL, entranceFaceImage, currentFaceImage);
-      }
-      setApiUrlPreference('local');
-      return handleResult(result);
-    } catch (localError) {
-      if (!isNetworkError(localError)) {
-        throw localError;
-      }
+    const preferredApi = getEffectiveApiUrl();
+    const fallbackApi = preferredApi === LOCAL_API_URL ? DEPLOYED_API_URL : LOCAL_API_URL;
+    const apiChain = [preferredApi, fallbackApi];
 
+    let sawNetworkError = false;
+    let lastErrorMessage: string | undefined;
+    let faceNotDetectedMessage: string | undefined;
+
+    for (const apiUrl of apiChain) {
       try {
-        let fallbackResult = await performVerification(DEPLOYED_API_URL, normalizedEntrance, normalizedProbe);
-        if (!fallbackResult?.base?.found || !fallbackResult?.probe?.found) {
-          fallbackResult = await performVerification(DEPLOYED_API_URL, entranceFaceImage, currentFaceImage);
+        const normalizedResult = await performVerification(apiUrl, normalizedEntrance, normalizedProbe);
+        const parsedNormalized = handleResult(normalizedResult);
+        if (parsedNormalized.valid) {
+          setApiUrlPreference(apiUrl === LOCAL_API_URL ? 'local' : 'deployed');
+          return {
+            match: parsedNormalized.match,
+            similarity: parsedNormalized.similarity
+          };
         }
-        setApiUrlPreference('deployed');
-        return handleResult(fallbackResult);
-      } catch (fallbackError) {
-        return {
-          match: false,
-          similarity: 0,
-          error: isNetworkError(fallbackError)
-            ? 'Face verification service unavailable'
-            : (fallbackError instanceof Error ? fallbackError.message : 'Face verification service unavailable'),
-          serviceUnavailable: isNetworkError(fallbackError)
-        };
+
+        const originalResult = await performVerification(apiUrl, entranceFaceImage, currentFaceImage);
+        const parsedOriginal = handleResult(originalResult);
+        if (parsedOriginal.valid) {
+          setApiUrlPreference(apiUrl === LOCAL_API_URL ? 'local' : 'deployed');
+          return {
+            match: parsedOriginal.match,
+            similarity: parsedOriginal.similarity
+          };
+        }
+
+        // Face not detected on this endpoint, try the alternate endpoint before failing.
+        faceNotDetectedMessage = parsedOriginal.error || parsedNormalized.error || 'Current face not detected';
+      } catch (endpointError) {
+        if (isNetworkError(endpointError)) {
+          sawNetworkError = true;
+        }
+        lastErrorMessage = endpointError instanceof Error ? endpointError.message : 'Face verification failed';
       }
     }
+
+    if (faceNotDetectedMessage) {
+      return {
+        match: false,
+        similarity: 0,
+        error: faceNotDetectedMessage
+      };
+    }
+
+    return {
+      match: false,
+      similarity: 0,
+      error: sawNetworkError ? 'Face verification service unavailable' : (lastErrorMessage || 'Face verification failed'),
+      serviceUnavailable: sawNetworkError
+    };
   } catch (error) {
     const serviceUnavailable = error instanceof TypeError;
     return {
