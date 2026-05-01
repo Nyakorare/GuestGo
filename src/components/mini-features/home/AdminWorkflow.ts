@@ -22,7 +22,7 @@ export function AdminWorkflow() {
       </div>
       <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="3">
         <p class="font-semibold mb-1">Configure System Settings</p>
-        <p class="text-sm text-gray-600 dark:text-gray-400">Set up places, gates, schedule limits, and other rules that control how appointments, entrances, and exits work across your organization.</p>
+        <p class="text-sm text-gray-600 dark:text-gray-400">Set up places, gates, appointment limits, and other rules that control how appointments, entrances, and exits work across your organization.</p>
       </div>
       <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="4">
         <p class="font-semibold mb-1">Generate Insights & Reports</p>

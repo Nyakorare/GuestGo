@@ -18,7 +18,7 @@ export function PersonnelWorkflow() {
       </div>
       <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="2">
         <p class="font-semibold mb-1">Verify Appointment Details</p>
-        <p class="text-sm text-gray-600 dark:text-gray-400">Review the visitor's information, scheduled date and time, and approval status to ensure the appointment is valid before allowing them to proceed.</p>
+        <p class="text-sm text-gray-600 dark:text-gray-400">Review the visitor's information, appointment date and time, and approval status to ensure the appointment is valid before allowing them to proceed.</p>
       </div>
       <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="3">
         <p class="font-semibold mb-1">Check-in Visitor</p>

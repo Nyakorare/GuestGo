@@ -878,9 +878,9 @@ export function HomePage() {
         
         if (userRole === 'visitor') {
           if (heroTitle) heroTitle.textContent = firstName ? `Welcome back, ${firstName}` : 'Welcome back to GuestGo';
-          if (heroSubtitle) heroSubtitle.textContent = 'Manage your visits, track status, and plan ahead.';
+          if (heroSubtitle) heroSubtitle.textContent = 'Manage your appointments, track status, and plan ahead.';
           if (scheduleNowBtn) {
-            scheduleNowBtn.textContent = 'Schedule Another Visit';
+            scheduleNowBtn.textContent = 'Book Another Appointment';
             scheduleNowBtn.onclick = () => (window as any).openScheduleModal();
           }
         } else if (userRole === 'personnel') {
@@ -907,8 +907,8 @@ export function HomePage() {
         }
       } else {
         if (heroTitle) heroTitle.textContent = 'Welcome to GuestGo';
-        if (heroSubtitle) heroSubtitle.textContent = 'Schedule visits, verify guests, and track arrivals in real time.';
-        if (scheduleNowBtn) scheduleNowBtn.textContent = 'Schedule Now';
+        if (heroSubtitle) heroSubtitle.textContent = 'Book appointments, verify guests, and track arrivals in real time.';
+        if (scheduleNowBtn) scheduleNowBtn.textContent = 'Book Appointment';
       }
       
       // Update feature cards based on role
@@ -1181,7 +1181,7 @@ export function HomePage() {
             Welcome to GuestGo
           </h1>
           <p id="heroSubtitle" class="hero-subtitle text-base sm:text-xl text-gray-600 dark:text-gray-300 transition-colors duration-200">
-            Schedule visits, verify guests, and track arrivals in real time.
+            Book appointments, verify guests, and track arrivals in real time.
           </p>
           <div id="featureCards" class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
             <!-- Feature cards will be populated dynamically based on role -->
@@ -1219,7 +1219,7 @@ export function HomePage() {
           <svg class="w-5 h-5 sm:w-6 sm:h-6 animate-bounce-slow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
           </svg>
-          <span>Schedule Now</span>
+          <span>Book Appointment</span>
           <svg class="w-5 h-5 sm:w-6 sm:h-6 transform group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
           </svg>
@@ -1241,12 +1241,12 @@ export function HomePage() {
 
       ${FAQ()}
 
-      <!-- Schedule Modal -->
+      <!-- Appointment Modal -->
       <div id="scheduleModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
         <div class="relative top-10 mx-auto p-3 sm:p-5 border w-full max-w-sm sm:max-w-md md:max-w-lg shadow-lg rounded-md bg-white dark:bg-gray-800">
           <div class="mt-3">
             <div class="flex justify-between items-center mb-4">
-              <h3 class="text-lg font-medium text-gray-900 dark:text-white">Schedule a Visit</h3>
+              <h3 class="text-lg font-medium text-gray-900 dark:text-white">Book an Appointment</h3>
               <button 
                 id="closeScheduleModalBtn"
                 class="text-gray-400 hover:text-gray-500 focus:outline-none"

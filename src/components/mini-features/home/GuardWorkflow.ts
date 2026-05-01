@@ -15,7 +15,7 @@ export function GuardWorkflow() {
     panels: `
       <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800" data-workflow-panel="1">
         <p class="font-semibold mb-1">Open Guard Dashboard</p>
-        <p class="text-sm text-gray-600 dark:text-gray-400">Log in as a guard and open the Guard Dashboard to see active schedules, gate statuses, and incoming visitors for your assigned entrances.</p>
+        <p class="text-sm text-gray-600 dark:text-gray-400">Log in as a guard and open the Guard Dashboard to see active appointments, gate statuses, and incoming visitors for your assigned entrances.</p>
       </div>
       <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="2">
         <p class="font-semibold mb-1">Monitor Gate Activity</p>
@@ -23,7 +23,7 @@ export function GuardWorkflow() {
       </div>
       <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="3">
         <p class="font-semibold mb-1">Verify Entrances</p>
-        <p class="text-sm text-gray-600 dark:text-gray-400">Use QR codes and AI face detection to validate visitors against their schedules before granting access, coordinating with personnel if issues arise.</p>
+        <p class="text-sm text-gray-600 dark:text-gray-400">Use QR codes and AI face detection to validate visitors against their appointments before granting access, coordinating with personnel if issues arise.</p>
       </div>
       <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 hidden" data-workflow-panel="4">
         <p class="font-semibold mb-1">Assist Exits</p>
