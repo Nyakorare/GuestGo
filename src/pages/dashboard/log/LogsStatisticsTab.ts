@@ -50,10 +50,18 @@ type AnalyticsPreviewFilter =
   | 'daily_activity'
   | 'action_breakdown'
   | 'hourly_activity'
+  | 'face_detection_avg'
+  | 'vface_verification_avg'
   | 'place_insights'
   | 'guest_insights'
   | 'time_insights'
   | 'outcome_insights';
+
+function normalizePercentLike(value: unknown): number | null {
+  const numeric = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) return null;
+  return numeric > 1 ? numeric / 100 : numeric;
+}
 
 export function renderLogsStatisticsTab(
   logs: any[],
@@ -130,6 +138,45 @@ export function renderLogsStatisticsTab(
   const averagePlacesPerVisit = totalVisitEvents > 0
     ? visitLogs.reduce((sum, log) => sum + Math.max(1, getVisitPlaceNames(log).length), 0) / totalVisitEvents
     : 0;
+
+  let faceDetectionSamples = 0;
+  let faceDetectionConfidenceSum = 0;
+  let vfaceSamples = 0;
+  let vfaceSimilaritySum = 0;
+  let vfaceVerified = 0;
+
+  visibleLogs.forEach((log) => {
+    const details = parseLogDetails(log);
+    const faceDetectionConfidence = normalizePercentLike(
+      details.face_detection_confidence
+      ?? details.detection_confidence
+      ?? details.confidence
+      ?? log?.face_detection_confidence
+    );
+    if (faceDetectionConfidence !== null) {
+      faceDetectionSamples += 1;
+      faceDetectionConfidenceSum += faceDetectionConfidence;
+    }
+
+    const verificationSimilarity = normalizePercentLike(
+      details.verification_similarity
+      ?? details.face_verification_similarity
+      ?? details.similarity
+      ?? details.verification_score
+    );
+    const explicitMatch = details.face_verified ?? details.verification_match ?? details.match;
+    if (verificationSimilarity !== null || typeof explicitMatch === 'boolean') {
+      const similarity = verificationSimilarity ?? 0;
+      const isMatch = typeof explicitMatch === 'boolean' ? explicitMatch : similarity >= 0.5;
+      vfaceSamples += 1;
+      vfaceSimilaritySum += similarity;
+      if (isMatch) vfaceVerified += 1;
+    }
+  });
+
+  const avgFaceDetection = faceDetectionSamples > 0 ? (faceDetectionConfidenceSum / faceDetectionSamples) * 100 : 0;
+  const avgVfaceSimilarity = vfaceSamples > 0 ? (vfaceSimilaritySum / vfaceSamples) * 100 : 0;
+  const vfaceVerificationRate = vfaceSamples > 0 ? (vfaceVerified / vfaceSamples) * 100 : 0;
 
   const topPlaceMax = Math.max(1, ...topPlaces.map(([, count]) => count));
   const topGuestMax = Math.max(1, ...topGuests.map(([, count]) => count));
@@ -229,11 +276,26 @@ export function renderLogsStatisticsTab(
       </div>
   `;
 
+  const faceCards = `
+      <div class="rounded-md border-l-4 border-l-emerald-500 border border-gray-200 dark:border-gray-700 bg-emerald-50/60 dark:bg-emerald-900/20 p-3">
+        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Average Face Detection</p>
+        <p class="text-2xl font-semibold text-gray-900 dark:text-white mt-1">${avgFaceDetection.toFixed(1)}%</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${faceDetectionSamples} logs with confidence data</p>
+      </div>
+      <div class="rounded-md border-l-4 border-l-purple-500 border border-gray-200 dark:border-gray-700 bg-purple-50/60 dark:bg-purple-900/20 p-3">
+        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Average VFace Similarity</p>
+        <p class="text-2xl font-semibold text-gray-900 dark:text-white mt-1">${avgVfaceSimilarity.toFixed(1)}%</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${vfaceVerificationRate.toFixed(1)}% verified match rate (${vfaceSamples} samples)</p>
+      </div>
+  `;
+
   const sectionsByFilter: Record<AnalyticsPreviewFilter, string> = {
-    overview: `${placeCards}${guestCards}${timeCards}${outcomeCards}`,
+    overview: `${placeCards}${guestCards}${timeCards}${outcomeCards}${faceCards}`,
     daily_activity: `${timeCards}`,
     action_breakdown: `${outcomeCards}`,
     hourly_activity: `${timeCards}`,
+    face_detection_avg: `${faceCards}`,
+    vface_verification_avg: `${faceCards}`,
     place_insights: `${placeCards}`,
     guest_insights: `${guestCards}`,
     time_insights: `${timeCards}`,

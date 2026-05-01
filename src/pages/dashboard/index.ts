@@ -76,11 +76,14 @@ let currentVisitorPastEndDate = '';
 let currentLogsTabFilter = 'all';
 let currentLogsStartDate = '';
 let currentLogsEndDate = '';
+let currentLogsGenderFilter = 'all';
 let currentLogsAnalyticsType:
   | 'overview'
   | 'daily_activity'
   | 'action_breakdown'
   | 'hourly_activity'
+  | 'face_detection_avg'
+  | 'vface_verification_avg'
   | 'place_insights'
   | 'guest_insights'
   | 'time_insights'
@@ -5481,6 +5484,7 @@ function setupDashboardEventListeners() {
   // Logs search and filter event listeners
   const logsSearchInput = document.getElementById('logsSearchInput');
   const actionFilter = document.getElementById('actionFilter');
+  const logsGenderFilter = document.getElementById('logsGenderFilter');
   const logsFiltersDropdownBtn = document.getElementById('logsFiltersDropdownBtn');
   const logsFiltersDropdown = document.getElementById('logsFiltersDropdown');
   const logsTopPaginationToggle = document.getElementById('logsTopPaginationToggle');
@@ -5493,6 +5497,11 @@ function setupDashboardEventListeners() {
 
   // Action filter event listener
   actionFilter?.addEventListener('change', async () => {
+    await applySearchAndFilterForLogs();
+  });
+
+  // Gender filter event listener
+  logsGenderFilter?.addEventListener('change', async () => {
     await applySearchAndFilterForLogs();
   });
 
@@ -5904,11 +5913,14 @@ function setupDashboardEventListeners() {
   function clearLogsDateFilter() {
     const logsStartDate = document.getElementById('logsStartDate') as HTMLInputElement;
     const logsEndDate = document.getElementById('logsEndDate') as HTMLInputElement;
+    const logsGenderFilter = document.getElementById('logsGenderFilter') as HTMLSelectElement;
     
     if (logsStartDate) logsStartDate.value = '';
     if (logsEndDate) logsEndDate.value = '';
+    if (logsGenderFilter) logsGenderFilter.value = 'all';
     currentLogsStartDate = '';
     currentLogsEndDate = '';
+    currentLogsGenderFilter = 'all';
   }
 
   if (logsTabAll) logsTabAll.addEventListener('click', () => {
@@ -5972,6 +5984,8 @@ function setupDashboardEventListeners() {
         | 'daily_activity'
         | 'action_breakdown'
         | 'hourly_activity'
+        | 'face_detection_avg'
+        | 'vface_verification_avg'
         | 'place_insights'
         | 'guest_insights'
         | 'time_insights'
@@ -6626,11 +6640,13 @@ async function getEffectiveLogAction(log: any): Promise<string> {
 async function applySearchAndFilterForLogs() {
   const searchInput = document.getElementById('logsSearchInput') as HTMLInputElement;
   const actionFilter = document.getElementById('actionFilter') as HTMLSelectElement;
+  const genderFilter = document.getElementById('logsGenderFilter') as HTMLSelectElement;
   const startDateInput = document.getElementById('logsStartDate') as HTMLInputElement;
   const endDateInput = document.getElementById('logsEndDate') as HTMLInputElement;
   
   const searchTerm = searchInput?.value.toLowerCase() || '';
   const actionValue = actionFilter?.value || 'all';
+  const genderValue = genderFilter?.value || 'all';
   const startDate = startDateInput?.value || '';
   const endDate = endDateInput?.value || '';
 
@@ -6640,6 +6656,7 @@ async function applySearchAndFilterForLogs() {
   // Update global date filter state
   currentLogsStartDate = startDate;
   currentLogsEndDate = endDate;
+  currentLogsGenderFilter = genderValue;
 
   // Start with all logs
   let filtered = [...allLogs];
@@ -6737,6 +6754,29 @@ async function applySearchAndFilterForLogs() {
         return logDateOnly <= end;
       }
       return true;
+    });
+  }
+
+  // Apply gender filter
+  if (genderValue !== 'all') {
+    const normalizeGender = (value: unknown): string => {
+      const raw = String(value || '').trim().toLowerCase().replace(/\s+/g, '_');
+      if (!raw || raw === 'n/a' || raw === 'na' || raw === 'null' || raw === 'undefined') return 'unknown';
+      if (raw === 'm' || raw === 'man' || raw === 'boy') return 'male';
+      if (raw === 'f' || raw === 'woman' || raw === 'girl') return 'female';
+      if (raw === 'non_binary' || raw === 'non-binary') return 'other';
+      if (raw === 'prefer_not_to_say' || raw === 'not_specified') return 'unknown';
+      return raw;
+    };
+
+    filtered = filtered.filter((log) => {
+      const details = typeof log?.details === 'string' ? safeParseLogDetails(log.details) : (log?.details || {});
+      const normalized = normalizeGender(
+        details?.visitor_gender
+        ?? details?.gender
+        ?? details?.sex
+      );
+      return genderValue === 'unknown' ? normalized === 'unknown' : normalized === genderValue;
     });
   }
 
@@ -6841,7 +6881,9 @@ function renderLogsAnalytics() {
 
   const chartType = (currentLogsAnalyticsType === 'daily_activity' ||
     currentLogsAnalyticsType === 'action_breakdown' ||
-    currentLogsAnalyticsType === 'hourly_activity')
+    currentLogsAnalyticsType === 'hourly_activity' ||
+    currentLogsAnalyticsType === 'face_detection_avg' ||
+    currentLogsAnalyticsType === 'vface_verification_avg')
     ? currentLogsAnalyticsType
     : 'daily_activity';
   chartElement.innerHTML = renderLogsAnalyticsChart(visibleLogs, chartType, currentLogsViewMode);

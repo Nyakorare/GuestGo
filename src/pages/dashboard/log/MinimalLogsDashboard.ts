@@ -14,6 +14,8 @@ export function renderMinimalLogsDashboard(): string {
                   <option value="daily_activity">Daily Activity (7 Days)</option>
                   <option value="action_breakdown">Action Breakdown</option>
                   <option value="hourly_activity">Hourly Activity</option>
+                  <option value="face_detection_avg">Face Detection Average</option>
+                  <option value="vface_verification_avg">VFace Verification Average</option>
                   <option value="place_insights">Place Insights</option>
                   <option value="guest_insights">Guest Insights</option>
                   <option value="time_insights">Time Insights</option>
@@ -107,6 +109,16 @@ export function renderMinimalLogsDashboard(): string {
                     <label for="actionFilter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Action Type</label>
                     <select id="actionFilter" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full">
                       <option value="all">All Actions</option>
+                    </select>
+                  </div>
+                  <div class="flex-1">
+                    <label for="logsGenderFilter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Gender</label>
+                    <select id="logsGenderFilter" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-full">
+                      <option value="all">All Genders</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                      <option value="unknown">Unknown / Not Set</option>
                     </select>
                   </div>
                   <div class="flex flex-col sm:flex-row gap-4">
