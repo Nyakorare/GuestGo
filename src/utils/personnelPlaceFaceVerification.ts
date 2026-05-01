@@ -7,15 +7,24 @@ import {
 
 async function getEntranceFaceImage(visitId: string): Promise<string | null> {
   try {
-    // Use same approach as working exit verification:
-    // read latest entrance scan first, then decrypt face image payload.
+    // Mirror temporary-exit lookup strategy while being tolerant to metadata flags.
+    const { data: visitRow, error: visitError } = await supabase
+      .from('scheduled_visits')
+      .select('gate_entrance_scanned_at, gate_entrance_scanned_by')
+      .eq('id', visitId)
+      .single();
+
+    if (visitError) {
+      console.error('Error retrieving visit entrance metadata for personnel verification:', visitError);
+    }
+
     const { data: entranceScans, error } = await supabase
       .from('gate_scans')
-      .select('face_image_data')
+      .select('face_image_data, scanned_at, scanned_by, face_detection_confidence')
       .eq('visit_id', visitId)
       .eq('scan_type', 'entrance')
-      .order('scanned_at', { ascending: false })
-      .limit(1);
+      .not('face_image_data', 'is', null)
+      .order('scanned_at', { ascending: false });
 
     if (error) {
       console.error('Error retrieving entrance face image:', error);
@@ -26,29 +35,32 @@ async function getEntranceFaceImage(visitId: string): Promise<string | null> {
     }
 
     const { processFaceImageForDisplay } = await import('./imageCompression');
-    const storedImageData = entranceScans[0].face_image_data;
-    if (storedImageData && typeof storedImageData === 'string') {
-      const decryptedImage = processFaceImageForDisplay(storedImageData);
-      if (decryptedImage && decryptedImage.startsWith('data:image/')) {
-        return decryptedImage;
-      }
-    }
 
-    // Fallback: if latest row has unusable payload, scan recent entrance rows.
-    const { data: fallbackScans, error: fallbackError } = await supabase
-      .from('gate_scans')
-      .select('face_image_data')
-      .eq('visit_id', visitId)
-      .eq('scan_type', 'entrance')
-      .order('scanned_at', { ascending: false })
-      .limit(10);
+    const entranceAt = visitRow?.gate_entrance_scanned_at
+      ? new Date(visitRow.gate_entrance_scanned_at).getTime()
+      : null;
+    const entranceBy = visitRow?.gate_entrance_scanned_by || null;
 
-    if (fallbackError) {
-      console.error('Error retrieving fallback entrance face image:', fallbackError);
-      return null;
-    }
+    const orderedCandidates = [...entranceScans].sort((a, b) => {
+      const score = (scan: any): number => {
+        let total = 0;
+        if (entranceBy && scan.scanned_by === entranceBy) total += 1000;
+        if (entranceAt) {
+          const scanTime = new Date(scan.scanned_at).getTime();
+          const diffMs = Math.abs(scanTime - entranceAt);
+          total += Math.max(0, 600000 - diffMs) / 1000;
+        }
+        const confidence = typeof scan.face_detection_confidence === 'number'
+          ? scan.face_detection_confidence
+          : 0;
+        total += confidence * 100;
+        return total;
+      };
 
-    for (const scan of fallbackScans || []) {
+      return score(b) - score(a);
+    });
+
+    for (const scan of orderedCandidates) {
       const candidate = scan.face_image_data;
       if (!candidate || typeof candidate !== 'string') {
         continue;
