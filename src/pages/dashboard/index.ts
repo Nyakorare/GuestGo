@@ -22,6 +22,7 @@ import { renderLogsAnalyticsChart } from './log/LogsAnalyticsChart';
 import { renderLogsStatisticsTab } from './log/LogsStatisticsTab';
 import { renderPersonnelAnalytics } from './personnel/MinimalPersonnelDashboard';
 import { renderMinimalVisitorDashboard, renderVisitorAnalyticsStatusBreakdown, renderVisitorAnalyticsTopPlaces, renderVisitorAnalyticsChart } from './visitor/MinimalVisitorDashboard';
+import { verifyPersonnelPlaceFace } from '../../utils/personnelPlaceFaceVerification';
 
 interface Place {
   id: string;
@@ -9441,6 +9442,15 @@ async function completeVisitPlace(visitId: string, placeId: string) {
       showNotification('Gate entrance must be scanned by the visitor before places can be completed', 'error');
       return;
     }
+
+    // Face verification is check-only:
+    // this does not save face data; it only allows/block place completion.
+    const faceVerification = await verifyPersonnelPlaceFace(visitId);
+    if (!faceVerification.success) {
+      showNotification(faceVerification.error || 'Face verification failed. Place was not marked complete.', 'error');
+      return;
+    }
+
     // Call the database function to complete the specific place
     const { data, error } = await supabase.rpc('complete_visit_place', {
       p_visit_id: visitId,
