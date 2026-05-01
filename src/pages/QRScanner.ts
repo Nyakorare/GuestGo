@@ -2,6 +2,7 @@ import supabase from '../config/supabase';
 import { parseQRCodeData, type VisitQRData } from '../utils/qrCode';
 import { openFaceDetectionModal, type FaceDetectionOutcome } from '../utils/AI-Face-Detection/blazefaceModal';
 import { compressImageDataUrl } from '../utils/imageCompression';
+import { verifyPersonnelPlaceFace } from '../utils/personnelPlaceFaceVerification';
 import jsQR from 'jsqr';
 import { isPlaceOnHold, getOnHoldExpiration, createOnHoldButton, initializePlaceOnHold } from '../components/PlaceOnHold';
 
@@ -1768,6 +1769,17 @@ function checkForPotentialQRPattern(imageData: ImageData): boolean {
     } catch (e) {
       // If gate check fails, fail closed to be safe
       showPersonnelModalStatus('Unable to verify entrance scan. Please try again after scanning entrance.', 'error');
+      return;
+    }
+
+    // Face verification is check-only here:
+    // no face data is saved by this module; it only allows or blocks place completion.
+    const faceVerification = await verifyPersonnelPlaceFace(visitId);
+    if (!faceVerification.success) {
+      showPersonnelModalStatus(
+        faceVerification.error || 'Face verification failed. Place was not marked complete.',
+        'error'
+      );
       return;
     }
 
