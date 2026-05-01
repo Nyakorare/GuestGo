@@ -4,6 +4,7 @@ import supabase from '../config/supabase';
 import { initScheduleModalNameValidation, initOtherPurposeValidation } from '../utils/nameInputValidation';
 import { showNotification } from '../pages/dashboard/index';
 import { showLoadingOverlay, updateLoadingOverlay, hideLoadingOverlay } from '../utils/loadingOverlay';
+import { formatVisitorGender, type VisitorGenderValue } from '../constants/visitorGender';
 
 // Global variables for form state management
 let isEmailVerified = false;
@@ -1653,8 +1654,12 @@ export async function setupEventListeners() {
         const lastName = (document.getElementById('scheduleLastName') as HTMLInputElement).value;
         const email = scheduleEmail.value;
         const phone = phoneInput.value;
+        const visitorGender = (document.getElementById('visitorGender') as HTMLSelectElement).value as VisitorGenderValue | '';
         const visitDate = (document.getElementById('visitDate') as HTMLInputElement).value;
         const placeToVisit = placeToVisitSelect.value;
+        if (!visitorGender) {
+          throw new Error('Please select your gender');
+        }
         
         // Handle purposes - single place or multiple places
         let purpose = '';
@@ -1804,6 +1809,7 @@ export async function setupEventListeners() {
           lastName,
           email,
           phone,
+          visitorGender,
           visitDate,
           placeToVisit,
           purpose,
@@ -1816,6 +1822,7 @@ export async function setupEventListeners() {
           lastName,
           email,
           phone,
+          visitorGender,
           visitDate,
           placeToVisit,
           purpose,
@@ -3234,6 +3241,7 @@ interface VisitConfirmationData {
   lastName: string;
   email: string;
   phone: string;
+  visitorGender: VisitorGenderValue;
   visitDate: string;
   placeToVisit: string;
   purpose: string;
@@ -3306,6 +3314,7 @@ export function showVisitConfirmationModal(data: VisitConfirmationData) {
   const confirmationName = document.getElementById('confirmationName');
   const confirmationEmail = document.getElementById('confirmationEmail');
   const confirmationPhone = document.getElementById('confirmationPhone');
+  const confirmationGender = document.getElementById('confirmationGender');
   const confirmationDate = document.getElementById('confirmationDate');
   const confirmationPlaces = document.getElementById('confirmationPlaces');
   const confirmationPurpose = document.getElementById('confirmationPurpose');
@@ -3313,6 +3322,7 @@ export function showVisitConfirmationModal(data: VisitConfirmationData) {
   if (confirmationName) confirmationName.textContent = `${data.firstName} ${data.lastName}`;
   if (confirmationEmail) confirmationEmail.textContent = data.email;
   if (confirmationPhone) confirmationPhone.textContent = `+63${data.phone}`;
+  if (confirmationGender) confirmationGender.textContent = formatVisitorGender(data.visitorGender);
   if (confirmationDate) confirmationDate.textContent = formattedDate;
   if (confirmationPlaces) confirmationPlaces.textContent = placesText;
   if (confirmationPurpose) confirmationPurpose.textContent = purposeText;
@@ -3395,6 +3405,7 @@ async function scheduleVisitFromConfirmation(data: VisitConfirmationData) {
       p_visitor_last_name: data.lastName,
       p_visitor_email: data.email,
       p_visitor_phone: data.phone,
+      p_visitor_gender: data.visitorGender,
       p_place_ids: placeIds,
       p_visit_date: data.visitDate,
       p_purpose: data.purpose === 'other' ? data.otherPurpose : data.purpose,
@@ -3713,6 +3724,7 @@ export function setupConfirmationModalListeners() {
     lastName: 'Doe',
     email: 'john.doe@example.com',
     phone: '9123456789',
+    visitorGender: 'prefer_not_to_say',
     visitDate: '2024-01-15',
     placeToVisit: 'Office Building A',
     purpose: 'Meeting',

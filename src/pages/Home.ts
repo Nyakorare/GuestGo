@@ -9,6 +9,7 @@ import { PersonnelWorkflow } from '../components/mini-features/home/PersonnelWor
 import { AdminWorkflow } from '../components/mini-features/home/AdminWorkflow';
 import { LogsWorkflow } from '../components/mini-features/home/LogsWorkflow';
 import { GuardWorkflow } from '../components/mini-features/home/GuardWorkflow';
+import { VISITOR_GENDER_OPTIONS } from '../constants/visitorGender';
 
 // Helper function to get current Philippine time
 function getPhilippineTime(): Date {
@@ -1340,6 +1341,18 @@ export function HomePage() {
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Enter 10-digit mobile number (e.g., 9123456789)</p>
               </div>
               <div>
+                <label for="visitorGender" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Gender</label>
+                <select
+                  id="visitorGender"
+                  name="visitorGender"
+                  class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  required
+                >
+                  <option value="">Select gender</option>
+                  ${VISITOR_GENDER_OPTIONS.map((option) => `<option value="${option.value}">${option.label}</option>`).join('')}
+                </select>
+              </div>
+              <div>
                 <label for="placeToVisit" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Place to Visit</label>
                 <select 
                   id="placeToVisit" 
@@ -1446,6 +1459,10 @@ export function HomePage() {
                 <div class="flex justify-between">
                   <span class="text-gray-600 dark:text-gray-300">Phone:</span>
                   <span class="text-gray-900 dark:text-white font-medium" id="confirmationPhone">-</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600 dark:text-gray-300">Gender:</span>
+                  <span class="text-gray-900 dark:text-white font-medium" id="confirmationGender">-</span>
                 </div>
                 <div class="flex justify-between">
                   <span class="text-gray-600 dark:text-gray-300">Visit Date:</span>

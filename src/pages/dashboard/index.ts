@@ -3056,6 +3056,11 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
               if (event.details.purpose) {
                 details += `<span class='text-xs text-gray-500'>Purpose: ${event.details.purpose}</span> `;
               }
+              if (event.details.visitor_gender) {
+                const normalizedGender = String(event.details.visitor_gender).replace(/_/g, ' ');
+                const formattedGender = normalizedGender.charAt(0).toUpperCase() + normalizedGender.slice(1);
+                details += `<span class='text-xs text-gray-500'>Gender: ${formattedGender}</span> `;
+              }
               if (event.details.note) {
                 details += `<span class='text-xs text-gray-500'>Note: ${event.details.note}</span> `;
               }
@@ -3421,6 +3426,11 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
                 if (event.details.purpose) {
                   details += `<span class='text-xs text-gray-500'>Purpose: ${event.details.purpose}</span> `;
                 }
+                if (event.details.visitor_gender) {
+                  const normalizedGender = String(event.details.visitor_gender).replace(/_/g, ' ');
+                  const formattedGender = normalizedGender.charAt(0).toUpperCase() + normalizedGender.slice(1);
+                  details += `<span class='text-xs text-gray-500'>Gender: ${formattedGender}</span> `;
+                }
                 if (event.details.note) {
                   details += `<span class='text-xs text-gray-500'>Note: ${event.details.note}</span> `;
                 }
@@ -3528,7 +3538,16 @@ async function formatLogDetails(details: any, action: string, log?: any): Promis
               </div>`;
           }
         }
-        return `<div><span class="font-medium">Visitor:</span> ${visitorName || 'Unknown visitor'}</div><div><span class="font-medium">Date:</span> ${parsedDetails.visit_date ? new Date(parsedDetails.visit_date).toLocaleDateString() : 'Unknown date'}</div>${placesHtml}<div><span class="font-medium">Purpose:</span> ${parsedDetails.purpose || 'Not specified'}</div>${personnelHtml}${statusHtml}${historyHtml}`;
+        const genderText = parsedDetails.visitor_gender
+          ? (() => {
+              const normalizedGender = String(parsedDetails.visitor_gender).replace(/_/g, ' ');
+              return normalizedGender.charAt(0).toUpperCase() + normalizedGender.slice(1);
+            })()
+          : '';
+        const genderHtml = genderText
+          ? `<div><span class="font-medium">Gender:</span> ${genderText}</div>`
+          : '';
+        return `<div><span class="font-medium">Visitor:</span> ${visitorName || 'Unknown visitor'}</div><div><span class="font-medium">Date:</span> ${parsedDetails.visit_date ? new Date(parsedDetails.visit_date).toLocaleDateString() : 'Unknown date'}</div>${genderHtml}${placesHtml}<div><span class="font-medium">Purpose:</span> ${parsedDetails.purpose || 'Not specified'}</div>${personnelHtml}${statusHtml}${historyHtml}`;
       }
       case 'place_update':
         const changes = [];
