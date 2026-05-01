@@ -20,10 +20,9 @@ async function getEntranceFaceImage(visitId: string): Promise<string | null> {
 
     const { data: entranceScans, error } = await supabase
       .from('gate_scans')
-      .select('face_image_data, scanned_at, scanned_by, face_detection_confidence')
+      .select('id, face_image_data, scanned_at, scanned_by, face_detection_confidence')
       .eq('visit_id', visitId)
       .eq('scan_type', 'entrance')
-      .not('face_image_data', 'is', null)
       .order('scanned_at', { ascending: false });
 
     if (error) {
@@ -31,7 +30,23 @@ async function getEntranceFaceImage(visitId: string): Promise<string | null> {
       return null;
     }
     if (!entranceScans || entranceScans.length === 0) {
-      return null;
+      // Fallback when personnel cannot list gate_scans rows due RLS:
+      // read latest entrance face image through SECURITY DEFINER RPC by visit ID.
+      const { data: latestFaceData, error: latestFaceError } = await supabase.rpc(
+        'get_latest_entrance_face_image_for_visit',
+        { p_visit_id: visitId }
+      );
+
+      if (latestFaceError || !latestFaceData || typeof latestFaceData !== 'string') {
+        if (latestFaceError) {
+          console.warn('Fallback RPC failed to retrieve entrance face image:', latestFaceError);
+        }
+        return null;
+      }
+
+      const { processFaceImageForDisplay } = await import('./imageCompression');
+      const decryptedImage = processFaceImageForDisplay(latestFaceData);
+      return decryptedImage && decryptedImage.startsWith('data:image/') ? decryptedImage : null;
     }
 
     const { processFaceImageForDisplay } = await import('./imageCompression');
@@ -61,10 +76,20 @@ async function getEntranceFaceImage(visitId: string): Promise<string | null> {
     });
 
     for (const scan of orderedCandidates) {
-      const candidate = scan.face_image_data;
-      if (!candidate || typeof candidate !== 'string') {
-        continue;
+      let candidate = scan.face_image_data;
+
+      // If direct column access is restricted for personnel, load via SECURITY DEFINER RPC.
+      if (!candidate && scan.id) {
+        const { data: rpcFaceData, error: rpcError } = await supabase.rpc('get_face_image_for_display', {
+          p_scan_id: scan.id
+        });
+        if (!rpcError && typeof rpcFaceData === 'string' && rpcFaceData.length > 0) {
+          candidate = rpcFaceData;
+        }
       }
+
+      if (!candidate || typeof candidate !== 'string') continue;
+
       const decryptedImage = processFaceImageForDisplay(candidate);
       if (decryptedImage && decryptedImage.startsWith('data:image/')) {
         return decryptedImage;
