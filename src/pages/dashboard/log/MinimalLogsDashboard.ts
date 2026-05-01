@@ -16,7 +16,7 @@ export function renderMinimalLogsDashboard(): string {
                     <option value="action_breakdown">Action Breakdown</option>
                     <option value="hourly_activity">Hourly Activity</option>
                     <option value="face_detection_avg">Face Detection Average</option>
-                    <option value="vface_verification_avg">VFace Verification Average</option>
+                    <option value="vface_verification_avg">Face Verification Average</option>
                     <option value="place_insights">Place Insights</option>
                     <option value="guest_insights">Guest Insights</option>
                     <option value="time_insights">Time Insights</option>

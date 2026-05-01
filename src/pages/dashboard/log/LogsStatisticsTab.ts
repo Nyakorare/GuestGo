@@ -63,6 +63,52 @@ function normalizePercentLike(value: unknown): number | null {
   return numeric > 1 ? numeric / 100 : numeric;
 }
 
+function extractVerificationMetrics(details: Record<string, any>): { similarity: number | null; match: boolean | null } {
+  const verificationContainer =
+    details.face_verification
+    ?? details.verification_result
+    ?? details.verification
+    ?? details.face_verification_result
+    ?? details.face_detection_metadata?.verification
+    ?? null;
+
+  const similarity =
+    normalizePercentLike(details.face_verification_similarity)
+    ?? normalizePercentLike(details.verification_similarity)
+    ?? normalizePercentLike(details.face_detection_metadata?.verification_similarity)
+    ?? normalizePercentLike(verificationContainer?.similarity)
+    ?? normalizePercentLike(verificationContainer?.score)
+    ?? null;
+
+  const matchRaw =
+    details.face_verification_match
+    ?? details.verification_match
+    ?? details.face_detection_metadata?.verification_match
+    ?? verificationContainer?.match
+    ?? verificationContainer?.verified;
+  const explicitMatch = typeof matchRaw === 'boolean' ? matchRaw : null;
+
+  if (similarity === null && explicitMatch === null) {
+    const messageFields = [
+      details.message,
+      details.result_message,
+      details.note,
+      details.status_message
+    ].filter((item) => typeof item === 'string') as string[];
+    const merged = messageFields.join(' ').toLowerCase();
+    if (!merged) return { similarity: null, match: null };
+
+    const percentMatch = merged.match(/(\d+(?:\.\d+)?)\s*%\s*(?:similarity|match)/i);
+    const parsedSimilarity = percentMatch ? normalizePercentLike(Number(percentMatch[1])) : null;
+    const parsedMatch = merged.includes('face verified')
+      ? true
+      : (merged.includes('face mismatch') || merged.includes('face verification failed') ? false : null);
+    return { similarity: parsedSimilarity, match: parsedMatch };
+  }
+
+  return { similarity, match: explicitMatch };
+}
+
 export function renderLogsStatisticsTab(
   logs: any[],
   previewFilter: AnalyticsPreviewFilter = 'overview'
@@ -158,13 +204,9 @@ export function renderLogsStatisticsTab(
       faceDetectionConfidenceSum += faceDetectionConfidence;
     }
 
-    const verificationSimilarity = normalizePercentLike(
-      details.verification_similarity
-      ?? details.face_verification_similarity
-      ?? details.similarity
-      ?? details.verification_score
-    );
-    const explicitMatch = details.face_verified ?? details.verification_match ?? details.match;
+    const verificationMetrics = extractVerificationMetrics(details);
+    const verificationSimilarity = normalizePercentLike(verificationMetrics.similarity);
+    const explicitMatch = verificationMetrics.match;
     if (verificationSimilarity !== null || typeof explicitMatch === 'boolean') {
       const similarity = verificationSimilarity ?? 0;
       const isMatch = typeof explicitMatch === 'boolean' ? explicitMatch : similarity >= 0.5;
@@ -309,9 +351,9 @@ export function renderLogsStatisticsTab(
         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${faceDetectionSamples} logs with confidence data</p>
       </div>
       <div class="rounded-md border-l-4 border-l-purple-500 border border-gray-200 dark:border-gray-700 bg-purple-50/60 dark:bg-purple-900/20 p-3">
-        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Average VFace Similarity</p>
+        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Average Face Verification Similarity</p>
         <p class="text-2xl font-semibold text-gray-900 dark:text-white mt-1">${avgVfaceSimilarity.toFixed(1)}%</p>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${vfaceVerificationRate.toFixed(1)}% verified match rate (${vfaceSamples} samples)</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${vfaceVerificationRate.toFixed(1)}% verified match rate (${vfaceSamples} verification samples)</p>
       </div>
   `;
 
@@ -325,9 +367,9 @@ export function renderLogsStatisticsTab(
 
   const vfaceCards = `
       <div class="rounded-md border-l-4 border-l-purple-500 border border-gray-200 dark:border-gray-700 bg-purple-50/60 dark:bg-purple-900/20 p-3">
-        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Average VFace Similarity</p>
+        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Average Face Verification Similarity</p>
         <p class="text-2xl font-semibold text-gray-900 dark:text-white mt-1">${avgVfaceSimilarity.toFixed(1)}%</p>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${vfaceVerificationRate.toFixed(1)}% verified match rate (${vfaceSamples} samples)</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${vfaceVerificationRate.toFixed(1)}% verified match rate (${vfaceSamples} verification samples)</p>
       </div>
   `;
 

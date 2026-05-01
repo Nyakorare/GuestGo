@@ -35,6 +35,53 @@ function parseDetails(log: any): Record<string, any> {
   return {};
 }
 
+function extractVerificationMetrics(details: Record<string, any>): { similarity: number | null; match: boolean | null } {
+  const verificationContainer =
+    details.face_verification
+    ?? details.verification_result
+    ?? details.verification
+    ?? details.face_verification_result
+    ?? details.face_detection_metadata?.verification
+    ?? null;
+
+  const similarity =
+    normalizePercentLike(details.face_verification_similarity)
+    ?? normalizePercentLike(details.verification_similarity)
+    ?? normalizePercentLike(details.face_detection_metadata?.verification_similarity)
+    ?? normalizePercentLike(verificationContainer?.similarity)
+    ?? normalizePercentLike(verificationContainer?.score)
+    ?? null;
+
+  const matchRaw =
+    details.face_verification_match
+    ?? details.verification_match
+    ?? details.face_detection_metadata?.verification_match
+    ?? verificationContainer?.match
+    ?? verificationContainer?.verified;
+
+  const explicitMatch = typeof matchRaw === 'boolean' ? matchRaw : null;
+
+  if (similarity === null && explicitMatch === null) {
+    const messageFields = [
+      details.message,
+      details.result_message,
+      details.note,
+      details.status_message
+    ].filter((item) => typeof item === 'string') as string[];
+    const merged = messageFields.join(' ').toLowerCase();
+    if (!merged) return { similarity: null, match: null };
+
+    const percentMatch = merged.match(/(\d+(?:\.\d+)?)\s*%\s*(?:similarity|match)/i);
+    const parsedSimilarity = percentMatch ? normalizePercentLike(Number(percentMatch[1])) : null;
+    const parsedMatch = merged.includes('face verified')
+      ? true
+      : (merged.includes('face mismatch') || merged.includes('face verification failed') ? false : null);
+    return { similarity: parsedSimilarity, match: parsedMatch };
+  }
+
+  return { similarity, match: explicitMatch };
+}
+
 function renderDonutChart(
   rows: Array<{ label: string; count: number; color: string; percent: number; tooltip: string }>,
   centerTitle: string,
@@ -228,13 +275,7 @@ function renderInteractiveChart(logs: any[], type: LogsAnalyticsChartType): stri
 
     logs.forEach((log) => {
       const details = parseDetails(log);
-      const similarity = normalizePercentLike(
-        details.verification_similarity
-        ?? details.face_verification_similarity
-        ?? details.similarity
-        ?? details.verification_score
-      );
-      const explicitMatch = details.face_verified ?? details.verification_match ?? details.match;
+      const { similarity, match: explicitMatch } = extractVerificationMetrics(details);
       if (similarity === null && typeof explicitMatch !== 'boolean') {
         return;
       }
@@ -247,7 +288,7 @@ function renderInteractiveChart(logs: any[], type: LogsAnalyticsChartType): stri
     });
 
     if (samples === 0) {
-      return '<p class="text-xs text-gray-500 dark:text-gray-400">No vface verification data</p>';
+      return '<p class="text-xs text-gray-500 dark:text-gray-400">No face verification percentage data</p>';
     }
 
     const avgSimilarityPercent = (similaritySum / samples) * 100;
@@ -270,7 +311,7 @@ function renderInteractiveChart(logs: any[], type: LogsAnalyticsChartType): stri
 
     return renderDonutChart(
       rows,
-      'Avg Similarity',
+      'Face Verification',
       `${avgSimilarityPercent.toFixed(1)}%`,
       `${samples} verifications`
     );
