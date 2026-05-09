@@ -89,7 +89,7 @@ export function Footer() {
             </p>
             <div class="flex flex-wrap justify-center sm:justify-end gap-3 sm:gap-4 md:gap-6">
               <a href="javascript:void(0)" onclick="window.openPrivacyPolicyModal()" class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer whitespace-nowrap">Privacy Policy</a>
-              <a href="javascript:void(0)" onclick="window.openDocumentationsPage()" class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer whitespace-nowrap">Documentations</a>
+              <span class="text-xs sm:text-sm text-gray-400 dark:text-gray-500 whitespace-nowrap cursor-not-allowed" title="Documentation is currently unavailable">Documentations</span>
               <a href="javascript:void(0)" onclick="window.openTermsOfServiceModal()" class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer whitespace-nowrap">Terms of Service</a>
             </div>
           </div>

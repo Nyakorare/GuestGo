@@ -1,15 +1,6 @@
 import algorithmsDocs from '../../Documentations/ALGORITHMS.md?raw';
 import faceDetectionDocs from '../../Documentations/FACE_DETECTION_VERIFICATION.md?raw';
 import projectReadme from '../../README.md?raw';
-import functionalityDocs from '../../THESIS DESC/FUNCTIONALITY.md?raw';
-import dashboardDescriptionsDocs from '../../THESIS DESC/DASHBOARD_DESCRIPTIONS.md?raw';
-import capabilitiesLimitationsDocs from '../../THESIS DESC/CAPABILITIES_LIMITATIONS.md?raw';
-import projectDescriptionDocs from '../../THESIS DESC/PROJECT_DESCRIPTION.md?raw';
-import homePageDescriptionDocs from '../../THESIS DESC/HOME_PAGE_DESCRIPTION.md?raw';
-import reliabilityTestResultsDocs from '../../THESIS DESC/RELIABILITY_TEST_RESULTS.md?raw';
-import securityTestResultsDocs from '../../THESIS DESC/SECURITY_TEST_RESULTS.md?raw';
-import usabilityTestResultsDocs from '../../THESIS DESC/USABILITY_TEST_RESULTS.md?raw';
-import conclusionDocs from '../../THESIS DESC/CONCLUSION.md?raw';
 import { marked } from 'marked';
 import { DocumentationNavigationButtons, setupDocumentationNavigationButtons } from '../components/DocumentationNavigationButtons';
 
@@ -132,15 +123,6 @@ export function setupDocumentationsPage(): void {
   const overviewHtml = enhanceTables(marked.parse(projectReadme));
   const algorithmsHtml = enhanceTables(marked.parse(algorithmsDocs));
   const faceHtml = enhanceTables(marked.parse(faceDetectionDocs));
-  const functionalityHtml = enhanceTables(marked.parse(functionalityDocs));
-  const dashboardDescriptionsHtml = enhanceTables(marked.parse(dashboardDescriptionsDocs));
-  const capabilitiesLimitationsHtml = enhanceTables(marked.parse(capabilitiesLimitationsDocs));
-  const projectDescriptionHtml = enhanceTables(marked.parse(projectDescriptionDocs));
-  const homePageDescriptionHtml = enhanceTables(marked.parse(homePageDescriptionDocs));
-  const reliabilityTestResultsHtml = enhanceTables(marked.parse(reliabilityTestResultsDocs));
-  const securityTestResultsHtml = enhanceTables(marked.parse(securityTestResultsDocs));
-  const usabilityTestResultsHtml = enhanceTables(marked.parse(usabilityTestResultsDocs));
-  const conclusionHtml = enhanceTables(marked.parse(conclusionDocs));
 
   const thesisSubTabsContainer = document.getElementById('thesisSubTabs');
   const thesisSubTabsNav = document.getElementById('thesisSubTabsNav');
@@ -166,107 +148,13 @@ export function setupDocumentationsPage(): void {
     let innerHtml = '';
     let title = '';
     
-    if (subTabId === 'functionality') {
-      title = 'Functionality';
-      innerHtml = functionalityHtml;
-    } else if (subTabId === 'dashboard-descriptions') {
-      title = 'Dashboard Descriptions';
-      innerHtml = dashboardDescriptionsHtml;
-    } else if (subTabId === 'capabilities-limitations') {
-      title = 'Capabilities & Limitations';
-      innerHtml = capabilitiesLimitationsHtml;
-    } else if (subTabId === 'project-description') {
-      title = 'Project Description';
-      innerHtml = projectDescriptionHtml;
-    } else if (subTabId === 'home-page-description') {
-      title = 'Home Page Description';
-      innerHtml = homePageDescriptionHtml;
-    } else if (subTabId === 'reliability-test-results') {
-      title = 'Reliability Test Results';
-      innerHtml = reliabilityTestResultsHtml;
-    } else if (subTabId === 'security-test-results') {
-      title = 'Security Test Results';
-      innerHtml = securityTestResultsHtml;
-    } else if (subTabId === 'usability-test-results') {
-      title = 'Usability Test Results';
-      innerHtml = usabilityTestResultsHtml;
-    } else if (subTabId === 'conclusion') {
-      title = 'Conclusion';
-      innerHtml = conclusionHtml;
-    } else if (subTabId === 'testing-samples-data') {
-      title = 'Testing Samples Data';
-      docsContent.innerHTML = `
-        <h2 class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">${title}</h2>
-        <div class="flex flex-col items-center justify-center py-12">
-          <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-6 mb-6 max-w-2xl w-full border border-gray-200 dark:border-gray-700">
-            <p class="text-gray-700 dark:text-gray-300 mb-4 text-center">
-              This sample data file contains test data used for system testing of the GuestGo platform. The test dataset includes:
-            </p>
-            <div class="grid grid-cols-2 gap-4 text-sm">
-              <div class="flex items-center gap-2">
-                <span class="font-semibold text-gray-900 dark:text-white">15 Visitors</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <span class="font-semibold text-gray-900 dark:text-white">2 Personnel</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <span class="font-semibold text-gray-900 dark:text-white">2 Guards</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <span class="font-semibold text-gray-900 dark:text-white">1 Admin</span>
-              </div>
-            </div>
-          </div>
-          <button 
-            id="downloadSampleDataBtn" 
-            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition-colors duration-200 flex items-center gap-2"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-            </svg>
-            System Testing Sample Data
-          </button>
-        </div>
-      `;
-      
-      // Setup download button
-      setTimeout(() => {
-        const downloadBtn = document.getElementById('downloadSampleDataBtn');
-        if (downloadBtn) {
-          downloadBtn.addEventListener('click', async () => {
-            try {
-              const response = await fetch('/GuestGo-System Sample Data IRL.xlsx');
-              if (!response.ok) {
-                throw new Error('Failed to download file');
-              }
-              const blob = await response.blob();
-              const url = URL.createObjectURL(blob);
-              const link = document.createElement('a');
-              link.href = url;
-              link.download = 'GuestGo-System Sample Data IRL.xlsx';
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-              URL.revokeObjectURL(url);
-            } catch (error) {
-              console.error('Error downloading file:', error);
-              alert('Failed to download the file. Please try again.');
-            }
-          });
-        }
-      }, 100);
-      return;
-    }
-
-    // Update content for all other thesis sub-tabs
-    if (docsContent && innerHtml && title) {
-      docsContent.innerHTML = `
-        <h2 class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">${title}</h2>
-        <div class="prose dark:prose-invert max-w-none text-sm leading-relaxed text-gray-800 dark:text-gray-100 overflow-x-auto">
-          ${innerHtml}
-        </div>
-      `;
-    }
+    docsContent.innerHTML = `
+      <h2 class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">Thesis documentation unavailable</h2>
+      <div class="prose dark:prose-invert max-w-none text-sm leading-relaxed text-gray-800 dark:text-gray-100 overflow-x-auto">
+        <p>The thesis documentation files are not currently available because the <code>THESIS DESC</code> folder is missing from the project.</p>
+        <p>Please restore those files or update the documentation sources before using this section.</p>
+      </div>
+    `;
   }
 
   function setActiveTab(tabId: 'overview' | 'algorithms' | 'face' | 'thesis') {
@@ -319,8 +207,16 @@ export function setupDocumentationsPage(): void {
         </div>
       `;
     } else if (tabId === 'thesis') {
-      // Show first thesis sub-tab by default
-      setActiveThesisSubTab('functionality');
+      if (thesisSubTabsContainer) {
+        thesisSubTabsContainer.classList.add('hidden');
+      }
+      docsContent.innerHTML = `
+        <h2 class="text-2xl font-semibold text-gray-900 dark:text-white mb-4">Thesis documentation unavailable</h2>
+        <div class="prose dark:prose-invert max-w-none text-sm leading-relaxed text-gray-800 dark:text-gray-100 overflow-x-auto">
+          <p>The thesis documentation files are not currently available because the <code>THESIS DESC</code> folder is missing from the project.</p>
+          <p>Please restore those files or update the documentation sources before using this section.</p>
+        </div>
+      `;
       return;
     }
 
