@@ -1,6 +1,3 @@
-import algorithmsDocs from '../../Documentations/ALGORITHMS.md?raw';
-import faceDetectionDocs from '../../Documentations/FACE_DETECTION_VERIFICATION.md?raw';
-import projectReadme from '../../README.md?raw';
 import { marked } from 'marked';
 import { DocumentationNavigationButtons, setupDocumentationNavigationButtons } from '../components/DocumentationNavigationButtons';
 
